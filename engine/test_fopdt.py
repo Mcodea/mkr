@@ -1,7 +1,10 @@
 import base64
 from datetime import datetime, timedelta, timezone
 import math
+import random
 import unittest
+
+import numpy as np
 
 from fopdt import identify
 
@@ -42,6 +45,59 @@ class FopdtTests(unittest.TestCase):
         for field in ("gain", "tauSeconds", "delaySeconds"):
             self.assertEqual(original[field], drifted[field])
         self.assertGreater(drifted["validation"]["rmse"], 2)
+
+    def test_noise_sensitivity_uses_training_only(self):
+        def noisy(level):
+            generator = random.Random(8321)
+
+            def adjust(i, cells):
+                if i >= 6:
+                    cells[2] = str(float(cells[2]) + level * generator.gauss(0, 1))
+            return adjust
+
+        first = calculate(source(1, change=noisy(0.05)))
+        stronger = calculate(source(1, change=noisy(0.10)))
+        self.assertAlmostEqual(first["gain"], -3, delta=0.05)
+        self.assertAlmostEqual(first["tauSeconds"], 4, delta=0.3)
+        self.assertAlmostEqual(first["delaySeconds"], 2.5, delta=0.3)
+        for parameter in ("gain", "tauSeconds", "delaySeconds"):
+            low = first["standardErrors"][parameter]
+            high = stronger["standardErrors"][parameter]
+            self.assertGreater(low, 0)
+            self.assertAlmostEqual(high / low, 2, delta=0.22)
+
+        # Check the scaled analytic sensitivities against finite differences
+        # in the physical coordinates of the three reported parameters.
+        times = np.array([point["seconds"] for point in first["training"]["points"]])
+        parameters = np.array([first["gain"], first["tauSeconds"], first["delaySeconds"]])
+
+        def curve(p):
+            gain, tau, delay = p
+            return 7 + 2 * gain * (1 - np.exp(-np.maximum(times - delay, 0) / tau))
+
+        epsilon = 1e-5
+        changes = epsilon * np.eye(3)
+        derivatives = np.column_stack([
+            (curve(parameters + change) - curve(parameters - change)) / (2 * epsilon)
+            for change in changes
+        ])
+        sample_count = len(times)
+        covariance = (
+            first["training"]["rmse"] ** 2 * sample_count / (sample_count - 3)
+            * np.linalg.inv(derivatives.T @ derivatives)
+        )
+        np.testing.assert_allclose(list(first["standardErrors"].values()), np.sqrt(np.diag(covariance)), rtol=1e-6)
+
+        alternate = calculate(source(1, change=noisy(0.05)), source(2, gain=-0.7))
+        self.assertEqual(first["standardErrors"], alternate["standardErrors"])
+
+    def test_autocorrelated_disturbance_suppresses_standard_errors(self):
+        def drift(i, cells):
+            if i >= 6:
+                cells[2] = str(float(cells[2]) + 0.3 * math.sin(i / 7))
+        report = calculate(source(1, change=drift))
+        self.assertIn("correlated_residuals", report["warnings"])
+        self.assertIsNone(report["standardErrors"])
 
     def test_zero_delay_is_resolution_limited(self):
         report = calculate(source(1, delay=0), source(2, delay=0))

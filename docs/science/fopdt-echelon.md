@@ -2,7 +2,7 @@
 
 Dans le projet, importer deux CSV historiques du même procédé issus d’essais en boucle ouverte, avec MV appliquée et PV mesurée. Ouvrir **Identification FOPDT**, sélectionner les deux imports, associer temps/MV/PV, déclarer les unités communes et indiquer les tolérances absolues des plateaux MV et de la PV avant échelon dans les unités correspondantes. La fenêtre demande de confirmer les conditions de test avant estimation.
 
-## Méthode 1.0.0
+## Méthode 1.1.0
 
 MKR-SPEC-001 §6 définit `G(s) = K exp(−θs)/(τs + 1)`. Sa réponse à un échelon est `PV(t) = PV₀ + K ΔMV (1 − exp(−max(t−θ,0)/τ))`. `PV₀` est la moyenne avant échelon, `ΔMV` la différence signée des moyennes des deux plateaux. K est exprimé en unité PV par unité MV, τ et θ en secondes. L’origine est le premier échantillon de MV qui s’écarte de plus de deux tolérances MV du premier point. L’instant réel de l’échelon est connu à la résolution de l’intervalle précédent, affichée dans les diagnostics enregistrés.
 
@@ -14,6 +14,12 @@ Le deuxième essai est prédit avec les mêmes K, τ et θ en utilisant uniqueme
 
 ## Domaine et vérification
 
-Interpréter ce résultat comme modèle exploratoire pour le régime testé. La comparabilité physique, la saturation, les perturbations et la causalité du retard apparent restent à examiner. Le logiciel ne fournit ni incertitude statistique, ni verdict de qualité industrielle, ni garantie d’unicité du minimum. Les limites d’amplitude et d’excitation sont des choix initialement conservateurs, documentés pour revue.
+Interpréter ce résultat comme modèle exploratoire pour le régime testé. La comparabilité physique, la saturation, les perturbations et la causalité du retard apparent restent à examiner. Le logiciel fournit une approximation locale conditionnelle, sans couverture statistique garantie ni verdict de qualité industrielle. Les limites d’amplitude et d’excitation sont des choix initialement conservateurs, documentés pour revue.
 
 Tests : réponse analytique, gain signé et échelon de validation inverse, cadences distinctes, retard nul, échec d’excitation, données invalides, étanchéité des fenêtres et validation dégradée sans effet sur l’estimation. Référence numérique : solveur [SciPy least_squares](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.least_squares.html).
+
+### Erreurs-types locales conditionnelles
+
+Pour les points d’estimation, on linéarise la réponse dans les coordonnées gain d’échelon normalisé, log(τ) et retard mis à l’échelle par τ. Si la matrice de sensibilités J a un rang numérique suffisant, on calcule les erreurs-types à partir de la diagonale de s²(JᵀJ)⁻¹ par décomposition en valeurs singulières. La variance résiduelle s² vaut SSE/(n−3). Les erreurs-types sont reconverties dans les unités des paramètres. Elles sont conditionnelles aux paliers, à l’origine de temps et aux écarts de mesure supposés indépendants et de variance constante.
+
+Cette approximation est omise si |autocorrélation à un échantillon| dépasse 0,3, en présence d’un avertissement de domaine, si le résidu est presque nul, si le retard coïncide numériquement avec un échantillon ou si le rapport des valeurs singulières est inférieur ou égal à 10⁻⁶. Ces seuils sont des garde-fous révisables. Ils ne valident pas les hypothèses. Cet indicateur ne quantifie ni l’erreur de modèle, ni les incertitudes du niveau initial, de la MV ou de l’origine de l’échelon. Les tests utilisent un bruit blanc à graine fixe et une perturbation autocorrélée.

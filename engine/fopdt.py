@@ -8,7 +8,7 @@ from scipy.optimize import least_squares
 
 from csv_quality import NUMBER, TIMESTAMP, read_table
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 @dataclass
@@ -138,6 +138,41 @@ def diagnostics(step, gain, tau, delay):
     )
 
 
+def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
+    """Local iid residual error, conditional on the measured baselines and input."""
+    correlation = diagnostics["residualLagOne"]
+    if correlation is not None and abs(correlation) > 0.3:
+        warnings.append("correlated_residuals")
+    if warnings or correlation is None:
+        return None
+
+    amplitude = gain * step.amplitude
+    scale = float(np.max(np.abs(step.observations - step.baseline)))
+    if diagnostics["rmse"] <= scale * 1e-12:
+        return None
+    # A sample at the estimated delay makes the delay derivative non-unique.
+    if np.min(np.abs(step.times - delay)) <= 1e-8 * tau:
+        warnings.append("delay_derivative")
+        return None
+
+    active = step.times > delay
+    v = np.maximum(step.times - delay, 0) / tau
+    exp = np.exp(-v)
+    scaled_amplitude = amplitude / scale
+    jacobian = np.column_stack((basis(step.times, tau, delay),
+                               -scaled_amplitude * v * exp,
+                               -scaled_amplitude * exp * active))
+    _, singular, right = np.linalg.svd(jacobian, full_matrices=False)
+    if singular[-1] <= 1e-6 * singular[0]:
+        warnings.append("ill_conditioned")
+        return None
+    degrees = len(step.times) - jacobian.shape[1]
+    sigma = diagnostics["rmse"] / scale * math.sqrt(len(step.times) / degrees)
+    standard = sigma * np.sqrt(np.sum((right.T / singular) ** 2, axis=1))
+    return dict(gain=float(standard[0]) * abs(scale / step.amplitude),
+                tauSeconds=float(standard[1]) * tau, delaySeconds=float(standard[2]) * tau)
+
+
 def identify(payload):
     if payload.keys() != {"training", "validation", "mvTolerance", "pvTolerance"}:
         raise ValueError("fit_mapping")
@@ -158,7 +193,9 @@ def identify(payload):
         warnings.append("delay_resolution")
     if min(training.times[-1], validation.times[-1]) - delay < 4 * tau:
         warnings.append("short_horizon")
+    training_diagnostics = diagnostics(training, gain, tau, delay)
+    errors = conditional_errors(training, gain, tau, delay, training_diagnostics, warnings)
     return dict(algorithmVersion=VERSION, gain=gain, tauSeconds=tau, delaySeconds=delay,
                 tauLowerSeconds=tau_low, tauUpperSeconds=tau_high, delayUpperSeconds=delay_high,
-                warnings=warnings, training=diagnostics(training, gain, tau, delay),
+                warnings=warnings, standardErrors=errors, training=training_diagnostics,
                 validation=diagnostics(validation, gain, tau, delay))

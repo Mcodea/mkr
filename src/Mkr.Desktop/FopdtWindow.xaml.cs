@@ -95,13 +95,19 @@ public partial class FopdtWindow : Window
             "parameter_bound" => "Un paramètre est proche d’une borne de recherche.",
             "delay_resolution" => "Le retard estimé est inférieur ou égal à la résolution de détection de l’échelon.",
             "short_horizon" => "Au moins un essai couvre moins de quatre constantes de temps après le retard.",
+            "correlated_residuals" => "Résidus autocorrélés sur l’essai d’estimation.",
+            "delay_derivative" => "Le retard estimé est trop proche d’un instant échantillonné pour linéariser sa réponse.",
+            "ill_conditioned" => "Sensibilités locales trop proches pour séparer les paramètres.",
             _ => code
         });
+        var uncertainty = result.StandardErrors is { } errors
+            ? $"Erreurs-types locales conditionnelles (K, τ, θ) : {errors.Gain:G4} {study.PvUnit}/{study.MvUnit}, {errors.TauSeconds:G4} s, {errors.DelaySeconds:G4} s."
+            : "Erreurs-types locales indisponibles.";
         FitReport.Text = $"Modèle exploratoire · K = {result.Gain:G5} {study.PvUnit}/{study.MvUnit} · " +
             $"τ = {result.TauSeconds:G5} s · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
-            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{string.Join(" ", warnings)}";
+            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{uncertainty}\n{string.Join(" ", warnings)}";
         PlotLegend.Text = $"Validation après l’échelon · PV ({study.PvUnit}) · bleu : mesurée · orange : prédite";
         DrawPlot();
     }
