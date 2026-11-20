@@ -1,0 +1,65 @@
+<Window x:Class="Mkr.Desktop.FopdtWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MKR — Identification FOPDT" Width="960" Height="780" MinWidth="620" MinHeight="480"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="18">
+        <TextBlock x:Name="Message" DockPanel.Dock="Bottom" Margin="0,12,0,0" TextWrapping="Wrap"
+                   AutomationProperties.LiveSetting="Polite" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <TextBlock FontSize="22" FontWeight="SemiBold" Text="Identification FOPDT par échelons" />
+                <TextBlock Margin="0,5,0,12" TextWrapping="Wrap"
+                           Text="Deux essais distincts du même procédé, avec un seul échelon de MV par CSV. La validation utilise le deuxième essai." />
+                <StackPanel x:Name="Form">
+                    <GroupBox Header="Estimation" Margin="0,0,0,8">
+                        <WrapPanel Margin="6">
+                            <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
+                            <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" />
+                            <Label Content="Temps" Target="{Binding ElementName=TrainingTime}" />
+                            <ComboBox x:Name="TrainingTime" Width="95" />
+                            <Label Content="MV" Target="{Binding ElementName=TrainingMv}" />
+                            <ComboBox x:Name="TrainingMv" Width="95" />
+                            <Label Content="PV" Target="{Binding ElementName=TrainingPv}" />
+                            <ComboBox x:Name="TrainingPv" Width="95" />
+                        </WrapPanel>
+                    </GroupBox>
+                    <GroupBox Header="Validation" Margin="0,0,0,8">
+                        <WrapPanel Margin="6">
+                            <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
+                            <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" />
+                            <Label Content="Temps" Target="{Binding ElementName=ValidationTime}" />
+                            <ComboBox x:Name="ValidationTime" Width="95" />
+                            <Label Content="MV" Target="{Binding ElementName=ValidationMv}" />
+                            <ComboBox x:Name="ValidationMv" Width="95" />
+                            <Label Content="PV" Target="{Binding ElementName=ValidationPv}" />
+                            <ComboBox x:Name="ValidationPv" Width="95" />
+                        </WrapPanel>
+                    </GroupBox>
+                    <WrapPanel Margin="0,0,0,8">
+                        <Label Content="Unité MV" Target="{Binding ElementName=MvUnit}" />
+                        <TextBox x:Name="MvUnit" Width="65" MaxLength="40" />
+                        <Label Content="Tolérance des plateaux MV" Target="{Binding ElementName=MvTolerance}" />
+                        <TextBox x:Name="MvTolerance" Width="82" />
+                        <Label Content="Unité PV" Target="{Binding ElementName=PvUnit}" />
+                        <TextBox x:Name="PvUnit" Width="65" MaxLength="40" />
+                        <Label Content="Tolérance PV avant échelon" Target="{Binding ElementName=PvTolerance}" />
+                        <TextBox x:Name="PvTolerance" Width="82" />
+                    </WrapPanel>
+                    <CheckBox x:Name="Confirmed" Margin="0,2,0,8">
+                        <TextBlock TextWrapping="Wrap" Text="Les deux essais ont été réalisés en boucle ouverte, sans saturation connue, avec les mêmes unités et dans des conditions comparables." />
+                    </CheckBox>
+                    <WrapPanel Margin="0,0,0,10">
+                        <Button Content="_Estimer et enregistrer" Click="Calculate" />
+                        <Label Content="Études" Target="{Binding ElementName=StudyList}" Margin="10,0,0,0" />
+                        <ComboBox x:Name="StudyList" Width="260" DisplayMemberPath="Label" SelectionChanged="ShowStudy" />
+                    </WrapPanel>
+                </StackPanel>
+                <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
+                <TextBlock x:Name="PlotLegend" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <Canvas x:Name="Plot" Height="226" ClipToBounds="True" SizeChanged="ResizePlot"
+                        AutomationProperties.Name="Comparaison entre PV mesurée et prédite sur l’essai de validation" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.2.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.3.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -78,6 +78,43 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude)
+    {
+        var csv = new StringBuilder("timestamp;mv;pv\n");
+        var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
+        for (var i = 0; i < 60; i++)
+        {
+            var t = i - 6;
+            var y = 8 - 3 * amplitude * (1 - Math.Exp(-Math.Max(0, t - 2.5) / 4));
+            csv.Append(FormattableString.Invariant($"{start.AddSeconds(i):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
+        }
+
+        // The CSV parser accepts up to six fractional digits; use an exact seconds representation.
+        var stepRaw = Encoding.UTF8.GetBytes(csv.ToString().Replace(".0000000+00:00", "Z", StringComparison.Ordinal));
+        var stepMapping = new CsvMapping("timestamp", "pv", "PV", "bar");
+        var (stepResult, stepVersion) = await engine.AnalyzeAsync(stepRaw, ";", stepMapping, default);
+        var stepSummary = new ImportSummary(Guid.NewGuid(), $"essai-{day}.csv", Convert.ToHexString(SHA256.HashData(stepRaw)), DateTimeOffset.UtcNow);
+        var step = new CsvImport(stepSummary, ";", stepMapping, stepResult, stepVersion, stepRaw);
+        restored.SaveImport(project.Id, step);
+        return step;
+    }
+
+    var training = await SaveStepAsync(1, 2);
+    var validation = await SaveStepAsync(2, -1.5);
+    var columns = new StepColumns("timestamp", "mv", "pv");
+    var (fit, fitVersion) = await engine.IdentifyAsync(new StepImport(training, columns),
+        new StepImport(validation, columns), 0.01, 0.01, default);
+    Require(Math.Abs(fit.Gain + 3) < 1e-5 && Math.Abs(fit.TauSeconds - 4) < 1e-5 &&
+        Math.Abs(fit.DelaySeconds - 2.5) < 1e-5 && fit.Validation.Rmse < 1e-6,
+        "Analytic FOPDT parameters and holdout prediction agree through the process boundary.");
+    var study = new FopdtStudy(Guid.NewGuid(), training.Summary.Id, validation.Summary.Id, columns, columns,
+        "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, fitVersion, fit);
+    restored.SaveFopdt(project.Id, study);
+    Throws<InvalidDataException>(() => restored.SaveFopdt(Guid.NewGuid(), study with { Id = Guid.NewGuid() }));
+    var persisted = new SqliteProjectStore(legacyPath).ListFopdt(project.Id).Single();
+    Require(persisted.Id == study.Id && persisted.ValidationId == validation.Summary.Id &&
+        persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
@@ -87,7 +124,7 @@ try
     }
     catch (OperationCanceledException) { }
 
-    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV quality and provenance, and pre-cancellation passed.");
+    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT holdout and persistence, and pre-cancellation passed.");
 }
 finally
 {

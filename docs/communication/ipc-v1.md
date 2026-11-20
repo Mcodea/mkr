@@ -11,3 +11,7 @@ Erreur : `{"version":1,"requestId":"abc123","engineVersion":"0.2.0","error":{"co
 ## Extension CSV du moteur 0.2
 
 Le plafond du message passe à 1 500 000 octets. Le client v1 conserve la même requête ping. Les opérations `inspect_csv` et `analyze_csv` prennent `raw` (octets originaux en Base64) et `delimiter` (virgule ou point-virgule). L’analyse demande aussi `timeColumn`, `valueColumn`, `role` et `unit`. La réponse contient `headers`, `preview` (200 enregistrements au plus) et `rowCount`. L’analyse ajoute `quality` et son `algorithmVersion`. Les erreurs CSV utilisent le même format d’enveloppe avec les codes `csv_limit`, `csv_header`, `csv_width`, `csv_empty`, `csv_encoding_or_syntax` et `csv_mapping`.
+
+## Extension identification du moteur 0.3
+
+Le plafond passe à 2 900 000 octets. `identify_fopdt` reçoit `training` et `validation`, chacun avec `raw` (Base64), `delimiter`, `timeColumn`, `mvColumn` et `pvColumn`, plus `mvTolerance` et `pvTolerance` (nombres). Le client accorde 30 secondes à cette opération. Le résultat contient paramètres et bornes, diagnostics séparés, avertissements et version d’algorithme. Les codes `fit_*` distinguent les erreurs de méthode des erreurs CSV.

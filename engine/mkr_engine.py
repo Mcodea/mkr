@@ -7,8 +7,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
-ENGINE_VERSION = "0.2.0"
-MAX_REQUEST_BYTES = 1_500_000
+ENGINE_VERSION = "0.3.0"
+MAX_REQUEST_BYTES = 2_900_000
 
 
 def unique_object(pairs):
@@ -43,6 +43,17 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
+    elif request["operation"] == "identify_fopdt":
+        try:
+            from fopdt import identify
+            result = identify(request["payload"])
+        except ImportError:
+            code = "fit_dependency"
+        except ValueError as error:
+            error_code = str(error)
+            code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
+        else:
+            return {**response, "result": result}
     elif request["operation"] in ("inspect_csv", "analyze_csv"):
         try:
             result = process_csv(request["payload"], request["operation"] == "inspect_csv")
@@ -62,4 +73,4 @@ def respond(raw):
 
 if __name__ == "__main__":
     response = respond(sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1))
-    sys.stdout.buffer.write(json.dumps(response, separators=(",", ":")).encode("utf-8"))
+    sys.stdout.buffer.write(json.dumps(response, separators=(",", ":"), allow_nan=False).encode("utf-8"))

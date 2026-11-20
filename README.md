@@ -1,12 +1,13 @@
 # MKR
 
-MKR est un logiciel Windows d’assistance à l’ingénierie de la régulation industrielle. Le socle permet de créer et rouvrir des projets locaux, de décrire un procédé et d’importer un CSV avec conservation de l’original et rapport de qualité descriptive.
+MKR est un logiciel Windows d’assistance à l’ingénierie de la régulation industrielle. Le socle permet de créer et rouvrir des projets locaux, de décrire un procédé et d’importer un CSV avec conservation de l’original et rapport de qualité descriptive. Il permet aussi d’enregistrer une étude FOPDT exploratoire avec deux essais historiques distincts.
 
 ## Construire et exécuter
 
 Prérequis : Windows x64, SDK .NET 10 et Python 3.12. Python doit être disponible sous la commande `python`, ou configuré avec le chemin complet de l’interpréteur via `MKR_PYTHON`. L'accès à NuGet est nécessaire à la première restauration.
 
 ```powershell
+python -m pip install -r engine/requirements.txt
 dotnet restore MKR.slnx
 dotnet build MKR.slnx -c Release --no-restore
 dotnet run --project src/Mkr.Desktop -c Release --no-build
@@ -23,6 +24,9 @@ dotnet run --project tests/Mkr.Smoke -c Release --no-build
 
 Sous Linux, le moteur et ses tests peuvent être exécutés avec `python3`. Avec le SDK .NET 10, les tests d’intégration peuvent être exécutés directement avec `MKR_PYTHON=python3 dotnet run --project tests/Mkr.Smoke -c Release`.
 
+- [Plan de développement](docs/DEVELOPMENT_PLAN.md)
+- [Avancement](docs/PROGRESS.md)
+- [Identification FOPDT](docs/science/fopdt-echelon.md)
 - [Périmètre et traçabilité](docs/requirements/traceabilite.md)
 - [Architecture et risques](docs/architecture/socle.md)
 - [Décisions du socle](docs/adr/0001-socle.md)

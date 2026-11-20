@@ -5,7 +5,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IFopdtEngine
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -32,6 +32,27 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (ReadCsvResult(result, expectQuality: true), version);
     }
 
+    public async Task<(FopdtResult Result, string EngineVersion)> IdentifyAsync(StepImport training,
+        StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token)
+    {
+        static object Source(StepImport source) => new
+        {
+            raw = source.Import.Original,
+            source.Import.Delimiter,
+            source.Columns.TimeColumn,
+            source.Columns.MvColumn,
+            source.Columns.PvColumn
+        };
+        var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
+        var (result, version) = await CallAsync("identify_fopdt", payload, token).ConfigureAwait(false);
+        var fit = result.Deserialize<FopdtResult>(JsonOptions);
+        if (fit is null || string.IsNullOrEmpty(fit.AlgorithmVersion) || fit.TauSeconds <= 0 ||
+            fit.DelaySeconds < 0 || fit.Gain == 0 || fit.Warnings is null ||
+            fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 })
+            throw new InvalidDataException("Résultat FOPDT incompatible avec le contrat.");
+        return (fit, version);
+    }
+
     private static CsvResult ReadCsvResult(JsonElement result, bool expectQuality)
     {
         var csv = result.Deserialize<CsvResult>(JsonOptions);
@@ -48,7 +69,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+        deadline.CancelAfter(TimeSpan.FromSeconds(operation == "identify_fopdt" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

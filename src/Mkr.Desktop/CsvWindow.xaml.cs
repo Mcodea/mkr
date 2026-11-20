@@ -11,12 +11,14 @@ namespace Mkr.Desktop;
 public partial class CsvWindow : Window
 {
     private readonly CsvWorkspace _workspace;
+    private readonly FopdtWorkspace _fopdt;
     private readonly CancellationTokenSource _lifetime = new();
 
-    internal CsvWindow(CsvWorkspace workspace)
+    internal CsvWindow(CsvWorkspace workspace, FopdtWorkspace fopdt)
     {
         InitializeComponent();
         _workspace = workspace;
+        _fopdt = fopdt;
         Title = $"MKR — {workspace.ProjectName}";
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
@@ -102,6 +104,12 @@ public partial class CsvWindow : Window
             File.WriteAllBytes(dialog.FileName, import.Original);
             StatusText.Text = "Fichier original exporté.";
         }
+        catch (Exception error) { ShowError(error); }
+    }
+
+    private void OpenFopdt(object sender, RoutedEventArgs args)
+    {
+        try { new FopdtWindow(_fopdt) { Owner = this }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 

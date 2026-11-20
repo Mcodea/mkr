@@ -6,7 +6,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class SqliteProjectStore : IProjectStore, IImportStore
+public sealed class SqliteProjectStore : IProjectStore, IImportStore, IFopdtStore
 {
     private readonly string _connectionString;
 
@@ -48,8 +48,24 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore
                     PRAGMA user_version = 2;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 2;
             case 2:
+                command.CommandText = """
+                    CREATE TABLE fopdt_studies (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        project_id TEXT NOT NULL REFERENCES projects(id),
+                        training_id TEXT NOT NULL REFERENCES csv_imports(id),
+                        validation_id TEXT NOT NULL REFERENCES csv_imports(id),
+                        created_at TEXT NOT NULL,
+                        metadata TEXT NOT NULL,
+                        CHECK(training_id <> validation_id)
+                    );
+                    CREATE INDEX fopdt_studies_project ON fopdt_studies(project_id, created_at, id);
+                    PRAGMA user_version = 3;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 3:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -161,6 +177,43 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore
         command.Parameters.AddWithValue("$metadata",
             JsonSerializer.Serialize(new ImportMetadata(import.Delimiter, import.Mapping, import.Result, import.EngineVersion)));
         command.ExecuteNonQuery();
+    }
+
+    public IReadOnlyList<FopdtStudy> ListFopdt(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT metadata FROM fopdt_studies
+            WHERE project_id = $project ORDER BY created_at DESC, id
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        using var reader = command.ExecuteReader();
+        var studies = new List<FopdtStudy>();
+        while (reader.Read())
+            studies.Add(JsonSerializer.Deserialize<FopdtStudy>(reader.GetString(0))
+                ?? throw new InvalidDataException("Étude FOPDT illisible."));
+        return studies;
+    }
+
+    public void SaveFopdt(Guid projectId, FopdtStudy study)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO fopdt_studies (id, project_id, training_id, validation_id, created_at, metadata)
+            SELECT $id, $project, $training, $validation, $created, $metadata
+            WHERE EXISTS (SELECT 1 FROM csv_imports WHERE id = $training AND project_id = $project)
+              AND EXISTS (SELECT 1 FROM csv_imports WHERE id = $validation AND project_id = $project)
+            """;
+        command.Parameters.AddWithValue("$id", study.Id.ToString());
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$training", study.TrainingId.ToString());
+        command.Parameters.AddWithValue("$validation", study.ValidationId.ToString());
+        command.Parameters.AddWithValue("$created", study.CalculatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Les deux imports doivent appartenir au projet.");
     }
 
     private static ImportSummary ReadSummary(SqliteDataReader reader) =>
