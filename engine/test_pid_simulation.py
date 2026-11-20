@@ -1,4 +1,7 @@
 import unittest
+import json
+
+from mkr_engine import respond
 
 from pid_simulation import calculate
 from pi_simulation import calculate as pi_calculate
@@ -86,6 +89,20 @@ class FilteredPidTests(unittest.TestCase):
         self.assertTrue(all(point["mv"] is None or point["mv"] <= 10 for point in result["points"]))
         self.assertLess(result["points"][0]["cv"], 0)
         self.assertTrue(any(point["derivative"] > 0 for point in result["points"][:-1]))
+
+    def test_ipc_is_versioned_and_rejects_invalid_filter(self):
+        request = {"version": 1, "requestId": "pid-prototype",
+                   "operation": "simulate_pid_experimental", "payload": case()}
+        answer = respond(json.dumps(request).encode())
+        self.assertNotIn("error", answer)
+        self.assertEqual(answer["requestId"], "pid-prototype")
+        self.assertEqual(answer["result"]["algorithmVersion"], "0.1.0")
+        self.assertEqual(answer["result"]["controllerForm"],
+                         "ideal_dependent_pid_derivative_on_pv")
+        self.assertEqual(answer["result"]["points"][-1]["cv"], None)
+        request["payload"]["controller"]["filterSeconds"] = 0
+        invalid = respond(json.dumps(request).encode())
+        self.assertEqual(invalid["error"]["code"], "pid_domain")
 
     def test_parameter_limits_and_grid(self):
         for changes, error in (
