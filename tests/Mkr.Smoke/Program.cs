@@ -164,8 +164,9 @@ try
     var (broida, broidaVersion) = await engine.IdentifyAsync(ModelFamily.BroidaFOPDT,
         new StepImport(training, columns), new StepImport(validation, columns),
         0.01, 0.01, default);
+    var evidence = broida.BroidaEvidence ??
+        throw new InvalidOperationException("Broïda crossing evidence missing.");
     Require(broidaVersion == fitVersion &&
-        broida.BroidaEvidence is { } evidence &&
         broida.StandardErrors is null &&
         Math.Abs(broida.Gain + 3) < 0.05 &&
         broida.TauSeconds is { } broidaTau && Math.Abs(broidaTau - 4) < 0.45 &&
