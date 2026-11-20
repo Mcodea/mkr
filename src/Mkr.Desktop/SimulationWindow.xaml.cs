@@ -174,13 +174,10 @@ public partial class SimulationWindow : Window
         var points = study.Result.Imc.Points;
         if (Math.Abs(x1 - x0) < 10)
         {
-            var nearest = points
+            var selected = points
                 .Where(p => p.Seconds >= range.Start && p.Seconds <= range.End)
-                .Select((p, index) => (Point: p, Index: index))
-                .OrderBy(p => Math.Abs(p.Point.Seconds - b))
+                .OrderBy(p => Math.Abs(p.Seconds - b))
                 .FirstOrDefault();
-            // The actual index is resolved against the persisted original simulation grid.
-            var selected = points.FirstOrDefault(p => p.Seconds == nearest.Point?.Seconds);
             if (selected is not null)
             {
                 _cursorTime = selected.Seconds;
