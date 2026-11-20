@@ -1,0 +1,18 @@
+# Comparaison PI sur modèle FOPDT
+
+Après avoir enregistré une étude FOPDT, la sélectionner dans la fenêtre d’identification. Le panneau **Réglages PI théoriques** compare IMC/Lambda et SIMC avec le même temps de réponse choisi, en secondes. Les comparaisons et leurs versions restent attachées à l’étude du modèle et peuvent être rouvertes.
+
+## Méthode 1.0.0
+
+Pour un procédé autorégulant stable `G(s) = K exp(−θs)/(τs+1)`, avec K non nul, τ strictement positif et θ positif ou nul, saisir une cible positive. Cette cible représente λ pour IMC/Lambda et τc pour SIMC. Ce sont des paramètres de calcul, sans mesure du temps de réponse réel.
+
+| Méthode | Kp | Ti |
+|---|---|---|
+| IMC/Lambda selon MKR-SPEC-001 §8 | τ / [K(λ+θ)] | τ |
+| SIMC PI selon MKR-SPEC-001 §8 | τ / [K(τc+θ)] | min(τ, 4(τc+θ)) |
+
+La forme est idéale continue, `u = u₀ + Kp(e + ∫e dt / Ti)` avec `e = SP − PV`. Le signe de Kp suit celui de K. Kp s’exprime en unité MV par unité PV et Ti en secondes. Le coefficient parallèle `Ki = Kp/Ti` s’exprime en unité MV par unité PV et par seconde, pour les mêmes conventions. Cette conversion n’est pas une correspondance avec un bloc constructeur.
+
+Les réglages héritent du statut exploratoire de l’étude. Lorsque la cible est plus courte que le retard estimé, le logiciel demande d’examiner la robustesse. Les limitations d’actionneur, l’anti-windup, la discrétisation et le comportement en présence de perturbations nécessitent une simulation ou des essais appropriés avant toute application.
+
+Vérification : cas de gain négatif, activation et inactivation de la borne intégrale SIMC, rejet des entrées hors domaine. Dans le cas IMC sans retard, un test évalue la boucle fermée à plusieurs fréquences et retrouve la réponse analytique `1/(λs+1)` du modèle nominal continu. [Skogestad, 2003](https://doi.org/10.1016/S0959-1524(02)00062-8)

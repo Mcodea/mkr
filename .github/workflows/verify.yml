@@ -1,0 +1,33 @@
+name: Vérification MKR
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Installer le moteur scientifique
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements.txt
+          python -m pip check
+      - name: Restaurer et auditer les dépendances
+        run: dotnet restore MKR.slnx
+      - name: Compiler la solution WPF
+        run: dotnet build MKR.slnx -c Release --no-restore
+      - name: Tester le contrat Python
+        run: python -m unittest discover -s engine -v
+      - name: Tester SQLite et le processus Python depuis .NET
+        run: dotnet run --project tests/Mkr.Smoke -c Release --no-build
