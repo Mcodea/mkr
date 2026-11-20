@@ -1,12 +1,14 @@
 namespace Mkr.Core;
 
 public sealed record PiScenario(double SampleSeconds, double DurationSeconds, double Setpoint, double MinimumMv,
-    double MaximumMv, double Disturbance, double DisturbanceAtSeconds);
+    double MaximumMv, double Disturbance, double DisturbanceAtSeconds, double? MaximumMvRate = null);
 
 public sealed record SimulationPoint(double Seconds, double Pv, double? Cv, double? Mv, double? Disturbance);
 
+public sealed record SetpointResponse(double WindowEndSeconds, double? OvershootPv, double? SettlingSeconds);
+
 public sealed record SimulationRun(double Iae, double Ise, double SaturationSeconds, int FrozenSteps,
-    double FinalError, SimulationPoint[] Points);
+    double FinalError, SimulationPoint[] Points, double RateLimitedSeconds = 0, SetpointResponse? SetpointResponse = null);
 
 public sealed record PiSimulationResult(string AlgorithmVersion, string[] Warnings, SimulationRun Imc, SimulationRun Simc);
 

@@ -21,6 +21,7 @@ public partial class OpenLoopWindow : Window
         _workspace = workspace;
         _model = model;
         InitializeComponent();
+        RateLabel.Content = $"Vitesse max. ΔMV ({model.MvUnit}/s, facultative)";
         Units.Text = $"Étude FOPDT {model.Label}\n" +
             $"Écarts autour du point initial. ΔMV en {model.MvUnit}, ΔPV en {model.PvUnit}.";
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
@@ -39,13 +40,24 @@ public partial class OpenLoopWindow : Window
             return;
         }
 
+        double? rate = null;
+        if (!string.IsNullOrWhiteSpace(Rate.Text))
+        {
+            if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
+            {
+                Message.Text = "La vitesse maximale de MV doit être strictement positive.";
+                return;
+            }
+            rate = maximumRate;
+        }
+
         ScenarioForm.IsEnabled = false;
         Message.Text = "Simulation en cours…";
         var token = _lifetime.Token;
         try
         {
             var (result, version) = await _workspace.SimulateOpenLoopAsync(_model,
-                new OpenLoopScenario(sample, duration, step, at, lower, upper), token);
+                new OpenLoopScenario(sample, duration, step, at, lower, upper, rate), token);
             token.ThrowIfCancellationRequested();
             _shown = result;
             Message.Text = result.Warnings.Contains("response_beyond_horizon")
@@ -53,7 +65,8 @@ public partial class OpenLoopWindow : Window
                 : "";
             Report.Text = $"Simulation exploratoire · méthode {result.AlgorithmVersion} · moteur {version}\n" +
                 $"ΔPV finale {result.Points[^1].Pv:G5} {_model.PvUnit} · " +
-                $"ΔPV asymptotique {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s\n" +
+                $"ΔPV asymptotique {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s · " +
+                $"vitesse limitée {result.RateLimitedSeconds:G5} s\n" +
                 $"ΔPV ({_model.PvUnit}) · bleu : simulée · orange : niveau initial";
             ExportButton.IsEnabled = true;
             DrawPlot();

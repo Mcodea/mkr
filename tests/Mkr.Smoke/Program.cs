@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.8.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.9.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -141,12 +141,12 @@ try
         persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
 
     var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
-        new OpenLoopScenario(1, 8, 4, 1, -2, 2), default);
-    Require(openLoopVersion == "0.8.0" && openLoop.Points.Length == 9 &&
+        new OpenLoopScenario(1, 8, 4, 1, -2, 2, 1), default);
+    Require(openLoopVersion == "0.9.0" && openLoop.Points.Length == 9 &&
         openLoop.Points[0].AppliedMv == 0 && openLoop.Points[1].RequestedMv == 4 &&
-        openLoop.Points[1].AppliedMv == 2 && openLoop.Points[3].Pv == 0 &&
-        Math.Abs(openLoop.Points[4].Pv - (-6 * (1 - Math.Exp(-0.5 / 4)))) < 1e-5 &&
-        openLoop.Points[^1].AppliedMv is null && openLoop.SaturationSeconds == 7,
+        openLoop.Points[1].AppliedMv == 1 && openLoop.Points[2].AppliedMv == 2 && openLoop.Points[3].Pv == 0 &&
+        Math.Abs(openLoop.Points[4].Pv - (-3 * (1 - Math.Exp(-0.5 / 4)))) < 1e-5 &&
+        openLoop.Points[^1].AppliedMv is null && openLoop.SaturationSeconds == 7 && openLoop.RateLimitedSeconds == 1,
         "The open-loop step and fractional delay survive the process boundary without a PI tuning.");
 
     var trainingSecond = await SaveStepAsync(3, 2, ModelFamily.SOPDT);
@@ -194,16 +194,19 @@ try
     Require(reopenedPi.ModelId == study.Id && reopenedPi.Result.Simc == linkedPi.Simc &&
         restored.ListPi(Guid.NewGuid(), study.Id).Count == 0, "PI settings stay linked to the source model and project.");
 
-    var scenario = new PiScenario(0.1, 5, 1, -0.1, 0.1, 0, 0);
+    var scenario = new PiScenario(0.1, 5, 1, -0.1, 0.1, 0.2, 3, 0.25);
     var (simulation, simulationVersion) = await engine.SimulatePiAsync(fit, linkedPi, scenario, default);
     Require(simulation.Imc.Points.Length == 51 && simulation.Imc.Points.All(p => p.Mv is null or >= -0.1 and <= 0.1) &&
-        simulation.Imc.Points[^1].Mv is null && simulation.Imc.SaturationSeconds > 0,
+        simulation.Imc.Points[^1].Mv is null && simulation.Imc.SaturationSeconds > 0 &&
+        simulation.Imc.Points[0].Mv == -0.025 && simulation.Imc.RateLimitedSeconds > 0 &&
+        simulation.Imc.SetpointResponse is { WindowEndSeconds: 3, OvershootPv: 0, SettlingSeconds: null },
         "The sampled simulation respects actuator bounds and reports saturation.");
     var simulationStudy = new PiSimulationStudy(Guid.NewGuid(), piStudy.Id, DateTimeOffset.UtcNow,
         simulationVersion, scenario, simulation);
     restored.SaveSimulation(project.Id, simulationStudy);
     var reopenedSimulation = new SqliteProjectStore(legacyPath).ListSimulations(project.Id, piStudy.Id).Single();
     Require(reopenedSimulation.Scenario == scenario && reopenedSimulation.Result.Imc.Points.SequenceEqual(simulation.Imc.Points) &&
+        reopenedSimulation.Result.Imc.SetpointResponse == simulation.Imc.SetpointResponse &&
         restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
     using var cancellation = new CancellationTokenSource();

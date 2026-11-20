@@ -38,8 +38,18 @@ class OpenLoopSimulationTests(unittest.TestCase):
         self.assertIn("response_beyond_horizon", delayed["warnings"])
         self.assertTrue(all(point["pv"] == 0 for point in delayed["points"]))
 
+    def test_rate_limited_steps_match_superposed_analytic_responses(self):
+        result = simulate(maximumMvRate=4)["result"]
+        self.assertEqual(result["rateLimitedSeconds"], 0.25)
+        self.assertEqual(result["saturationSeconds"], 1.5)
+        self.assertEqual([point["appliedMv"] for point in result["points"][2:5]], [1, 2, 2])
+        for point in result["points"]:
+            expected = sum(-2 * (1 - math.exp(-max(0, point["seconds"] - onset) / 4))
+                           for onset in (0.85, 1.10))
+            self.assertAlmostEqual(point["pv"], expected, places=12)
+
     def test_invalid_scenarios(self):
-        for changes, code in ((dict(stepMv=True), "sim_input"), (dict(stepMv=0), "sim_domain"),
+        for changes, code in ((dict(stepMv=True), "sim_input"), (dict(maximumMvRate=0), "sim_domain"), (dict(stepMv=0), "sim_domain"),
                               (dict(stepAtSeconds=2), "sim_domain"), (dict(stepAtSeconds=0.1), "sim_grid")):
             with self.subTest(changes=changes):
                 self.assertEqual(simulate(**changes)["error"]["code"], code)

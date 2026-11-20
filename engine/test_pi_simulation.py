@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from pi_simulation import calculate
+from pi_simulation import calculate, response_metrics
 
 
 def payload(**changes):
@@ -36,6 +36,32 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(result["points"][3]["pv"], 0)
         self.assertAlmostEqual(result["points"][4]["pv"], -2 * (1 - math.exp(-0.05 / 4)), places=12)
         self.assertLess(result["points"][4]["mv"], 0)
+
+    def test_rate_constraint_also_freezes_integral_for_reverse_action(self):
+        result = calculate(payload(gain=-2, imc=dict(kp=-0.5, tiSeconds=4),
+                                   simc=dict(kp=-0.5, tiSeconds=2), maximumMvRate=1))["imc"]
+        mv = [0] + [point["mv"] for point in result["points"][:-1]]
+        self.assertEqual(mv[1], -0.1)
+        self.assertTrue(all(abs(next_mv - previous) <= 0.1 + 1e-12
+                            for previous, next_mv in zip(mv, mv[1:])))
+        self.assertGreater(result["rateLimitedSeconds"], 0)
+        self.assertGreater(result["frozenSteps"], 0)
+        self.assertEqual(result["saturationSeconds"], 0)
+
+    def test_response_metrics_are_signed_and_require_a_settled_tail(self):
+        points = [dict(seconds=t, pv=pv) for t, pv in enumerate([0, -2.4, -2, -2.01])]
+        self.assertEqual(response_metrics(points, -2), dict(
+            windowEndSeconds=3, overshootPv=abs(-2.4 + 2), settlingSeconds=2))
+        self.assertIsNone(response_metrics(points[:-1], -2)["settlingSeconds"])
+        self.assertIsNone(response_metrics(points, 0)["overshootPv"])
+
+    def test_response_window_ends_at_disturbance_even_with_sampled_delay(self):
+        result = calculate(payload(disturbance=3, disturbanceAtSeconds=3, delaySeconds=0.35))
+        for method in ("imc", "simc"):
+            run = result[method]
+            self.assertEqual(run["setpointResponse"], response_metrics(run["points"][:31], 1))
+        zero_window = calculate(payload(disturbance=3, disturbanceAtSeconds=0))["imc"]["setpointResponse"]
+        self.assertEqual(zero_window, dict(windowEndSeconds=0, overshootPv=None, settlingSeconds=None))
 
     def test_grid_and_action_validation(self):
         for changes, error in ((dict(durationSeconds=0.25), "sim_grid"),

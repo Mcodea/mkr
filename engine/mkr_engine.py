@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
-ENGINE_VERSION = "0.8.0"
+ENGINE_VERSION = "0.9.0"
 MAX_REQUEST_BYTES = 2_900_000
 
 

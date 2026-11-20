@@ -93,13 +93,14 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             imc = new { tuning.Imc.Kp, tuning.Imc.TiSeconds },
             simc = new { tuning.Simc.Kp, tuning.Simc.TiSeconds },
             scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint, scenario.MinimumMv,
-            scenario.MaximumMv, scenario.Disturbance, scenario.DisturbanceAtSeconds
+            scenario.MaximumMv, scenario.Disturbance, scenario.DisturbanceAtSeconds, scenario.MaximumMvRate
         };
         var (result, version) = await CallAsync("simulate_pi", payload, token).ConfigureAwait(false);
         var simulation = result.Deserialize<PiSimulationResult>(JsonOptions);
         if (simulation is null || string.IsNullOrEmpty(simulation.AlgorithmVersion) || simulation.Warnings is null ||
             simulation.Imc?.Points is not { Length: >= 3 and <= 5001 } imc ||
             simulation.Simc?.Points is not { Length: >= 3 and <= 5001 } simc ||
+            simulation.Imc.SetpointResponse is null || simulation.Simc.SetpointResponse is null ||
             imc.Length != simc.Length || imc[^1].Seconds != scenario.DurationSeconds ||
             simc[^1].Seconds != scenario.DurationSeconds)
             throw new InvalidDataException("Résultat de simulation incompatible avec le contrat.");
@@ -112,7 +113,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var payload = new
         {
             model.Gain, model.TauSeconds, model.DelaySeconds, scenario.SampleSeconds, scenario.DurationSeconds,
-            scenario.StepMv, scenario.StepAtSeconds, scenario.MinimumMv, scenario.MaximumMv
+            scenario.StepMv, scenario.StepAtSeconds, scenario.MinimumMv, scenario.MaximumMv, scenario.MaximumMvRate
         };
         var (result, version) = await CallAsync("simulate_open_loop", payload, token).ConfigureAwait(false);
         var simulation = result.Deserialize<OpenLoopResult>(JsonOptions);

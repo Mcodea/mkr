@@ -23,6 +23,7 @@ public partial class SimulationWindow : Window
         _model = model;
         _tuning = tuning;
         InitializeComponent();
+        RateLabel.Content = $"Vitesse max. ΔMV ({model.MvUnit}/s, facultative)";
         Units.Text = $"Cible PI : {tuning.Result.ResponseSeconds:G5} s. Déviations autour du point initial : " +
             $"consigne et PV en {model.PvUnit}, saturation et perturbation en {model.MvUnit}.";
         Saved.ItemsSource = _workspace.Simulations(_tuning.Id);
@@ -40,13 +41,24 @@ public partial class SimulationWindow : Window
             Message.Text = "Saisissez les sept valeurs numériques du scénario.";
             return;
         }
+        double? rate = null;
+        if (!string.IsNullOrWhiteSpace(Rate.Text))
+        {
+            if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
+            {
+                Message.Text = "La vitesse maximale de MV doit être strictement positive.";
+                return;
+            }
+            rate = maximumRate;
+        }
+
         ScenarioForm.IsEnabled = false;
         Message.Text = "Simulation en cours…";
         var token = _lifetime.Token;
         try
         {
             var study = await _workspace.SimulateAsync(_model, _tuning,
-                new PiScenario(sample, duration, setpoint, lower, upper, disturbance, at), token);
+                new PiScenario(sample, duration, setpoint, lower, upper, disturbance, at, rate), token);
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
@@ -75,6 +87,7 @@ public partial class SimulationWindow : Window
         Upper.Text = input.MaximumMv.ToString("G17");
         Disturbance.Text = input.Disturbance.ToString("G17");
         DisturbanceAt.Text = input.DisturbanceAtSeconds.ToString("G17");
+        Rate.Text = input.MaximumMvRate?.ToString("G17") ?? "";
         var result = simulation.Result;
         var warnings = result.Warnings.Select(code => code switch
         {
@@ -83,15 +96,25 @@ public partial class SimulationWindow : Window
             _ => "Simulation exploratoire sur modèle nominal."
         });
         Report.Text = $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
-            $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n{string.Join(" ", warnings)}";
+            $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
+            $"{ResponseWindow(result.Imc.SetpointResponse)}{string.Join(" ", warnings)}";
         Legend.Text = $"ΔPV ({_model.PvUnit}) · bleu : IMC/Lambda · orange : SIMC";
         DrawPlot();
     }
 
     private string Metrics(SimulationRun run) =>
         $"IAE {run.Iae:G5} {_model.PvUnit}·s · ISE {run.Ise:G5} {_model.PvUnit}²·s · " +
-        $"saturation {run.SaturationSeconds:G5} s · intégration gelée {run.FrozenSteps} pas · " +
-        $"erreur finale {run.FinalError:G5} {_model.PvUnit}";
+        $"saturation {run.SaturationSeconds:G5} s · vitesse limitée {run.RateLimitedSeconds:G5} s · " +
+        $"intégration gelée {run.FrozenSteps} pas · " +
+        $"erreur finale {run.FinalError:G5} {_model.PvUnit}" +
+        (run.SetpointResponse is { } response
+            ? $" · dépassement {(response.OvershootPv is { } peak ? $"{peak:G5} {_model.PvUnit}" : "—")}" +
+              $" · temps de réponse ±5 % {(response.SettlingSeconds is { } time ? $"{time:G5} s" : "—")}"
+            : "");
+
+    private static string ResponseWindow(SetpointResponse? response) => response is null
+        ? ""
+        : $"Fenêtre de réponse à la consigne [0, {response.WindowEndSeconds:G5}] s · — : valeur indisponible.\n";
 
     private void ResizePlot(object sender, SizeChangedEventArgs args) => DrawPlot();
 

@@ -23,6 +23,10 @@
                     <Label Content="ΔMV max." Target="{Binding ElementName=Upper}" />
                     <TextBox x:Name="Upper" Width="75" />
                 </WrapPanel>
+                <WrapPanel Margin="0,0,0,6">
+                    <Label x:Name="RateLabel" Target="{Binding ElementName=Rate}" />
+                    <TextBox x:Name="Rate" Width="90" />
+                </WrapPanel>
                 <WrapPanel Margin="0,0,0,8">
                     <Button Content="_Simuler" Click="Run" />
                     <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export"
