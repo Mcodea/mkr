@@ -4,7 +4,8 @@ using Mkr.Core;
 namespace Mkr.Desktop;
 
 internal sealed class IdentificationWorkspace(Project project, IImportStore imports, IIdentificationStore studies,
-    IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine, IOpenLoopEngine openLoopEngine)
+    IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine, IOpenLoopEngine openLoopEngine,
+    IPidPrototypeEngine pidEngine)
 {
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
@@ -105,6 +106,17 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
             nominalVersion, scenario, nominal, sensitivity);
         piStore.SaveSimulation(project.Id, study);
         return study;
+    }
+
+    public Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
+        IdentificationStudy model, PiStudy tuning, PidPrototypeCoefficients controller,
+        PiScenario scenario, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id ||
+            model.Result.TauSeconds is not > 0)
+            throw new InvalidOperationException("L'essai PID exige un modèle FOPDT et le réglage PI associés.");
+        // Explicitly offline, non-persistent prototype. The source model and tune are immutable.
+        return pidEngine.SimulatePidPrototypeAsync(model.Result, controller, scenario, token);
     }
 
     public Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
