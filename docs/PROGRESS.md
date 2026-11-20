@@ -41,3 +41,12 @@
 - Tests Python de contrat, origine UTC, indices source, décimation, invalidité temporelle/numérique.
 - Documentation : `docs/ui/UI-03B1-trial-preview.md`. Compilation Windows/CI et revue visuelle **à confirmer**.
 - **La sélection de période n'est pas appliquée à l'estimation** ; prochaine phase UI-03B2 nécessite une conception scientifique et de traçabilité spécifique.
+
+## UI-03B2 — identification sur plages sources immuables
+
+- Recherche comparative documentée : LOOP-PRO Tuner et MathWorks System Identification (sélection visuelle, données d'estimation/validation séparées), voir `docs/ui/UI-03B2-windowed-identification.md`.
+- Envoi facultatif de deux plages `rowStart` / `rowEnd` (bornes inclusives, ligne 0 après l'en-tête), distinctes pour estimation et validation; validation Python des bornes, puis application des gardes scientifiques existants.
+- Interface permettant de confirmer une période depuis la prévisualisation MV/PV d'origine; liaison de la sélection à l'import et au mapping; absence de plage = comportement historique intégral.
+- Enregistrement des plages optionnelles dans `IdentificationStudy` sérialisée en SQLite, sans migration de schéma ni remplacement des originaux.
+- Tests scientifiques Python et test smoke C# ajoutés pour la traçabilité et la persistance. CI Windows et revue visuelle **à exécuter**.
+- Limites : rendu décimé pouvant masquer les événements courts; ce lot n'ajoute ni prétraitement automatique, ni classification de boucle fermée, ni preuve de qualification industrielle.
