@@ -71,7 +71,7 @@ def respond(raw):
             code = "fit_dependency"
         except ValueError as error:
             error_code = str(error)
-            code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
+            code = error_code if error_code.startswith(("fit_", "csv_", "broida_")) else "fit_data"
         else:
             return {**response, "result": result}
     elif request["operation"] == "simulate_pid_experimental":
