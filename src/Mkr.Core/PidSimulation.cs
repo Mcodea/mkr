@@ -20,5 +20,5 @@ public interface IPidPrototypeEngine
 {
     Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
         IdentificationResult model, PidPrototypeCoefficients coefficients,
-        PiScenario scenario, CancellationToken token);
+        PiScenario scenario, CancellationToken token, double[]? measurementNoise = null);
 }
