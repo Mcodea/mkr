@@ -7,3 +7,10 @@
 - Simulation en boucle ouverte disponible depuis une étude FOPDT. Le scénario applique un échelon de MV borné, affiche la réponse PV et exporte les séries en CSV. La simulation est calculée à la demande et l’export conserve les séries.
 - Prochaines tâches du jalon simulation : modes de commande et transitions, scénarios comparatifs supplémentaires et revue graphique Windows.
 - Blocage matériel : l’environnement local est Linux. L’examen graphique exige une session Windows. La CI utilise un agent Windows pour compiler et exécuter les tests automatisés.
+
+## Lot SIM-02 — transition manuelle vers automatique (branche dédiée)
+
+- Opération moteur expérimentale `simulate_pi_transition`, indépendante du parcours WPF actuel : suivi d’intégrale sur MV appliquée, bascule sans saut de CV calculée, limites d’amplitude et de vitesse, série de modes et diagnostics.
+- Tests de non-régression ajoutés : transfert nominal, saturation, limitation de vitesse, procédé inverse à retard fractionnaire, entrées invalides. Résultat de la CI à vérifier avant validation.
+- Spécification : `docs/science/pi-manual-auto.md`.
+- À intégrer au lot suivant : modèles et contrat .NET, interface WPF, persistance SQLite, comparaison graphique, essais Windows. Aucun transfert PLC ; aucune qualification industrielle.
