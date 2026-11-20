@@ -1,16 +1,18 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class SqliteProjectStore : IProjectStore
+public sealed class SqliteProjectStore : IProjectStore, IImportStore
 {
     private readonly string _connectionString;
 
     public SqliteProjectStore(string path)
     {
-        _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
+        _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = true }.ToString();
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
         using var command = connection.CreateCommand();
@@ -29,8 +31,25 @@ public sealed class SqliteProjectStore : IProjectStore
                     PRAGMA user_version = 1;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 1;
             case 1:
+                command.CommandText = """
+                    ALTER TABLE projects ADD COLUMN description TEXT NOT NULL DEFAULT '';
+                    CREATE TABLE csv_imports (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        project_id TEXT NOT NULL REFERENCES projects(id),
+                        file_name TEXT NOT NULL,
+                        sha256 TEXT NOT NULL,
+                        imported_at TEXT NOT NULL,
+                        original BLOB NOT NULL,
+                        metadata TEXT NOT NULL
+                    );
+                    CREATE INDEX csv_imports_project ON csv_imports(project_id, imported_at, id);
+                    PRAGMA user_version = 2;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 2:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -62,6 +81,93 @@ public sealed class SqliteProjectStore : IProjectStore
         command.Parameters.AddWithValue("$created", project.CreatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         command.ExecuteNonQuery();
     }
+
+    public string ReadDescription(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT description FROM projects WHERE id = $project";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        return (string?)command.ExecuteScalar() ?? throw new InvalidDataException("Projet introuvable.");
+    }
+
+    public void SaveDescription(Guid projectId, string description)
+    {
+        if (description.Length > 4000)
+            throw new ArgumentException("La description est limitée à 4 000 caractères.", nameof(description));
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE projects SET description = $description WHERE id = $project";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$description", description);
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Projet introuvable.");
+    }
+
+    public IReadOnlyList<ImportSummary> ListImports(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, file_name, sha256, imported_at FROM csv_imports
+            WHERE project_id = $project ORDER BY imported_at DESC, id
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        using var reader = command.ExecuteReader();
+        var summaries = new List<ImportSummary>();
+        while (reader.Read())
+            summaries.Add(ReadSummary(reader));
+        return summaries;
+    }
+
+    public CsvImport ReadImport(Guid projectId, Guid importId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT id, file_name, sha256, imported_at, original, metadata
+            FROM csv_imports WHERE project_id = $project AND id = $id
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$id", importId.ToString());
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+            throw new InvalidDataException("Import introuvable dans ce projet.");
+        var summary = ReadSummary(reader);
+        var original = reader.GetFieldValue<byte[]>(4);
+        if (Convert.ToHexString(SHA256.HashData(original)) != summary.Sha256)
+            throw new InvalidDataException("L’empreinte du fichier original ne correspond pas.");
+        var metadata = JsonSerializer.Deserialize<ImportMetadata>(reader.GetString(5))
+            ?? throw new InvalidDataException("Métadonnées CSV indisponibles.");
+        return new CsvImport(summary, metadata.Delimiter, metadata.Mapping, metadata.Result, metadata.EngineVersion, original);
+    }
+
+    public void SaveImport(Guid projectId, CsvImport import)
+    {
+        if (import.Result.Quality is null || Convert.ToHexString(SHA256.HashData(import.Original)) != import.Summary.Sha256)
+            throw new InvalidDataException("L’import doit contenir l’original vérifié et son rapport.");
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO csv_imports (id, project_id, file_name, sha256, imported_at, original, metadata)
+            VALUES ($id, $project, $file, $sha, $date, $original, $metadata)
+            """;
+        command.Parameters.AddWithValue("$id", import.Summary.Id.ToString());
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$file", import.Summary.FileName);
+        command.Parameters.AddWithValue("$sha", import.Summary.Sha256);
+        command.Parameters.AddWithValue("$date", import.Summary.ImportedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$original", import.Original);
+        command.Parameters.AddWithValue("$metadata",
+            JsonSerializer.Serialize(new ImportMetadata(import.Delimiter, import.Mapping, import.Result, import.EngineVersion)));
+        command.ExecuteNonQuery();
+    }
+
+    private static ImportSummary ReadSummary(SqliteDataReader reader) =>
+        new(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
+            DateTimeOffset.ParseExact(reader.GetString(3), "O", CultureInfo.InvariantCulture));
+
+    private sealed record ImportMetadata(string Delimiter, CsvMapping Mapping, CsvResult Result, string EngineVersion);
 
     private SqliteConnection Open()
     {

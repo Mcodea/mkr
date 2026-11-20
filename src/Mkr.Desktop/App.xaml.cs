@@ -20,7 +20,7 @@ public partial class App : Application
             var python = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
             var engine = new PythonDiagnostics(python, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
             var model = new WorkspaceViewModel(store, engine);
-            MainWindow = new WindowView { DataContext = model };
+            MainWindow = new WindowView(store, engine) { DataContext = model };
             MainWindow.Closed += (_, _) => model.CancelDiagnostics();
             MainWindow.Show();
         }

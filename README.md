@@ -1,6 +1,6 @@
 # MKR
 
-MKR est un logiciel Windows d’assistance à l’ingénierie de la régulation industrielle. Le socle permet de créer des projets locaux, de retrouver la liste enregistrée et de vérifier le moteur Python.
+MKR est un logiciel Windows d’assistance à l’ingénierie de la régulation industrielle. Le socle permet de créer et rouvrir des projets locaux, de décrire un procédé et d’importer un CSV avec conservation de l’original et rapport de qualité descriptive.
 
 ## Construire et exécuter
 
@@ -27,4 +27,5 @@ Sous Linux, le moteur et ses tests peuvent être exécutés avec `python3`. Avec
 - [Architecture et risques](docs/architecture/socle.md)
 - [Décisions du socle](docs/adr/0001-socle.md)
 - [Contrat du moteur](docs/communication/ipc-v1.md)
+- [Import et qualité des CSV](docs/science/qualite-csv.md)
 - [Plan de vérification](docs/testing/verification.md)

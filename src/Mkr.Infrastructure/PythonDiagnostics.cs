@@ -5,9 +5,46 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task<string> GetVersionAsync(CancellationToken cancellationToken)
+    {
+        var (result, version) = await CallAsync("ping", new { }, cancellationToken).ConfigureAwait(false);
+        if (result.EnumerateObject().Count() != 1 || !result.TryGetProperty("status", out var status) ||
+            status.ValueKind != JsonValueKind.String || status.GetString() != "ready")
+            throw new InvalidDataException("Réponse Python incompatible avec le diagnostic v1.");
+        return version;
+    }
+
+    public async Task<CsvResult> InspectAsync(byte[] original, string delimiter, CancellationToken token)
+    {
+        var (result, _) = await CallAsync("inspect_csv", new { raw = original, delimiter }, token).ConfigureAwait(false);
+        return ReadCsvResult(result, expectQuality: false);
+    }
+
+    public async Task<(CsvResult Result, string EngineVersion)> AnalyzeAsync(byte[] original,
+        string delimiter, CsvMapping mapping, CancellationToken token)
+    {
+        var payload = new { raw = original, delimiter, mapping.TimeColumn, mapping.ValueColumn, mapping.Role, mapping.Unit };
+        var (result, version) = await CallAsync("analyze_csv", payload, token).ConfigureAwait(false);
+        return (ReadCsvResult(result, expectQuality: true), version);
+    }
+
+    private static CsvResult ReadCsvResult(JsonElement result, bool expectQuality)
+    {
+        var csv = result.Deserialize<CsvResult>(JsonOptions);
+        if (csv is null || csv.Headers is null || csv.Preview is null || csv.RowCount < 1 ||
+            csv.Preview.Length != Math.Min(200, csv.RowCount) ||
+            csv.Preview.Any(row => row is null || row.Length != csv.Headers.Length) ||
+            expectQuality != (csv.Quality is not null))
+            throw new InvalidDataException("Résultat CSV incompatible avec le contrat.");
+        return csv;
+    }
+
+    private async Task<(JsonElement Result, string Version)> CallAsync(
+        string operation, object payload, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -32,7 +69,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             Task diagnostics = process.StandardError.BaseStream.CopyToAsync(Stream.Null, token);
             var output = process.StandardOutput.ReadToEndAsync(token);
             var requestId = Guid.NewGuid().ToString("N");
-            var request = JsonSerializer.Serialize(new { version = 1, requestId, operation = "ping", payload = new Dictionary<string, string>() });
+            var request = JsonSerializer.Serialize(new { version = 1, requestId, operation, payload }, JsonOptions);
             await process.StandardInput.WriteAsync(request.AsMemory(), token).ConfigureAwait(false);
             process.StandardInput.Close();
             await Task.WhenAll(process.WaitForExitAsync(token), output, diagnostics).ConfigureAwait(false);
@@ -46,14 +83,16 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
                 !version.TryGetInt32(out var protocol) || protocol != 1 ||
                 !reply.TryGetProperty("requestId", out var id) || id.ValueKind != JsonValueKind.String ||
                 id.GetString() != requestId ||
-                !reply.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Object ||
-                result.EnumerateObject().Count() != 1 || !result.TryGetProperty("status", out var status) ||
-                status.ValueKind != JsonValueKind.String || status.GetString() != "ready" ||
                 !reply.TryGetProperty("engineVersion", out var engine) || engine.ValueKind != JsonValueKind.String ||
                 string.IsNullOrWhiteSpace(engine.GetString()))
                 throw new InvalidDataException("Réponse Python incompatible avec le contrat v1.");
 
-            return engine.GetString()!;
+            if (reply.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object &&
+                error.TryGetProperty("code", out var code) && code.ValueKind == JsonValueKind.String)
+                throw new CsvInputException(code.GetString()!);
+            if (!reply.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Object)
+                throw new InvalidDataException("Résultat Python absent.");
+            return (result.Clone(), engine.GetString()!);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

@@ -17,11 +17,11 @@ class ContractTests(unittest.TestCase):
         )
         self.assertEqual(result.stderr, b"")
         self.assertEqual(json.loads(result.stdout), {
-            "version": 1, "requestId": "job-42", "engineVersion": "0.1.0", "result": {"status": "ready"},
+            "version": 1, "requestId": "job-42", "engineVersion": "0.2.0", "result": {"status": "ready"},
         })
 
     def test_invalid_json(self):
-        for raw in (b"{", b"\xff", b'{"version":1,"version":1}', b" " * 8193):
+        for raw in (b"{", b"\xff", b'{"version":1,"version":1}', b" " * 1_500_001):
             with self.subTest(raw=raw[:64]):
                 self.assertEqual(respond(raw)["error"]["code"], "invalid_json")
 

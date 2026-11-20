@@ -14,9 +14,10 @@
         <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
             <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,0,0,8"
                        AutomationProperties.LiveSetting="Polite" />
+            <Button HorizontalAlignment="Left" Content="_Ouvrir le projet sélectionné" Click="OpenProject" Margin="0,0,0,6" />
             <Button HorizontalAlignment="Left" Content="_Vérifier le moteur Python" Command="{Binding CheckEngine}" />
         </StackPanel>
-        <DataGrid ItemsSource="{Binding Projects}" AutoGenerateColumns="False" IsReadOnly="True"
+        <DataGrid x:Name="ProjectList" SelectionMode="Single" ItemsSource="{Binding Projects}" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" AlternationCount="2" AlternatingRowBackground="#F3F5F8"
                   AutomationProperties.Name="Projets enregistrés">
             <DataGrid.Columns>

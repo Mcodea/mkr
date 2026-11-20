@@ -5,6 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Mkr.Infrastructure/Mkr.Infrastructure.csproj" />
-    <None Include="../../engine/mkr_engine.py" Link="engine/mkr_engine.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../engine/*.py" Exclude="../../engine/test_*.py" Link="engine/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
