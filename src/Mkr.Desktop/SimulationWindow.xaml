@@ -47,6 +47,9 @@
                         <Button Content="Analyser 27 _combinaisons" Click="RunCombined"
                                 Margin="8,0,0,0"
                                 ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
+                        <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
+                                Margin="8,0,0,0"
+                                ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
                         <Label Content="Simulations" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
                         <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
                         <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
