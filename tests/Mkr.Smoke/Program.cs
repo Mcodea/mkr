@@ -252,9 +252,9 @@ try
     // Combined 3×3×3 sensitivity has aligned pointwise envelopes and round-trips via SQLite.
     var (combined, combinedVersion) = await engine.AnalyzeCombinedAsync(
         fit, linkedPi, scenario, 20, default);
+    var envelope = combined.Envelope ?? throw new InvalidOperationException("Missing combined PV envelope.");
     Require(combinedVersion == simulationVersion &&
         combined.Cases.Length == 27 &&
-        combined.Envelope is { } envelope &&
         envelope.Seconds.Length == simulation.Imc.Points.Length &&
         Math.Abs(combined.Cases[0].Imc.Iae - simulation.Imc.Iae) < 1e-10 &&
         combined.Cases.Select(x => x.Key).Distinct().Count() == 27 &&
