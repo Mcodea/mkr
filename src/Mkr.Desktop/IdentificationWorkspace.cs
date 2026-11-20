@@ -108,6 +108,14 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return study;
     }
 
+    public Task<(PiSimulationResult Result, string EngineVersion)> PreviewPiAsync(
+        IdentificationStudy model, PiStudy tuning, PiScenario scenario, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
+            throw new InvalidOperationException("La référence PI doit provenir du même modèle FOPDT.");
+        return piEngine.SimulatePiAsync(model.Result, tuning.Result, scenario, token);
+    }
+
     public Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
         IdentificationStudy model, PiStudy tuning, PidPrototypeCoefficients controller,
         PiScenario scenario, CancellationToken token)
