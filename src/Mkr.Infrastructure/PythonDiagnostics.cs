@@ -144,6 +144,48 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (simulation, version);
     }
 
+    public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token)
+    {
+        if (model.TauSeconds is not > 0 || variationPercent is <= 0 or > 50 ||
+            !double.IsFinite(variationPercent))
+            throw new CsvInputException("robust_domain");
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds,
+            imc = new { tuning.Imc.Kp, tuning.Imc.TiSeconds },
+            simc = new { tuning.Simc.Kp, tuning.Simc.TiSeconds },
+            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint,
+            scenario.MinimumMv, scenario.MaximumMv, scenario.Disturbance,
+            scenario.DisturbanceAtSeconds, scenario.MaximumMvRate, variationPercent
+        };
+        var (result, version) = await CallAsync("simulate_pi_robustness", payload, token).ConfigureAwait(false);
+        var sensitivity = result.Deserialize<PiRobustnessResult>(JsonOptions);
+        string[] keys = ["nominal", "gain_minus", "gain_plus", "tau_minus",
+            "tau_plus", "delay_minus", "delay_plus"];
+        if (sensitivity is null || string.IsNullOrWhiteSpace(sensitivity.AlgorithmVersion) ||
+            sensitivity.VariationPercent != variationPercent ||
+            sensitivity.Warnings is null || sensitivity.Cases is not { Length: 7 } cases ||
+            cases.Where((item, index) => item is null || item.Key != keys[index] ||
+                !double.IsFinite(item.Gain) || !double.IsFinite(item.TauSeconds) ||
+                !double.IsFinite(item.DelaySeconds) || item.TauSeconds <= 0 ||
+                item.Gain == 0 || item.DelaySeconds < 0 ||
+                item.Warnings is null || !ValidMetrics(item.Imc) || !ValidMetrics(item.Simc)).Any())
+            throw new InvalidDataException("Résultat de robustesse PI incompatible avec le contrat.");
+        return (sensitivity, version);
+
+        static bool ValidMetrics(PiSensitivityMetrics? m) =>
+            m is not null && double.IsFinite(m.Iae) && m.Iae >= 0 &&
+            double.IsFinite(m.Ise) && m.Ise >= 0 &&
+            double.IsFinite(m.FinalError) &&
+            double.IsFinite(m.SaturationSeconds) && m.SaturationSeconds >= 0 &&
+            double.IsFinite(m.RateLimitedSeconds) && m.RateLimitedSeconds >= 0 &&
+            m.FrozenSteps >= 0 &&
+            (m.OvershootPv is null || double.IsFinite(m.OvershootPv.Value)) &&
+            (m.SettlingSeconds is null || double.IsFinite(m.SettlingSeconds.Value));
+    }
+
     public async Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
         IdentificationResult model, OpenLoopScenario scenario, CancellationToken token)
     {

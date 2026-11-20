@@ -38,6 +38,12 @@
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,8">
                         <Button Content="_Simuler et enregistrer" Click="Run" />
+                        <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>
+                        <TextBox x:Name="Variation" Width="62" Text="20"
+                                 ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
+                        <Button Content="_Comparer la robustesse" Click="RunRobustness"
+                                Style="{StaticResource MkrPrimaryButton}" Margin="8,0,0,0"
+                                ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
                         <Label Content="Simulations" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
                         <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
                         <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
@@ -50,10 +56,38 @@
                         <TextBlock x:Name="Report" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+                <Border x:Name="RobustnessPanel" Visibility="Collapsed"
+                        Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                        BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="03  ·  Sensibilité du réglage PI"
+                                   FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Foreground="{StaticResource MkrMuted}"/>
+                        <DataGrid x:Name="RobustnessGrid" HeadersVisibility="Column"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserAddRows="False" MaxHeight="340"
+                                  AutomationProperties.Name="Résultats de sensibilité IMC et SIMC">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Cas" Binding="{Binding Name}" Width="170"/>
+                                <DataGridTextColumn Header="K" Binding="{Binding Gain, StringFormat=G5}" Width="65"/>
+                                <DataGridTextColumn Header="τ (s)" Binding="{Binding Tau, StringFormat=G5}" Width="70"/>
+                                <DataGridTextColumn Header="θ (s)" Binding="{Binding Delay, StringFormat=G5}" Width="70"/>
+                                <DataGridTextColumn Header="IAE IMC" Binding="{Binding ImcIae, StringFormat=G5}" Width="95"/>
+                                <DataGridTextColumn Header="IAE SIMC" Binding="{Binding SimcIae, StringFormat=G5}" Width="95"/>
+                                <DataGridTextColumn Header="Sat. IMC (s)" Binding="{Binding ImcSaturation, StringFormat=G5}" Width="105"/>
+                                <DataGridTextColumn Header="Sat. SIMC (s)" Binding="{Binding SimcSaturation, StringFormat=G5}" Width="105"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="Étude exploratoire, un paramètre varie à la fois. Les coefficients PI restent fixes. Ne constitue pas une preuve de stabilité ni un intervalle de confiance."
+                                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}"
+                                   Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
                 <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="03  ·  Analyse temporelle" FontSize="16"
+                        <TextBlock Text="04  ·  Analyse temporelle" FontSize="16"
                                    FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,10"
                                    Foreground="{StaticResource MkrMuted}"/>

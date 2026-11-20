@@ -12,8 +12,19 @@ public sealed record SimulationRun(double Iae, double Ise, double SaturationSeco
 
 public sealed record PiSimulationResult(string AlgorithmVersion, string[] Warnings, SimulationRun Imc, SimulationRun Simc);
 
+// Local one-factor sensitivity; not a statistical confidence interval or stability certificate.
+public sealed record PiSensitivityMetrics(double Iae, double Ise, double FinalError,
+    double SaturationSeconds, double RateLimitedSeconds, int FrozenSteps,
+    double? OvershootPv, double? SettlingSeconds);
+
+public sealed record PiSensitivityCase(string Key, double Gain, double TauSeconds,
+    double DelaySeconds, PiSensitivityMetrics Imc, PiSensitivityMetrics Simc, string[] Warnings);
+
+public sealed record PiRobustnessResult(string AlgorithmVersion, double VariationPercent,
+    PiSensitivityCase[] Cases, string[] Warnings);
+
 public sealed record PiSimulationStudy(Guid Id, Guid PiId, DateTimeOffset CalculatedAt, string EngineVersion,
-    PiScenario Scenario, PiSimulationResult Result)
+    PiScenario Scenario, PiSimulationResult Result, PiRobustnessResult? Robustness = null)
 {
     public string Label => $"{CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}";
 }

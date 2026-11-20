@@ -229,6 +229,26 @@ try
         reopenedSimulation.Result.Imc.SetpointResponse == simulation.Imc.SetpointResponse &&
         restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
+    // The sensitivity matrix keeps fixed PI coefficients and survives SQLite reopening.
+    var (sensitivity, robustnessVersion) = await engine.AnalyzeRobustnessAsync(
+        fit, linkedPi, scenario, 20, default);
+    Require(robustnessVersion == simulationVersion && sensitivity.Cases.Length == 7 &&
+        sensitivity.Cases[0].Key == "nominal" &&
+        Math.Abs(sensitivity.Cases[0].Imc.Iae - simulation.Imc.Iae) < 1e-10 &&
+        Math.Abs(sensitivity.Cases[2].Gain - fit.Gain * 1.2) < 1e-10,
+        "Seven FOPDT scenarios preserve the nominal simulation and explicit gain variation.");
+    var robustStudy = simulationStudy with
+    {
+        Id = Guid.NewGuid(), Robustness = sensitivity, CalculatedAt = DateTimeOffset.UtcNow
+    };
+    restored.SaveSimulation(project.Id, robustStudy);
+    var storedRobustness = new SqliteProjectStore(legacyPath).ListSimulations(project.Id, piStudy.Id)
+        .Single(item => item.Id == robustStudy.Id);
+    Require(storedRobustness.Robustness?.Cases.Length == 7 &&
+        storedRobustness.Robustness.Cases[2].Imc.Iae == sensitivity.Cases[2].Imc.Iae &&
+        storedRobustness.Scenario == scenario,
+        "Sensitivity hypotheses and per-case metrics survive SQLite reopening.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
@@ -238,7 +258,7 @@ try
     }
     catch (OperationCanceledException) { }
 
-    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, closed-loop simulation and pre-cancellation passed.");
+    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, closed-loop simulation, seven-case PI sensitivity persistence and pre-cancellation passed.");
 }
 finally
 {

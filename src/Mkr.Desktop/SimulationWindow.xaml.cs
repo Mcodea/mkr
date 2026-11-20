@@ -37,14 +37,16 @@ public partial class SimulationWindow : Window
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
-    private async void Run(object sender, RoutedEventArgs args)
+    private bool TryReadScenario(out PiScenario scenario)
     {
-        if (!Read(Sample, out var sample) || !Read(Duration, out var duration) || !Read(Setpoint, out var setpoint) ||
-            !Read(Lower, out var lower) || !Read(Upper, out var upper) || !Read(Disturbance, out var disturbance) ||
+        scenario = null!;
+        if (!Read(Sample, out var sample) || !Read(Duration, out var duration) ||
+            !Read(Setpoint, out var setpoint) || !Read(Lower, out var lower) ||
+            !Read(Upper, out var upper) || !Read(Disturbance, out var disturbance) ||
             !Read(DisturbanceAt, out var at))
         {
             Message.Text = "Saisissez les sept valeurs numériques du scénario.";
-            return;
+            return false;
         }
         double? rate = null;
         if (!string.IsNullOrWhiteSpace(Rate.Text))
@@ -52,22 +54,54 @@ public partial class SimulationWindow : Window
             if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
             {
                 Message.Text = "La vitesse maximale de MV doit être strictement positive.";
-                return;
+                return false;
             }
             rate = maximumRate;
         }
+        scenario = new PiScenario(sample, duration, setpoint, lower, upper, disturbance, at, rate);
+        return true;
+    }
 
+    private async void Run(object sender, RoutedEventArgs args)
+    {
+        if (!TryReadScenario(out var scenario))
+            return;
         ScenarioForm.IsEnabled = false;
         Message.Text = "Simulation en cours…";
         var token = _lifetime.Token;
         try
         {
-            var study = await _workspace.SimulateAsync(_model, _tuning,
-                new PiScenario(sample, duration, setpoint, lower, upper, disturbance, at, rate), token);
+            var study = await _workspace.SimulateAsync(_model, _tuning, scenario, token);
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
             Message.Text = "Simulation enregistrée.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { ScenarioForm.IsEnabled = true; }
+    }
+
+    private async void RunRobustness(object sender, RoutedEventArgs args)
+    {
+        if (!TryReadScenario(out var scenario))
+            return;
+        if (!Read(Variation, out var variation) || variation <= 0 || variation > 50)
+        {
+            Message.Text = "Indiquez une variation de sensibilité strictement supérieure à 0 et inférieure ou égale à 50 %.";
+            return;
+        }
+        ScenarioForm.IsEnabled = false;
+        Message.Text = "Calcul de sept scénarios de sensibilité en cours…";
+        var token = _lifetime.Token;
+        try
+        {
+            var study = await _workspace.AnalyzeRobustnessAsync(
+                _model, _tuning, scenario, variation, token);
+            var list = _workspace.Simulations(_tuning.Id);
+            Saved.ItemsSource = list;
+            Saved.SelectedItem = list.First(item => item.Id == study.Id);
+            Message.Text = "Analyse de sensibilité enregistrée avec sa simulation nominale.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -82,6 +116,45 @@ public partial class SimulationWindow : Window
         ZoomStatus.Text = "Horizon complet";
         CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
         ExportButton.IsEnabled = _shown is not null;
+        RobustnessPanel.Visibility = _shown?.Robustness is null
+            ? Visibility.Collapsed : Visibility.Visible;
+        if (_shown?.Robustness is { } sensitivity)
+        {
+            RobustnessGrid.ItemsSource = sensitivity.Cases.Select(caseItem => new
+            {
+                Name = caseItem.Key switch
+                {
+                    "nominal" => "Nominal",
+                    "gain_minus" => "Gain −",
+                    "gain_plus" => "Gain +",
+                    "tau_minus" => "Constante τ −",
+                    "tau_plus" => "Constante τ +",
+                    "delay_minus" => "Retard θ −",
+                    "delay_plus" => "Retard θ +",
+                    _ => caseItem.Key
+                },
+                caseItem.Gain,
+                Tau = caseItem.TauSeconds,
+                Delay = caseItem.DelaySeconds,
+                ImcIae = caseItem.Imc.Iae,
+                SimcIae = caseItem.Simc.Iae,
+                ImcSaturation = caseItem.Imc.SaturationSeconds,
+                SimcSaturation = caseItem.Simc.SaturationSeconds
+            }).ToArray();
+            Variation.Text = sensitivity.VariationPercent.ToString("G5", CultureInfo.CurrentCulture);
+            var worstImc = sensitivity.Cases.Max(c => c.Imc.Iae);
+            var worstSimc = sensitivity.Cases.Max(c => c.Simc.Iae);
+            RobustnessSummary.Text =
+                $"Variation individuelle ±{sensitivity.VariationPercent:G5} % autour du modèle FOPDT enregistré. " +
+                $"IAE maximale dans ces sept cas : IMC {worstImc:G5} {_model.PvUnit}·s ; " +
+                $"SIMC {worstSimc:G5} {_model.PvUnit}·s. " +
+                $"Méthode {sensitivity.AlgorithmVersion} · simulation nominale et paramètres conservés.";
+        }
+        else
+        {
+            RobustnessGrid.ItemsSource = null;
+            RobustnessSummary.Text = "";
+        }
         if (_shown is not { } simulation)
         {
             Report.Text = Legend.Text = "";
@@ -249,6 +322,8 @@ public partial class SimulationWindow : Window
             "sim_grid" => "Utilisez une durée et un instant de perturbation multiples du pas, pour 2 à 5 000 intervalles.",
             "sim_domain" => "Vérifiez le modèle, le pas positif, les limites de MV autour de zéro et l’instant de perturbation.",
             "sim_range" => "La dynamique calculée dépasse la plage numérique. Vérifiez le pas et le réglage.",
+            "robust_domain" => "Variation de sensibilité invalide : indiquez 0–50 %, avec un modèle FOPDT valide.",
+            "robust_input" => "Les paramètres de l'analyse de robustesse sont incomplets ou incompatibles.",
             _ => "Vérifiez les entrées et les unités du scénario."
         } : "Simulation indisponible. Vérifiez le stockage et le journal MKR.";
     }
