@@ -13,6 +13,7 @@
                            Text="Deux essais distincts du même procédé, avec un seul échelon de MV par CSV. La validation utilise le deuxième essai." />
                 <StackPanel x:Name="Form">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
+                        <StackPanel>
                         <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
                             <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" />
@@ -29,8 +30,10 @@
                                 ToolTip="Sélectionner une plage du CSV original pour le prochain calcul"/>
                         <TextBlock x:Name="TrainingRangeInfo" Text="Estimation : fichier complet" Margin="12,0,8,8"
                                    Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+                                            </StackPanel>
                     </GroupBox>
                     <GroupBox Header="Validation" Margin="0,0,0,8">
+                        <StackPanel>
                         <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
                             <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" />
@@ -47,6 +50,7 @@
                                 ToolTip="Sélectionner une plage indépendante pour la validation"/>
                         <TextBlock x:Name="ValidationRangeInfo" Text="Validation : fichier complet" Margin="12,0,8,8"
                                    Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+                                            </StackPanel>
                     </GroupBox>
                     <WrapPanel Margin="0,0,0,8">
                         <Label Content="Unité MV" Target="{Binding ElementName=MvUnit}" />
