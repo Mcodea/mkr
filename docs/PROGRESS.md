@@ -105,3 +105,13 @@ Hypothèses : les contributions prennent en compte le code rédigé dans les bra
 - Document scientifique : `docs/science/SIM-05A-pi-sensitivity.md`.
 - **Qualification non acquise** : aucune marge de stabilité ni intervalle de confiance ne peut être déduit de cette analyse; les effets combinés et essais industriels restent à couvrir.
 - L'indice global de réalisation estimée passerait d'environ 41 % à **43 %** si les tests CI Windows de ce lot réussissent. Estimation pondérée non contractuelle ; interfaces visuelles et validations terrain toujours en attente.
+
+## SIM-05B — grille combinée K × τ × θ
+
+- `engine/pi_combined_robustness.py` calcule 27 variantes déterministes du FOPDT nominal à niveaux −v/0/+v % pour K, τ et θ, **coefficients PI fixes**.
+- Retourne, pour les deux réglages IMC/SIMC, les métriques des 27 cas et une enveloppe PV min/max point par point calculée sur tous les scénarios au même horizon.
+- Exposition IPC `simulate_pi_combined`, validation .NET typée, persistance optionnelle dans l'étude existante sans migration SQLite.
+- Interface : action 27 combinaisons, tableau comparatif et zones d'enveloppe translucides derrière les réponses nominales, avec avertissement explicite « pas de bande de confiance ».
+- Tests Python et smoke .NET/SQLite ajoutés; document `docs/science/SIM-05B-combined-sensitivity.md`.
+- Les résultats ne constituent ni marge de stabilité ni garantie de robustesse ; simulation WPF réelle et qualification industrielle restent à faire.
+- Estimation globale du périmètre cible : **environ 45 %**, indicative, si la CI complète réussit; les PR restent non fusionnées.
