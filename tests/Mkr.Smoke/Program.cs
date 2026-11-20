@@ -160,6 +160,32 @@ try
             reopenedWindow.ValidationId == validation.Summary.Id,
         "Selected original row indices and independent import references survive SQLite reopening.");
 
+    // Broïda: a distinct 28%/40% estimator, with explicit crossings and holdout.
+    var (broida, broidaVersion) = await engine.IdentifyAsync(ModelFamily.BroidaFOPDT,
+        new StepImport(training, columns), new StepImport(validation, columns),
+        0.01, 0.01, default);
+    Require(broidaVersion == fitVersion &&
+        broida.BroidaEvidence is { } evidence &&
+        broida.StandardErrors is null &&
+        Math.Abs(broida.Gain + 3) < 0.05 &&
+        broida.TauSeconds is { } broidaTau && Math.Abs(broidaTau - 4) < 0.45 &&
+        Math.Abs(broida.DelaySeconds - 2.5) < 0.4 &&
+        evidence.Crossing28Seconds > 0 &&
+        evidence.Crossing40Seconds > evidence.Crossing28Seconds &&
+        evidence.TerminalSamples == 6,
+        "Broïda 28/40 FOPDT identification returns physical parameters and recorded evidence.");
+    var broidaStudy = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id,
+        validation.Summary.Id, columns, columns, "%", "bar", 0.01, 0.01,
+        DateTimeOffset.UtcNow, broidaVersion, broida, ModelFamily.BroidaFOPDT);
+    restored.SaveStudy(project.Id, broidaStudy);
+    var reopenedBroida = new SqliteProjectStore(legacyPath).ListStudies(project.Id)
+        .Single(item => item.Id == broidaStudy.Id);
+    Require(reopenedBroida.Family == ModelFamily.BroidaFOPDT &&
+        reopenedBroida.TrainingId == training.Summary.Id &&
+        reopenedBroida.ValidationId == validation.Summary.Id &&
+        reopenedBroida.Result.BroidaEvidence == evidence,
+        "Broïda crossing provenance and independent source references survive SQLite reopening.");
+
     var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
         new OpenLoopScenario(1, 8, 4, 1, -2, 2, 1), default);
     Require(openLoopVersion == "0.9.0" && openLoop.Points.Length == 9 &&
