@@ -136,3 +136,12 @@ Hypothèses : les contributions prennent en compte le code rédigé dans les bra
 - Tests scientifiques supplémentaires : raffinement temporel vers une référence fine, absence de pic dérivé sur un échelon initial SP, avertissement de filtre sous-échantillonné.
 - Gouvernance de qualité : `docs/validation/PID-06B-industrial-gates.md` sépare convention documentée, tests numériques, validation Windows, qualification de banc constructeur et autorisation terrain.
 - **Statut : conception et implémentation ; compilation Windows et essais CI à vérifier. Aucune qualification industrielle et aucun paramètre constructeur validé.**
+
+## PID-06C1 — Qualification numérique du capteur et filtre D
+
+- Simulation PID avec **bruit de capteur déterministe facultatif** sur la mesure PV, sans modifier directement le procédé ; PV physique et mesurée désormais distinctes dans le résultat.
+- Contrôle PID sur PV mesurée, indicateurs IAE/ISE sur PV physique (vérité simulée) ; aucun tirage aléatoire implicite et aucun enregistrement caché du vecteur de bruit.
+- Résultats moteur version 0.2.0 ; port .NET accepte facultativement des échantillons de bruit explicites, sans modifier le laboratoire WPF non bruité.
+- Tests d'oracles indépendants : récurrence D échantillonnée, choc de bruit, filtrage plus lent, erreurs de cardinalité/type/NaN/Inf, zéro bruit identique au nominal, et smoke Python–.NET.
+- `docs/validation/PID-06C1-noise-qualification.md` documente les limites, hypothèses et conditions avant usage industriel.
+- **Qualification industrielle non acquise** ; aucune donnée terrain ni bloc constructeur testé. CI Windows à vérifier sur le SHA final.

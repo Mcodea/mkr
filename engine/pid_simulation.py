@@ -16,7 +16,7 @@ def calculate(payload):
         "durationSeconds", "setpoint", "minimumMv", "maximumMv",
         "disturbance", "disturbanceAtSeconds",
     }
-    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate"} != required:
+    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate", "measurementNoise"} != required:
         raise ValueError("pid_input")
     gain, tau, delay, h, duration, sp, lower, upper, disturbance, event = (
         number(payload[key]) for key in (
@@ -47,6 +47,18 @@ def calculate(payload):
     if not 2 <= n <= 5000:
         raise ValueError("pid_grid")
     advance = plant_step(gain, tau, delay, h, duration)
+    # Sensor noise is a deterministic input, never an implicit random draw.
+    noisy = "measurementNoise" in payload
+    if noisy:
+        values = payload["measurementNoise"]
+        if not isinstance(values, list) or len(values) != n:
+            raise ValueError("pid_noise")
+        try:
+            noise = [number(value) for value in values]
+        except ValueError as error:
+            raise ValueError("pid_noise") from error
+    else:
+        noise = None
 
     pv = integral = derivative = previous_pv = previous_mv = 0.0
     iae = ise = saturated = rate_limited = 0.0
@@ -57,9 +69,12 @@ def calculate(payload):
     pv_change_gain = kp * td / (tf + h) if td > 0 else 0.0
 
     for k in range(n):
-        error = sp - pv
-        derivative = decay * derivative - pv_change_gain * (pv - previous_pv)
-        previous_pv = pv
+        measured_pv = pv + (noise[k] if noise is not None else 0.0)
+        if not math.isfinite(measured_pv):
+            raise ValueError("pid_range")
+        error = sp - measured_pv
+        derivative = decay * derivative - pv_change_gain * (measured_pv - previous_pv)
+        previous_pv = measured_pv
         raw = kp * error + integral + derivative
         if not math.isfinite(raw):
             raise ValueError("pid_range")
@@ -84,10 +99,13 @@ def calculate(payload):
         us.append(mv + applied_disturbance)
         points.append(dict(
             seconds=k * h, pv=pv, cv=raw, mv=mv,
-            disturbance=applied_disturbance, derivative=derivative
+            disturbance=applied_disturbance, derivative=derivative,
+            measuredPv=measured_pv
         ))
-        iae += abs(error) * h
-        ise += error * error * h
+        # Tracking performance reflects actual process PV, not a noisy sensor.
+        physical_error = sp - pv
+        iae += abs(physical_error) * h
+        ise += physical_error * physical_error * h
         saturated += h if raw != bounded else 0.0
         rate_limited += h if bounded != mv else 0.0
         pv = advance(pv, us)
@@ -96,11 +114,13 @@ def calculate(payload):
 
     points.append(dict(
         seconds=duration, pv=pv, cv=None, mv=None,
-        disturbance=None, derivative=None
+        disturbance=None, derivative=None, measuredPv=None
     ))
     response_end = event_index if disturbance != 0 else n
     warnings = ["exploratory_pid", "derivative_on_measurement",
                 "backward_euler_filter", "conditional_integration"]
+    if noisy:
+        warnings.append("deterministic_measurement_noise")
     if h > tau / 10:
         warnings.append("coarse_sample")
     if td > 0 and h > tf:
@@ -109,7 +129,7 @@ def calculate(payload):
         warnings.append("delay_beyond_horizon")
 
     return dict(
-        algorithmVersion="0.1.0",
+        algorithmVersion="0.2.0",
         controllerForm="ideal_dependent_pid_derivative_on_pv",
         warnings=warnings,
         iae=iae, ise=ise, finalError=sp-pv,

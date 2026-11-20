@@ -96,7 +96,7 @@ class FilteredPidTests(unittest.TestCase):
         answer = respond(json.dumps(request).encode())
         self.assertNotIn("error", answer)
         self.assertEqual(answer["requestId"], "pid-prototype")
-        self.assertEqual(answer["result"]["algorithmVersion"], "0.1.0")
+        self.assertEqual(answer["result"]["algorithmVersion"], "0.2.0")
         self.assertEqual(answer["result"]["controllerForm"],
                          "ideal_dependent_pid_derivative_on_pv")
         self.assertEqual(answer["result"]["points"][-1]["cv"], None)

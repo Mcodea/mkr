@@ -146,27 +146,41 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
 
     public async Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
         IdentificationResult model, PidPrototypeCoefficients coefficients,
-        PiScenario scenario, CancellationToken token)
+        PiScenario scenario, CancellationToken token, double[]? measurementNoise = null)
     {
         if (model.TauSeconds is not > 0)
             throw new InvalidDataException("Le prototype PID requiert un modèle FOPDT.");
-        var payload = new
+        // Never convert invalid or out-of-grid sensor fixtures into valid samples.
+        if (measurementNoise is not null &&
+            (measurementNoise.Length != (int)Math.Round(scenario.DurationSeconds / scenario.SampleSeconds) ||
+             measurementNoise.Any(x => !double.IsFinite(x) || Math.Abs(x) > 1e12)))
+            throw new CsvInputException("pid_noise");
+        var payload = new Dictionary<string, object?>
         {
-            model.Gain, model.TauSeconds, model.DelaySeconds,
-            controller = new
+            ["gain"] = model.Gain,
+            ["tauSeconds"] = model.TauSeconds,
+            ["delaySeconds"] = model.DelaySeconds,
+            ["controller"] = new
             {
                 coefficients.Kp, coefficients.TiSeconds,
                 coefficients.TdSeconds, coefficients.FilterSeconds
             },
-            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint,
-            scenario.MinimumMv, scenario.MaximumMv, scenario.Disturbance,
-            scenario.DisturbanceAtSeconds, scenario.MaximumMvRate
+            ["sampleSeconds"] = scenario.SampleSeconds,
+            ["durationSeconds"] = scenario.DurationSeconds,
+            ["setpoint"] = scenario.Setpoint,
+            ["minimumMv"] = scenario.MinimumMv,
+            ["maximumMv"] = scenario.MaximumMv,
+            ["disturbance"] = scenario.Disturbance,
+            ["disturbanceAtSeconds"] = scenario.DisturbanceAtSeconds,
+            ["maximumMvRate"] = scenario.MaximumMvRate
         };
+        if (measurementNoise is not null)
+            payload["measurementNoise"] = measurementNoise;
         var (result, version) = await CallAsync("simulate_pid_experimental", payload, token)
             .ConfigureAwait(false);
         var simulation = result.Deserialize<PidPrototypeResult>(JsonOptions);
         if (simulation is null ||
-            simulation.AlgorithmVersion != "0.1.0" ||
+            simulation.AlgorithmVersion != "0.2.0" ||
             simulation.ControllerForm != "ideal_dependent_pid_derivative_on_pv" ||
             simulation.Warnings is null ||
             simulation.Points is not { Length: >= 3 and <= 5001 } points ||
@@ -174,7 +188,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             points[0].Seconds != 0 ||
             points[^1].Seconds != scenario.DurationSeconds ||
             points[^1].Cv is not null || points[^1].Mv is not null ||
-            points[^1].Derivative is not null ||
+            points[^1].Derivative is not null || points[^1].MeasuredPv is not null ||
             !double.IsFinite(simulation.Iae) || simulation.Iae < 0 ||
             !double.IsFinite(simulation.Ise) || simulation.Ise < 0 ||
             !double.IsFinite(simulation.FinalError) ||
@@ -183,7 +197,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             points.Any(p => !double.IsFinite(p.Seconds) || !double.IsFinite(p.Pv) ||
                 (p.Cv is { } cv && !double.IsFinite(cv)) ||
                 (p.Mv is { } mv && !double.IsFinite(mv)) ||
-                (p.Derivative is { } derivative && !double.IsFinite(derivative))) ||
+                (p.Derivative is { } derivative && !double.IsFinite(derivative)) ||
+                (p.MeasuredPv is { } measured && !double.IsFinite(measured))) ||
             points.Zip(points.Skip(1), (a, b) => b.Seconds > a.Seconds).Any(ok => !ok) ||
             !IsValidPidGrid(points, scenario))
             throw new InvalidDataException("Simulation PID expérimentale incompatible avec le contrat.");
@@ -212,6 +227,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
                     point.Derivative is null && point.Disturbance is null;
             if (point.Cv is null || point.Mv is not { } mv ||
                 point.Derivative is null || point.Disturbance is null ||
+                point.MeasuredPv is null ||
                 mv < scenario.MinimumMv - tolerance || mv > scenario.MaximumMv + tolerance)
                 return false;
             if (scenario.MaximumMvRate is { } limit &&
