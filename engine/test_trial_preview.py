@@ -55,8 +55,9 @@ class TrialPreviewTests(unittest.TestCase):
         source = "timestamp;mv;pv\n2026-01-01T00:00:01Z;1;2\n2026-01-01T00:00:00Z;2;3"
         bad = base64.b64encode(source.encode()).decode()
         self.assertEqual(call(raw=bad)["error"]["code"], "preview_time")
-        malformed = base64.b64encode(source.replace(";2;3", ";inf;3").encode()).decode()
-        self.assertEqual(call(raw=malformed)["error"]["code"], "preview_time")
+        valid_source = "timestamp;mv;pv\\n2026-01-01T00:00:00Z;1;2\\n2026-01-01T00:00:01Z;2;inf"
+        malformed = base64.b64encode(valid_source.encode()).decode()
+        self.assertEqual(call(raw=malformed)["error"]["code"], "preview_data")
 
 
 if __name__ == "__main__":
