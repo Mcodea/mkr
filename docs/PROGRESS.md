@@ -94,3 +94,14 @@
 | **Total** | **100 %** | | **40,9 %** |
 
 Hypothèses : les contributions prennent en compte le code rédigé dans les branches/PR MKR non fusionnées, dont le socle et les lots d'interface. Les pourcentages arrondis sont révisables, car il n'existe pas de registre des exigences clos et approuvés. Une CI réussie atteste la compilation et les tests automatisés exécutés, pas la qualification scientifique sur données industrielles, la conformité du catalogue automate, le test graphique Windows ni la facilité de livraison à un utilisateur final. L'avancement de la branche `main` peut donc être inférieur à cet indice.
+
+## SIM-05A — Sensibilité FOPDT des réglages PI
+
+- Opération scientifique Python `simulate_pi_robustness`, utilisant sept scénarios (nominal, gain ±v, constante τ ±v, retard θ ±v) pour un pourcentage défini par l'utilisateur (0 < v ≤ 50, 20 % par défaut).
+- Coefficients PI IMC/Lambda et SIMC **fixes** ; chaque scénario utilise le moteur PI et ses métriques actuels, sans nouvelle loi de commande.
+- Contrat versionné `PiRobustnessResult`, contrôles .NET, étude nominale + matrice de sensibilité optionnelle enregistrée dans les métadonnées SQLite v6 sans migration.
+- Interface WPF : bouton de calcul, saisie du pourcentage, tableau comparatif des sept cas, pire IAE dans cet ensemble fini.
+- Tests Python (cas nominal, gain inverse, variations indépendantes, domaine et IPC) et smoke test .NET–Python–SQLite de relecture.
+- Document scientifique : `docs/science/SIM-05A-pi-sensitivity.md`.
+- **Qualification non acquise** : aucune marge de stabilité ni intervalle de confiance ne peut être déduit de cette analyse; les effets combinés et essais industriels restent à couvrir.
+- L'indice global de réalisation estimée passerait d'environ 41 % à **43 %** si les tests CI Windows de ce lot réussissent. Estimation pondérée non contractuelle ; interfaces visuelles et validations terrain toujours en attente.
