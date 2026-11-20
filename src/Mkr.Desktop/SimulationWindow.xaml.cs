@@ -62,6 +62,21 @@ public partial class SimulationWindow : Window
         return true;
     }
 
+    private void OpenPidPrototype(object sender, RoutedEventArgs args)
+    {
+        if (!TryReadScenario(out var scenario))
+            return;
+        try
+        {
+            new PidPrototypeWindow(_workspace, _model, _tuning, scenario)
+            { Owner = this }.ShowDialog();
+        }
+        catch (Exception error)
+        {
+            ShowError(error);
+        }
+    }
+
     private async void Run(object sender, RoutedEventArgs args)
     {
         if (!TryReadScenario(out var scenario))
