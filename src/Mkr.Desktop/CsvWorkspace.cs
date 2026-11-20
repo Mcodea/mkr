@@ -22,7 +22,7 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
         _original = null;
         await using var stream = File.OpenRead(path);
         var buffer = new byte[MaxBytes + 1];
-        var read = await stream.ReadAtLeastAsync(buffer, buffer.Length, throwIfEndOfStream: false, cancellationToken: token);
+        var read = await stream.ReadAtLeastAsync(buffer, buffer.Length, false, token);
         if (read > MaxBytes)
             throw new CsvInputException("csv_limit");
         var original = buffer[..read];
