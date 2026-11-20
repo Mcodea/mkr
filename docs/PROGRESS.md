@@ -59,3 +59,12 @@
 - Régression automatisée : pics courts, échelon, source entière, limites d'indices et test IPC sur CSV anomalique.
 - Spécification et recette : `docs/ui/UI-03C-extrema-preview.md`. Tests CI Windows/inspection graphique réels à contrôler.
 - Prochain lot : UI-04, simulation PI et graphiques comparatifs professionnels.
+
+## UI-04A — Comparaison de simulations PI (branche dédiée)
+
+- Refonte de `SimulationWindow.xaml` en sections scénario, indicateurs et analyse scientifique, basée sur les styles WPF de MKR.
+- Nouveau `PiComparisonPlot.cs` : SP/PV comparées, commandes CV/MV distinctes par méthode (IMC/Lambda et SIMC), bornes de MV et instant de perturbation, avec unités.
+- Les graphiques reposent directement sur les séries de simulation persistées; aucun recalcul de modèle ni changement des paramètres scientifiques.
+- Rapport affichant les fenêtres de réponse **pour les deux** méthodes, et export CSV existant conservé.
+- Documentation et recette : `docs/ui/UI-04A-pi-comparison.md`.
+- CI Windows et inspection visuelle sur Windows réel : **à vérifier**.
