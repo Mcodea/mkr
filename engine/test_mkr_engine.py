@@ -17,7 +17,7 @@ class ContractTests(unittest.TestCase):
         )
         self.assertEqual(result.stderr, b"")
         self.assertEqual(json.loads(result.stdout), {
-            "version": 1, "requestId": "job-42", "engineVersion": "0.4.0", "result": {"status": "ready"},
+            "version": 1, "requestId": "job-42", "engineVersion": "0.5.0", "result": {"status": "ready"},
         })
 
     def test_invalid_json(self):

@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.4.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.5.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -78,7 +78,7 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
-    async Task<CsvImport> SaveStepAsync(int day, double amplitude, bool secondOrder = false)
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT)
     {
         var csv = new StringBuilder("timestamp;mv;pv\n");
         var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
@@ -86,9 +86,12 @@ try
         {
             var t = i - 6;
             var x = Math.Max(0, t - 2.5);
-            var response = secondOrder
-                ? 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3
-                : 1 - Math.Exp(-x / 4);
+            var response = family switch
+            {
+                ModelFamily.SOPDT => 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3,
+                ModelFamily.Integrateur => x / 10,
+                _ => 1 - Math.Exp(-x / 4)
+            };
             var y = 8 - 3 * amplitude * response;
             csv.Append(FormattableString.Invariant($"{start.AddSeconds(i):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
         }
@@ -108,7 +111,7 @@ try
     var columns = new StepColumns("timestamp", "mv", "pv");
     var (fit, fitVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT, new StepImport(training, columns),
         new StepImport(validation, columns), 0.01, 0.01, default);
-    Require(Math.Abs(fit.Gain + 3) < 1e-5 && Math.Abs(fit.TauSeconds - 4) < 1e-5 &&
+    Require(Math.Abs(fit.Gain + 3) < 1e-5 && fit.TauSeconds is { } firstTau && Math.Abs(firstTau - 4) < 1e-5 &&
         Math.Abs(fit.DelaySeconds - 2.5) < 1e-5 && fit.Validation.Rmse < 1e-6,
         "Analytic FOPDT parameters and holdout prediction agree through the process boundary.");
     var study = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id, validation.Summary.Id, columns, columns,
@@ -135,11 +138,11 @@ try
     Require(persisted.Id == study.Id && persisted.Family == ModelFamily.FOPDT && persisted.ValidationId == validation.Summary.Id &&
         persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
 
-    var trainingSecond = await SaveStepAsync(3, 2, secondOrder: true);
-    var validationSecond = await SaveStepAsync(4, -1.5, secondOrder: true);
+    var trainingSecond = await SaveStepAsync(3, 2, ModelFamily.SOPDT);
+    var validationSecond = await SaveStepAsync(4, -1.5, ModelFamily.SOPDT);
     var (second, secondVersion) = await engine.IdentifyAsync(ModelFamily.SOPDT, new StepImport(trainingSecond, columns),
         new StepImport(validationSecond, columns), 0.01, 0.01, default);
-    Require(Math.Abs(second.Gain + 3) < 1e-5 && Math.Abs(second.TauSeconds - 5) < 1e-5 &&
+    Require(Math.Abs(second.Gain + 3) < 1e-5 && second.TauSeconds is { } slow && Math.Abs(slow - 5) < 1e-5 &&
         second.SecondTauSeconds is { } fast && Math.Abs(fast - 2) < 1e-5 && second.Validation.Rmse < 1e-6,
         "SOPDT poles and prediction agree through the process boundary.");
     var secondStudy = study with
@@ -152,6 +155,23 @@ try
     Require(restoredSecond.Family == ModelFamily.SOPDT && restoredSecond.Result.SecondTauSeconds == second.SecondTauSeconds,
         "The SOPDT family and both time constants survive reopening.");
 
+    var trainingThird = await SaveStepAsync(5, 2, ModelFamily.Integrateur);
+    var validationThird = await SaveStepAsync(6, -1.5, ModelFamily.Integrateur);
+    var (third, thirdVersion) = await engine.IdentifyAsync(ModelFamily.Integrateur, new StepImport(trainingThird, columns),
+        new StepImport(validationThird, columns), 0.01, 0.01, default);
+    Require(Math.Abs(third.Gain + 0.3) < 1e-7 && Math.Abs(third.DelaySeconds - 2.5) < 1e-7 &&
+        third.TauSeconds is null && third.Validation.Rmse < 1e-8,
+        "Integrating model has the expected slope and delay through the process boundary.");
+    var thirdStudy = study with
+    {
+        Id = Guid.NewGuid(), TrainingId = trainingThird.Summary.Id, ValidationId = validationThird.Summary.Id,
+        Family = ModelFamily.Integrateur, Result = third, EngineVersion = thirdVersion
+    };
+    restored.SaveStudy(project.Id, thirdStudy);
+    var reopenedThird = new SqliteProjectStore(legacyPath).ListStudies(project.Id).Single(item => item.Id == thirdStudy.Id);
+    Require(reopenedThird.Family == ModelFamily.Integrateur && reopenedThird.Result.TauSeconds is null,
+        "Integrating model persists without a finite time constant.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
@@ -161,7 +181,7 @@ try
     }
     catch (OperationCanceledException) { }
 
-    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT holdout and persistence, and pre-cancellation passed.");
+    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, and pre-cancellation passed.");
 }
 finally
 {

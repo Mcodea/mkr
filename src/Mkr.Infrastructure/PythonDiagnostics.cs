@@ -48,16 +48,24 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         {
             ModelFamily.FOPDT => "identify_fopdt",
             ModelFamily.SOPDT => "identify_sopdt",
+            ModelFamily.Integrateur => "identify_integrator",
             _ => throw new ArgumentOutOfRangeException(nameof(family))
         };
         var (result, version) = await CallAsync(operation, payload, token).ConfigureAwait(false);
         var fit = result.Deserialize<IdentificationResult>(JsonOptions);
-        if (fit is null || string.IsNullOrEmpty(fit.AlgorithmVersion) || fit.TauSeconds <= 0 ||
+        if (fit is null || string.IsNullOrEmpty(fit.AlgorithmVersion) ||
             fit.DelaySeconds < 0 || fit.Gain == 0 || fit.Warnings is null ||
-            fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 } ||
-            (family == ModelFamily.SOPDT && (fit.SecondTauSeconds is not > 0 || fit.SecondTauSeconds > fit.TauSeconds)) ||
-            (family == ModelFamily.FOPDT && fit.SecondTauSeconds is not null))
+            fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 })
             throw new InvalidDataException("Résultat d’identification incompatible avec le contrat.");
+        var validTimeConstants = family switch
+        {
+            ModelFamily.FOPDT => fit.TauSeconds is > 0 && fit.SecondTauSeconds is null,
+            ModelFamily.SOPDT => fit.TauSeconds is > 0 && fit.SecondTauSeconds is > 0 && fit.SecondTauSeconds <= fit.TauSeconds,
+            ModelFamily.Integrateur => fit.TauSeconds is null && fit.SecondTauSeconds is null,
+            _ => false
+        };
+        if (!validTimeConstants)
+            throw new InvalidDataException("Constantes de temps incompatibles avec la famille de modèle.");
         return (fit, version);
     }
 

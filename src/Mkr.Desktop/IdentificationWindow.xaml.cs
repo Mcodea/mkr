@@ -100,6 +100,7 @@ public partial class IdentificationWindow : Window
             "correlated_residuals" => "Résidus autocorrélés sur l’essai d’estimation.",
             "delay_derivative" => "Le retard estimé est trop proche d’un instant échantillonné pour linéariser sa réponse.",
             "fast_pole_resolution" => "La constante rapide est inférieure au pas médian d’échantillonnage.",
+            "integrator_validation_tail" => "La fin de l’essai de validation ne présente pas la dérive attendue.",
             "close_poles" => "Les deux constantes sont proches et peuvent être difficiles à distinguer.",
             "ill_conditioned" => "Sensibilités locales trop proches pour séparer les paramètres.",
             _ => code
@@ -107,10 +108,13 @@ public partial class IdentificationWindow : Window
         var uncertainty = result.StandardErrors is { } errors
             ? $"Erreurs-types locales conditionnelles (K, τ, θ) : {errors.Gain:G4} {study.PvUnit}/{study.MvUnit}, {errors.TauSeconds:G4} s, {errors.DelaySeconds:G4} s."
             : "Erreurs-types locales indisponibles.";
+        var gainUnit = study.Family == ModelFamily.Integrateur
+            ? $"{study.PvUnit}/({study.MvUnit}·s)" : $"{study.PvUnit}/{study.MvUnit}";
         var timeConstants = result.SecondTauSeconds is { } fast
-            ? $"τ lente = {result.TauSeconds:G5} s · τ rapide = {fast:G5} s"
-            : $"τ = {result.TauSeconds:G5} s";
-        FitReport.Text = $"Modèle {study.Family} exploratoire · K = {result.Gain:G5} {study.PvUnit}/{study.MvUnit} · " +
+            ? $" · τ lente = {result.TauSeconds:G5} s · τ rapide = {fast:G5} s"
+            : result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "";
+        var family = study.Family == ModelFamily.Integrateur ? "intégrateur" : study.Family.ToString();
+        FitReport.Text = $"Modèle {family} exploratoire · K = {result.Gain:G5} {gainUnit}" +
             $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
@@ -189,6 +193,7 @@ public partial class IdentificationWindow : Window
             "fit_data" => "Vérifiez les valeurs numériques MV/PV : les données manquantes et non finies empêchent l’estimation.",
             "fit_time" => "Les horodatages doivent inclure un décalage UTC et être strictement croissants.",
             "fit_recorded_mapping" => "Le rôle ou l’unité déclaré contredit le mapping enregistré lors de l’import.",
+            "fit_integrator_tail" => "L’essai d’estimation ne montre pas une dérive suffisante en fin d’échelon.",
             "fit_dependency" => "Installez les dépendances Python du fichier engine/requirements.txt avec l’interpréteur MKR.",
             "fit_solver" => "L’estimateur n’a pas convergé dans les limites prévues.",
             _ => "Vérifiez les colonnes et les données des deux imports."
