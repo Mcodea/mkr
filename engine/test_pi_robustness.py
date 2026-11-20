@@ -6,7 +6,8 @@ from test_pi_simulation import payload
 
 
 def scenario(**changes):
-    return payload(**(dict(delaySeconds=0.5, maximumMvRate=2) | changes)) | {"variationPercent": 20}
+    variation = changes.pop("variationPercent", 20)
+    return payload(**(dict(delaySeconds=0.5, maximumMvRate=2) | changes)) | {"variationPercent": variation}
 
 
 class PiRobustnessTests(unittest.TestCase):
