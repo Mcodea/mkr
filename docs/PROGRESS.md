@@ -15,3 +15,11 @@
 - Consignes et essais : `docs/ui/UI-01-project-workspace.md`.
 - Sans modification du moteur scientifique ni des données enregistrées; compilation CI Windows et revue visuelle manuelle **à confirmer**.
 - Prochain lot UX : réutilisation des styles et navigation dans les écrans CSV / identification / simulation, après validation de UI-01.
+
+## UI-02 — Espace CSV et qualité (branche dédiée)
+
+- Refonte ciblée de `CsvWindow.xaml` : zones source/format, mapping, imports enregistrés, tableau d'aperçu, qualité et provenance, description du procédé et accès à l'identification.
+- Tous les contrôles existants, leurs noms et handlers sont préservés. Aucune modification du moteur Python, de la base SQLite ni du stockage des originaux.
+- Guide de revue et tests : `docs/ui/UI-02-csv-workspace.md`.
+- **À vérifier** : compilation Windows, qualité graphique multi-DPI et non-régression des imports et études.
+- Prochain lot UX après preuves : visualisation des signaux et sélection de plages à partir de données sources traçables.
