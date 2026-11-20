@@ -97,11 +97,16 @@ public partial class SimulationWindow : Window
         });
         Report.Text = $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
             $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
-            $"{ResponseWindow(result.Imc.SetpointResponse)}{string.Join(" ", warnings)}";
-        Legend.Text = $"ΔPV ({_model.PvUnit}) · bleu : IMC/Lambda · orange : SIMC";
+            $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
+            $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
+            $"{string.Join(" ", warnings)}";
+        Legend.Text = $"PV/SP ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
+            $"Commandes ({_model.MvUnit}) : pointillés = CV calculée, vert = MV appliquée, gris = limites ; violet = instant de perturbation.";
         DrawPlot();
     }
 
+    // Figures and the exported series are generated from the same persisted simulation runs.
+    // A historical study is displayed without re-running a control algorithm.
     private string Metrics(SimulationRun run) =>
         $"IAE {run.Iae:G5} {_model.PvUnit}·s · ISE {run.Ise:G5} {_model.PvUnit}²·s · " +
         $"saturation {run.SaturationSeconds:G5} s · vitesse limitée {run.RateLimitedSeconds:G5} s · " +
@@ -122,9 +127,7 @@ public partial class SimulationWindow : Window
     {
         if (Plot is null)
             return;
-        var data = _shown?.Result;
-        ComparisonPlot.Draw(Plot, data is null ? null : data.Imc.Points.Zip(data.Simc.Points, (imc, simc) =>
-            (imc.Seconds, imc.Pv, simc.Pv)).ToArray());
+        PiComparisonPlot.Draw(Plot, _shown, _model.PvUnit, _model.MvUnit);
     }
 
     private void Export(object sender, RoutedEventArgs args)
