@@ -1,4 +1,7 @@
 import unittest
+import json
+
+from mkr_engine import respond
 
 from pi_robustness import calculate_sensitivity
 from pi_simulation import calculate
@@ -64,6 +67,16 @@ class PiRobustnessTests(unittest.TestCase):
         result = calculate_sensitivity(scenario(delaySeconds=0))
         self.assertEqual(result["cases"][5]["delaySeconds"], 0)
         self.assertEqual(result["cases"][6]["delaySeconds"], 0)
+
+    def test_ipc_contract_has_seven_variants_and_version(self):
+        request = dict(version=1, requestId="robustness-smoke",
+                       operation="simulate_pi_robustness", payload=scenario())
+        answer = respond(json.dumps(request).encode())
+        self.assertNotIn("error", answer)
+        self.assertEqual(answer["requestId"], "robustness-smoke")
+        self.assertEqual(len(answer["result"]["cases"]), 7)
+        self.assertEqual(answer["result"]["variationPercent"], 20)
+        self.assertIn("not_a_stability_proof", answer["result"]["warnings"])
 
     def test_errors_are_explicit(self):
         for value in (0, -1, 51, True, float("nan")):
