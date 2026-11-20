@@ -72,6 +72,15 @@ def respond(raw):
             code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
         else:
             return {**response, "result": result}
+    elif request["operation"] == "simulate_pid_experimental":
+        try:
+            from pid_simulation import calculate as simulate_pid
+            result = simulate_pid(request["payload"])
+        except ValueError as error:
+            value = str(error)
+            code = value if value.startswith(("pid_", "sim_")) else "pid_input"
+        else:
+            return {**response, "result": result}
     elif request["operation"] == "simulate_pi_combined":
         try:
             from pi_combined_robustness import calculate_combined
