@@ -184,9 +184,42 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
                 (p.Cv is { } cv && !double.IsFinite(cv)) ||
                 (p.Mv is { } mv && !double.IsFinite(mv)) ||
                 (p.Derivative is { } derivative && !double.IsFinite(derivative))) ||
-            points.Zip(points.Skip(1), (a, b) => b.Seconds > a.Seconds).Any(ok => !ok))
+            points.Zip(points.Skip(1), (a, b) => b.Seconds > a.Seconds).Any(ok => !ok) ||
+            !IsValidPidGrid(points, scenario))
             throw new InvalidDataException("Simulation PID expérimentale incompatible avec le contrat.");
         return (simulation, version);
+    }
+
+    private static bool IsValidPidGrid(PidPrototypePoint[] points, PiScenario scenario)
+    {
+        if (scenario.SampleSeconds <= 0 || !double.IsFinite(scenario.SampleSeconds) ||
+            !double.IsFinite(scenario.DurationSeconds))
+            return false;
+        var intervals = scenario.DurationSeconds / scenario.SampleSeconds;
+        if (!double.IsFinite(intervals) || intervals < 2 || intervals > 5000.00000001 ||
+            Math.Abs(intervals - Math.Round(intervals)) > 1e-8 ||
+            points.Length != (int)Math.Round(intervals) + 1)
+            return false;
+        var tolerance = 1e-8 * Math.Max(1.0, scenario.DurationSeconds);
+        double previousMv = 0;
+        for (var i = 0; i < points.Length; i++)
+        {
+            var point = points[i];
+            if (Math.Abs(point.Seconds - i * scenario.SampleSeconds) > tolerance)
+                return false;
+            if (i == points.Length - 1)
+                return point.Cv is null && point.Mv is null &&
+                    point.Derivative is null && point.Disturbance is null;
+            if (point.Cv is null || point.Mv is not { } mv ||
+                point.Derivative is null || point.Disturbance is null ||
+                mv < scenario.MinimumMv - tolerance || mv > scenario.MaximumMv + tolerance)
+                return false;
+            if (scenario.MaximumMvRate is { } limit &&
+                Math.Abs(mv - previousMv) > limit * scenario.SampleSeconds + tolerance)
+                return false;
+            previousMv = mv;
+        }
+        return true;
     }
 
     public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsync(
