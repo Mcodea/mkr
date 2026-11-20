@@ -31,11 +31,19 @@ def number(cell):
 
 
 def read_step(source, input_tolerance, output_tolerance):
-    if not isinstance(source, dict) or source.keys() != {
-        "raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"
-    }:
+    required = {"raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"}
+    if not isinstance(source, dict) or (
+            source.keys() != required and source.keys() != required | {"rowStart", "rowEnd"}):
         raise ValueError("fit_mapping")
     headers, rows = read_table(source)
+    if "rowStart" in source:
+        first, last = source["rowStart"], source["rowEnd"]
+        if (type(first) is not int or type(last) is not int
+                or not 0 <= first < last < len(rows)):
+            raise ValueError("fit_window")
+        # Inclusive indices refer to original CSV data rows, excluding header.
+        # The source is retained intact; only the fitting view is sliced.
+        rows = rows[first:last + 1]
     columns = [source[field] for field in ("timeColumn", "mvColumn", "pvColumn")]
     if any(not isinstance(column, str) or column not in headers for column in columns) or len(set(columns)) != 3:
         raise ValueError("fit_mapping")
