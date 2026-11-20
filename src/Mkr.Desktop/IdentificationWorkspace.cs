@@ -66,6 +66,27 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return study;
     }
 
+    public async Task<PiSimulationStudy> AnalyzeRobustnessAsync(IdentificationStudy model,
+        PiStudy tuning, PiScenario scenario, double variationPercent, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
+            throw new InvalidOperationException("L'analyse de robustesse exige le modèle FOPDT associé au réglage PI.");
+        // Nominal simulation and sensitivity are part of one saved study:
+        // no partial SQLite write if either calculation fails.
+        var (nominal, nominalVersion) = await piEngine.SimulatePiAsync(
+            model.Result, tuning.Result, scenario, token);
+        token.ThrowIfCancellationRequested();
+        var (sensitivity, sensitivityVersion) = await piEngine.AnalyzeRobustnessAsync(
+            model.Result, tuning.Result, scenario, variationPercent, token);
+        token.ThrowIfCancellationRequested();
+        if (nominalVersion != sensitivityVersion)
+            throw new InvalidDataException("Versions moteur différentes pour la simulation et la robustesse.");
+        var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow,
+            nominalVersion, scenario, nominal, sensitivity);
+        piStore.SaveSimulation(project.Id, study);
+        return study;
+    }
+
     public Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
         IdentificationStudy model, OpenLoopScenario scenario, CancellationToken token)
     {
