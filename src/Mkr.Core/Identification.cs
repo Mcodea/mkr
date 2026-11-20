@@ -21,6 +21,7 @@ public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid Validati
 
 public interface IIdentificationEngine
 {
+    Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token);
     Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token);
 }
