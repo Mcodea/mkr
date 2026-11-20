@@ -73,7 +73,10 @@ public partial class IdentificationWindow : Window
             if (token.IsCancellationRequested)
                 return;
             Message.Text = "Courbes chargées depuis le CSV enregistré, sans modification de l'étude.";
-            new TrialPreviewWindow(preview, import.FileName) { Owner = this }.ShowDialog();
+            new TrialPreviewWindow(preview, import.FileName,
+                string.IsNullOrWhiteSpace(MvUnit.Text) ? "unité MV non renseignée" : MvUnit.Text.Trim(),
+                string.IsNullOrWhiteSpace(PvUnit.Text) ? "unité PV non renseignée" : PvUnit.Text.Trim())
+                { Owner = this }.ShowDialog();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
