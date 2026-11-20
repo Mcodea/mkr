@@ -188,6 +188,9 @@ public partial class IdentificationWindow : Window
         var validationName = _sources.FirstOrDefault(import => import.Id == study.ValidationId)?.Label ?? study.ValidationId.ToString();
         var warnings = result.Warnings.Select(code => code switch
         {
+            "two_point_estimator" => "Broïda : détermination directe sur les passages 28 % / 40 %, sans optimisation numérique.",
+            "measured_tail_plateau" => "La valeur finale a été estimée sur six mesures terminales ; confirmer la stationnarité réelle.",
+            "interpolated_crossings" => "Instants 28 % / 40 % interpolés linéairement entre deux échantillons réels.",
             "parameter_bound" => "Un paramètre est proche d’une borne de recherche.",
             "delay_resolution" => "Le retard estimé est inférieur ou égal à la résolution de détection de l’échelon.",
             "short_horizon" => "Au moins un essai est trop court au regard de la constante de temps lente après le retard.",
@@ -209,11 +212,17 @@ public partial class IdentificationWindow : Window
             : result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "";
         var family = study.Family == ModelFamily.Integrateur ? "intégrateur" : study.Family.ToString();
         var windows = $"Plage estimation : {FormatWindow(study.TrainingWindow)} · plage validation : {FormatWindow(study.ValidationWindow)}\n";
+        var broida = result.BroidaEvidence is { } evidence
+            ? $"Broïda : t28 = {evidence.Crossing28Seconds:G6} s ; t40 = {evidence.Crossing40Seconds:G6} s ; " +
+              $"PV terminale mesurée = {evidence.TerminalPv:G6} {study.PvUnit} " +
+              $"sur {evidence.TerminalSamples} échantillons.\n"
+            : "";
+
         FitReport.Text = $"Modèle {family} exploratoire · K = {result.Gain:G5} {gainUnit}" +
             $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
-            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{uncertainty}\n{string.Join(" ", warnings)}";
+            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
         DrawPlot();
     }
 
@@ -398,6 +407,12 @@ public partial class IdentificationWindow : Window
             "pi_domain" => "Le modèle et le temps de réponse sont hors du domaine de calcul PI.",
             "pi_range" => "La combinaison demandée dépasse la plage numérique des réglages PI.",
             "fit_dependency" => "Installez les dépendances Python du fichier engine/requirements.txt avec l’interpréteur MKR.",
+            "broida_plateau" => "Broïda refusée : la fin de l’essai ne présente pas un plateau PV stable dans la tolérance.",
+            "broida_shape" => "Broïda refusée : réponse non monotone ou dépassement incompatibles avec l’hypothèse.",
+            "broida_response" => "Broïda refusée : variation finale PV insuffisante.",
+            "broida_horizon" => "Broïda refusée : horizon insuffisant pour établir une valeur finale et la dynamique.",
+            "broida_crossing" => "Broïda refusée : passages 28 % / 40 % indéterminables ou incohérents.",
+            "broida_domain" => "Broïda refusée : les points conduisent à un retard négatif ou à une constante non physique.",
             "fit_solver" => "L’estimateur n’a pas convergé dans les limites prévues.",
             _ => "Vérifiez les colonnes et les données des deux imports."
         } : error is TimeoutException ? error.Message : "Étude indisponible. Vérifiez le stockage et le journal MKR.";
