@@ -5,7 +5,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine, IPiEngine, IOpenLoopEngine
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine, IPiEngine, IPidPrototypeEngine, IOpenLoopEngine
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -141,6 +141,51 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             imc.Length != simc.Length || imc[^1].Seconds != scenario.DurationSeconds ||
             simc[^1].Seconds != scenario.DurationSeconds)
             throw new InvalidDataException("Résultat de simulation incompatible avec le contrat.");
+        return (simulation, version);
+    }
+
+    public async Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
+        IdentificationResult model, PidPrototypeCoefficients coefficients,
+        PiScenario scenario, CancellationToken token)
+    {
+        if (model.TauSeconds is not > 0)
+            throw new InvalidDataException("Le prototype PID requiert un modèle FOPDT.");
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds,
+            controller = new
+            {
+                coefficients.Kp, coefficients.TiSeconds,
+                coefficients.TdSeconds, coefficients.FilterSeconds
+            },
+            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint,
+            scenario.MinimumMv, scenario.MaximumMv, scenario.Disturbance,
+            scenario.DisturbanceAtSeconds, scenario.MaximumMvRate
+        };
+        var (result, version) = await CallAsync("simulate_pid_experimental", payload, token)
+            .ConfigureAwait(false);
+        var simulation = result.Deserialize<PidPrototypeResult>(JsonOptions);
+        if (simulation is null ||
+            simulation.AlgorithmVersion != "0.1.0" ||
+            simulation.ControllerForm != "ideal_dependent_pid_derivative_on_pv" ||
+            simulation.Warnings is null ||
+            simulation.Points is not { Length: >= 3 and <= 5001 } points ||
+            simulation.SetpointResponse is null ||
+            points[0].Seconds != 0 ||
+            points[^1].Seconds != scenario.DurationSeconds ||
+            points[^1].Cv is not null || points[^1].Mv is not null ||
+            points[^1].Derivative is not null ||
+            !double.IsFinite(simulation.Iae) || simulation.Iae < 0 ||
+            !double.IsFinite(simulation.Ise) || simulation.Ise < 0 ||
+            !double.IsFinite(simulation.FinalError) ||
+            !double.IsFinite(simulation.SaturationSeconds) ||
+            !double.IsFinite(simulation.RateLimitedSeconds) ||
+            points.Any(p => !double.IsFinite(p.Seconds) || !double.IsFinite(p.Pv) ||
+                (p.Cv is { } cv && !double.IsFinite(cv)) ||
+                (p.Mv is { } mv && !double.IsFinite(mv)) ||
+                (p.Derivative is { } derivative && !double.IsFinite(derivative))) ||
+            points.Zip(points.Skip(1), (a, b) => b.Seconds > a.Seconds).Any(ok => !ok))
+            throw new InvalidDataException("Simulation PID expérimentale incompatible avec le contrat.");
         return (simulation, version);
     }
 
