@@ -42,12 +42,50 @@ class TrialPreviewTests(unittest.TestCase):
         result = call(raw=base64.b64encode(source.encode()).decode(), delimiter=",")["result"]
         self.assertTrue(result["displayDecimated"])
         self.assertEqual(result["sourceRows"], 1000)
-        self.assertEqual(result["displayedRows"], 600)
+        self.assertLessEqual(result["displayedRows"], 600)
+        self.assertGreater(result["displayedRows"], 1)
         self.assertEqual(result["points"][0]["rowIndex"], 0)
         self.assertEqual(result["points"][-1]["rowIndex"], 999)
         for point in result["points"]:
             self.assertEqual(point["mv"], point["rowIndex"])
             self.assertEqual(point["pv"], -point["rowIndex"])
+
+    def test_single_sample_spike_survives_reduction(self):
+        # Old uniform-index preview could miss isolated anomalies.
+        from trial_preview import display_indices
+        mv = [0.0] * 10000
+        pv = [3.0] * 10000
+        mv[4321] = 120.0
+        pv[7654] = -90.0
+        selected = display_indices(mv, pv)
+        self.assertIn(4321, selected)
+        self.assertIn(7654, selected)
+        self.assertEqual(selected[0], 0)
+        self.assertEqual(selected[-1], 9999)
+        self.assertLessEqual(len(selected), 600)
+        self.assertEqual(selected, sorted(set(selected)))
+
+    def test_step_boundary_and_signed_extremes_survive(self):
+        from trial_preview import display_indices
+        mv = [0.0] * 5000 + [10.0] * 5000
+        pv = [0.0] * 10000
+        pv[147] = -12.0
+        pv[148] = 16.0
+        selected = display_indices(mv, pv)
+        self.assertIn(4999, selected)
+        self.assertIn(5000, selected)
+        self.assertIn(147, selected)
+        self.assertIn(148, selected)
+        self.assertLessEqual(len(selected), 600)
+
+    def test_preserves_source_order_and_returns_full_small_series(self):
+        from trial_preview import display_indices
+        mv = [float(i % 17) for i in range(512)]
+        pv = [-value for value in mv]
+        self.assertEqual(display_indices(mv, pv), list(range(512)))
+        selected = display_indices(mv * 20, pv * 20)
+        self.assertEqual(selected, sorted(set(selected)))
+        self.assertTrue(all(0 <= idx < 10240 for idx in selected))
 
     def test_mapping_and_malformed_source_rejected(self):
         self.assertEqual(call(pvColumn="mv")["error"]["code"], "preview_mapping")
