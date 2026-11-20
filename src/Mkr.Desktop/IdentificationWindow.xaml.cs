@@ -12,6 +12,9 @@ public partial class IdentificationWindow : Window
     private readonly IdentificationWorkspace _workspace;
     private readonly CancellationTokenSource _lifetime = new();
     private IdentificationStudy? _shown;
+    private sealed record WindowChoice(Guid ImportId, StepColumns Columns, StepWindow Window);
+    private WindowChoice? _trainingSelection;
+    private WindowChoice? _validationSelection;
     private double? _plotFrom;
     private double? _plotTo;
     private double? _dragStartX;
@@ -31,11 +34,21 @@ public partial class IdentificationWindow : Window
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
-    private void SelectTraining(object sender, SelectionChangedEventArgs args) =>
+    private void SelectTraining(object sender, SelectionChangedEventArgs args)
+    {
+        _trainingSelection = null;
+        if (TrainingRangeInfo is not null)
+            TrainingRangeInfo.Text = "Estimation : fichier complet";
         Populate(TrainingSource, TrainingTime, TrainingMv, TrainingPv);
+    }
 
-    private void SelectValidation(object sender, SelectionChangedEventArgs args) =>
+    private void SelectValidation(object sender, SelectionChangedEventArgs args)
+    {
+        _validationSelection = null;
+        if (ValidationRangeInfo is not null)
+            ValidationRangeInfo.Text = "Validation : fichier complet";
         Populate(ValidationSource, ValidationTime, ValidationMv, ValidationPv);
+    }
 
     private void Populate(ComboBox source, ComboBox time, ComboBox mv, ComboBox pv)
     {
@@ -50,12 +63,12 @@ public partial class IdentificationWindow : Window
     }
 
     private async void PreviewTraining(object sender, RoutedEventArgs args) =>
-        await PreviewSourceAsync(TrainingSource, TrainingTime, TrainingMv, TrainingPv);
+        await PreviewSourceAsync(TrainingSource, TrainingTime, TrainingMv, TrainingPv, true);
 
     private async void PreviewValidation(object sender, RoutedEventArgs args) =>
-        await PreviewSourceAsync(ValidationSource, ValidationTime, ValidationMv, ValidationPv);
+        await PreviewSourceAsync(ValidationSource, ValidationTime, ValidationMv, ValidationPv, false);
 
-    private async Task PreviewSourceAsync(ComboBox source, ComboBox time, ComboBox mv, ComboBox pv)
+    private async Task PreviewSourceAsync(ComboBox source, ComboBox time, ComboBox mv, ComboBox pv, bool training)
     {
         if (source.SelectedItem is not ImportSummary import ||
             ReadColumns(time, mv, pv) is not { } columns)
@@ -73,10 +86,28 @@ public partial class IdentificationWindow : Window
             if (token.IsCancellationRequested)
                 return;
             Message.Text = "Courbes chargées depuis le CSV enregistré, sans modification de l'étude.";
-            new TrialPreviewWindow(preview, import.FileName,
+            var window = new TrialPreviewWindow(preview, import.FileName,
                 string.IsNullOrWhiteSpace(MvUnit.Text) ? "unité MV non renseignée" : MvUnit.Text.Trim(),
                 string.IsNullOrWhiteSpace(PvUnit.Text) ? "unité PV non renseignée" : PvUnit.Text.Trim())
-                { Owner = this }.ShowDialog();
+                { Owner = this };
+            if (window.ShowDialog() == true && window.SelectedWindow is { } range)
+            {
+                var choice = new WindowChoice(import.Id, columns, range);
+                var text = $"Lignes originales {range.RowStart + 1} à {range.RowEnd + 1}" +
+                    $" (indices 0-based {range.RowStart}..{range.RowEnd}, bornes incluses)";
+                if (training)
+                {
+                    _trainingSelection = choice;
+                    TrainingRangeInfo.Text = "Estimation : " + text;
+                }
+                else
+                {
+                    _validationSelection = choice;
+                    ValidationRangeInfo.Text = "Validation : " + text;
+                }
+                Confirmed.IsChecked = false;
+                Message.Text = "Plage retenue. Vérifiez les conditions d'essai et confirmez-les avant estimation.";
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -99,13 +130,25 @@ public partial class IdentificationWindow : Window
             return;
         }
 
+        // A saved choice belongs to a specific original import and exact column mapping.
+        // Never silently apply a stale range to newly selected data.
+        if ((_trainingSelection is { } tr &&
+                (tr.ImportId != training.Id || tr.Columns != trainColumns)) ||
+            (_validationSelection is { } va &&
+                (va.ImportId != validation.Id || va.Columns != valColumns)))
+        {
+            Message.Text = "Les colonnes ou l'import ont changé après la sélection de plage. Rouvrez la prévisualisation ou réinitialisez le formulaire.";
+            return;
+        }
+
         Form.IsEnabled = false;
         Message.Text = "Estimation et évaluation…";
         var token = _lifetime.Token;
         try
         {
             var study = await _workspace.CalculateAsync(family, training, trainColumns, validation, valColumns,
-                mvUnit, pvUnit, mvTolerance, pvTolerance, token);
+                mvUnit, pvUnit, mvTolerance, pvTolerance, token,
+                _trainingSelection?.Window, _validationSelection?.Window);
             var studies = _workspace.Studies();
             StudyList.ItemsSource = studies;
             StudyList.SelectedItem = studies.First(item => item.Id == study.Id);
@@ -165,11 +208,12 @@ public partial class IdentificationWindow : Window
             ? $" · τ lente = {result.TauSeconds:G5} s · τ rapide = {fast:G5} s"
             : result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "";
         var family = study.Family == ModelFamily.Integrateur ? "intégrateur" : study.Family.ToString();
+        var windows = $"Plage estimation : {FormatWindow(study.TrainingWindow)} · plage validation : {FormatWindow(study.ValidationWindow)}\\n";
         FitReport.Text = $"Modèle {family} exploratoire · K = {result.Gain:G5} {gainUnit}" +
             $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
-            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{uncertainty}\n{string.Join(" ", warnings)}";
+            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{uncertainty}\n{string.Join(" ", warnings)}";
         DrawPlot();
     }
 
@@ -232,6 +276,10 @@ public partial class IdentificationWindow : Window
             $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
             "Forme idéale continue, e = SP − PV. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
+
+    private static string FormatWindow(StepWindow? window) => window is { } w
+        ? $"indices source {w.RowStart}..{w.RowEnd} (inclus)"
+        : "fichier complet";
 
     private static string Metrics(FitDiagnostics fit, string unit) =>
         $"{fit.Samples} points · RMSE {fit.Rmse:G4} {unit} · MAE {fit.Mae:G4} {unit} · " +
@@ -337,6 +385,7 @@ public partial class IdentificationWindow : Window
             "preview_time" => "Les horodatages doivent être valides, UTC explicites et strictement croissants.",
             "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
+            "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
             "fit_independence" => "Les deux essais doivent provenir de fichiers distincts et de plages temporelles disjointes.",
             "fit_step" => "Il faut un seul échelon MV et deux plateaux dans la tolérance déclarée.",
             "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
