@@ -208,7 +208,7 @@ public partial class IdentificationWindow : Window
             ? $" · τ lente = {result.TauSeconds:G5} s · τ rapide = {fast:G5} s"
             : result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "";
         var family = study.Family == ModelFamily.Integrateur ? "intégrateur" : study.Family.ToString();
-        var windows = $"Plage estimation : {FormatWindow(study.TrainingWindow)} · plage validation : {FormatWindow(study.ValidationWindow)}\\n";
+        var windows = $"Plage estimation : {FormatWindow(study.TrainingWindow)} · plage validation : {FormatWindow(study.ValidationWindow)}\n";
         FitReport.Text = $"Modèle {family} exploratoire · K = {result.Gain:G5} {gainUnit}" +
             $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
