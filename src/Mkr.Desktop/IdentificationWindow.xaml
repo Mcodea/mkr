@@ -58,9 +58,36 @@
                     </WrapPanel>
                 </StackPanel>
                 <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
-                <TextBlock x:Name="PlotLegend" Margin="0,8,0,0" TextWrapping="Wrap" />
-                <Canvas x:Name="Plot" Height="226" ClipToBounds="True" SizeChanged="ResizePlot"
-                        AutomationProperties.Name="Comparaison entre PV mesurée et prédite sur l’essai de validation" />
+                <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                        BorderThickness="1" Padding="14" CornerRadius="6" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Diagnostic du modèle" FontWeight="SemiBold" FontSize="17"
+                                   Margin="0,0,0,8"/>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Label Content="_Essai affiché" Target="{Binding ElementName=PlotSource}"
+                                   VerticalAlignment="Center"/>
+                            <ComboBox x:Name="PlotSource" Width="160" SelectedIndex="1"
+                                      SelectionChanged="ChangePlotSource" VerticalAlignment="Center">
+                                <ComboBoxItem Content="Estimation"/>
+                                <ComboBoxItem Content="Validation"/>
+                            </ComboBox>
+                            <Button Content="_Réinitialiser le zoom" Click="ResetPlotZoom"
+                                    Margin="12,0,0,0"
+                                    ToolTip="Revenir à l’horizon complet de l’essai affiché"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="PlotLegend" Margin="0,2,0,8" TextWrapping="Wrap"
+                                   Foreground="{StaticResource MkrMuted}"/>
+                        <Canvas x:Name="Plot" Height="390" ClipToBounds="True" SizeChanged="ResizePlot"
+                                Background="{StaticResource MkrSurface}"
+                                MouseLeftButtonDown="PlotStartSelection"
+                                MouseLeftButtonUp="PlotEndSelection"
+                                MouseLeave="PlotCancelSelection"
+                                AutomationProperties.Name="PV mesurée, PV prédite et résidus de l’essai sélectionné"/>
+                        <TextBlock Text="Pour zoomer, faites glisser horizontalement sur le graphique. Le zoom modifie seulement l’affichage, jamais les données ou les paramètres de l’étude."
+                                   Foreground="{StaticResource MkrMuted}" FontSize="11"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
                 <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
