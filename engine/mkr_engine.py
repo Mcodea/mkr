@@ -56,12 +56,14 @@ def respond(raw):
             code = str(error)
         else:
             return {**response, "result": result}
-    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator"):
+    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida"):
         try:
             if request["operation"] == "identify_fopdt":
                 from fopdt import identify
             elif request["operation"] == "identify_sopdt":
                 from sopdt import identify
+            elif request["operation"] == "identify_broida":
+                from broida import identify
             else:
                 from integrator import identify
             result = identify(request["payload"])
