@@ -23,3 +23,12 @@
 - Guide de revue et tests : `docs/ui/UI-02-csv-workspace.md`.
 - **À vérifier** : compilation Windows, qualité graphique multi-DPI et non-régression des imports et études.
 - Prochain lot UX après preuves : visualisation des signaux et sélection de plages à partir de données sources traçables.
+
+## UI-03A — Diagnostic graphique d'identification (branche dédiée)
+
+- Nouvelle vue WPF de diagnostic avec choix estimation / validation indépendante, PV mesurée / prédite, résidu signé et axes unités.
+- Zoom horizontal et remise à zéro sur les points déjà enregistrés; changement d'étude ou d'essai remet à zéro le zoom.
+- Implémentation dans `IdentificationDiagnosticsPlot.cs` et `IdentificationWindow.xaml(.cs)`; aucune modification des algorithmes Python, modèles, schémas SQLite et fichiers sources.
+- Limite : **zoom visuel seulement**. Les données du graphe proviennent des points de diagnostic déjà échantillonnés pour l'affichage, pas d'une sélection d'entraînement recalculée.
+- Recette : `docs/ui/UI-03A-identification-diagnostics.md`. Compilation CI Windows et validation visuelle **à confirmer**.
+- Suite : UI-03B, sélection de fenêtres sur courbes MV/PV brutes et traçabilité scientifique sans contaminer la validation indépendante.
