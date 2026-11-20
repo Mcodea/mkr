@@ -56,12 +56,14 @@ def respond(raw):
             code = str(error)
         else:
             return {**response, "result": result}
-    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator"):
+    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida"):
         try:
             if request["operation"] == "identify_fopdt":
                 from fopdt import identify
             elif request["operation"] == "identify_sopdt":
                 from sopdt import identify
+            elif request["operation"] == "identify_broida":
+                from broida import identify
             else:
                 from integrator import identify
             result = identify(request["payload"])
@@ -69,7 +71,7 @@ def respond(raw):
             code = "fit_dependency"
         except ValueError as error:
             error_code = str(error)
-            code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
+            code = error_code if error_code.startswith(("fit_", "csv_", "broida_")) else "fit_data"
         else:
             return {**response, "result": result}
     elif request["operation"] == "simulate_pid_experimental":
