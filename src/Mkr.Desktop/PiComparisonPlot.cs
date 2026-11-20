@@ -108,6 +108,17 @@ internal static class PiComparisonPlot
 
         var pvValues = imc.Select(p => p.Pv).Concat(simc.Select(p => p.Pv))
             .Append(study.Scenario.Setpoint);
+        if (study.Robustness?.Envelope is { } plotEnvelope &&
+            plotEnvelope.Seconds.Length == allImc.Length)
+        {
+            var visible = Enumerable.Range(0, plotEnvelope.Seconds.Length)
+                .Where(i => plotEnvelope.Seconds[i] >= t0 && plotEnvelope.Seconds[i] <= t1).ToArray();
+            pvValues = pvValues.Concat(visible.SelectMany(i => new[]
+            {
+                plotEnvelope.Imc.MinPv[i], plotEnvelope.Imc.MaxPv[i],
+                plotEnvelope.Simc.MinPv[i], plotEnvelope.Simc.MaxPv[i]
+            }));
+        }
         Track($"ΔPV et ΔSP ({pvUnit})", Top, pvValues, y =>
         {
             var reference = y(study.Scenario.Setpoint);
@@ -118,6 +129,35 @@ internal static class PiComparisonPlot
                 StrokeDashArray = new DoubleCollection { 5, 3 },
                 IsHitTestVisible = false
             });
+            if (study.Robustness?.Envelope is { } envelope &&
+                envelope.Seconds.Length == allImc.Length &&
+                envelope.Imc.MinPv.Length == allImc.Length &&
+                envelope.Imc.MaxPv.Length == allImc.Length &&
+                envelope.Simc.MinPv.Length == allImc.Length &&
+                envelope.Simc.MaxPv.Length == allImc.Length)
+            {
+                void Band(PiPvBounds values, Color color)
+                {
+                    var selected = Enumerable.Range(0, envelope.Seconds.Length)
+                        .Where(i => envelope.Seconds[i] >= t0 && envelope.Seconds[i] <= t1)
+                        .ToArray();
+                    if (selected.Length < 2)
+                        return;
+                    var region = new Polygon
+                    {
+                        Fill = new SolidColorBrush(Color.FromArgb(36, color.R, color.G, color.B)),
+                        StrokeThickness = 0,
+                        IsHitTestVisible = false
+                    };
+                    foreach (var i in selected)
+                        region.Points.Add(new Point(X(envelope.Seconds[i]), y(values.MaxPv[i])));
+                    foreach (var i in selected.Reverse())
+                        region.Points.Add(new Point(X(envelope.Seconds[i]), y(values.MinPv[i])));
+                    canvas.Children.Add(region);
+                }
+                Band(envelope.Imc, Colors.SteelBlue);
+                Band(envelope.Simc, Colors.DarkOrange);
+            }
             Curve(imc.Select(p => (p.Seconds, p.Pv)), y, Brushes.SteelBlue);
             Curve(simc.Select(p => (p.Seconds, p.Pv)), y, Brushes.DarkOrange);
         });
