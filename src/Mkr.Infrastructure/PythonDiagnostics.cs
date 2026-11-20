@@ -166,7 +166,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             .ConfigureAwait(false);
         var simulation = result.Deserialize<PidPrototypeResult>(JsonOptions);
         if (simulation is null ||
-            simulation.AlgorithmVersion != "0.1.0" ||
+            simulation.AlgorithmVersion != "0.2.0" ||
             simulation.ControllerForm != "ideal_dependent_pid_derivative_on_pv" ||
             simulation.Warnings is null ||
             simulation.Points is not { Length: >= 3 and <= 5001 } points ||
@@ -174,7 +174,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             points[0].Seconds != 0 ||
             points[^1].Seconds != scenario.DurationSeconds ||
             points[^1].Cv is not null || points[^1].Mv is not null ||
-            points[^1].Derivative is not null ||
+            points[^1].Derivative is not null || points[^1].MeasuredPv is not null ||
             !double.IsFinite(simulation.Iae) || simulation.Iae < 0 ||
             !double.IsFinite(simulation.Ise) || simulation.Ise < 0 ||
             !double.IsFinite(simulation.FinalError) ||
@@ -183,7 +183,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             points.Any(p => !double.IsFinite(p.Seconds) || !double.IsFinite(p.Pv) ||
                 (p.Cv is { } cv && !double.IsFinite(cv)) ||
                 (p.Mv is { } mv && !double.IsFinite(mv)) ||
-                (p.Derivative is { } derivative && !double.IsFinite(derivative))) ||
+                (p.Derivative is { } derivative && !double.IsFinite(derivative)) ||
+                (p.MeasuredPv is { } measured && !double.IsFinite(measured))) ||
             points.Zip(points.Skip(1), (a, b) => b.Seconds > a.Seconds).Any(ok => !ok) ||
             !IsValidPidGrid(points, scenario))
             throw new InvalidDataException("Simulation PID expérimentale incompatible avec le contrat.");
@@ -212,6 +213,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
                     point.Derivative is null && point.Disturbance is null;
             if (point.Cv is null || point.Mv is not { } mv ||
                 point.Derivative is null || point.Disturbance is null ||
+                point.MeasuredPv is null ||
                 mv < scenario.MinimumMv - tolerance || mv > scenario.MaximumMv + tolerance)
                 return false;
             if (scenario.MaximumMvRate is { } limit &&
