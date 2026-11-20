@@ -69,6 +69,32 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (fit, version);
     }
 
+    public async Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token)
+    {
+        var payload = new
+        {
+            raw = trial.Import.Original,
+            trial.Import.Delimiter,
+            trial.Columns.TimeColumn,
+            trial.Columns.MvColumn,
+            trial.Columns.PvColumn
+        };
+        var (result, _) = await CallAsync("preview_trial", payload, token).ConfigureAwait(false);
+        var preview = result.Deserialize<TrialPreview>(JsonOptions);
+        if (preview is null || preview.SourceRows < 2 || preview.DisplayedRows < 2 ||
+            preview.DisplayedRows > 600 || preview.Points is null ||
+            preview.Points.Length != preview.DisplayedRows ||
+            preview.FirstUtc >= preview.LastUtc ||
+            preview.Points[0].RowIndex != 0 ||
+            preview.Points[^1].RowIndex != preview.SourceRows - 1 ||
+            preview.Points.Any(p => !double.IsFinite(p.Seconds) ||
+                !double.IsFinite(p.Mv) || !double.IsFinite(p.Pv)) ||
+            preview.Points.Zip(preview.Points.Skip(1),
+                (a, b) => b.RowIndex > a.RowIndex && b.Seconds > a.Seconds).Any(valid => !valid))
+            throw new InvalidDataException("Aperçu de signaux incompatible avec le contrat.");
+        return preview;
+    }
+
     public async Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token)
     {
