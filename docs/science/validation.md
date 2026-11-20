@@ -1,0 +1,3 @@
+# MKR-SCI — Entrée en développement scientifique
+
+FOPDT/SOPDT et intégrateurs nécessitent un protocole de validation indépendant incluant excitation, séparations temporelles, résidus, incertitudes et limites. Le retard apparent peut combiner transport, cinétique, mélange, analyseur et filtrage. Avant livraison des méthodes IMC/Lambda et SIMC, sélectionner les références de chaque variante et figer forme PID, unités, signes, conventions numériques et domaine. La simulation devra tester retards, périodes, saturation, anti-windup, changements de mode et convergence. Le diagnostic du moteur v1 ne produit aucun calcul scientifique.
