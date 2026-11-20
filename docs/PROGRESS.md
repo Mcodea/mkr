@@ -7,3 +7,11 @@
 - Simulation en boucle ouverte disponible depuis une étude FOPDT. Le scénario applique un échelon de MV borné, affiche la réponse PV et exporte les séries en CSV. La simulation est calculée à la demande et l’export conserve les séries.
 - Prochaines tâches du jalon simulation : modes de commande et transitions, scénarios comparatifs supplémentaires et revue graphique Windows.
 - Blocage matériel : l’environnement local est Linux. L’examen graphique exige une session Windows. La CI utilise un agent Windows pour compiler et exécuter les tests automatisés.
+
+## UI-01 — Espace projets, branche de refonte ciblée
+
+- Création d'un design system WPF minimal dans `App.xaml` : tokens sémantiques et styles communs.
+- Refonte de `WindowView.xaml` avec navigation informative, création de projet, liste des projets et commandes existantes inchangées.
+- Consignes et essais : `docs/ui/UI-01-project-workspace.md`.
+- Sans modification du moteur scientifique ni des données enregistrées; compilation CI Windows et revue visuelle manuelle **à confirmer**.
+- Prochain lot UX : réutilisation des styles et navigation dans les écrans CSV / identification / simulation, après validation de UI-01.
