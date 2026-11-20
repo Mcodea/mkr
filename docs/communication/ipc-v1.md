@@ -15,3 +15,5 @@ Le plafond du message passe à 1 500 000 octets. Le client v1 conserve la même 
 ## Extension identification du moteur 0.3
 
 Le plafond passe à 2 900 000 octets. `identify_fopdt` reçoit `training` et `validation`, chacun avec `raw` (Base64), `delimiter`, `timeColumn`, `mvColumn` et `pvColumn`, plus `mvTolerance` et `pvTolerance` (nombres). Le client accorde 30 secondes à cette opération. Le résultat contient paramètres et bornes, diagnostics séparés, avertissements et version d’algorithme. Les codes `fit_*` distinguent les erreurs de méthode des erreurs CSV.
+
+Le moteur 0.4 ajoute `identify_sopdt` avec le même schéma de requête. La réponse SOPDT ajoute `secondTauSeconds`. Dans FOPDT, `standardErrors` contient les erreurs-types conditionnelles lorsqu’elles sont calculables, ou vaut null.

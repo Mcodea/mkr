@@ -118,8 +118,8 @@ def estimate(step):
     return gain, tau, delay, tau_low, tau_high, delay_high
 
 
-def diagnostics(step, gain, tau, delay):
-    predicted = step.baseline + gain * step.amplitude * basis(step.times, tau, delay)
+def diagnostics(step, gain, response):
+    predicted = step.baseline + gain * step.amplitude * response
     residual = step.observations - predicted
     centered = residual - np.mean(residual)
     variance = float(np.dot(centered, centered))
@@ -173,7 +173,7 @@ def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
                 tauSeconds=float(standard[1]) * tau, delaySeconds=float(standard[2]) * tau)
 
 
-def identify(payload):
+def read_trials(payload):
     if payload.keys() != {"training", "validation", "mvTolerance", "pvTolerance"}:
         raise ValueError("fit_mapping")
     tolerances = [payload["mvTolerance"], payload["pvTolerance"]]
@@ -185,6 +185,11 @@ def identify(payload):
         raise ValueError("fit_independence")
     if not 0.5 <= abs(validation.amplitude / training.amplitude) <= 2:
         raise ValueError("fit_amplitude")
+    return training, validation
+
+
+def identify(payload):
+    training, validation = read_trials(payload)
     gain, tau, delay, tau_low, tau_high, delay_high = estimate(training)
     warnings = []
     if tau <= 1.02 * tau_low or tau >= 0.98 * tau_high or delay >= 0.98 * delay_high:
@@ -193,9 +198,9 @@ def identify(payload):
         warnings.append("delay_resolution")
     if min(training.times[-1], validation.times[-1]) - delay < 4 * tau:
         warnings.append("short_horizon")
-    training_diagnostics = diagnostics(training, gain, tau, delay)
+    training_diagnostics = diagnostics(training, gain, basis(training.times, tau, delay))
     errors = conditional_errors(training, gain, tau, delay, training_diagnostics, warnings)
     return dict(algorithmVersion=VERSION, gain=gain, tauSeconds=tau, delaySeconds=delay,
                 tauLowerSeconds=tau_low, tauUpperSeconds=tau_high, delayUpperSeconds=delay_high,
                 warnings=warnings, standardErrors=errors, training=training_diagnostics,
-                validation=diagnostics(validation, gain, tau, delay))
+                validation=diagnostics(validation, gain, basis(validation.times, tau, delay)))

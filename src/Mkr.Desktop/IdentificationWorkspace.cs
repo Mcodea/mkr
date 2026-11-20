@@ -2,13 +2,13 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-internal sealed class FopdtWorkspace(Project project, IImportStore imports, IFopdtStore studies, IFopdtEngine engine)
+internal sealed class IdentificationWorkspace(Project project, IImportStore imports, IIdentificationStore studies, IIdentificationEngine engine)
 {
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
-    public IReadOnlyList<FopdtStudy> Studies() => studies.ListFopdt(project.Id);
+    public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
     public string[] Columns(ImportSummary source) => imports.ReadImport(project.Id, source.Id).Result.Headers;
 
-    public async Task<FopdtStudy> CalculateAsync(ImportSummary training, StepColumns trainColumns,
+    public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, CancellationToken token)
     {
@@ -18,11 +18,11 @@ internal sealed class FopdtWorkspace(Project project, IImportStore imports, IFop
             throw new CsvInputException("fit_independence");
         CheckRecordedUnit(train, mvUnit, pvUnit);
         CheckRecordedUnit(check, mvUnit, pvUnit);
-        var (result, version) = await engine.IdentifyAsync(train, check, mvTolerance, pvTolerance, token);
+        var (result, version) = await engine.IdentifyAsync(family, train, check, mvTolerance, pvTolerance, token);
         token.ThrowIfCancellationRequested();
-        var study = new FopdtStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
-            mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result);
-        studies.SaveFopdt(project.Id, study);
+        var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
+            mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result, family);
+        studies.SaveStudy(project.Id, study);
         return study;
     }
 

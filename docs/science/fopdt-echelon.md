@@ -1,6 +1,6 @@
 # Identification FOPDT sur essais d’échelon
 
-Dans le projet, importer deux CSV historiques du même procédé issus d’essais en boucle ouverte, avec MV appliquée et PV mesurée. Ouvrir **Identification FOPDT**, sélectionner les deux imports, associer temps/MV/PV, déclarer les unités communes et indiquer les tolérances absolues des plateaux MV et de la PV avant échelon dans les unités correspondantes. La fenêtre demande de confirmer les conditions de test avant estimation.
+Dans le projet, importer deux CSV historiques du même procédé issus d’essais en boucle ouverte, avec MV appliquée et PV mesurée. Ouvrir **Identification** et choisir FOPDT, sélectionner les deux imports, associer temps/MV/PV, déclarer les unités communes et indiquer les tolérances absolues des plateaux MV et de la PV avant échelon dans les unités correspondantes. La fenêtre demande de confirmer les conditions de test avant estimation.
 
 ## Méthode 1.1.0
 

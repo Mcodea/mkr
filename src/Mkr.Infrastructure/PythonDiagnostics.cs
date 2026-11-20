@@ -5,7 +5,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IFopdtEngine
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -32,7 +32,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (ReadCsvResult(result, expectQuality: true), version);
     }
 
-    public async Task<(FopdtResult Result, string EngineVersion)> IdentifyAsync(StepImport training,
+    public async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
         StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token)
     {
         static object Source(StepImport source) => new
@@ -44,12 +44,20 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             source.Columns.PvColumn
         };
         var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
-        var (result, version) = await CallAsync("identify_fopdt", payload, token).ConfigureAwait(false);
-        var fit = result.Deserialize<FopdtResult>(JsonOptions);
+        var operation = family switch
+        {
+            ModelFamily.FOPDT => "identify_fopdt",
+            ModelFamily.SOPDT => "identify_sopdt",
+            _ => throw new ArgumentOutOfRangeException(nameof(family))
+        };
+        var (result, version) = await CallAsync(operation, payload, token).ConfigureAwait(false);
+        var fit = result.Deserialize<IdentificationResult>(JsonOptions);
         if (fit is null || string.IsNullOrEmpty(fit.AlgorithmVersion) || fit.TauSeconds <= 0 ||
             fit.DelaySeconds < 0 || fit.Gain == 0 || fit.Warnings is null ||
-            fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 })
-            throw new InvalidDataException("Résultat FOPDT incompatible avec le contrat.");
+            fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 } ||
+            (family == ModelFamily.SOPDT && (fit.SecondTauSeconds is not > 0 || fit.SecondTauSeconds > fit.TauSeconds)) ||
+            (family == ModelFamily.FOPDT && fit.SecondTauSeconds is not null))
+            throw new InvalidDataException("Résultat d’identification incompatible avec le contrat.");
         return (fit, version);
     }
 
@@ -69,7 +77,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(operation == "identify_fopdt" ? 30 : 10));
+        deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

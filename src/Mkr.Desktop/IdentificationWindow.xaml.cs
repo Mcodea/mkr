@@ -8,17 +8,19 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-public partial class FopdtWindow : Window
+public partial class IdentificationWindow : Window
 {
-    private readonly FopdtWorkspace _workspace;
+    private readonly IdentificationWorkspace _workspace;
     private readonly CancellationTokenSource _lifetime = new();
-    private FopdtStudy? _shown;
+    private IdentificationStudy? _shown;
     private readonly IReadOnlyList<ImportSummary> _sources;
 
-    internal FopdtWindow(FopdtWorkspace workspace)
+    internal IdentificationWindow(IdentificationWorkspace workspace)
     {
         _workspace = workspace;
         InitializeComponent();
+        FamilyChoice.ItemsSource = Enum.GetValues<ModelFamily>();
+        FamilyChoice.SelectedItem = ModelFamily.FOPDT;
         _sources = _workspace.Sources();
         TrainingSource.ItemsSource = ValidationSource.ItemsSource = _sources;
         StudyList.ItemsSource = _workspace.Studies();
@@ -51,7 +53,7 @@ public partial class FopdtWindow : Window
         var valColumns = ReadColumns(ValidationTime, ValidationMv, ValidationPv);
         var mvUnit = MvUnit.Text.Trim();
         var pvUnit = PvUnit.Text.Trim();
-        if (TrainingSource.SelectedItem is not ImportSummary training ||
+        if (FamilyChoice.SelectedItem is not ModelFamily family || TrainingSource.SelectedItem is not ImportSummary training ||
             ValidationSource.SelectedItem is not ImportSummary validation || training.Id == validation.Id ||
             trainColumns is null || valColumns is null || mvUnit.Length == 0 || pvUnit.Length == 0 ||
             !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance) ||
@@ -66,7 +68,7 @@ public partial class FopdtWindow : Window
         var token = _lifetime.Token;
         try
         {
-            var study = await _workspace.CalculateAsync(training, trainColumns, validation, valColumns,
+            var study = await _workspace.CalculateAsync(family, training, trainColumns, validation, valColumns,
                 mvUnit, pvUnit, mvTolerance, pvTolerance, token);
             var studies = _workspace.Studies();
             StudyList.ItemsSource = studies;
@@ -80,7 +82,7 @@ public partial class FopdtWindow : Window
 
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
-        _shown = StudyList.SelectedItem as FopdtStudy;
+        _shown = StudyList.SelectedItem as IdentificationStudy;
         if (_shown is not { } study)
         {
             FitReport.Text = PlotLegend.Text = "";
@@ -94,17 +96,22 @@ public partial class FopdtWindow : Window
         {
             "parameter_bound" => "Un paramètre est proche d’une borne de recherche.",
             "delay_resolution" => "Le retard estimé est inférieur ou égal à la résolution de détection de l’échelon.",
-            "short_horizon" => "Au moins un essai couvre moins de quatre constantes de temps après le retard.",
+            "short_horizon" => "Au moins un essai est trop court au regard de la constante de temps lente après le retard.",
             "correlated_residuals" => "Résidus autocorrélés sur l’essai d’estimation.",
             "delay_derivative" => "Le retard estimé est trop proche d’un instant échantillonné pour linéariser sa réponse.",
+            "fast_pole_resolution" => "La constante rapide est inférieure au pas médian d’échantillonnage.",
+            "close_poles" => "Les deux constantes sont proches et peuvent être difficiles à distinguer.",
             "ill_conditioned" => "Sensibilités locales trop proches pour séparer les paramètres.",
             _ => code
         });
         var uncertainty = result.StandardErrors is { } errors
             ? $"Erreurs-types locales conditionnelles (K, τ, θ) : {errors.Gain:G4} {study.PvUnit}/{study.MvUnit}, {errors.TauSeconds:G4} s, {errors.DelaySeconds:G4} s."
             : "Erreurs-types locales indisponibles.";
-        FitReport.Text = $"Modèle exploratoire · K = {result.Gain:G5} {study.PvUnit}/{study.MvUnit} · " +
-            $"τ = {result.TauSeconds:G5} s · θ = {result.DelaySeconds:G5} s\n" +
+        var timeConstants = result.SecondTauSeconds is { } fast
+            ? $"τ lente = {result.TauSeconds:G5} s · τ rapide = {fast:G5} s"
+            : $"τ = {result.TauSeconds:G5} s";
+        FitReport.Text = $"Modèle {study.Family} exploratoire · K = {result.Gain:G5} {study.PvUnit}/{study.MvUnit} · " +
+            $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{uncertainty}\n{string.Join(" ", warnings)}";
@@ -171,7 +178,7 @@ public partial class FopdtWindow : Window
 
     private void ShowError(Exception error)
     {
-        Trace.TraceError("fopdt.study {0}", error.GetType().Name);
+        Trace.TraceError("identification.study {0}", error.GetType().Name);
         Message.Text = error is CsvInputException input ? input.Code switch
         {
             "fit_independence" => "Les deux essais doivent provenir de fichiers distincts et de plages temporelles disjointes.",

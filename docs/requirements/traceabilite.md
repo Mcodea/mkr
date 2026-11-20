@@ -8,7 +8,7 @@ Source primaire : MKR-SPEC-001 v1.0, 14 pages, §§1–19 examinées. La mission
 | SYS-002 §3 | IPC | Contrat v1, tests requêtes valides/invalides et échange interprocessus | Python testé, intégration .NET à vérifier |
 | DATA-001 §§5,13 | Data/Persistence | Octets originaux, empreinte, journal des traitements, test de réouverture | Parcours CSV implémenté, intégration Windows à vérifier |
 | DATA-002 §§4–5 | Data | Jeu annoté avec trous, doublons, unités, saturation et excitation, sans correction silencieuse | Contrôles descriptifs implémentés, qualification complète à venir |
-| SCI-001 §6 | Identification | FOPDT/SOPDT, résidus, incertitudes et validation indépendante | FOPDT exploratoire et essai distinct implémentés, SOPDT et incertitudes en attente |
+| SCI-001 §6 | Identification | FOPDT/SOPDT, résidus, incertitudes et validation indépendante | FOPDT/SOPDT exploratoires avec essai distinct, erreurs-types conditionnelles FOPDT, qualification sur données représentatives en attente |
 | SCI-002 §§7–8 | Control/Tuning | Cas de référence P/PI/PID, IMC/Lambda et SIMC, formes et signes documentés | Phase 4 |
 | SCI-003 §9 | Simulation | Scénarios reproductibles, cas analytiques et convergence | Phase 5 |
 | COM-001 §§5,10 | Data/Acquisition | Entrées hors ligne et connectées equivalentes après normalisation | Phases 2 et 7 |

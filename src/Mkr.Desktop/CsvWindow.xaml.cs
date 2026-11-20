@@ -11,14 +11,14 @@ namespace Mkr.Desktop;
 public partial class CsvWindow : Window
 {
     private readonly CsvWorkspace _workspace;
-    private readonly FopdtWorkspace _fopdt;
+    private readonly IdentificationWorkspace _identification;
     private readonly CancellationTokenSource _lifetime = new();
 
-    internal CsvWindow(CsvWorkspace workspace, FopdtWorkspace fopdt)
+    internal CsvWindow(CsvWorkspace workspace, IdentificationWorkspace identification)
     {
         InitializeComponent();
         _workspace = workspace;
-        _fopdt = fopdt;
+        _identification = identification;
         Title = $"MKR — {workspace.ProjectName}";
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
@@ -107,9 +107,9 @@ public partial class CsvWindow : Window
         catch (Exception error) { ShowError(error); }
     }
 
-    private void OpenFopdt(object sender, RoutedEventArgs args)
+    private void OpenIdentification(object sender, RoutedEventArgs args)
     {
-        try { new FopdtWindow(_fopdt) { Owner = this }.ShowDialog(); }
+        try { new IdentificationWindow(_identification) { Owner = this }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 

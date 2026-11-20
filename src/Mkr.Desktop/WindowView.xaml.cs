@@ -9,15 +9,15 @@ public partial class WindowView : Window
     private readonly IImportStore _store;
     private readonly ICsvEngine _engine;
 
-    private readonly IFopdtStore _studies;
-    private readonly IFopdtEngine _fopdt;
+    private readonly IIdentificationStore _studies;
+    private readonly IIdentificationEngine _identification;
 
-    public WindowView(IImportStore store, ICsvEngine engine, IFopdtStore studies, IFopdtEngine fopdt)
+    public WindowView(IImportStore store, ICsvEngine engine, IIdentificationStore studies, IIdentificationEngine identification)
     {
         _store = store;
         _engine = engine;
         _studies = studies;
-        _fopdt = fopdt;
+        _identification = identification;
         InitializeComponent();
     }
 
@@ -30,7 +30,7 @@ public partial class WindowView : Window
         }
         try
         {
-            new CsvWindow(new CsvWorkspace(project, _store, _engine), new FopdtWorkspace(project, _store, _studies, _fopdt)) { Owner = this }.ShowDialog();
+            new CsvWindow(new CsvWorkspace(project, _store, _engine), new IdentificationWorkspace(project, _store, _studies, _identification)) { Owner = this }.ShowDialog();
         }
         catch (Exception error)
         {

@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
-ENGINE_VERSION = "0.3.0"
+ENGINE_VERSION = "0.4.0"
 MAX_REQUEST_BYTES = 2_900_000
 
 
@@ -43,9 +43,12 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
-    elif request["operation"] == "identify_fopdt":
+    elif request["operation"] in ("identify_fopdt", "identify_sopdt"):
         try:
-            from fopdt import identify
+            if request["operation"] == "identify_fopdt":
+                from fopdt import identify
+            else:
+                from sopdt import identify
             result = identify(request["payload"])
         except ImportError:
             code = "fit_dependency"
