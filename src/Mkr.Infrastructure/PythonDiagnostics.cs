@@ -58,6 +58,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var operation = family switch
         {
             ModelFamily.FOPDT => "identify_fopdt",
+            ModelFamily.BroidaFOPDT => "identify_broida",
             ModelFamily.SOPDT => "identify_sopdt",
             ModelFamily.Integrateur => "identify_integrator",
             _ => throw new ArgumentOutOfRangeException(nameof(family))
@@ -71,6 +72,14 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var validTimeConstants = family switch
         {
             ModelFamily.FOPDT => fit.TauSeconds is > 0 && fit.SecondTauSeconds is null,
+            ModelFamily.BroidaFOPDT => fit.TauSeconds is > 0 && fit.SecondTauSeconds is null &&
+                fit.BroidaEvidence is { } ev && ev.Crossing28Seconds > 0 &&
+                ev.Crossing40Seconds > ev.Crossing28Seconds &&
+                ev.TerminalSamples == 6 && ev.ThresholdFractions is { Length: 2 } fractions &&
+                fractions[0] == 0.28 && fractions[1] == 0.40 &&
+                ev.TimeOrigin == "mv_step_first_changed_sample" &&
+                double.IsFinite(ev.TerminalPv) &&
+                fit.StandardErrors is null,
             ModelFamily.SOPDT => fit.TauSeconds is > 0 && fit.SecondTauSeconds is > 0 && fit.SecondTauSeconds <= fit.TauSeconds,
             ModelFamily.Integrateur => fit.TauSeconds is null && fit.SecondTauSeconds is null,
             _ => false
