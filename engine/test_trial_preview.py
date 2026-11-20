@@ -87,6 +87,19 @@ class TrialPreviewTests(unittest.TestCase):
         self.assertEqual(selected, sorted(set(selected)))
         self.assertTrue(all(0 <= idx < 10240 for idx in selected))
 
+    def test_ipc_preview_keeps_isolated_anomalies(self):
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        lines = ["timestamp,mv,pv"]
+        for i in range(1000):
+            when = (start + timedelta(milliseconds=10 * i)).isoformat()
+            lines.append(f"{when},{55 if i == 347 else 0},{-25 if i == 681 else 1}")
+        raw = base64.b64encode("\\n".join(lines).encode()).decode()
+        points = call(raw=raw, delimiter=",")["result"]["points"]
+        ids = {p["rowIndex"] for p in points}
+        self.assertIn(347, ids)
+        self.assertIn(681, ids)
+        self.assertLessEqual(len(points), 600)
+
     def test_mapping_and_malformed_source_rejected(self):
         self.assertEqual(call(pvColumn="mv")["error"]["code"], "preview_mapping")
         self.assertEqual(call(timeColumn="absent")["error"]["code"], "preview_mapping")
