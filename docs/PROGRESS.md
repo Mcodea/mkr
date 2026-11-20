@@ -32,3 +32,12 @@
 - Limite : **zoom visuel seulement**. Les données du graphe proviennent des points de diagnostic déjà échantillonnés pour l'affichage, pas d'une sélection d'entraînement recalculée.
 - Recette : `docs/ui/UI-03A-identification-diagnostics.md`. Compilation CI Windows et validation visuelle **à confirmer**.
 - Suite : UI-03B, sélection de fenêtres sur courbes MV/PV brutes et traçabilité scientifique sans contaminer la validation indépendante.
+
+## UI-03B1 — Prévisualisation des essais MV/PV originaux (branche dédiée)
+
+- Nouvelle opération Python `preview_trial`, lecture en mémoire du CSV source conservé, horodatages UTC et signaux strictement validés, aperçu limité à 600 points d'affichage indexés.
+- Raccordement .NET via `TrialPreview`, port `IIdentificationEngine`, `PythonDiagnostics` et `IdentificationWorkspace` ; aucun changement du schéma SQLite.
+- Fenêtre WPF en lecture seule permettant inspection de MV/PV séparément, contrôle d'une période et effacement de la sélection, sans changement des modèles calculés.
+- Tests Python de contrat, origine UTC, indices source, décimation, invalidité temporelle/numérique.
+- Documentation : `docs/ui/UI-03B1-trial-preview.md`. Compilation Windows/CI et revue visuelle **à confirmer**.
+- **La sélection de période n'est pas appliquée à l'estimation** ; prochaine phase UI-03B2 nécessite une conception scientifique et de traçabilité spécifique.

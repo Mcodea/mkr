@@ -72,6 +72,14 @@ def respond(raw):
             code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
         else:
             return {**response, "result": result}
+    elif request["operation"] == "preview_trial":
+        try:
+            from trial_preview import preview
+            result = preview(request["payload"])
+        except ValueError as error:
+            code = str(error) if str(error).startswith(("preview_", "csv_")) else "preview_data"
+        else:
+            return {**response, "result": result}
     elif request["operation"] in ("inspect_csv", "analyze_csv"):
         try:
             result = process_csv(request["payload"], request["operation"] == "inspect_csv")

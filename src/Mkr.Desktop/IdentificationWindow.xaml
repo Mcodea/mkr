@@ -13,6 +13,7 @@
                            Text="Deux essais distincts du même procédé, avec un seul échelon de MV par CSV. La validation utilise le deuxième essai." />
                 <StackPanel x:Name="Form">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
+                        <StackPanel>
                         <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
                             <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" />
@@ -23,8 +24,14 @@
                             <Label Content="PV" Target="{Binding ElementName=TrainingPv}" />
                             <ComboBox x:Name="TrainingPv" Width="95" />
                         </WrapPanel>
+                        <Button Content="Afficher les _courbes brutes MV/PV (estimation)…"
+                                Click="PreviewTraining" HorizontalAlignment="Left"
+                                Margin="12,0,12,8"
+                                ToolTip="Prévisualisation de l'import source, sans changement des paramètres calculés"/>
+                        </StackPanel>
                     </GroupBox>
                     <GroupBox Header="Validation" Margin="0,0,0,8">
+                        <StackPanel>
                         <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
                             <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" />
@@ -35,6 +42,11 @@
                             <Label Content="PV" Target="{Binding ElementName=ValidationPv}" />
                             <ComboBox x:Name="ValidationPv" Width="95" />
                         </WrapPanel>
+                        <Button Content="Afficher les courbes brutes MV/PV (_validation)…"
+                                Click="PreviewValidation" HorizontalAlignment="Left"
+                                Margin="12,0,12,8"
+                                ToolTip="Prévisualisation indépendante de l'import de validation"/>
+                        </StackPanel>
                     </GroupBox>
                     <WrapPanel Margin="0,0,0,8">
                         <Label Content="Unité MV" Target="{Binding ElementName=MvUnit}" />

@@ -9,6 +9,15 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
     public string[] Columns(ImportSummary source) => imports.ReadImport(project.Id, source.Id).Result.Headers;
 
+    public Task<TrialPreview> PreviewTrialAsync(ImportSummary source, StepColumns columns,
+        CancellationToken token)
+    {
+        var original = imports.ReadImport(project.Id, source.Id);
+        if (original.Summary.Sha256 != source.Sha256)
+            throw new CsvInputException("preview_provenance");
+        return engine.PreviewTrialAsync(new StepImport(original, columns), token);
+    }
+
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, CancellationToken token)
