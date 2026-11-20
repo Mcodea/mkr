@@ -50,3 +50,12 @@
 - Enregistrement des plages optionnelles dans `IdentificationStudy` sérialisée en SQLite, sans migration de schéma ni remplacement des originaux.
 - Tests scientifiques Python et test smoke C# ajoutés pour la traçabilité et la persistance. CI Windows et revue visuelle **à exécuter**.
 - Limites : rendu décimé pouvant masquer les événements courts; ce lot n'ajoute ni prétraitement automatique, ni classification de boucle fermée, ni preuve de qualification industrielle.
+
+## UI-03C — Affichage scientifique des grands historiques
+
+- `trial_preview.py` passe à l'algorithme d'aperçu 1.1.0 : réduction à 600 points maximum en conservant les extrema et principales transitions dans chaque portion chronologique (premier/dernier, min/max MV et PV, voisinage des plus fortes variations).
+- Les points affichés conservent leurs indices originaux. L'identification sur une plage UI-03B2 exploite toujours **toutes** les lignes du CSV original incluses dans les indices retenus.
+- Avertissement graphique révisé : une réduction visuelle ne constitue pas une garantie de couverture de tous les événements.
+- Régression automatisée : pics courts, échelon, source entière, limites d'indices et test IPC sur CSV anomalique.
+- Spécification et recette : `docs/ui/UI-03C-extrema-preview.md`. Tests CI Windows/inspection graphique réels à contrôler.
+- Prochain lot : UI-04, simulation PI et graphiques comparatifs professionnels.
