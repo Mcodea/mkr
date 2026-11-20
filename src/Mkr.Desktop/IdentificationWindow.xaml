@@ -13,7 +13,8 @@
                            Text="Deux essais distincts du même procédé, avec un seul échelon de MV par CSV. La validation utilise le deuxième essai." />
                 <StackPanel x:Name="Form">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
-                        <WrapPanel Margin="6">
+                        <StackPanel>
+                            <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
                             <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" />
                             <Label Content="Temps" Target="{Binding ElementName=TrainingTime}" />
@@ -26,10 +27,14 @@
                         <Button Content="Afficher les _courbes brutes MV/PV (estimation)…"
                                 Click="PreviewTraining" HorizontalAlignment="Left"
                                 Margin="12,0,12,8"
-                                ToolTip="Prévisualisation de l'import source, sans changement des paramètres calculés"/>
+                                ToolTip="Sélectionner une plage du CSV original pour le prochain calcul"/>
+                        <TextBlock x:Name="TrainingRangeInfo" Text="Estimation : fichier complet" Margin="12,0,8,8"
+                                   Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </GroupBox>
                     <GroupBox Header="Validation" Margin="0,0,0,8">
-                        <WrapPanel Margin="6">
+                        <StackPanel>
+                            <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
                             <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" />
                             <Label Content="Temps" Target="{Binding ElementName=ValidationTime}" />
@@ -42,7 +47,10 @@
                         <Button Content="Afficher les courbes brutes MV/PV (_validation)…"
                                 Click="PreviewValidation" HorizontalAlignment="Left"
                                 Margin="12,0,12,8"
-                                ToolTip="Prévisualisation indépendante de l'import de validation"/>
+                                ToolTip="Sélectionner une plage indépendante pour la validation"/>
+                        <TextBlock x:Name="ValidationRangeInfo" Text="Validation : fichier complet" Margin="12,0,8,8"
+                                   Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </GroupBox>
                     <WrapPanel Margin="0,0,0,8">
                         <Label Content="Unité MV" Target="{Binding ElementName=MvUnit}" />

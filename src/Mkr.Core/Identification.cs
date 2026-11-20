@@ -3,7 +3,13 @@ namespace Mkr.Core;
 public enum ModelFamily { FOPDT, SOPDT, Integrateur }
 
 public sealed record StepColumns(string TimeColumn, string MvColumn, string PvColumn);
-public sealed record StepImport(CsvImport Import, StepColumns Columns);
+/// <summary>Inclusive original CSV data-row indices (header excluded).</summary>
+public sealed record StepWindow(int RowStart, int RowEnd)
+{
+    public bool IsValid => RowStart >= 0 && RowEnd > RowStart;
+}
+
+public sealed record StepImport(CsvImport Import, StepColumns Columns, StepWindow? Window = null);
 public sealed record FitPoint(double Seconds, double Observed, double Predicted);
 public sealed record FitDiagnostics(int Samples, double InputStep, double Baseline, double OnsetIntervalSeconds,
     double HorizonSeconds, double Rmse, double Mae, double? RSquared, double? ResidualLagOne, FitPoint[] Points);
@@ -14,7 +20,8 @@ public sealed record IdentificationResult(string AlgorithmVersion, double Gain, 
 
 public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid ValidationId, StepColumns TrainingColumns,
     StepColumns ValidationColumns, string MvUnit, string PvUnit, double MvTolerance, double PvTolerance,
-    DateTimeOffset CalculatedAt, string EngineVersion, IdentificationResult Result, ModelFamily Family = ModelFamily.FOPDT)
+    DateTimeOffset CalculatedAt, string EngineVersion, IdentificationResult Result, ModelFamily Family = ModelFamily.FOPDT,
+    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null)
 {
     public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}";
 }

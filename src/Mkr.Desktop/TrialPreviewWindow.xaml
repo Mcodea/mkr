@@ -34,7 +34,7 @@
                         MouseLeftButtonDown="StartSelection" MouseLeftButtonUp="EndSelection"
                         MouseLeave="CancelSelection"
                         AutomationProperties.Name="Courbes sources MV et PV en fonction du temps"/>
-                <TextBlock Grid.Row="2" Text="Glissez sur l'axe du temps pour délimiter une période à examiner. Cela n'entraîne aucun recalcul scientifique."
+                <TextBlock Grid.Row="2" Text="Glissez sur le graphique pour délimiter une plage. Une sélection confirmée sera prise en compte uniquement lors du prochain calcul de modèle."
                            Foreground="{StaticResource MkrMuted}" Margin="0,8,0,0"
                            TextWrapping="Wrap"/>
             </Grid>
@@ -47,7 +47,13 @@
             <TextBlock x:Name="SelectionText" TextWrapping="Wrap"
                        Foreground="{StaticResource MkrText}" VerticalAlignment="Center"
                        Margin="0,0,12,0" AutomationProperties.LiveSetting="Polite"/>
-            <Button Grid.Column="1" Content="Effacer la sélection" Click="ClearSelection"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Effacer la sélection" Click="ClearSelection" Margin="0,0,8,0"/>
+                <Button x:Name="ApplySelection" Content="_Utiliser cette plage pour l'essai"
+                        IsEnabled="False" Click="ApplyWindow"
+                        Style="{StaticResource MkrPrimaryButton}"
+                        ToolTip="Réutiliser ces indices de lignes sources dans une nouvelle identification"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </Window>

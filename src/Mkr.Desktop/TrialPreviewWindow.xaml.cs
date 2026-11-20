@@ -12,6 +12,9 @@ public partial class TrialPreviewWindow : Window
     private double? _dragOrigin;
     private double? _selectedFrom;
     private double? _selectedTo;
+    private StepWindow? _pendingWindow;
+
+    internal StepWindow? SelectedWindow { get; private set; }
 
     internal TrialPreviewWindow(TrialPreview data, string importName, string mvUnit, string pvUnit)
     {
@@ -60,6 +63,8 @@ public partial class TrialPreviewWindow : Window
 
         _selectedFrom = retained[0].Seconds;
         _selectedTo = retained[^1].Seconds;
+        _pendingWindow = new StepWindow(retained[0].RowIndex, retained[^1].RowIndex);
+        ApplySelection.IsEnabled = true;
         SelectionText.Text = $"Inspection uniquement · {retained.Length} points affichés · " +
             $"[{_selectedFrom:G6} s – {_selectedTo:G6} s] depuis l'origine UTC. " +
             "La sélection n'est pas appliquée à l'identification.";
@@ -74,9 +79,19 @@ public partial class TrialPreviewWindow : Window
         Plot.ReleaseMouseCapture();
     }
 
+    private void ApplyWindow(object sender, RoutedEventArgs args)
+    {
+        if (_pendingWindow is not { IsValid: true } window)
+            return;
+        SelectedWindow = window;
+        DialogResult = true;
+    }
+
     private void ClearSelection(object sender, RoutedEventArgs args)
     {
         _selectedFrom = _selectedTo = _dragOrigin = null;
+        _pendingWindow = null;
+        ApplySelection.IsEnabled = false;
         Plot.ReleaseMouseCapture();
         SelectionText.Text = "Aucune période sélectionnée. Affichage en lecture seule.";
         Draw();

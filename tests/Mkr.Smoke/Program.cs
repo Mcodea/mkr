@@ -140,6 +140,26 @@ try
     Require(persisted.Id == study.Id && persisted.Family == ModelFamily.FOPDT && persisted.ValidationId == validation.Summary.Id &&
         persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
 
+    // Row-window fit preserves untouched originals and survives SQLite JSON reopening.
+    var selectedRange = new StepWindow(0, 55);
+    var (windowFit, windowEngineVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+        new StepImport(training, columns, selectedRange),
+        new StepImport(validation, columns, selectedRange), 0.01, 0.01, default);
+    Require(Math.Abs(windowFit.Gain + 3) < 1e-4 && windowFit.Validation.Rmse < 1e-5,
+        "Scientific fitting uses selected source rows for each independent trial.");
+    var windowStudy = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id,
+        validation.Summary.Id, columns, columns, "%", "bar", 0.01, 0.01,
+        DateTimeOffset.UtcNow, windowEngineVersion, windowFit, ModelFamily.FOPDT,
+        selectedRange, selectedRange);
+    restored.SaveStudy(project.Id, windowStudy);
+    var reopenedWindow = new SqliteProjectStore(legacyPath).ListStudies(project.Id)
+        .Single(item => item.Id == windowStudy.Id);
+    Require(reopenedWindow.TrainingWindow == selectedRange &&
+            reopenedWindow.ValidationWindow == selectedRange &&
+            reopenedWindow.TrainingId == training.Summary.Id &&
+            reopenedWindow.ValidationId == validation.Summary.Id,
+        "Selected original row indices and independent import references survive SQLite reopening.");
+
     var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
         new OpenLoopScenario(1, 8, 4, 1, -2, 2, 1), default);
     Require(openLoopVersion == "0.9.0" && openLoop.Points.Length == 9 &&

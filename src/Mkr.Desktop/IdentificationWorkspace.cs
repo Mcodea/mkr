@@ -20,10 +20,11 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
-        double mvTolerance, double pvTolerance, CancellationToken token)
+        double mvTolerance, double pvTolerance, CancellationToken token,
+        StepWindow? trainingWindow = null, StepWindow? validationWindow = null)
     {
-        var train = new StepImport(imports.ReadImport(project.Id, training.Id), trainColumns);
-        var check = new StepImport(imports.ReadImport(project.Id, validation.Id), valColumns);
+        var train = new StepImport(imports.ReadImport(project.Id, training.Id), trainColumns, trainingWindow);
+        var check = new StepImport(imports.ReadImport(project.Id, validation.Id), valColumns, validationWindow);
         if (train.Import.Summary.Sha256 == check.Import.Summary.Sha256)
             throw new CsvInputException("fit_independence");
         CheckRecordedUnit(train, mvUnit, pvUnit);
@@ -31,7 +32,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var (result, version) = await engine.IdentifyAsync(family, train, check, mvTolerance, pvTolerance, token);
         token.ThrowIfCancellationRequested();
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
-            mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result, family);
+            mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result,
+            family, trainingWindow, validationWindow);
         studies.SaveStudy(project.Id, study);
         return study;
     }
