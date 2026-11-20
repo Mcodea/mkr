@@ -25,9 +25,9 @@ public partial class TrialPreviewWindow : Window
         SourceInfo.Text = $"{importName} · {data.SourceRows} lignes source · " +
             $"{data.DisplayedRows} points affichés · UTC [{data.FirstUtc:u} – {data.LastUtc:u}]" +
             (data.DisplayDecimated
-                ? " · Affichage décimé : certaines variations rapides peuvent être masquées."
+                ? " · Affichage réduit : extrema et fortes variations prioritaires ; certains événements restent potentiellement invisibles."
                 : " · Aucun point écarté de l'affichage.");
-        SelectionText.Text = "Aucune période sélectionnée. Affichage en lecture seule.";
+        SelectionText.Text = "Aucune période sélectionnée. Les plages validées utilisent les indices des lignes originales.";
     }
 
     private void PlotResize(object sender, SizeChangedEventArgs args) => Draw();
@@ -65,9 +65,9 @@ public partial class TrialPreviewWindow : Window
         _selectedTo = retained[^1].Seconds;
         _pendingWindow = new StepWindow(retained[0].RowIndex, retained[^1].RowIndex);
         ApplySelection.IsEnabled = true;
-        SelectionText.Text = $"Inspection uniquement · {retained.Length} points affichés · " +
-            $"[{_selectedFrom:G6} s – {_selectedTo:G6} s] depuis l'origine UTC. " +
-            "La sélection n'est pas appliquée à l'identification.";
+        SelectionText.Text = $"Sélection : {_pendingWindow.RowEnd - _pendingWindow.RowStart + 1} lignes originales " +
+            $"(dont {retained.Length} affichées) · [{_selectedFrom:G6} s – {_selectedTo:G6} s]. " +
+            "Confirmez pour utiliser cette plage lors de la prochaine identification.";
         Draw();
     }
 
