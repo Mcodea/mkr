@@ -14,6 +14,10 @@ public interface IPiEngine
     Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
         IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token);
 
+    Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token);
+
     Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token);
 }
