@@ -81,7 +81,7 @@ public partial class IdentificationWindow : Window
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
-        PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         PiList.ItemsSource = null;
         PiResponse.Clear();
         PiReport.Text = "";
@@ -155,6 +155,12 @@ public partial class IdentificationWindow : Window
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
         finally { Form.IsEnabled = PiPanel.IsEnabled = true; }
+    }
+
+    private void OpenLoop(object sender, RoutedEventArgs args)
+    {
+        if (_shown is { Family: ModelFamily.FOPDT } model)
+            new OpenLoopWindow(_workspace, model) { Owner = this }.ShowDialog();
     }
 
     private void OpenSimulation(object sender, RoutedEventArgs args)

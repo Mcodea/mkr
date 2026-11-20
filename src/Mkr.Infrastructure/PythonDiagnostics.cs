@@ -5,7 +5,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine, IPiEngine
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine, IPiEngine, IOpenLoopEngine
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -103,6 +103,24 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             imc.Length != simc.Length || imc[^1].Seconds != scenario.DurationSeconds ||
             simc[^1].Seconds != scenario.DurationSeconds)
             throw new InvalidDataException("Résultat de simulation incompatible avec le contrat.");
+        return (simulation, version);
+    }
+
+    public async Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
+        IdentificationResult model, OpenLoopScenario scenario, CancellationToken token)
+    {
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds, scenario.SampleSeconds, scenario.DurationSeconds,
+            scenario.StepMv, scenario.StepAtSeconds, scenario.MinimumMv, scenario.MaximumMv
+        };
+        var (result, version) = await CallAsync("simulate_open_loop", payload, token).ConfigureAwait(false);
+        var simulation = result.Deserialize<OpenLoopResult>(JsonOptions);
+        if (simulation is null || string.IsNullOrEmpty(simulation.AlgorithmVersion) || simulation.Warnings is null ||
+            simulation.Points is not { Length: >= 3 and <= 5001 } points ||
+            points[^1] is not { RequestedMv: null, AppliedMv: null } || points[^1].Seconds != scenario.DurationSeconds ||
+            points.Take(points.Length - 1).Any(point => point is not { RequestedMv: not null, AppliedMv: not null }))
+            throw new InvalidDataException("Résultat de simulation en boucle ouverte incompatible avec le contrat.");
         return (simulation, version);
     }
 

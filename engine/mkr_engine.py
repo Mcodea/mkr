@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
-ENGINE_VERSION = "0.7.0"
+ENGINE_VERSION = "0.8.0"
 MAX_REQUEST_BYTES = 2_900_000
 
 
@@ -43,11 +43,13 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
-    elif request["operation"] in ("calculate_pi", "simulate_pi"):
+    elif request["operation"] in ("calculate_pi", "simulate_pi", "simulate_open_loop"):
         if request["operation"] == "calculate_pi":
             from pi_tuning import calculate
-        else:
+        elif request["operation"] == "simulate_pi":
             from pi_simulation import calculate
+        else:
+            from open_loop_simulation import calculate
         try:
             result = calculate(request["payload"])
         except ValueError as error:

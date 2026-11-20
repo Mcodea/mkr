@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.7.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.8.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -139,6 +139,15 @@ try
     var persisted = new SqliteProjectStore(legacyPath).ListStudies(project.Id).Single();
     Require(persisted.Id == study.Id && persisted.Family == ModelFamily.FOPDT && persisted.ValidationId == validation.Summary.Id &&
         persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
+
+    var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
+        new OpenLoopScenario(1, 8, 4, 1, -2, 2), default);
+    Require(openLoopVersion == "0.8.0" && openLoop.Points.Length == 9 &&
+        openLoop.Points[0].AppliedMv == 0 && openLoop.Points[1].RequestedMv == 4 &&
+        openLoop.Points[1].AppliedMv == 2 && openLoop.Points[3].Pv == 0 &&
+        Math.Abs(openLoop.Points[4].Pv - (-6 * (1 - Math.Exp(-0.5 / 4)))) < 1e-5 &&
+        openLoop.Points[^1].AppliedMv is null && openLoop.SaturationSeconds == 7,
+        "The open-loop step and fractional delay survive the process boundary without a PI tuning.");
 
     var trainingSecond = await SaveStepAsync(3, 2, ModelFamily.SOPDT);
     var validationSecond = await SaveStepAsync(4, -1.5, ModelFamily.SOPDT);

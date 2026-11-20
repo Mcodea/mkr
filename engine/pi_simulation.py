@@ -2,16 +2,27 @@
 import math
 
 
+def number(value):
+    if type(value) not in (float, int) or not -1e12 <= value <= 1e12:
+        raise ValueError("sim_input")
+    return float(value)
+
+
+def grid_index(seconds, sample_seconds):
+    ratio = seconds / sample_seconds
+    if not math.isfinite(ratio) or ratio > 5000:
+        raise ValueError("sim_grid")
+    rounded = round(ratio)
+    if abs(ratio - rounded) > 1e-8:
+        raise ValueError("sim_grid")
+    return rounded
+
+
 def calculate(payload):
     required = {"gain", "tauSeconds", "delaySeconds", "imc", "simc", "sampleSeconds", "durationSeconds",
                 "setpoint", "minimumMv", "maximumMv", "disturbance", "disturbanceAtSeconds"}
     if payload.keys() != required:
         raise ValueError("sim_input")
-
-    def number(value):
-        if type(value) not in (float, int) or not -1e12 <= value <= 1e12:
-            raise ValueError("sim_input")
-        return float(value)
 
     gain, tau, delay, h, duration, sp, lower, upper, disturbance, event = (
         number(payload[key]) for key in ("gain", "tauSeconds", "delaySeconds", "sampleSeconds", "durationSeconds",
@@ -19,16 +30,7 @@ def calculate(payload):
     if gain == 0 or tau <= 0 or delay < 0 or h <= 0 or duration <= 0 or not lower < 0 < upper or not 0 <= event <= duration:
         raise ValueError("sim_domain")
 
-    def index(seconds):
-        ratio = seconds / h
-        if not math.isfinite(ratio) or ratio > 5000:
-            raise ValueError("sim_grid")
-        rounded = round(ratio)
-        if abs(ratio - rounded) > 1e-8:
-            raise ValueError("sim_grid")
-        return rounded
-
-    n, event_index = index(duration), index(event)
+    n, event_index = grid_index(duration, h), grid_index(event, h)
     if not 2 <= n <= 5000:
         raise ValueError("sim_grid")
     delay_steps = min(delay, duration) / h

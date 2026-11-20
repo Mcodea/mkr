@@ -1,0 +1,38 @@
+<Window x:Class="Mkr.Desktop.OpenLoopWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MKR — Simulation en boucle ouverte" Width="790" Height="525" MinWidth="540" MinHeight="390"
+        WindowStartupLocation="CenterOwner">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="18">
+            <TextBlock x:Name="Units" TextWrapping="Wrap" Margin="0,0,0,10" />
+            <StackPanel x:Name="ScenarioForm">
+                <WrapPanel Margin="0,0,0,6">
+                    <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
+                    <TextBox x:Name="Sample" Width="75" />
+                    <Label Content="Durée (s)" Target="{Binding ElementName=Duration}" />
+                    <TextBox x:Name="Duration" Width="75" />
+                    <Label Content="Instant de l’échelon (s)" Target="{Binding ElementName=StepAt}" />
+                    <TextBox x:Name="StepAt" Width="75" Text="0" />
+                </WrapPanel>
+                <WrapPanel Margin="0,0,0,6">
+                    <Label Content="Échelon ΔMV" Target="{Binding ElementName=StepMv}" />
+                    <TextBox x:Name="StepMv" Width="75" />
+                    <Label Content="ΔMV min." Target="{Binding ElementName=Lower}" />
+                    <TextBox x:Name="Lower" Width="75" />
+                    <Label Content="ΔMV max." Target="{Binding ElementName=Upper}" />
+                    <TextBox x:Name="Upper" Width="75" />
+                </WrapPanel>
+                <WrapPanel Margin="0,0,0,8">
+                    <Button Content="_Simuler" Click="Run" />
+                    <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export"
+                            IsEnabled="False" Margin="8,0,0,0" />
+                </WrapPanel>
+            </StackPanel>
+            <TextBlock x:Name="Message" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="0,8,0,0" />
+            <Canvas x:Name="Plot" Height="208" ClipToBounds="True" SizeChanged="ResizePlot"
+                    AutomationProperties.Name="Réponse PV en boucle ouverte et niveau initial" />
+        </StackPanel>
+    </ScrollViewer>
+</Window>

@@ -11,3 +11,9 @@ Pour chaque méthode, le PI numérique calcule `CV[k]=Kp(SP−PV[k])+I[k]` et ap
 Les IAE et ISE sont les sommes à gauche de `h|e[k]|` et `h e[k]²`. L’erreur finale est calculée sur la PV au dernier instant. Le pas comporte 2 à 5 000 intervalles. Un pas supérieur au dixième de τ ou un retard atteignant l’horizon sont signalés. Le résultat est nominal et exploratoire. Il ne comprend ni dérivée PID, ni limitation de vitesse, ni changement de mode ou transfert sans à-coup. Il ne prouve pas la stabilité robuste ni la performance industrielle.
 
 Le stockage conserve scénario, version, réglage d’origine, diagnostics et séries complètes. Les tests vérifient la convergence vers une réponse analytique sans retard, la réponse avec retard fractionnaire et saturation, la commande inverse, la perturbation et le gel de l’intégrale.
+
+## Échelon en boucle ouverte
+
+Depuis une étude FOPDT, ouvrir **Simuler en boucle ouverte**. Saisir le pas, la durée, l’instant et l’amplitude signée de l’échelon de ΔMV ainsi que les bornes autour de zéro. La durée et l’instant de l’échelon sont des multiples du pas. L’échelon est non nul et précède la fin de l’horizon, qui comporte 2 à 5 000 intervalles.
+
+La MV reste à zéro jusqu’à l’échelon, puis prend la valeur demandée bornée jusqu’à la fin. Après l’instant de l’échelon augmenté du retard θ, la PV suit la réponse exacte `K × ΔMV appliquée × (1 − exp(−temps écoulé / τ))`. Le retard conserve sa valeur fractionnaire. Le graphique présente la PV et le niveau initial. La durée de saturation compte les intervalles où la MV demandée diffère de la MV appliquée. Le CSV exporte le temps, la PV et les deux séries de MV. L’export est disponible pendant la session de simulation.

@@ -3,7 +3,7 @@ using Mkr.Core;
 namespace Mkr.Desktop;
 
 internal sealed class IdentificationWorkspace(Project project, IImportStore imports, IIdentificationStore studies,
-    IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine)
+    IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine, IOpenLoopEngine openLoopEngine)
 {
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
@@ -53,6 +53,14 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow, version, scenario, result);
         piStore.SaveSimulation(project.Id, study);
         return study;
+    }
+
+    public Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
+        IdentificationStudy model, OpenLoopScenario scenario, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT)
+            throw new InvalidOperationException("La simulation en boucle ouverte exige une étude FOPDT.");
+        return openLoopEngine.SimulateOpenLoopAsync(model.Result, scenario, token);
     }
 
     private static void CheckRecordedUnit(StepImport source, string mvUnit, string pvUnit)
