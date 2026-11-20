@@ -93,7 +93,7 @@ class TrialPreviewTests(unittest.TestCase):
         for i in range(1000):
             when = (start + timedelta(milliseconds=10 * i)).isoformat()
             lines.append(f"{when},{55 if i == 347 else 0},{-25 if i == 681 else 1}")
-        raw = base64.b64encode("\\n".join(lines).encode()).decode()
+        raw = base64.b64encode("\n".join(lines).encode()).decode()
         points = call(raw=raw, delimiter=",")["result"]["points"]
         ids = {p["rowIndex"] for p in points}
         self.assertIn(347, ids)
