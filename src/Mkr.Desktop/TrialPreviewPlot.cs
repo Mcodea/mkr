@@ -27,8 +27,8 @@ internal static class TrialPreviewPlot
         return double.IsFinite(seconds);
     }
 
-    public static void Draw(Canvas canvas, TrialPreview data, double? selectedStart = null,
-                            double? selectedEnd = null)
+    public static void Draw(Canvas canvas, TrialPreview data, string mvUnit, string pvUnit,
+                            double? selectedStart = null, double? selectedEnd = null)
     {
         canvas.Children.Clear();
         if (canvas.ActualWidth < 240 || canvas.ActualHeight < 300 || data.Points.Length < 2)
@@ -41,7 +41,7 @@ internal static class TrialPreviewPlot
             return;
 
         var width = canvas.ActualWidth - Left - Right;
-        var trackHeight = Math.Max(74, (canvas.ActualHeight - 110) / 2);
+        var trackHeight = Math.Max(74, (canvas.ActualHeight - 150) / 2);
         var mvTop = 31.0;
         var pvTop = mvTop + trackHeight + 45;
         double X(double t) => Left + (t - t0) / seconds * width;
@@ -80,8 +80,8 @@ internal static class TrialPreviewPlot
             canvas.Children.Add(curve);
         }
 
-        Track("MV — échelle propre (unité déclarée dans l'étude)", p => p.Mv, mvTop, Brushes.SteelBlue);
-        Track("PV — échelle propre (unité déclarée dans l'étude)", p => p.Pv, pvTop, Brushes.DarkOrange);
+        Track($"MV ({mvUnit}) — échelle indépendante", p => p.Mv, mvTop, Brushes.SteelBlue);
+        Track($"PV ({pvUnit}) — échelle indépendante", p => p.Pv, pvTop, Brushes.DarkOrange);
 
         if (selectedStart is { } a && selectedEnd is { } b && b > a)
         {
