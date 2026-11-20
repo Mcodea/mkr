@@ -1,5 +1,4 @@
 ---
----
 name: mkr-visual-qa
 description: Auditer et tester visuellement l'application WPF MKR pour garantir une finition premium, sans chevauchement, dysfonctionnement ou incohérence entre écrans.
 ---
