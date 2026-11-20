@@ -249,6 +249,29 @@ try
         storedRobustness.Scenario == scenario,
         "Sensitivity hypotheses and per-case metrics survive SQLite reopening.");
 
+    // Combined 3×3×3 sensitivity has aligned pointwise envelopes and round-trips via SQLite.
+    var (combined, combinedVersion) = await engine.AnalyzeCombinedAsync(
+        fit, linkedPi, scenario, 20, default);
+    Require(combinedVersion == simulationVersion &&
+        combined.Cases.Length == 27 &&
+        combined.Envelope is { } envelope &&
+        envelope.Seconds.Length == simulation.Imc.Points.Length &&
+        Math.Abs(combined.Cases[0].Imc.Iae - simulation.Imc.Iae) < 1e-10 &&
+        combined.Cases.Select(x => x.Key).Distinct().Count() == 27 &&
+        envelope.Imc.MinPv.Zip(envelope.Imc.MaxPv, (low, high) => low <= high).All(x => x),
+        "27-case fixed-PI sensitivity returns finite aligned simulation envelopes.");
+    var combinedStudy = simulationStudy with
+    {
+        Id = Guid.NewGuid(), Robustness = combined, CalculatedAt = DateTimeOffset.UtcNow
+    };
+    restored.SaveSimulation(project.Id, combinedStudy);
+    var reloadedCombined = new SqliteProjectStore(legacyPath).ListSimulations(project.Id, piStudy.Id)
+        .Single(x => x.Id == combinedStudy.Id);
+    Require(reloadedCombined.Robustness?.Cases.Length == 27 &&
+        reloadedCombined.Robustness.Envelope?.Seconds.Length == envelope.Seconds.Length &&
+        reloadedCombined.Robustness.Envelope.Imc.MinPv.SequenceEqual(envelope.Imc.MinPv),
+        "Combined sensitivity scenario and PV envelopes survive SQLite reopening.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
