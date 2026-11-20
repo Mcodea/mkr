@@ -44,6 +44,9 @@
                         <Button Content="_Comparer la robustesse" Click="RunRobustness"
                                 Style="{StaticResource MkrPrimaryButton}" Margin="8,0,0,0"
                                 ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
+                        <Button Content="Analyser 27 _combinaisons" Click="RunCombined"
+                                Margin="8,0,0,0"
+                                ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
                         <Label Content="Simulations" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
                         <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
                         <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
@@ -60,7 +63,7 @@
                         Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                     <StackPanel>
-                        <TextBlock Text="03  ·  Sensibilité du réglage PI"
+                        <TextBlock Text="03  ·  Sensibilité des réglages PI"
                                    FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,10"
                                    Foreground="{StaticResource MkrMuted}"/>

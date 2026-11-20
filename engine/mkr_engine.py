@@ -72,6 +72,14 @@ def respond(raw):
             code = error_code if error_code.startswith(("fit_", "csv_")) else "fit_data"
         else:
             return {**response, "result": result}
+    elif request["operation"] == "simulate_pi_combined":
+        try:
+            from pi_combined_robustness import calculate_combined
+            result = calculate_combined(request["payload"])
+        except ValueError as error:
+            code = str(error) if str(error).startswith(("sim_", "combined_")) else "combined_input"
+        else:
+            return {**response, "result": result}
     elif request["operation"] == "simulate_pi_robustness":
         try:
             from pi_robustness import calculate_sensitivity

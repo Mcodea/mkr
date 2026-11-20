@@ -67,6 +67,25 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return study;
     }
 
+    public async Task<PiSimulationStudy> AnalyzeCombinedAsync(IdentificationStudy model,
+        PiStudy tuning, PiScenario scenario, double variationPercent, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
+            throw new InvalidOperationException("La comparaison combinée exige le modèle FOPDT associé au réglage PI.");
+        var (nominal, nominalVersion) = await piEngine.SimulatePiAsync(
+            model.Result, tuning.Result, scenario, token);
+        token.ThrowIfCancellationRequested();
+        var (combined, combinedVersion) = await piEngine.AnalyzeCombinedAsync(
+            model.Result, tuning.Result, scenario, variationPercent, token);
+        token.ThrowIfCancellationRequested();
+        if (nominalVersion != combinedVersion)
+            throw new InvalidDataException("Versions moteur différentes pour le nominal et la matrice.");
+        var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow,
+            nominalVersion, scenario, nominal, combined);
+        piStore.SaveSimulation(project.Id, study);
+        return study;
+    }
+
     public async Task<PiSimulationStudy> AnalyzeRobustnessAsync(IdentificationStudy model,
         PiStudy tuning, PiScenario scenario, double variationPercent, CancellationToken token)
     {

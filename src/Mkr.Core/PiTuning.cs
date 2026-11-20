@@ -18,6 +18,10 @@ public interface IPiEngine
         IdentificationResult model, PiComparison tuning, PiScenario scenario,
         double variationPercent, CancellationToken token);
 
+    Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token);
+
     Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token);
 }

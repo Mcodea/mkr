@@ -108,6 +108,32 @@ public partial class SimulationWindow : Window
         finally { ScenarioForm.IsEnabled = true; }
     }
 
+    private async void RunCombined(object sender, RoutedEventArgs args)
+    {
+        if (!TryReadScenario(out var scenario))
+            return;
+        if (!Read(Variation, out var variation) || variation <= 0 || variation > 50)
+        {
+            Message.Text = "Indiquez une variation supérieure à 0 et inférieure ou égale à 50 %.";
+            return;
+        }
+        ScenarioForm.IsEnabled = false;
+        Message.Text = "Calcul de la matrice de 27 procédés en cours…";
+        var token = _lifetime.Token;
+        try
+        {
+            var study = await _workspace.AnalyzeCombinedAsync(
+                _model, _tuning, scenario, variation, token);
+            var list = _workspace.Simulations(_tuning.Id);
+            Saved.ItemsSource = list;
+            Saved.SelectedItem = list.First(item => item.Id == study.Id);
+            Message.Text = "Matrice combinée enregistrée avec l'enveloppe PV et sa simulation nominale.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { ScenarioForm.IsEnabled = true; }
+    }
+
     private void ShowSaved(object sender, SelectionChangedEventArgs args)
     {
         _shown = Saved.SelectedItem as PiSimulationStudy;
@@ -144,11 +170,16 @@ public partial class SimulationWindow : Window
             Variation.Text = sensitivity.VariationPercent.ToString("G5", CultureInfo.CurrentCulture);
             var worstImc = sensitivity.Cases.Max(c => c.Imc.Iae);
             var worstSimc = sensitivity.Cases.Max(c => c.Simc.Iae);
+            var isCombined = sensitivity.Envelope is not null;
+            var mode = isCombined
+                ? "Grille combinée K × τ × θ (27 procédés)"
+                : "Variation individuelle de K, τ ou θ (7 procédés)";
             RobustnessSummary.Text =
-                $"Variation individuelle ±{sensitivity.VariationPercent:G5} % autour du modèle FOPDT enregistré. " +
-                $"IAE maximale dans ces sept cas : IMC {worstImc:G5} {_model.PvUnit}·s ; " +
-                $"SIMC {worstSimc:G5} {_model.PvUnit}·s. " +
-                $"Méthode {sensitivity.AlgorithmVersion} · simulation nominale et paramètres conservés.";
+                $"{mode}, ±{sensitivity.VariationPercent:G5} %, coefficients PI fixes. " +
+                $"IAE maximale parmi les {sensitivity.Cases.Length} cas : " +
+                $"IMC {worstImc:G5} {_model.PvUnit}·s ; SIMC {worstSimc:G5} {_model.PvUnit}·s. " +
+                (isCombined ? "Les enveloppes PV indiquent seulement les extrema simulés, pas un intervalle de confiance. " : "") +
+                $"Méthode {sensitivity.AlgorithmVersion} · modèle nominal conservé.";
         }
         else
         {
@@ -184,6 +215,8 @@ public partial class SimulationWindow : Window
             $"{string.Join(" ", warnings)}";
         Legend.Text = $"PV/SP ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
             $"Commandes ({_model.MvUnit}) : pointillés = CV calculée, vert = MV appliquée, gris = limites ; violet = instant de perturbation.";
+        if (simulation.Robustness?.Envelope is not null)
+            Legend.Text += " Sur la piste PV, zones translucides = enveloppes min/max de 27 simulations, sans garantie de stabilité.";
         DrawPlot();
     }
 
@@ -324,6 +357,9 @@ public partial class SimulationWindow : Window
             "sim_range" => "La dynamique calculée dépasse la plage numérique. Vérifiez le pas et le réglage.",
             "robust_domain" => "Variation de sensibilité invalide : indiquez 0–50 %, avec un modèle FOPDT valide.",
             "robust_input" => "Les paramètres de l'analyse de robustesse sont incomplets ou incompatibles.",
+            "combined_domain" => "La variation combinée doit rester entre 0 et 50 %, avec un modèle FOPDT valide.",
+            "combined_input" => "Contrat de calcul combiné invalide.",
+            "combined_grid" => "Les essais combinés n'ont pas tous le même axe temporel.",
             _ => "Vérifiez les entrées et les unités du scénario."
         } : "Simulation indisponible. Vérifiez le stockage et le journal MKR.";
     }
