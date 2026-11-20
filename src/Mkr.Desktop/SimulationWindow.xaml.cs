@@ -97,7 +97,9 @@ public partial class SimulationWindow : Window
         });
         Report.Text = $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
             $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
-            $"{ResponseWindow(result.Imc.SetpointResponse)}{string.Join(" ", warnings)}";
+            $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
+            $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
+            $"{string.Join(" ", warnings)}";
         Legend.Text = $"PV/SP ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
             $"Commandes ({_model.MvUnit}) : pointillés = CV calculée, vert = MV appliquée, gris = limites ; violet = instant de perturbation.";
         DrawPlot();
