@@ -11,6 +11,9 @@ public sealed record PiStudy(Guid Id, Guid ModelId, DateTimeOffset CalculatedAt,
 
 public interface IPiEngine
 {
+    Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token);
+
     Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token);
 }
@@ -19,4 +22,6 @@ public interface IPiStore
 {
     IReadOnlyList<PiStudy> ListPi(Guid projectId, Guid modelId);
     void SavePi(Guid projectId, PiStudy study);
+    IReadOnlyList<PiSimulationStudy> ListSimulations(Guid projectId, Guid piId);
+    void SaveSimulation(Guid projectId, PiSimulationStudy study);
 }

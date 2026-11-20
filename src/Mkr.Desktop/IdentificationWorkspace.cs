@@ -41,6 +41,20 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return study;
     }
 
+    public IReadOnlyList<PiSimulationStudy> Simulations(Guid piId) => piStore.ListSimulations(project.Id, piId);
+
+    public async Task<PiSimulationStudy> SimulateAsync(IdentificationStudy model, PiStudy tuning,
+        PiScenario scenario, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
+            throw new InvalidOperationException("La comparaison PI doit référencer le modèle FOPDT sélectionné.");
+        var (result, version) = await piEngine.SimulatePiAsync(model.Result, tuning.Result, scenario, token);
+        token.ThrowIfCancellationRequested();
+        var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow, version, scenario, result);
+        piStore.SaveSimulation(project.Id, study);
+        return study;
+    }
+
     private static void CheckRecordedUnit(StepImport source, string mvUnit, string pvUnit)
     {
         var recorded = source.Import.Mapping;

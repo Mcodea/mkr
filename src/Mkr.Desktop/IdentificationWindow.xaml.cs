@@ -2,8 +2,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
 using Mkr.Core;
 
 namespace Mkr.Desktop;
@@ -159,6 +157,20 @@ public partial class IdentificationWindow : Window
         finally { Form.IsEnabled = PiPanel.IsEnabled = true; }
     }
 
+    private void OpenSimulation(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { } model || PiList.SelectedItem is not PiStudy tuning)
+        {
+            Message.Text = "Sélectionnez un réglage PI enregistré.";
+            return;
+        }
+        try
+        {
+            new SimulationWindow(_workspace, model, tuning) { Owner = this }.ShowDialog();
+        }
+        catch (Exception error) { ShowError(error); }
+    }
+
     private void ShowPi(object sender, SelectionChangedEventArgs args)
     {
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
@@ -185,45 +197,9 @@ public partial class IdentificationWindow : Window
 
     private void DrawPlot()
     {
-        if (Plot is null)
-            return;
-        Plot.Children.Clear();
-        if (_shown is not { } study || Plot.ActualWidth <= 100)
-            return;
-        var values = study.Result.Validation.Points;
-        var minimum = values.Min(p => Math.Min(p.Observed, p.Predicted));
-        var maximum = values.Max(p => Math.Max(p.Observed, p.Predicted));
-        var span = maximum > minimum ? maximum - minimum : 1;
-        const double left = 75, top = 24, height = 165;
-        var width = Plot.ActualWidth - left - 24;
-        var seconds = values[^1].Seconds;
-        var actual = new Polyline { Stroke = Brushes.SteelBlue, StrokeThickness = 2.5 };
-        var predicted = new Polyline { Stroke = Brushes.DarkOrange, StrokeThickness = 2, StrokeDashArray = new DoubleCollection { 4, 2 } };
-        Plot.Children.Add(new System.Windows.Shapes.Path
-        {
-            Stroke = Brushes.Gray,
-            Data = Geometry.Parse(FormattableString.Invariant($"M {left},{top} L {left},{top + height} L {left + width},{top + height}"))
-        });
-        foreach (var point in values)
-        {
-            var x = left + point.Seconds / seconds * width;
-            actual.Points.Add(new Point(x, top + (maximum - point.Observed) / span * height));
-            predicted.Points.Add(new Point(x, top + (maximum - point.Predicted) / span * height));
-        }
-        Plot.Children.Add(actual);
-        Plot.Children.Add(predicted);
-        LabelAt($"{maximum:G4}", 0, top - 12);
-        LabelAt($"{minimum:G4}", 0, top + height - 14);
-        LabelAt("0 s", left, top + height + 3);
-        LabelAt($"{seconds:G4} s", Math.Max(left, left + width - 68), top + height + 3);
-    }
-
-    private void LabelAt(string text, double x, double y)
-    {
-        var label = new TextBlock { Text = text };
-        Canvas.SetLeft(label, x);
-        Canvas.SetTop(label, y);
-        Plot.Children.Add(label);
+        if (Plot is not null)
+            ComparisonPlot.Draw(Plot, _shown?.Result.Validation.Points.Select(
+                point => (point.Seconds, point.Observed, point.Predicted)).ToArray());
     }
 
     private static StepColumns? ReadColumns(ComboBox time, ComboBox mv, ComboBox pv) =>

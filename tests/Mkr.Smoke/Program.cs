@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.6.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.7.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -126,6 +126,7 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            DROP TABLE pi_simulations;
             DROP TABLE pi_studies;
             DROP INDEX identification_studies_project;
             ALTER TABLE identification_studies RENAME TO fopdt_studies;
@@ -173,15 +174,28 @@ try
     Require(reopenedThird.Family == ModelFamily.Integrateur && reopenedThird.Result.TauSeconds is null,
         "Integrating model persists without a finite time constant.");
 
-    var (pi, piVersion) = await engine.CalculatePiAsync(-2, 100, 3, 2, default);
+    var (pi, _) = await engine.CalculatePiAsync(-2, 100, 3, 2, default);
     Require(pi.Imc == new PiCoefficients(-10, 100, -0.1) && pi.Simc == new PiCoefficients(-10, 20, -0.5) &&
         pi.Warnings.Contains("tight_response"), "PI settings match the signed analytical case.");
-    var piStudy = new PiStudy(Guid.NewGuid(), study.Id, DateTimeOffset.UtcNow, piVersion, pi);
+    var (linkedPi, piVersion) = await engine.CalculatePiAsync(fit.Gain, fit.TauSeconds!.Value, fit.DelaySeconds, 2, default);
+    var piStudy = new PiStudy(Guid.NewGuid(), study.Id, DateTimeOffset.UtcNow, piVersion, linkedPi);
     restored.SavePi(project.Id, piStudy);
     Throws<InvalidDataException>(() => restored.SavePi(Guid.NewGuid(), piStudy with { Id = Guid.NewGuid() }));
     var reopenedPi = new SqliteProjectStore(legacyPath).ListPi(project.Id, study.Id).Single();
-    Require(reopenedPi.ModelId == study.Id && reopenedPi.Result.Simc == pi.Simc &&
+    Require(reopenedPi.ModelId == study.Id && reopenedPi.Result.Simc == linkedPi.Simc &&
         restored.ListPi(Guid.NewGuid(), study.Id).Count == 0, "PI settings stay linked to the source model and project.");
+
+    var scenario = new PiScenario(0.1, 5, 1, -0.1, 0.1, 0, 0);
+    var (simulation, simulationVersion) = await engine.SimulatePiAsync(fit, linkedPi, scenario, default);
+    Require(simulation.Imc.Points.Length == 51 && simulation.Imc.Points.All(p => p.Mv is null or >= -0.1 and <= 0.1) &&
+        simulation.Imc.Points[^1].Mv is null && simulation.Imc.SaturationSeconds > 0,
+        "The sampled simulation respects actuator bounds and reports saturation.");
+    var simulationStudy = new PiSimulationStudy(Guid.NewGuid(), piStudy.Id, DateTimeOffset.UtcNow,
+        simulationVersion, scenario, simulation);
+    restored.SaveSimulation(project.Id, simulationStudy);
+    var reopenedSimulation = new SqliteProjectStore(legacyPath).ListSimulations(project.Id, piStudy.Id).Single();
+    Require(reopenedSimulation.Scenario == scenario && reopenedSimulation.Result.Imc.Points.SequenceEqual(simulation.Imc.Points) &&
+        restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
@@ -192,7 +206,7 @@ try
     }
     catch (OperationCanceledException) { }
 
-    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, and pre-cancellation passed.");
+    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, closed-loop simulation and pre-cancellation passed.");
 }
 finally
 {

@@ -84,6 +84,28 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         static bool Valid(PiCoefficients? pi) => pi is { TiSeconds: > 0 } && pi.Kp != 0 && pi.ParallelKi != 0;
     }
 
+    public async Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token)
+    {
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds,
+            imc = new { tuning.Imc.Kp, tuning.Imc.TiSeconds },
+            simc = new { tuning.Simc.Kp, tuning.Simc.TiSeconds },
+            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint, scenario.MinimumMv,
+            scenario.MaximumMv, scenario.Disturbance, scenario.DisturbanceAtSeconds
+        };
+        var (result, version) = await CallAsync("simulate_pi", payload, token).ConfigureAwait(false);
+        var simulation = result.Deserialize<PiSimulationResult>(JsonOptions);
+        if (simulation is null || string.IsNullOrEmpty(simulation.AlgorithmVersion) || simulation.Warnings is null ||
+            simulation.Imc?.Points is not { Length: >= 3 and <= 5001 } imc ||
+            simulation.Simc?.Points is not { Length: >= 3 and <= 5001 } simc ||
+            imc.Length != simc.Length || imc[^1].Seconds != scenario.DurationSeconds ||
+            simc[^1].Seconds != scenario.DurationSeconds)
+            throw new InvalidDataException("Résultat de simulation incompatible avec le contrat.");
+        return (simulation, version);
+    }
+
     private static CsvResult ReadCsvResult(JsonElement result, bool expectQuality)
     {
         var csv = result.Deserialize<CsvResult>(JsonOptions);

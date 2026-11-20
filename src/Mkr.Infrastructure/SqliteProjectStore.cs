@@ -86,8 +86,21 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                     PRAGMA user_version = 5;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 5;
             case 5:
+                command.CommandText = """
+                    CREATE TABLE pi_simulations (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        pi_id TEXT NOT NULL REFERENCES pi_studies(id),
+                        created_at TEXT NOT NULL,
+                        metadata TEXT NOT NULL
+                    );
+                    CREATE INDEX pi_simulations_pi ON pi_simulations(pi_id, created_at, id);
+                    PRAGMA user_version = 6;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 6:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -274,6 +287,49 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
         if (command.ExecuteNonQuery() != 1)
             throw new InvalidDataException("Le modèle doit appartenir au projet.");
+    }
+
+    public IReadOnlyList<PiSimulationStudy> ListSimulations(Guid projectId, Guid piId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT sim.metadata FROM pi_simulations AS sim
+            JOIN pi_studies AS pi ON pi.id = sim.pi_id
+            JOIN identification_studies AS fit ON fit.id = pi.model_id
+            WHERE fit.project_id = $project AND pi.id = $pi
+            ORDER BY sim.created_at DESC, sim.id
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$pi", piId.ToString());
+        using var reader = command.ExecuteReader();
+        var studies = new List<PiSimulationStudy>();
+        while (reader.Read())
+            studies.Add(JsonSerializer.Deserialize<PiSimulationStudy>(reader.GetString(0))
+                ?? throw new InvalidDataException("Simulation PI illisible."));
+        return studies;
+    }
+
+    public void SaveSimulation(Guid projectId, PiSimulationStudy study)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO pi_simulations (id, pi_id, created_at, metadata)
+            SELECT $id, $pi, $created, $metadata
+            WHERE EXISTS (
+                SELECT 1 FROM pi_studies AS pi
+                JOIN identification_studies AS fit ON fit.id = pi.model_id
+                WHERE pi.id = $pi AND fit.project_id = $project
+            )
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$id", study.Id.ToString());
+        command.Parameters.AddWithValue("$pi", study.PiId.ToString());
+        command.Parameters.AddWithValue("$created", study.CalculatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Le calcul PI doit appartenir au projet.");
     }
 
     private static ImportSummary ReadSummary(SqliteDataReader reader) =>
