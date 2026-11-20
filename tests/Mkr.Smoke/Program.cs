@@ -183,7 +183,11 @@ try
     Require(reopenedBroida.Family == ModelFamily.BroidaFOPDT &&
         reopenedBroida.TrainingId == training.Summary.Id &&
         reopenedBroida.ValidationId == validation.Summary.Id &&
-        reopenedBroida.Result.BroidaEvidence == evidence,
+        reopenedBroida.Result.BroidaEvidence is { } restoredEvidence &&
+        restoredEvidence.Crossing28Seconds == evidence.Crossing28Seconds &&
+        restoredEvidence.Crossing40Seconds == evidence.Crossing40Seconds &&
+        restoredEvidence.TerminalPv == evidence.TerminalPv &&
+        restoredEvidence.ThresholdFractions.SequenceEqual(evidence.ThresholdFractions),
         "Broïda crossing provenance and independent source references survive SQLite reopening.");
 
     var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
