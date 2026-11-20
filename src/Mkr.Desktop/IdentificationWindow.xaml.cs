@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Mkr.Core;
 
 namespace Mkr.Desktop;
@@ -11,6 +12,9 @@ public partial class IdentificationWindow : Window
     private readonly IdentificationWorkspace _workspace;
     private readonly CancellationTokenSource _lifetime = new();
     private IdentificationStudy? _shown;
+    private double? _plotFrom;
+    private double? _plotTo;
+    private double? _dragStartX;
     private readonly IReadOnlyList<ImportSummary> _sources;
 
     internal IdentificationWindow(IdentificationWorkspace workspace)
@@ -81,6 +85,7 @@ public partial class IdentificationWindow : Window
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
+        _plotFrom = _plotTo = _dragStartX = null;
         OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         PiList.ItemsSource = null;
         PiResponse.Clear();
@@ -131,7 +136,6 @@ public partial class IdentificationWindow : Window
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{uncertainty}\n{string.Join(" ", warnings)}";
-        PlotLegend.Text = $"Validation après l’échelon · PV ({study.PvUnit}) · bleu : mesurée · orange : prédite";
         DrawPlot();
     }
 
@@ -201,11 +205,85 @@ public partial class IdentificationWindow : Window
 
     private void ResizePlot(object sender, SizeChangedEventArgs args) => DrawPlot();
 
+    private FitDiagnostics? DisplayedDiagnostics() => _shown is not { } study ? null :
+        PlotSource.SelectedIndex == 0 ? study.Result.Training : study.Result.Validation;
+
+    private void ChangePlotSource(object sender, SelectionChangedEventArgs args)
+    {
+        _plotFrom = _plotTo = _dragStartX = null;
+        DrawPlot();
+    }
+
+    private void ResetPlotZoom(object sender, RoutedEventArgs args)
+    {
+        _plotFrom = _plotTo = _dragStartX = null;
+        DrawPlot();
+    }
+
+    private void PlotStartSelection(object sender, MouseButtonEventArgs args)
+    {
+        var points = DisplayedDiagnostics()?.Points;
+        if (points is not { Length: >= 2 })
+            return;
+        var x = args.GetPosition(Plot).X;
+        var start = _plotFrom ?? points[0].Seconds;
+        var end = _plotTo ?? points[^1].Seconds;
+        if (!IdentificationDiagnosticsPlot.TryTimeAt(x, Plot.ActualWidth, start, end, out _))
+            return;
+        _dragStartX = x;
+        Plot.CaptureMouse();
+    }
+
+    private void PlotEndSelection(object sender, MouseButtonEventArgs args)
+    {
+        if (_dragStartX is not { } x0)
+            return;
+        _dragStartX = null;
+        Plot.ReleaseMouseCapture();
+        var points = DisplayedDiagnostics()?.Points;
+        if (points is not { Length: >= 2 })
+            return;
+        var x1 = args.GetPosition(Plot).X;
+        if (Math.Abs(x1 - x0) < 12)
+            return;
+        var start = _plotFrom ?? points[0].Seconds;
+        var end = _plotTo ?? points[^1].Seconds;
+        if (!IdentificationDiagnosticsPlot.TryTimeAt(x0, Plot.ActualWidth, start, end, out var a) ||
+            !IdentificationDiagnosticsPlot.TryTimeAt(x1, Plot.ActualWidth, start, end, out var b))
+            return;
+        var first = Math.Min(a, b);
+        var last = Math.Max(a, b);
+        // Show only intervals containing at least two genuine stored samples.
+        if (points.Count(p => p.Seconds >= first && p.Seconds <= last) < 2)
+        {
+            Message.Text = "Sélection trop courte : choisissez au moins deux points mesurés.";
+            return;
+        }
+        _plotFrom = first;
+        _plotTo = last;
+        DrawPlot();
+    }
+
+    private void PlotCancelSelection(object sender, MouseEventArgs args)
+    {
+        if (_dragStartX is null)
+            return;
+        _dragStartX = null;
+        Plot.ReleaseMouseCapture();
+    }
+
     private void DrawPlot()
     {
-        if (Plot is not null)
-            ComparisonPlot.Draw(Plot, _shown?.Result.Validation.Points.Select(
-                point => (point.Seconds, point.Observed, point.Predicted)).ToArray());
+        if (Plot is null || PlotSource is null)
+            return;
+        var fit = DisplayedDiagnostics();
+        var category = PlotSource.SelectedIndex == 0 ? "Estimation" : "Validation indépendante";
+        PlotLegend.Text = fit is null ? "" :
+            $"{category} · PV ({_shown!.PvUnit}) · bleu : mesurée · orange : prédite · violet : résidu (mesurée − prédite)" +
+            (_plotFrom.HasValue && _plotTo.HasValue
+                ? $" · Zoom [{_plotFrom.Value:G5}, {_plotTo.Value:G5}] s" : "");
+        IdentificationDiagnosticsPlot.Draw(Plot, fit?.Points, _shown?.PvUnit ?? "",
+                                           _plotFrom, _plotTo);
     }
 
     private static StepColumns? ReadColumns(ComboBox time, ComboBox mv, ComboBox pv) =>
