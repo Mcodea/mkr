@@ -35,14 +35,25 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
     public async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
         StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token)
     {
-        static object Source(StepImport source) => new
+        static object Source(StepImport source)
         {
-            raw = source.Import.Original,
-            source.Import.Delimiter,
-            source.Columns.TimeColumn,
-            source.Columns.MvColumn,
-            source.Columns.PvColumn
-        };
+            var fields = new Dictionary<string, object>
+            {
+                ["raw"] = source.Import.Original,
+                ["delimiter"] = source.Import.Delimiter,
+                ["timeColumn"] = source.Columns.TimeColumn,
+                ["mvColumn"] = source.Columns.MvColumn,
+                ["pvColumn"] = source.Columns.PvColumn
+            };
+            if (source.Window is { } window)
+            {
+                if (!window.IsValid)
+                    throw new CsvInputException("fit_window");
+                fields["rowStart"] = window.RowStart;
+                fields["rowEnd"] = window.RowEnd;
+            }
+            return fields;
+        }
         var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
         var operation = family switch
         {
