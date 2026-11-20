@@ -7,13 +7,17 @@ namespace Mkr.Desktop;
 public partial class TrialPreviewWindow : Window
 {
     private readonly TrialPreview _data;
+    private readonly string _mvUnit;
+    private readonly string _pvUnit;
     private double? _dragOrigin;
     private double? _selectedFrom;
     private double? _selectedTo;
 
-    internal TrialPreviewWindow(TrialPreview data, string importName)
+    internal TrialPreviewWindow(TrialPreview data, string importName, string mvUnit, string pvUnit)
     {
         _data = data;
+        _mvUnit = mvUnit;
+        _pvUnit = pvUnit;
         InitializeComponent();
         SourceInfo.Text = $"{importName} · {data.SourceRows} lignes source · " +
             $"{data.DisplayedRows} points affichés · UTC [{data.FirstUtc:u} – {data.LastUtc:u}]" +
@@ -25,7 +29,7 @@ public partial class TrialPreviewWindow : Window
 
     private void PlotResize(object sender, SizeChangedEventArgs args) => Draw();
 
-    private void Draw() => TrialPreviewPlot.Draw(Plot, _data, _selectedFrom, _selectedTo);
+    private void Draw() => TrialPreviewPlot.Draw(Plot, _data, _mvUnit, _pvUnit, _selectedFrom, _selectedTo);
 
     private void StartSelection(object sender, MouseButtonEventArgs args)
     {
