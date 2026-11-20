@@ -57,10 +57,26 @@
                                    FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,10"
                                    Foreground="{StaticResource MkrMuted}"/>
+                        <WrapPanel Margin="0,0,0,10">
+                            <Button x:Name="ResetZoomButton" Content="_Réinitialiser le zoom"
+                                    Click="ResetZoom" IsEnabled="False"
+                                    ToolTip="Revenir à toute la durée de la simulation" Margin="0,0,12,0"/>
+                            <TextBlock x:Name="ZoomStatus" Text="Horizon complet"
+                                       Foreground="{StaticResource MkrMuted}" VerticalAlignment="Center"/>
+                        </WrapPanel>
+                        <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+                                Background="{StaticResource MkrCanvas}" CornerRadius="4"
+                                Padding="10,8" Margin="0,0,0,10">
+                            <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré."
+                                       Foreground="{StaticResource MkrText}" TextWrapping="Wrap"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                        </Border>
                         <Canvas x:Name="Plot" Height="570" ClipToBounds="True" SizeChanged="ResizePlot"
                                 Background="{StaticResource MkrSurface}"
+                                MouseLeftButtonDown="StartPlotSelection"
+                                MouseLeftButtonUp="EndPlotSelection"
                                 AutomationProperties.Name="Réponses SP et PV, commandes calculées et MV appliquées IMC et SIMC"/>
-                        <TextBlock Text="Graphiques en variables d'écart. ΔCV est la commande calculée avant limitation ; ΔMV est la commande réellement appliquée dans le modèle."
+                        <TextBlock Text="Glissez horizontalement pour zoomer ; cliquez pour inspecter un échantillon. ΔCV est la commande calculée avant limitation ; ΔMV est celle appliquée dans le modèle. Le zoom n'altère ni la simulation ni son export."
                                    Foreground="{StaticResource MkrMuted}" FontSize="11" Margin="0,8,0,0"
                                    TextWrapping="Wrap"/>
                     </StackPanel>

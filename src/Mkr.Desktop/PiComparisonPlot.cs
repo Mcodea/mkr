@@ -10,26 +10,44 @@ namespace Mkr.Desktop;
 /// <summary>Scientific display of existing PI simulation series. No recalculation or resampling.</summary>
 internal static class PiComparisonPlot
 {
-    private const double Left = 90;
-    private const double Right = 25;
+    internal const double Left = 90;
+    internal const double Right = 25;
     private const double Top = 28;
     private const double Gap = 44;
 
-    public static void Draw(Canvas canvas, PiSimulationStudy? study, string pvUnit, string mvUnit)
+    internal static bool TryTimeAt(double x, double width, double start, double end, out double seconds)
+    {
+        seconds = 0;
+        if (!double.IsFinite(x) || !double.IsFinite(width) ||
+            !double.IsFinite(start) || !double.IsFinite(end) || end <= start ||
+            width - Left - Right <= 1 || x < Left || x > width - Right)
+            return false;
+        seconds = start + (x - Left) / (width - Left - Right) * (end - start);
+        return double.IsFinite(seconds);
+    }
+
+    public static void Draw(Canvas canvas, PiSimulationStudy? study, string pvUnit, string mvUnit,
+                            double? fromSeconds = null, double? toSeconds = null, double? cursorSeconds = null)
     {
         canvas.Children.Clear();
         if (study is null || canvas.ActualWidth < 260 || canvas.ActualHeight < 400)
             return;
 
-        var imc = study.Result.Imc.Points;
-        var simc = study.Result.Simc.Points;
-        if (imc.Length < 3 || simc.Length != imc.Length)
+        var allImc = study.Result.Imc.Points;
+        var allSimc = study.Result.Simc.Points;
+        if (allImc.Length < 3 || allSimc.Length != allImc.Length)
+            return;
+
+        var t0 = fromSeconds ?? allImc[0].Seconds;
+        var t1 = toSeconds ?? allImc[^1].Seconds;
+        var imc = allImc.Where(p => p.Seconds >= t0 && p.Seconds <= t1).ToArray();
+        var simc = allSimc.Where(p => p.Seconds >= t0 && p.Seconds <= t1).ToArray();
+        if (imc.Length < 2 || simc.Length != imc.Length ||
+            imc.Where((p, i) => p.Seconds != simc[i].Seconds).Any())
             return;
 
         var width = canvas.ActualWidth - Left - Right;
         var trackHeight = Math.Max(80.0, (canvas.ActualHeight - Top - 2 * Gap - 55) / 3);
-        var t0 = imc[0].Seconds;
-        var t1 = imc[^1].Seconds;
         if (!double.IsFinite(t0) || !double.IsFinite(t1) || t1 <= t0)
             return;
         double X(double time) => Left + width * (time - t0) / (t1 - t0);
@@ -155,6 +173,18 @@ internal static class PiComparisonPlot
         Label($"{t0:G5} s", Left, thirdTop + trackHeight + 9, Brushes.DimGray);
         Label($"{t1:G5} s", Math.Max(Left, Left + width - 80),
               thirdTop + trackHeight + 9, Brushes.DimGray);
+        if (cursorSeconds is { } cursor && cursor >= t0 && cursor <= t1)
+        {
+            var cursorX = X(cursor);
+            canvas.Children.Add(new Line
+            {
+                X1 = cursorX, X2 = cursorX, Y1 = Top, Y2 = thirdTop + trackHeight,
+                Stroke = Brushes.DarkSlateGray, StrokeThickness = 1.2,
+                StrokeDashArray = new DoubleCollection { 2, 3 },
+                IsHitTestVisible = false
+            });
+        }
+
         Label("Temps depuis le début du scénario (s)", Left,
               thirdTop + trackHeight + 30, Brushes.DimGray);
     }

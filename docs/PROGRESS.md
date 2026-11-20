@@ -68,3 +68,29 @@
 - Rapport affichant les fenêtres de réponse **pour les deux** méthodes, et export CSV existant conservé.
 - Documentation et recette : `docs/ui/UI-04A-pi-comparison.md`.
 - CI Windows et inspection visuelle sur Windows réel : **à vérifier**.
+
+## UI-04B — Inspection des simulations PI (branche dédiée)
+
+- Clic pour lire un échantillon réellement enregistré : temps, SP, PV IMC/SIMC et CV/MV pour chaque méthode.
+- Zoom horizontal commun aux trois pistes et retour à l'horizon complet, sans transformation scientifique ni modification de l'export.
+- Courbes et échelles reconstituées uniquement à partir des données persistées dans l'intervalle visible; les métriques globales restent calculées sur le scénario complet.
+- Guide d'essais : `docs/ui/UI-04B-plot-inspection.md`.
+- Validation automatique Windows à confirmer sur le SHA final; validation visuelle réelle non effectuée.
+
+## Estimation d'avancement du plan (20/11/2026)
+
+**Indice de développement pondéré : environ 41 % du périmètre cible**, calculé par pondération explicite des jalons, avec jugement d'ingénierie (pas un pourcentage issu d'un outil de suivi, ni un résultat de qualification) :
+
+| Jalon | Poids | Réalisation estimée | Contribution |
+|---|---:|---:|---:|
+| Socle Windows, IPC, stockage | 12 % | 80 % | 9,6 |
+| Données hors ligne / traçabilité | 14 % | 55 % | 7,7 |
+| Identification et diagnostics | 18 % | 60 % | 10,8 |
+| Réglages P/PI/PID | 16 % | 25 % | 4,0 |
+| Simulations et comparaisons | 18 % | 45 % | 8,1 |
+| Catalogue blocs constructeur | 8 % | 0 % | 0 |
+| Acquisition PLC lecture seule | 7 % | 0 % | 0 |
+| Livraison, UX Windows et qualification | 7 % | 10 % | 0,7 |
+| **Total** | **100 %** | | **40,9 %** |
+
+Hypothèses : les contributions prennent en compte le code rédigé dans les branches/PR MKR non fusionnées, dont le socle et les lots d'interface. Les pourcentages arrondis sont révisables, car il n'existe pas de registre des exigences clos et approuvés. Une CI réussie atteste la compilation et les tests automatisés exécutés, pas la qualification scientifique sur données industrielles, la conformité du catalogue automate, le test graphique Windows ni la facilité de livraison à un utilisateur final. L'avancement de la branche `main` peut donc être inférieur à cet indice.

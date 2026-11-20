@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Mkr.Core;
 
@@ -16,6 +17,10 @@ public partial class SimulationWindow : Window
     private readonly PiStudy _tuning;
     private readonly CancellationTokenSource _lifetime = new();
     private PiSimulationStudy? _shown;
+    private double? _zoomStart;
+    private double? _zoomEnd;
+    private double? _cursorTime;
+    private double? _dragX;
 
     internal SimulationWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
@@ -72,6 +77,10 @@ public partial class SimulationWindow : Window
     private void ShowSaved(object sender, SelectionChangedEventArgs args)
     {
         _shown = Saved.SelectedItem as PiSimulationStudy;
+        _zoomStart = _zoomEnd = _cursorTime = _dragX = null;
+        ResetZoomButton.IsEnabled = false;
+        ZoomStatus.Text = "Horizon complet";
+        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
         ExportButton.IsEnabled = _shown is not null;
         if (_shown is not { } simulation)
         {
@@ -127,7 +136,87 @@ public partial class SimulationWindow : Window
     {
         if (Plot is null)
             return;
-        PiComparisonPlot.Draw(Plot, _shown, _model.PvUnit, _model.MvUnit);
+        PiComparisonPlot.Draw(Plot, _shown, _model.PvUnit, _model.MvUnit,
+                              _zoomStart, _zoomEnd, _cursorTime);
+    }
+
+    private (double Start, double End)? VisibleWindow()
+    {
+        if (_shown?.Result.Imc.Points is not { Length: >= 3 } points)
+            return null;
+        return (_zoomStart ?? points[0].Seconds, _zoomEnd ?? points[^1].Seconds);
+    }
+
+    private void StartPlotSelection(object sender, MouseButtonEventArgs args)
+    {
+        if (VisibleWindow() is not { } range)
+            return;
+        var x = args.GetPosition(Plot).X;
+        if (!PiComparisonPlot.TryTimeAt(x, Plot.ActualWidth, range.Start, range.End, out _))
+            return;
+        _dragX = x;
+        Plot.CaptureMouse();
+    }
+
+    private void EndPlotSelection(object sender, MouseButtonEventArgs args)
+    {
+        if (_dragX is not { } x0)
+            return;
+        _dragX = null;
+        Plot.ReleaseMouseCapture();
+        if (VisibleWindow() is not { } range || _shown is not { } study)
+            return;
+        var x1 = args.GetPosition(Plot).X;
+        if (!PiComparisonPlot.TryTimeAt(x0, Plot.ActualWidth, range.Start, range.End, out var a) ||
+            !PiComparisonPlot.TryTimeAt(x1, Plot.ActualWidth, range.Start, range.End, out var b))
+            return;
+
+        var points = study.Result.Imc.Points;
+        if (Math.Abs(x1 - x0) < 10)
+        {
+            var selected = points
+                .Where(p => p.Seconds >= range.Start && p.Seconds <= range.End)
+                .OrderBy(p => Math.Abs(p.Seconds - b))
+                .FirstOrDefault();
+            if (selected is not null)
+            {
+                _cursorTime = selected.Seconds;
+                var index = Array.FindIndex(points, p => p.Seconds == selected.Seconds);
+                var other = study.Result.Simc.Points[index];
+                string Value(double? value) => value is { } v ? v.ToString("G6", CultureInfo.CurrentCulture) : "—";
+                CursorReadout.Text = $"t = {selected.Seconds:G6} s · ΔSP = {study.Scenario.Setpoint:G6} {_model.PvUnit} · " +
+                    $"PV IMC = {selected.Pv:G6} {_model.PvUnit}, SIMC = {other.Pv:G6} {_model.PvUnit} · " +
+                    $"CV IMC = {Value(selected.Cv)}, MV IMC = {Value(selected.Mv)} · " +
+                    $"CV SIMC = {Value(other.Cv)}, MV SIMC = {Value(other.Mv)} {_model.MvUnit}";
+                DrawPlot();
+            }
+            return;
+        }
+        var lower = Math.Min(a, b);
+        var upper = Math.Max(a, b);
+        var selectedPoints = points.Where(p => p.Seconds >= lower && p.Seconds <= upper).ToArray();
+        if (selectedPoints.Length < 3)
+        {
+            Message.Text = "Zoom refusé : sélectionnez au moins trois points simulés.";
+            return;
+        }
+        _zoomStart = selectedPoints[0].Seconds;
+        _zoomEnd = selectedPoints[^1].Seconds;
+        _cursorTime = null;
+        ResetZoomButton.IsEnabled = true;
+        ZoomStatus.Text = $"Zoom [{_zoomStart:G6} ; {_zoomEnd:G6}] s · {selectedPoints.Length} points";
+        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un point simulé du zoom.";
+        DrawPlot();
+    }
+
+    private void ResetZoom(object sender, RoutedEventArgs args)
+    {
+        _zoomStart = _zoomEnd = _cursorTime = _dragX = null;
+        Plot.ReleaseMouseCapture();
+        ResetZoomButton.IsEnabled = false;
+        ZoomStatus.Text = "Horizon complet";
+        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
+        DrawPlot();
     }
 
     private void Export(object sender, RoutedEventArgs args)
