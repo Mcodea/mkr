@@ -272,6 +272,30 @@ try
         reloadedCombined.Robustness.Envelope.Imc.MinPv.SequenceEqual(envelope.Imc.MinPv),
         "Combined sensitivity scenario and PV envelopes survive SQLite reopening.");
 
+    // PID prototype must reduce exactly to PI when its derivative action is disabled.
+    var prototypePi = new PidPrototypeCoefficients(
+        linkedPi.Imc.Kp, linkedPi.Imc.TiSeconds, 0, 0);
+    var (pidZero, pidVersion) = await engine.SimulatePidPrototypeAsync(
+        fit, prototypePi, scenario, default);
+    Require(pidVersion == simulationVersion &&
+        pidZero.ControllerForm == "ideal_dependent_pid_derivative_on_pv" &&
+        Math.Abs(pidZero.Iae - simulation.Imc.Iae) < 1e-10 &&
+        pidZero.Points.Length == simulation.Imc.Points.Length &&
+        pidZero.Points.Zip(simulation.Imc.Points,
+            (pid, pi) => Math.Abs(pid.Pv - pi.Pv) < 1e-10 &&
+                pid.Cv == pi.Cv && pid.Mv == pi.Mv).All(ok => ok),
+        "Zero-derivative PID exactly reproduces the established PI simulation.");
+
+    var derivativePi = new PidPrototypeCoefficients(
+        linkedPi.Imc.Kp, linkedPi.Imc.TiSeconds, 0.4, 0.1);
+    var (pidFiltered, _) = await engine.SimulatePidPrototypeAsync(
+        fit, derivativePi, scenario, default);
+    Require(pidFiltered.Points[0].Derivative == 0 &&
+        pidFiltered.Points[^1].Derivative is null &&
+        pidFiltered.Points.Any(p => p.Derivative is { } d && Math.Abs(d) > 1e-10) &&
+        pidFiltered.Points.All(p => p.Mv is null or >= -0.1 and <= 0.1),
+        "Filtered derivative acts on PV with valid actuator bounds.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try

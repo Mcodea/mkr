@@ -115,3 +115,14 @@ Hypothèses : les contributions prennent en compte le code rédigé dans les bra
 - Tests Python et smoke .NET/SQLite ajoutés; document `docs/science/SIM-05B-combined-sensitivity.md`.
 - Les résultats ne constituent ni marge de stabilité ni garantie de robustesse ; simulation WPF réelle et qualification industrielle restent à faire.
 - Estimation globale du périmètre cible : **environ 45 %**, indicative, si la CI complète réussit; les PR restent non fusionnées.
+
+## PID-06A — Prototype scientifique filtré (branche dédiée)
+
+- Nouveau moteur `engine/pid_simulation.py` en forme PID idéale/dépendante, P/I sur l'erreur et dérivée filtrée sur la seule PV (Euler implicite), avec anti-windup par intégration conditionnelle, saturation, rampe MV, retard fractionnaire, perturbation.
+- Contrat IPC `simulate_pid_experimental` et port .NET `IPidPrototypeEngine`, avec points PV/CV/MV, dérivée, métriques et avertissements.
+- Pas d'interface WPF de réglage PID dans ce lot et **aucune méthode de tuning automatique**. Aucun coefficient fabricant ni écriture PLC.
+- Vérifications : comparaison exacte avec le moteur PI si Td = 0, oracle récursif du filtre, limite Td → 0, gain inverse, garde-fous, IPC et smoke .NET–Python.
+- Documentation et hypothèses : `docs/science/PID-06A-filtered-controller.md`.
+- Développement et test scientifique automatisé en cours de qualification CI ; validation Windows graphique et qualification terrain distinctes.
+- Prochain lot : PID-06B, parcours graphique d'essais manuels PID et comparaison avec PI, sans remplacement automatique d'un bloc automate.
+- Estimation de réalisation du périmètre total : **environ 47 % sous réserve de tests CI réussis** ; reste une estimation d'ingénierie, pas une qualification industrielle.
