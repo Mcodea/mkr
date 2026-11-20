@@ -116,6 +116,30 @@ class FilteredPidTests(unittest.TestCase):
             with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, error):
                 calculate(case(**changes))
 
+    def test_time_refinement_converges_to_independent_fine_reference(self):
+        # Reuse the same underlying continuous FOPDT and controller parameters,
+        # compare endpoint error under refined sample times (no exported PLC assumptions).
+        reference = calculate(case(sampleSeconds=0.005))["points"][-1]["pv"]
+        coarse = calculate(case(sampleSeconds=0.1))["points"][-1]["pv"]
+        fine = calculate(case(sampleSeconds=0.025))["points"][-1]["pv"]
+        self.assertLess(abs(fine - reference), abs(coarse - reference))
+
+    def test_filtered_pid_has_no_initial_setpoint_derivative_kick(self):
+        positive = calculate(case(setpoint=1))["points"]
+        negative = calculate(case(setpoint=-1))["points"]
+        zero = calculate(case(setpoint=0))["points"]
+        for series in (positive, negative, zero):
+            self.assertEqual(series[0]["derivative"], 0)
+        self.assertGreater(positive[0]["cv"], 0)
+        self.assertLess(negative[0]["cv"], 0)
+        self.assertEqual(zero[0]["cv"], 0)
+
+    def test_derivative_filter_warning_is_explicit_when_undersampled(self):
+        result = calculate(case(sampleSeconds=0.2, durationSeconds=8,
+                                controller=dict(kp=0.5, tiSeconds=4,
+                                                tdSeconds=0.4, filterSeconds=0.05)))
+        self.assertIn("coarse_derivative_filter", result["warnings"])
+
     def test_disturbance_and_fractional_delay(self):
         r = calculate(case(setpoint=0, disturbance=1, disturbanceAtSeconds=0.5))
         self.assertEqual(r["points"][10]["disturbance"], 1)
