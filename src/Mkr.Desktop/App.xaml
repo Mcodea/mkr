@@ -2,13 +2,62 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
+        <!-- MKR UI-01: centralised, semantic tokens; light industrial desktop theme. -->
+        <SolidColorBrush x:Key="MkrNavy" Color="#15243B"/>
+        <SolidColorBrush x:Key="MkrNavySoft" Color="#243953"/>
+        <SolidColorBrush x:Key="MkrCanvas" Color="#F3F6FA"/>
+        <SolidColorBrush x:Key="MkrSurface" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="MkrBorder" Color="#D8E0EA"/>
+        <SolidColorBrush x:Key="MkrText" Color="#1B293D"/>
+        <SolidColorBrush x:Key="MkrMuted" Color="#546579"/>
+        <SolidColorBrush x:Key="MkrAccent" Color="#1769AA"/>
+        <SolidColorBrush x:Key="MkrAccentPale" Color="#EAF3FA"/>
+        <Style TargetType="Window">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{StaticResource MkrText}"/>
+            <Setter Property="Background" Value="{StaticResource MkrCanvas}"/>
+        </Style>
         <Style TargetType="Button">
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="BorderBrush" Value="{StaticResource MkrBorder}"/>
+            <Setter Property="Background" Value="{StaticResource MkrSurface}"/>
+            <Setter Property="Foreground" Value="{StaticResource MkrText}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style x:Key="MkrPrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource MkrAccent}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource MkrAccent}"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
         <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="7" />
-            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="9,7"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="BorderBrush" Value="{StaticResource MkrBorder}"/>
+            <Setter Property="Background" Value="{StaticResource MkrSurface}"/>
+            <Setter Property="Foreground" Value="{StaticResource MkrText}"/>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{StaticResource MkrSurface}"/>
+            <Setter Property="Foreground" Value="{StaticResource MkrText}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource MkrBorder}"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource MkrBorder}"/>
+            <Setter Property="RowHeight" Value="40"/>
+            <Setter Property="ColumnHeaderHeight" Value="40"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="{StaticResource MkrAccentPale}"/>
+            <Setter Property="Foreground" Value="{StaticResource MkrText}"/>
+            <Setter Property="Padding" Value="12,8"/>
         </Style>
     </Application.Resources>
 </Application>
