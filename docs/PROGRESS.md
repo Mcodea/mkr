@@ -126,3 +126,13 @@ Hypothèses : les contributions prennent en compte le code rédigé dans les bra
 - Développement et test scientifique automatisé en cours de qualification CI ; validation Windows graphique et qualification terrain distinctes.
 - Prochain lot : PID-06B, parcours graphique d'essais manuels PID et comparaison avec PI, sans remplacement automatique d'un bloc automate.
 - Estimation de réalisation du périmètre total : **environ 47 % sous réserve de tests CI réussis** ; reste une estimation d'ingénierie, pas une qualification industrielle.
+
+## PID-06B — Laboratoire PID manuel hors ligne et qualité scientifique
+
+- Nouvelle fenêtre WPF PID expérimentale, déclenchée depuis l'espace Simulation PI, sans sauvegarde et sans connexion automate.
+- Même scénario, modèle FOPDT, limites, perturbation et pas pour le PI IMC de référence et le PID manuel filtré ; égalité des versions moteur et des horodatages vérifiée avant affichage.
+- Tableau comparatif IAE/ISE/erreur finale/saturation/vitesse/gels I, courbes PV/SP, MV appliquée et contribution D avec unités physiques distinctes.
+- Validation .NET renforcée indépendamment du moteur Python : contrôle de la grille temporelle, du contenu de tous les points et des bornes/vitesse MV.
+- Tests scientifiques supplémentaires : raffinement temporel vers une référence fine, absence de pic dérivé sur un échelon initial SP, avertissement de filtre sous-échantillonné.
+- Gouvernance de qualité : `docs/validation/PID-06B-industrial-gates.md` sépare convention documentée, tests numériques, validation Windows, qualification de banc constructeur et autorisation terrain.
+- **Statut : conception et implémentation ; compilation Windows et essais CI à vérifier. Aucune qualification industrielle et aucun paramètre constructeur validé.**
