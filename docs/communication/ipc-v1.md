@@ -19,3 +19,5 @@ Le plafond passe à 2 900 000 octets. `identify_fopdt` reçoit `training` et `va
 Le moteur 0.4 ajoute `identify_sopdt` avec le même schéma de requête. La réponse SOPDT ajoute `secondTauSeconds`. Dans FOPDT, `standardErrors` contient les erreurs-types conditionnelles lorsqu’elles sont calculables, ou vaut null.
 
 Le moteur 0.5 ajoute `identify_integrator` avec le même schéma de requête. La réponse de cette famille omet les constantes de temps et leurs bornes. `gain` est le gain intégrateur exprimé par seconde. `fit_integrator_tail` indique une dérive terminale insuffisante sur l’essai d’estimation.
+
+Le moteur 0.6 ajoute `calculate_pi` avec les nombres `gain`, `tauSeconds`, `delaySeconds`, `responseSeconds`. La réponse versionnée compare `imc` et `simc`, chacun avec `kp`, `tiSeconds` et `parallelKi`. Les erreurs `pi_input`, `pi_domain` et `pi_range` concernent respectivement le schéma, le domaine de la méthode et la plage numérique.

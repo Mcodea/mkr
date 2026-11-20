@@ -2,7 +2,8 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-internal sealed class IdentificationWorkspace(Project project, IImportStore imports, IIdentificationStore studies, IIdentificationEngine engine)
+internal sealed class IdentificationWorkspace(Project project, IImportStore imports, IIdentificationStore studies,
+    IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine)
 {
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
@@ -23,6 +24,20 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
             mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result, family);
         studies.SaveStudy(project.Id, study);
+        return study;
+    }
+
+    public IReadOnlyList<PiStudy> PiStudies(Guid modelId) => piStore.ListPi(project.Id, modelId);
+
+    public async Task<PiStudy> CalculatePiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || model.Result.TauSeconds is not { } tau)
+            throw new InvalidOperationException("Ce calcul PI exige une étude FOPDT.");
+        var (result, version) = await piEngine.CalculatePiAsync(model.Result.Gain, tau,
+            model.Result.DelaySeconds, responseSeconds, token);
+        token.ThrowIfCancellationRequested();
+        var study = new PiStudy(Guid.NewGuid(), model.Id, DateTimeOffset.UtcNow, version, result);
+        piStore.SavePi(project.Id, study);
         return study;
     }
 

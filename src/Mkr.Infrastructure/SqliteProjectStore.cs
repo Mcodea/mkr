@@ -6,7 +6,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore
+public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore, IPiStore
 {
     private readonly string _connectionString;
 
@@ -73,8 +73,21 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                     PRAGMA user_version = 4;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 4;
             case 4:
+                command.CommandText = """
+                    CREATE TABLE pi_studies (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        model_id TEXT NOT NULL REFERENCES identification_studies(id),
+                        created_at TEXT NOT NULL,
+                        metadata TEXT NOT NULL
+                    );
+                    CREATE INDEX pi_studies_model ON pi_studies(model_id, created_at, id);
+                    PRAGMA user_version = 5;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 5:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -223,6 +236,44 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
         if (command.ExecuteNonQuery() != 1)
             throw new InvalidDataException("Les deux imports doivent appartenir au projet.");
+    }
+
+    public IReadOnlyList<PiStudy> ListPi(Guid projectId, Guid modelId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT pi.metadata FROM pi_studies AS pi
+            JOIN identification_studies AS fit ON fit.id = pi.model_id
+            WHERE fit.project_id = $project AND fit.id = $model
+            ORDER BY pi.created_at DESC, pi.id
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$model", modelId.ToString());
+        using var reader = command.ExecuteReader();
+        var studies = new List<PiStudy>();
+        while (reader.Read())
+            studies.Add(JsonSerializer.Deserialize<PiStudy>(reader.GetString(0))
+                ?? throw new InvalidDataException("Étude PI illisible."));
+        return studies;
+    }
+
+    public void SavePi(Guid projectId, PiStudy study)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO pi_studies (id, model_id, created_at, metadata)
+            SELECT $id, $model, $created, $metadata
+            WHERE EXISTS (SELECT 1 FROM identification_studies WHERE id = $model AND project_id = $project)
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$id", study.Id.ToString());
+        command.Parameters.AddWithValue("$model", study.ModelId.ToString());
+        command.Parameters.AddWithValue("$created", study.CalculatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Le modèle doit appartenir au projet.");
     }
 
     private static ImportSummary ReadSummary(SqliteDataReader reader) =>

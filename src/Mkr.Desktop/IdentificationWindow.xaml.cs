@@ -83,6 +83,20 @@ public partial class IdentificationWindow : Window
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
+        PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        PiList.ItemsSource = null;
+        PiResponse.Clear();
+        PiReport.Text = "";
+        if (_shown is { Family: ModelFamily.FOPDT } model)
+        {
+            try
+            {
+                PiList.ItemsSource = _workspace.PiStudies(model.Id);
+                if (PiList.Items.Count > 0)
+                    PiList.SelectedIndex = 0;
+            }
+            catch (Exception error) { ShowError(error); }
+        }
         if (_shown is not { } study)
         {
             FitReport.Text = PlotLegend.Text = "";
@@ -121,6 +135,46 @@ public partial class IdentificationWindow : Window
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{uncertainty}\n{string.Join(" ", warnings)}";
         PlotLegend.Text = $"Validation après l’échelon · PV ({study.PvUnit}) · bleu : mesurée · orange : prédite";
         DrawPlot();
+    }
+
+    private async void CalculatePi(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { Family: ModelFamily.FOPDT } model || !ReadTolerance(PiResponse, out var seconds))
+        {
+            Message.Text = "Sélectionnez une étude FOPDT et indiquez un temps de réponse strictement positif en secondes.";
+            return;
+        }
+        Form.IsEnabled = PiPanel.IsEnabled = false;
+        var token = _lifetime.Token;
+        try
+        {
+            var saved = await _workspace.CalculatePiAsync(model, seconds, token);
+            var studies = _workspace.PiStudies(model.Id);
+            PiList.ItemsSource = studies;
+            PiList.SelectedItem = studies.First(item => item.Id == saved.Id);
+            Message.Text = "Réglages théoriques PI enregistrés.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = PiPanel.IsEnabled = true; }
+    }
+
+    private void ShowPi(object sender, SelectionChangedEventArgs args)
+    {
+        if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
+        {
+            PiReport.Text = "";
+            return;
+        }
+        var result = pi.Result;
+        var ratio = $"{model.MvUnit}/{model.PvUnit}";
+        string Format(PiCoefficients settings) =>
+            $"Kp = {settings.Kp:G5} {ratio}, Ti = {settings.TiSeconds:G5} s, Ki parallèle = {settings.ParallelKi:G5} {ratio}/s";
+        var tight = result.Warnings.Contains("tight_response")
+            ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
+        PiReport.Text = $"Cible : {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
+            $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
+            "Forme idéale continue, e = SP − PV. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
 
     private static string Metrics(FitDiagnostics fit, string unit) =>
@@ -194,6 +248,8 @@ public partial class IdentificationWindow : Window
             "fit_time" => "Les horodatages doivent inclure un décalage UTC et être strictement croissants.",
             "fit_recorded_mapping" => "Le rôle ou l’unité déclaré contredit le mapping enregistré lors de l’import.",
             "fit_integrator_tail" => "L’essai d’estimation ne montre pas une dérive suffisante en fin d’échelon.",
+            "pi_domain" => "Le modèle et le temps de réponse sont hors du domaine de calcul PI.",
+            "pi_range" => "La combinaison demandée dépasse la plage numérique des réglages PI.",
             "fit_dependency" => "Installez les dépendances Python du fichier engine/requirements.txt avec l’interpréteur MKR.",
             "fit_solver" => "L’estimateur n’a pas convergé dans les limites prévues.",
             _ => "Vérifiez les colonnes et les données des deux imports."

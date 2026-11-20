@@ -5,7 +5,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine
+public sealed class PythonDiagnostics(string interpreter, string script) : IEngineDiagnostics, ICsvEngine, IIdentificationEngine, IPiEngine
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -67,6 +67,21 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         if (!validTimeConstants)
             throw new InvalidDataException("Constantes de temps incompatibles avec la famille de modèle.");
         return (fit, version);
+    }
+
+    public async Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
+        double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token)
+    {
+        var payload = new { gain, tauSeconds, delaySeconds, responseSeconds };
+        var (result, version) = await CallAsync("calculate_pi", payload, token).ConfigureAwait(false);
+        var comparison = result.Deserialize<PiComparison>(JsonOptions);
+        if (comparison is null || string.IsNullOrEmpty(comparison.AlgorithmVersion) ||
+            comparison.ResponseSeconds != responseSeconds || comparison.Warnings is null ||
+            !Valid(comparison.Imc) || !Valid(comparison.Simc))
+            throw new InvalidDataException("Résultat PI incompatible avec le contrat.");
+        return (comparison, version);
+
+        static bool Valid(PiCoefficients? pi) => pi is { TiSeconds: > 0 } && pi.Kp != 0 && pi.ParallelKi != 0;
     }
 
     private static CsvResult ReadCsvResult(JsonElement result, bool expectQuality)

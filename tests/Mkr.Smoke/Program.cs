@@ -35,7 +35,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.5.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.6.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -126,6 +126,7 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            DROP TABLE pi_studies;
             DROP INDEX identification_studies_project;
             ALTER TABLE identification_studies RENAME TO fopdt_studies;
             CREATE INDEX fopdt_studies_project ON fopdt_studies(project_id, created_at, id);
@@ -172,6 +173,16 @@ try
     Require(reopenedThird.Family == ModelFamily.Integrateur && reopenedThird.Result.TauSeconds is null,
         "Integrating model persists without a finite time constant.");
 
+    var (pi, piVersion) = await engine.CalculatePiAsync(-2, 100, 3, 2, default);
+    Require(pi.Imc == new PiCoefficients(-10, 100, -0.1) && pi.Simc == new PiCoefficients(-10, 20, -0.5) &&
+        pi.Warnings.Contains("tight_response"), "PI settings match the signed analytical case.");
+    var piStudy = new PiStudy(Guid.NewGuid(), study.Id, DateTimeOffset.UtcNow, piVersion, pi);
+    restored.SavePi(project.Id, piStudy);
+    Throws<InvalidDataException>(() => restored.SavePi(Guid.NewGuid(), piStudy with { Id = Guid.NewGuid() }));
+    var reopenedPi = new SqliteProjectStore(legacyPath).ListPi(project.Id, study.Id).Single();
+    Require(reopenedPi.ModelId == study.Id && reopenedPi.Result.Simc == pi.Simc &&
+        restored.ListPi(Guid.NewGuid(), study.Id).Count == 0, "PI settings stay linked to the source model and project.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
@@ -181,7 +192,7 @@ try
     }
     catch (OperationCanceledException) { }
 
-    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, and pre-cancellation passed.");
+    Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, and pre-cancellation passed.");
 }
 finally
 {

@@ -61,6 +61,20 @@
                 <TextBlock x:Name="PlotLegend" Margin="0,8,0,0" TextWrapping="Wrap" />
                 <Canvas x:Name="Plot" Height="226" ClipToBounds="True" SizeChanged="ResizePlot"
                         AutomationProperties.Name="Comparaison entre PV mesurée et prédite sur l’essai de validation" />
+                <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Label Content="_Temps de réponse choisi (s)" Target="{Binding ElementName=PiResponse}" />
+                            <TextBox x:Name="PiResponse" Width="80" />
+                            <Button Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
+                        </WrapPanel>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Label Content="Réglages enregistrés" Target="{Binding ElementName=PiList}" />
+                            <ComboBox x:Name="PiList" Width="245" DisplayMemberPath="Label" SelectionChanged="ShowPi" />
+                        </WrapPanel>
+                        <TextBlock x:Name="PiReport" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
+                </GroupBox>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
