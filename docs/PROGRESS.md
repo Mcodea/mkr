@@ -145,3 +145,14 @@ Hypothèses : les contributions prennent en compte le code rédigé dans les bra
 - Tests d'oracles indépendants : récurrence D échantillonnée, choc de bruit, filtrage plus lent, erreurs de cardinalité/type/NaN/Inf, zéro bruit identique au nominal, et smoke Python–.NET.
 - `docs/validation/PID-06C1-noise-qualification.md` documente les limites, hypothèses et conditions avant usage industriel.
 - **Qualification industrielle non acquise** ; aucune donnée terrain ni bloc constructeur testé. CI Windows à vérifier sur le SHA final.
+
+## ID-07A — Identification Broïda des procédés FOPDT
+
+- Nouveau modèle d'identification `BroidaFOPDT` explicitement distinct de l'optimiseur FOPDT existant.
+- Moteur scientifique `engine/broida.py` : passages interpolés 28 %/40 % relatifs au premier échantillon MV modifié, `τ=5.5(t40-t28)`, `θ=2.8t28-1.8t40`, `K=ΔPVfinal/ΔMV`.
+- Réutilisation stricte du lecteur des deux essais indépendants, des indices d'origines, de la sélection de fenêtres et des diagnostics de validation.
+- Plateau final mesuré obligatoire sur six échantillons, réponse monotone, horizon ≥4τ après θ, rejet des domaines impossibles et de retard négatif ; aucune interpolation cachée du signal.
+- Passage des preuves t28/t40/PVfinal dans le contrat .NET et la persistance SQLite ; lecture explicite à l'écran d'identification.
+- Absence de fausses barres d'incertitude et **pas de génération automatique de réglages de régulateur sur cette nouvelle méthode**.
+- Tests scientifiques Python et smoke .NET–Python–SQLite ; documentation `docs/science/ID-07A-broida.md`. CI et inspection graphique Windows à vérifier avant acceptation.
+- **TUNE-08, Ziegler–Nichols**, reste à développer séparément après qualification du protocole gain ultime et des équations de réglage.
