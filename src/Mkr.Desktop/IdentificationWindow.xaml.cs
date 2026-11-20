@@ -49,6 +49,37 @@ public partial class IdentificationWindow : Window
         catch (Exception error) { ShowError(error); }
     }
 
+    private async void PreviewTraining(object sender, RoutedEventArgs args) =>
+        await PreviewSourceAsync(TrainingSource, TrainingTime, TrainingMv, TrainingPv);
+
+    private async void PreviewValidation(object sender, RoutedEventArgs args) =>
+        await PreviewSourceAsync(ValidationSource, ValidationTime, ValidationMv, ValidationPv);
+
+    private async Task PreviewSourceAsync(ComboBox source, ComboBox time, ComboBox mv, ComboBox pv)
+    {
+        if (source.SelectedItem is not ImportSummary import ||
+            ReadColumns(time, mv, pv) is not { } columns)
+        {
+            Message.Text = "Sélectionnez un import et trois colonnes distinctes (temps, MV, PV) pour visualiser les signaux.";
+            return;
+        }
+
+        Form.IsEnabled = false;
+        Message.Text = "Lecture des courbes brutes en cours…";
+        var token = _lifetime.Token;
+        try
+        {
+            var preview = await _workspace.PreviewTrialAsync(import, columns, token);
+            if (token.IsCancellationRequested)
+                return;
+            Message.Text = "Courbes chargées depuis le CSV enregistré, sans modification de l'étude.";
+            new TrialPreviewWindow(preview, import.FileName) { Owner = this }.ShowDialog();
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = true; }
+    }
+
     private async void Calculate(object sender, RoutedEventArgs args)
     {
         var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
@@ -299,6 +330,10 @@ public partial class IdentificationWindow : Window
         Trace.TraceError("identification.study {0}", error.GetType().Name);
         Message.Text = error is CsvInputException input ? input.Code switch
         {
+            "preview_mapping" => "Sélectionnez des colonnes de temps, MV et PV distinctes.",
+            "preview_time" => "Les horodatages doivent être valides, UTC explicites et strictement croissants.",
+            "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
+            "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
             "fit_independence" => "Les deux essais doivent provenir de fichiers distincts et de plages temporelles disjointes.",
             "fit_step" => "Il faut un seul échelon MV et deux plateaux dans la tolérance déclarée.",
             "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
