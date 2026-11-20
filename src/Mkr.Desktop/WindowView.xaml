@@ -9,7 +9,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Background="{StaticResource MkrNavy}">
-            <DockPanel Margin="20,24,16,18" LastChildFill="True">
+            <DockPanel Margin="20,24,16,18" LastChildFill="False">
                 <StackPanel DockPanel.Dock="Top">
                     <TextBlock Text="MKR" FontSize="31" FontWeight="Bold" Foreground="White"/>
                     <TextBlock Text="INGÉNIERIE DE RÉGULATION" FontSize="10" FontWeight="SemiBold"
