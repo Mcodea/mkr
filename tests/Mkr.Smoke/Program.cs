@@ -296,6 +296,30 @@ try
         pidFiltered.Points.All(p => p.Mv is null or >= -0.1 and <= 0.1),
         "Filtered derivative acts on PV with valid actuator bounds.");
 
+    // Qualified synthetic sensor fixture: verify noise stays separate from plant PV.
+    // This does not demonstrate compatibility with an actual sensor or PLC block.
+    var noiseSamples = (int)Math.Round(scenario.DurationSeconds / scenario.SampleSeconds);
+    var deterministicSensorNoise = Enumerable.Range(0, noiseSamples)
+        .Select(index => index == 0 ? 0.1 : 0.0).ToArray();
+    var (pidWithNoise, noiseEngineVersion) = await engine.SimulatePidPrototypeAsync(
+        fit, derivativePi, scenario, default, deterministicSensorNoise);
+    Require(noiseEngineVersion == pidVersion &&
+        pidWithNoise.AlgorithmVersion == "0.2.0" &&
+        pidWithNoise.Warnings.Contains("deterministic_measurement_noise") &&
+        pidWithNoise.Points[0].Pv == 0 &&
+        pidWithNoise.Points[0].MeasuredPv == 0.1 &&
+        Math.Abs(pidWithNoise.Points[0].Derivative!.Value +
+            derivativePi.Kp * derivativePi.TdSeconds /
+            (derivativePi.FilterSeconds + scenario.SampleSeconds) * 0.1) < 1e-10 &&
+        pidWithNoise.Points[^1].MeasuredPv is null,
+        "Deterministic sensor-noise fixture is distinct from process PV and validates D filter.");
+    var (zeroNoisePid, _) = await engine.SimulatePidPrototypeAsync(
+        fit, derivativePi, scenario, default, new double[noiseSamples]);
+    Require(zeroNoisePid.Points.Zip(pidFiltered.Points,
+        (a, z) => a.Pv == z.Pv && a.Cv == z.Cv &&
+            a.Mv == z.Mv && a.Derivative == z.Derivative).All(ok => ok),
+        "Explicit zero noise reproduces every previously simulated PID point.");
+
     using var cancellation = new CancellationTokenSource();
     cancellation.Cancel();
     try
