@@ -1,0 +1,28 @@
+<Window x:Class="Mkr.Desktop.WindowView" Title="MKR — Projets"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="900" Height="600" MinWidth="520" MinHeight="420" Background="#F3F5F8">
+    <DockPanel Margin="24">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
+            <TextBlock Text="Projets MKR" FontSize="26" FontWeight="SemiBold" Foreground="#172642" />
+            <Label Content="_Nom du projet" Target="{Binding ElementName=ProjectName}" Margin="0,10,0,0" />
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Content="_Créer" Margin="8,0,0,0" Command="{Binding CreateProject}" />
+                <TextBox x:Name="ProjectName" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="120" />
+            </DockPanel>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,0,0,8"
+                       AutomationProperties.LiveSetting="Polite" />
+            <Button HorizontalAlignment="Left" Content="_Vérifier le moteur Python" Command="{Binding CheckEngine}" />
+        </StackPanel>
+        <DataGrid ItemsSource="{Binding Projects}" AutoGenerateColumns="False" IsReadOnly="True"
+                  CanUserAddRows="False" AlternationCount="2" AlternatingRowBackground="#F3F5F8"
+                  AutomationProperties.Name="Projets enregistrés">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Projet" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="Création (UTC)" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm:ss}" Width="175" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

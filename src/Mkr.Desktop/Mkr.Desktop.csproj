@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Mkr.Core/Mkr.Core.csproj" />
+    <ProjectReference Include="../Mkr.Infrastructure/Mkr.Infrastructure.csproj" />
+    <None Include="../../engine/mkr_engine.py" Link="engine/mkr_engine.py"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
