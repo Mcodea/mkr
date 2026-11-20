@@ -144,6 +144,62 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (simulation, version);
     }
 
+    public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsync(
+        IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token)
+    {
+        if (model.TauSeconds is not > 0 || !double.IsFinite(variationPercent) ||
+            variationPercent <= 0 || variationPercent > 50)
+            throw new CsvInputException("combined_domain");
+
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds,
+            imc = new { tuning.Imc.Kp, tuning.Imc.TiSeconds },
+            simc = new { tuning.Simc.Kp, tuning.Simc.TiSeconds },
+            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint,
+            scenario.MinimumMv, scenario.MaximumMv, scenario.Disturbance,
+            scenario.DisturbanceAtSeconds, scenario.MaximumMvRate, variationPercent
+        };
+        var (result, version) = await CallAsync("simulate_pi_combined", payload, token)
+            .ConfigureAwait(false);
+        var combined = result.Deserialize<PiRobustnessResult>(JsonOptions);
+        if (combined is null || string.IsNullOrWhiteSpace(combined.AlgorithmVersion) ||
+            combined.VariationPercent != variationPercent || combined.Warnings is null ||
+            combined.Cases is not { Length: 27 } cases || combined.Envelope is not { } envelope ||
+            envelope.Seconds is not { Length: >= 3 and <= 5001 } times ||
+            envelope.Imc is null || envelope.Simc is null ||
+            times[^1] != scenario.DurationSeconds ||
+            times[0] != 0 || times.Any(t => !double.IsFinite(t)) ||
+            times.Zip(times.Skip(1), (a, b) => b > a).Any(ok => !ok) ||
+            !ValidBounds(envelope.Imc, times.Length) ||
+            !ValidBounds(envelope.Simc, times.Length) ||
+            cases.Select(c => c.Key).Distinct().Count() != 27 ||
+            cases.Any(c => c is null || string.IsNullOrWhiteSpace(c.Key) ||
+                c.Gain == 0 || c.TauSeconds <= 0 || c.DelaySeconds < 0 ||
+                !double.IsFinite(c.Gain) || !double.IsFinite(c.TauSeconds) ||
+                !double.IsFinite(c.DelaySeconds) || c.Warnings is null ||
+                !ValidMetrics(c.Imc) || !ValidMetrics(c.Simc)))
+            throw new InvalidDataException("Résultat de sensibilité combinée incompatible avec le contrat.");
+        return (combined, version);
+
+        static bool ValidBounds(PiPvBounds bounds, int length) =>
+            bounds.MinPv is not null && bounds.MaxPv is not null &&
+            bounds.MinPv.Length == length && bounds.MaxPv.Length == length &&
+            bounds.MinPv.Zip(bounds.MaxPv, (low, high) =>
+                double.IsFinite(low) && double.IsFinite(high) && low <= high).All(ok => ok);
+
+        static bool ValidMetrics(PiSensitivityMetrics? m) =>
+            m is not null && double.IsFinite(m.Iae) && m.Iae >= 0 &&
+            double.IsFinite(m.Ise) && m.Ise >= 0 &&
+            double.IsFinite(m.FinalError) &&
+            double.IsFinite(m.SaturationSeconds) && m.SaturationSeconds >= 0 &&
+            double.IsFinite(m.RateLimitedSeconds) && m.RateLimitedSeconds >= 0 &&
+            m.FrozenSteps >= 0 &&
+            (m.OvershootPv is null || double.IsFinite(m.OvershootPv.Value)) &&
+            (m.SettlingSeconds is null || double.IsFinite(m.SettlingSeconds.Value));
+    }
+
     public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsync(
         IdentificationResult model, PiComparison tuning, PiScenario scenario,
         double variationPercent, CancellationToken token)
