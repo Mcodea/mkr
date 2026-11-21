@@ -36,6 +36,18 @@
                         <Label x:Name="RateLabel" Target="{Binding ElementName=Rate}" />
                         <TextBox x:Name="Rate" Width="90" />
                     </WrapPanel>
+                    <GroupBox Header="Passage manuel → automatique · essai hors ligne" Margin="0,4,0,8">
+                        <WrapPanel Margin="5">
+                            <Label Content="ΔMV manuelle" Target="{Binding ElementName=ManualMv}"/>
+                            <TextBox x:Name="ManualMv" Width="68"/>
+                            <Label Content="Bascule (s)" Target="{Binding ElementName=SwitchTime}"/>
+                            <TextBox x:Name="SwitchTime" Width="68"/>
+                            <ComboBox x:Name="TransferTune" SelectedIndex="0" AutomationProperties.Name="Réglage de transfert" Margin="4">
+                                <ComboBoxItem Content="IMC / Lambda"/><ComboBoxItem Content="SIMC"/>
+                            </ComboBox>
+                            <Button Content="Tester le transfert" Click="RunTransfer"/>
+                        </WrapPanel>
+                    </GroupBox>
                     <WrapPanel Margin="0,0,0,8">
                         <Button Content="_Simuler et enregistrer" Click="Run" />
                         <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>
