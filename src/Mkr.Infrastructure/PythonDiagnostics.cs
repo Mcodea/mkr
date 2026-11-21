@@ -130,6 +130,32 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         static bool Valid(PiCoefficients? pi) => pi is { TiSeconds: > 0 } && pi.Kp != 0 && pi.ParallelKi != 0;
     }
 
+    public async Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
+        PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token)
+    {
+        if (scenario.Disturbance != 0)
+            throw new InvalidOperationException("Pour cet essai de transfert, renseignez une perturbation nulle.");
+        var payload = new
+        {
+            model.Gain, model.TauSeconds, model.DelaySeconds, coefficients.Kp, coefficients.TiSeconds,
+            scenario.SampleSeconds, scenario.DurationSeconds, scenario.Setpoint, scenario.MinimumMv,
+            scenario.MaximumMv, scenario.MaximumMvRate, manualMv, automaticAtSeconds
+        };
+        var (json, _) = await CallAsync("simulate_pi_transition", payload, token).ConfigureAwait(false);
+        var result = json.Deserialize<PiTransferResult>(JsonOptions);
+        if (result?.Points is not { Length: >= 3 and <= 5001 } points || result.Warnings is null ||
+            string.IsNullOrWhiteSpace(result.AlgorithmVersion) || points.Any(p => p is null) ||
+            points[^1].Seconds != scenario.DurationSeconds || points[^1].Mv is not null)
+            throw new InvalidDataException("Résultat de transfert PI incomplet.");
+        int index = Array.FindIndex(points, p => p.Mode == "automatic");
+        if (index < 1 || index >= points.Length - 1 ||
+            Math.Abs(points[index].Seconds - automaticAtSeconds) > scenario.SampleSeconds * 1e-7 ||
+            points[index - 1].Mode != "manual" || points[index - 1].Mv is null ||
+            points[index].Mv is null || points[index].Cv is null)
+            throw new InvalidDataException("Échantillons de bascule PI incohérents.");
+        return result;
+    }
+
     public async Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
         IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token)
     {
