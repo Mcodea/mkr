@@ -1,7 +1,7 @@
 import unittest
 from decimal import Decimal
 from datetime import datetime
-from mkr_engine.io.csv_import import import_csv
+from mkr_data_import.io.csv_import import import_csv
 
 
 class CsvImportTests(unittest.TestCase):

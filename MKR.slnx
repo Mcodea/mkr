@@ -5,6 +5,7 @@
     <Project Path="src/Mkr.Desktop/Mkr.Desktop.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Mkr.PhysicalLoop.Tests/Mkr.PhysicalLoop.Tests.csproj" />
     <Project Path="tests/Mkr.Smoke/Mkr.Smoke.csproj" />
   </Folder>
 </Solution>
