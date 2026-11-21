@@ -39,6 +39,10 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($items.Count -ne 1) { throw 'La recherche PIDFF doit afficher un seul bloc.' }
     $null = Wait-Element $catalogue $nameProperty 'Compatibilité à vérifier'
+    $evidence = Wait-Element $catalogue $idProperty 'Evidence'
+    if ($evidence.Current.Name -notlike '*ti TIME*' -or $evidence.Current.Name -notlike '*33002535K01000*') {
+        throw 'Les paramètres typés et la référence de la fiche PIDFF doivent être visibles.'
+    }
     Write-Output 'Accueil, ouverture du catalogue, filtre PIDFF et statut vérifiés.'
 } finally {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id }
