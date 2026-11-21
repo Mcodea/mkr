@@ -7,6 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="../Mkr.Core/Mkr.Core.csproj" />
     <ProjectReference Include="../Mkr.Infrastructure/Mkr.Infrastructure.csproj" />
+    <None Include="../../engine/catalogue/*.json" Link="engine/catalogue/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../engine/*.py" Exclude="../../engine/test_*.py" Link="engine/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
