@@ -140,6 +140,7 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            DROP TABLE study_reviews;
             DROP TABLE pi_simulations;
             DROP TABLE pi_studies;
             DROP INDEX identification_studies_project;
