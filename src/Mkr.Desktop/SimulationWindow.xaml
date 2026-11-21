@@ -52,6 +52,7 @@
                                 ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
                         <Label Content="Simulations" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
                         <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
+                        <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="8,0,0,0"/>
                         <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
                     </WrapPanel>
                 </StackPanel>

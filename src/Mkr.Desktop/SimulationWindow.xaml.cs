@@ -156,6 +156,7 @@ public partial class SimulationWindow : Window
         ResetZoomButton.IsEnabled = false;
         ZoomStatus.Text = "Horizon complet";
         CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
+        SheetButton.IsEnabled = _shown is not null;
         ExportButton.IsEnabled = _shown is not null;
         RobustnessPanel.Visibility = _shown?.Robustness is null
             ? Visibility.Collapsed : Visibility.Visible;
@@ -338,6 +339,23 @@ public partial class SimulationWindow : Window
         ZoomStatus.Text = "Horizon complet";
         CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
         DrawPlot();
+    }
+
+    private void ExportSheet(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { } simulation) return;
+        var dialog = new SaveFileDialog { FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            _workspace.ExportSheet(dialog.FileName, _model, _tuning, simulation);
+            Message.Text = "Fiche de mise au point exportée.";
+        }
+        catch (Exception error)
+        {
+            Trace.TraceError("report.export {0}", error.GetType().Name);
+            Message.Text = "Export PDF impossible. Vérifiez le dossier de destination et le journal MKR.";
+        }
     }
 
     private void Export(object sender, RoutedEventArgs args)

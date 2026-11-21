@@ -30,6 +30,8 @@ jobs:
       - name: Tester le contrat Python
         run: python -m unittest discover -s engine -v
       - name: Tester SQLite et le processus Python depuis .NET
+        env:
+          MKR_SAMPLE_PDF: mkr-etude-synthetique.pdf
         run: dotnet run --project tests/Mkr.Smoke -c Release --no-build
       - name: Tester les imports, l’affectation et la qualité temporelle
         run: python -m unittest discover -s tests -v
@@ -38,3 +40,8 @@ jobs:
       - name: Vérifier le parcours graphique du catalogue
         shell: powershell
         run: .\tests\windows\catalogue.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MKR-exemple-fiche-PDF
+          path: mkr-etude-synthetique.pdf
+          if-no-files-found: error
