@@ -6,7 +6,7 @@ Output clamps and rate constraints follow the existing MKR PI simulation convent
 """
 import math
 
-from fopdt_simulation import grid_index, mv_increment, number, plant_step
+from fopdt_simulation import grid_index, mv_increment, number, plant_step, second_order_step
 from pi_simulation import response_metrics
 
 
@@ -16,7 +16,7 @@ def calculate(payload):
         "durationSeconds", "setpoint", "minimumMv", "maximumMv",
         "disturbance", "disturbanceAtSeconds",
     }
-    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate", "measurementNoise"} != required:
+    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate", "measurementNoise", "secondTauSeconds"} != required:
         raise ValueError("pid_input")
     gain, tau, delay, h, duration, sp, lower, upper, disturbance, event = (
         number(payload[key]) for key in (
@@ -46,7 +46,11 @@ def calculate(payload):
     n, event_index = grid_index(duration, h), grid_index(event, h)
     if not 2 <= n <= 5000:
         raise ValueError("pid_grid")
-    advance = plant_step(gain, tau, delay, h, duration)
+    if "secondTauSeconds" in payload:
+        fast = number(payload["secondTauSeconds"])
+        advance = second_order_step(gain, tau, fast, delay, h, duration)
+    else:
+        advance = plant_step(gain, tau, delay, h, duration)
     # Sensor noise is a deterministic input, never an implicit random draw.
     noisy = "measurementNoise" in payload
     if noisy:

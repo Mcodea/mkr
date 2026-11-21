@@ -45,3 +45,36 @@ def plant_step(gain, tau, delay, h, duration):
         return pv + alpha_second * (gain * current - pv)
 
     return advance
+
+
+def second_order_step(gain, slow, fast, delay, h, duration):
+    """Cascade of two lags, initially steady at zero deviation; held input."""
+    if not 0 < fast <= slow:
+        raise ValueError("sim_second_pole")
+    delay_samples = min(duration, delay) / h
+    full = math.floor(delay_samples)
+    fraction = h * (delay_samples - full)
+
+    def coefficients(dt):
+        if dt == 0:
+            return 0.0, 0.0, 0.0
+        a = dt / slow
+        b = dt / fast
+        if not math.isfinite(b):
+            raise ValueError("sim_range")
+        delta = b * ((slow - fast) / slow)
+        coupling = math.exp(-a) * (b if delta == 0 else b * (-math.expm1(-delta) / delta))
+        return -math.expm1(-a), -math.expm1(-b), coupling
+
+    first, second = coefficients(fraction), coefficients(h - fraction)
+    intermediate = 0.0
+
+    def advance(pv, inputs):
+        nonlocal intermediate
+        index = len(inputs) - 1 - full
+        for position, (lag1, lag2, coupling) in ((index-1, first), (index, second)):
+            target = gain * inputs[position] if position >= 0 else 0.0
+            pv += lag2 * (target - pv) + coupling * (intermediate - target)
+            intermediate += lag1 * (target - intermediate)
+        return pv
+    return advance
