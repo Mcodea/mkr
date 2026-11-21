@@ -56,9 +56,11 @@ def respond(raw):
             code = str(error)
         else:
             return {**response, "result": result}
-    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida"):
+    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida", "compare_models"):
         try:
-            if request["operation"] == "identify_fopdt":
+            if request["operation"] == "compare_models":
+                from model_comparison import compare as identify
+            elif request["operation"] == "identify_fopdt":
                 from fopdt import identify
             elif request["operation"] == "identify_sopdt":
                 from sopdt import identify
