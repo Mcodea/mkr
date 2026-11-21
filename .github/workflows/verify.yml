@@ -31,3 +31,7 @@ jobs:
         run: python -m unittest discover -s engine -v
       - name: Tester SQLite et le processus Python depuis .NET
         run: dotnet run --project tests/Mkr.Smoke -c Release --no-build
+      - name: Tester les imports, l’affectation et la qualité temporelle
+        run: python -m unittest discover -s tests -v
+      - name: Tester la description physique et les profils
+        run: dotnet run --project tests/Mkr.PhysicalLoop.Tests -c Release --no-build
