@@ -13,7 +13,7 @@ def read_catalogue():
         raise ValueError("catalogue_version")
     references = {source["id"] for source in data["sources"]}
     for block in data["blocks"]:
-        if not all(fact["source"] in references for fact in block["facts"]):
+        if not all(fact["source"] in references for fact in block["facts"] + block["parameters"]):
             raise ValueError("catalogue_reference")
     return data
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-21.1",
+  "catalogueVersion": "2026-11-21.2",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -29,6 +29,16 @@
       "url": "https://www.se.com/be/fr/faqs/FAQ000279186/",
       "scope": "Paramètre aw_type du PIDFF dans Control Expert.",
       "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PIDFF-167",
+      "document": "33002535K01000",
+      "edition": "16",
+      "section": "PIDFF, Para_PIDFF, p. 167 et paramétrage, p. 172–173",
+      "date": "2020-09-06",
+      "url": "https://www.se.com/us/en/download/document/33002535K01000/",
+      "scope": "Types et rôle des paramètres de la bibliothèque Control. Le comportement sur une cible particulière reste à qualifier.",
+      "consultedOn": "2026-11-21"
     }
   ],
   "blocks": [
@@ -42,7 +52,50 @@
       "softwareVersion": null,
       "libraryVersion": null,
       "equation": null,
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "kp",
+          "iecType": "REAL",
+          "label": "coefficient proportionnel",
+          "unit": "Dépend des échelles du procédé et de la sortie",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "ti",
+          "iecType": "TIME",
+          "label": "temps intégral",
+          "unit": "Durée IEC",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "td",
+          "iecType": "TIME",
+          "label": "temps dérivé",
+          "unit": "Durée IEC",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "mix_par",
+          "iecType": "BOOL",
+          "label": "structure du régulateur",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "rev_dir",
+          "iecType": "BOOL",
+          "label": "sens d’action",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "en_rcpy",
+          "iecType": "BOOL",
+          "label": "utilisation du retour RCPY",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        }
+      ],
       "modes": [],
       "status": "to_verify",
       "facts": [
@@ -53,6 +106,14 @@
         {
           "source": "SE-PIDFF-AW",
           "claim": "aw_type configure l’anti-windup du PIDFF."
+        },
+        {
+          "source": "SE-PIDFF-167",
+          "claim": "mix_par sélectionne la structure mixte (0) ou parallèle (1). En structure parallèle, les plages d’entrée et de sortie interviennent dans le calcul des actions intégrale et dérivée."
+        },
+        {
+          "source": "SE-PIDFF-167",
+          "claim": "Un temps intégral nul désactive l’action intégrale. Avec un temps intégral positif, le bloc calcule d’abord un incrément de sortie."
         }
       ]
     },
