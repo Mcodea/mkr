@@ -15,7 +15,11 @@ public sealed record PhysicalLoop(
     LoopEquipment Actuator,
     SignalConstraint ControlledConstraint,
     SignalConstraint ManipulatedConstraint,
-    IReadOnlyList<LoopDisturbance> Disturbances);
+    IReadOnlyList<LoopDisturbance> Disturbances)
+{
+    public SensorProfile? SensorProfile { get; init; }
+    public ActuatorProfile? ActuatorProfile { get; init; }
+}
 
 /// <summary>Checks a description before use; constructing a DTO does not validate it.</summary>
 public static class PhysicalLoopValidator
@@ -32,6 +36,7 @@ public static class PhysicalLoopValidator
         CheckEquipment(loop.Actuator, "Actuator", errors);
         CheckConstraint(loop.ControlledConstraint, loop.ControlledVariable, "ControlledConstraint", errors);
         CheckConstraint(loop.ManipulatedConstraint, loop.ManipulatedVariable, "ManipulatedConstraint", errors);
+        EquipmentProfileValidator.Validate(loop.SensorProfile, loop.ActuatorProfile, errors);
 
         if (!double.IsFinite(loop.Setpoint)) errors.Add("Setpoint must be finite.");
         else if (loop.ControlledVariable is not null && ValidRange(loop.ControlledVariable.Range) &&
