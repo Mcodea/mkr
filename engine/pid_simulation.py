@@ -29,6 +29,9 @@ def calculate(payload):
             not lower < 0 < upper or not 0 <= event <= duration):
         raise ValueError("pid_domain")
     controller = payload["controller"]
+    proportional_only = isinstance(controller, dict) and controller.keys() == {"kind", "kp"} and controller["kind"] == "P"
+    if proportional_only:
+        controller = dict(kp=controller["kp"], tiSeconds=1, tdSeconds=0, filterSeconds=0)
     if not isinstance(controller, dict) or controller.keys() != {
         "kp", "tiSeconds", "tdSeconds", "filterSeconds"
     }:
@@ -88,7 +91,7 @@ def calculate(payload):
         mv = max(effective_lower, min(effective_upper, bounded))
         previous_mv = mv
 
-        step_integral = kp * h / ti * error
+        step_integral = 0.0 if proportional_only else kp * h / ti * error
         if not math.isfinite(step_integral):
             raise ValueError("pid_range")
         # Conditional integration at actuator bounds incl. rate limit;
@@ -134,7 +137,7 @@ def calculate(payload):
 
     return dict(
         algorithmVersion="0.2.0",
-        controllerForm="ideal_dependent_pid_derivative_on_pv",
+        controllerForm="proportional" if proportional_only else "ideal_dependent_pid_derivative_on_pv",
         warnings=warnings,
         iae=iae, ise=ise, finalError=sp-pv,
         saturationSeconds=saturated, rateLimitedSeconds=rate_limited,
