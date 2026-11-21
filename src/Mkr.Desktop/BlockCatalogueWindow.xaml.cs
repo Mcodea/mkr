@@ -7,7 +7,7 @@ namespace Mkr.Desktop;
 
 public partial class BlockCatalogueWindow : Window
 {
-    private sealed record Card(string Name, string Target, string Status, string Evidence);
+    private sealed record Card(string Name, string Target, string Status, string Evidence, string BenchSheet);
     private readonly List<Card> _cards = new();
 
     public BlockCatalogueWindow()
@@ -31,12 +31,68 @@ public partial class BlockCatalogueWindow : Window
                 return $"{Detail("name")} {Detail("iecType")} · {Detail("label")} · {Detail("unit")}\n{source}";
             });
             var evidence = string.Join("\n\n", parameters.Concat(facts));
+            var sheet = new List<string>
+            {
+                $"MKR — Relevé de banc · {Read("name")}",
+                $"Catalogue : {root.GetProperty("catalogueVersion").GetString()}",
+                $"Constructeur : {Read("manufacturer")} · Logiciel : {Read("software")}",
+                "Statut initial : essai à réaliser",
+                "",
+                "Identification de la configuration observée",
+                "Référence CPU :",
+                "Version firmware :",
+                "Version du logiciel :",
+                "Nom et version de bibliothèque :",
+                "Instance du bloc et période d’exécution :",
+                "Plage et unité de mesure :",
+                "Plage et unité de commande :",
+                "",
+                "Paramètres relevés sur l’instance"
+            };
+            foreach (var parameter in block.GetProperty("parameters").EnumerateArray())
+            {
+                var source = sources[parameter.GetProperty("source").GetString()!];
+                sheet.Add($"{parameter.GetProperty("name").GetString()} [{source}] — valeur observée :");
+            }
+            if (block.GetProperty("parameters").GetArrayLength() == 0)
+                sheet.Add("Aucun paramètre documenté dans cette fiche.");
+            sheet.AddRange(new[]
+            {
+                "", "Essai et revue",
+                "Identifiant de l’étude et de l’essai :",
+                "Conditions initiales et scénario :",
+                "Résultat attendu et tolérance fixée avant essai :",
+                "Résultat observé et écart :",
+                "Référence de la trace de mesure :",
+                "Date, opérateur et relecteur :",
+                "Conclusion de la revue :"
+            });
             _cards.Add(new Card(Read("name")!,
                 $"{Read("manufacturer")} · {Read("software")}\nCPU : {Read("cpu") ?? "à vérifier"}\nVersion logicielle : {Read("softwareVersion") ?? "à vérifier"}",
                 Read("status") == "verified" ? "Fiche documentaire vérifiée" : "Compatibilité à vérifier",
-                evidence.Length > 0 ? evidence : "Aucune propriété documentée dans cette édition du catalogue."));
+                evidence.Length > 0 ? evidence : "Aucune propriété documentée dans cette édition du catalogue.",
+                string.Join(Environment.NewLine, sheet)));
         }
         Refresh();
+    }
+
+    private void CopyBenchSheet(object sender, RoutedEventArgs args)
+    {
+        if (Blocks.SelectedItem is not Card card) return;
+        try
+        {
+            Clipboard.SetText(card.BenchSheet);
+            CopyStatus.Text = $"Relevé {card.Name} copié.";
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            CopyStatus.Text = "Presse-papiers indisponible. Réessayez.";
+        }
+    }
+
+    private void ClearCopyStatus(object sender, SelectionChangedEventArgs args)
+    {
+        if (CopyStatus is not null) CopyStatus.Text = "";
     }
 
     private void ApplyFilter(object sender, TextChangedEventArgs args)

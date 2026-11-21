@@ -43,6 +43,22 @@ try {
     if ($evidence.Current.Name -notlike '*ti TIME*' -or $evidence.Current.Name -notlike '*33002535K01000*') {
         throw 'Les paramètres typés et la référence de la fiche PIDFF doivent être visibles.'
     }
+    $copy = Wait-Element $catalogue $idProperty 'CopySheet'
+    $copy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $null = Wait-Element $catalogue $nameProperty 'Relevé PIDFF copié.'
+    $sheet = Get-Clipboard -Raw
+    foreach ($required in @('Relevé de banc · PIDFF', 'Version firmware', 'mix_par [33002535K01000',
+                             'en_rcpy [33002535K01000', 'tolérance fixée avant essai', 'trace de mesure')) {
+        if (!$sheet.Contains($required)) { throw "Champ du relevé absent : $required" }
+    }
+    $filter.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('PIFINT')
+    $null = Wait-Element $catalogue $nameProperty 'Aucune propriété documentée dans cette édition du catalogue.'
+    $copy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $null = Wait-Element $catalogue $nameProperty 'Relevé PIFINT copié.'
+    $other = Get-Clipboard -Raw
+    if (!$other.Contains('Relevé de banc · PIFINT') -or $other.Contains('mix_par')) {
+        throw 'Le relevé doit correspondre au bloc sélectionné.'
+    }
     Write-Output 'Accueil, ouverture du catalogue, filtre PIDFF et statut vérifiés.'
 } finally {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id }
