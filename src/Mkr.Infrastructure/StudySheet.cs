@@ -12,7 +12,8 @@ public static class StudySheet
     private static string N(double? value) => value?.ToString("G6", CultureInfo.GetCultureInfo("fr-FR")) ?? "indéterminé";
 
     public static void Export(string path, string project, IdentificationStudy model, PiStudy pi,
-        PiSimulationStudy sim, ImportSummary training, ImportSummary validation, IReadOnlyList<ReviewEvent> reviews)
+        PiSimulationStudy sim, ImportSummary training, ImportSummary validation, IReadOnlyList<ReviewEvent> reviews,
+        AcquisitionOrigin? trainingOrigin = null, AcquisitionOrigin? validationOrigin = null)
     {
         if (model.Id != pi.ModelId || pi.Id != sim.PiId || training.Id != model.TrainingId ||
             validation.Id != model.ValidationId)
@@ -32,10 +33,13 @@ public static class StudySheet
         Line($"Simulation enregistrée le {sim.CalculatedAt:yyyy-MM-dd HH:mm:ss zzz}");
         Heading("Modèle et essais");
         Line($"{model.Family} · gain {N(model.Result.Gain)} {model.PvUnit}/{model.MvUnit} · constante de temps {N(model.Result.TauSeconds)} s · retard {N(model.Result.DelaySeconds)} s");
-        Line($"Erreur quadratique moyenne (RMSE) sur validation indépendante : {N(model.Result.Validation.Rmse)} {model.PvUnit}.");
-        foreach (var (label, source) in new[] { ("Estimation", training), ("Validation", validation) })
+        Line($"Racine de l’erreur quadratique moyenne (RMSE) sur validation indépendante : {N(model.Result.Validation.Rmse)} {model.PvUnit}.");
+        foreach (var (label, source, origin) in new[] { ("Estimation", training, trainingOrigin), ("Validation", validation, validationOrigin) })
         {
             Line($"{label} · {source.FileName}");
+            if (origin is not null)
+                Line($"Modbus TCP · unité {origin.Source.UnitId} · offset {origin.Source.FirstRegister} · " +
+                     $"pause {origin.Source.IntervalMs} ms · horodatage UTC de réception · fin {origin.StopReason}");
             Line($"SHA-256  {source.Sha256}");
         }
         Heading("Réglages PI génériques");

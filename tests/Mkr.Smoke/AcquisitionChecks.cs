@@ -6,9 +6,10 @@ using Mkr.Infrastructure;
 
 internal static class AcquisitionChecks
 {
-    internal static async Task Run(string db, Guid project, ICsvEngine engine)
+    internal static async Task Run(string db, Guid project, PythonDiagnostics engine)
     {
         await CheckInterruptedSession();
+        await CheckIdentification(db, project, engine);
         foreach (bool swapped in new[] { false, true })
         {
             using var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -54,6 +55,56 @@ internal static class AcquisitionChecks
                 reopened.Result.Quality.InvalidTimestamps != 0 || !saved.Original.SequenceEqual(reopened.Original))
                 throw new Exception("Capture did not survive the study archive round trip.");
         }
+    }
+
+    private static async Task CheckIdentification(string db, Guid project, PythonDiagnostics engine)
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(50));
+        var source = new RegisterSource("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port,
+            1, 0, false, "bar", "%", 100);
+        var store = new SqliteProjectStore(db);
+        async Task<CsvImport> Trial(float amplitude)
+        {
+            const int count = 44;
+            var samples = new List<AcquiredSample>();
+            var reading = new ModbusAcquisition().CaptureAsync(source, count, samples.Add, limit.Token);
+            using var peer = await listener.AcceptTcpClientAsync(limit.Token);
+            using var stream = peer.GetStream();
+            var elapsed = new System.Diagnostics.Stopwatch();
+            for (int i = 0; i < count; i++)
+            {
+                var request = new byte[12];
+                await stream.ReadExactlyAsync(request, limit.Token);
+                if (i == 6) elapsed.Start();
+                float mv = i < 6 ? 0 : amplitude;
+                float pv = (float)(4 - 2 * mv * (1 - Math.Exp(-Math.Max(0, elapsed.Elapsed.TotalSeconds - 0.25) / 0.55)));
+                byte[] reply = new byte[21];
+                Array.Copy(request, reply, 8);
+                reply[5] = 15;
+                reply[8] = 12;
+                BinaryPrimitives.WriteSingleBigEndian(reply.AsSpan(9), 4);
+                BinaryPrimitives.WriteSingleBigEndian(reply.AsSpan(13), pv);
+                BinaryPrimitives.WriteSingleBigEndian(reply.AsSpan(17), mv);
+                await stream.WriteAsync(reply, limit.Token);
+            }
+            await reading;
+            var saved = await AcquisitionArchive.SaveAsync(project, store, engine, samples,
+                new(source, "sample_limit", "receiver_utc"), limit.Token);
+            return new SqliteProjectStore(db).ReadImport(project, saved.Summary.Id);
+        }
+        var train = await Trial(1);
+        var check = await Trial(-1);
+        var columns = new StepColumns("timestamp", "MV", "PV");
+        var (fit, _) = await engine.IdentifyAsync(ModelFamily.FOPDT, new(train, columns), new(check, columns),
+            0.005, 0.01, limit.Token);
+        if (Math.Abs(fit.Gain + 2) > 0.1 || fit.TauSeconds is not double tau || Math.Abs(tau - 0.55) > 0.12 ||
+            Math.Abs(fit.DelaySeconds - 0.25) > 0.12 || fit.Validation.Rmse > 0.12)
+            throw new Exception("Independent simulated acquisition trials failed the FOPDT reference case.");
+        var (settings, _) = await engine.CalculatePiAsync(fit.Gain, tau, fit.DelaySeconds, 1, limit.Token);
+        if (settings.Simc.Kp >= 0 || settings.Simc.TiSeconds <= 0)
+            throw new Exception("Live trial tuning has invalid controller action.");
     }
 
     private static async Task CheckInterruptedSession()

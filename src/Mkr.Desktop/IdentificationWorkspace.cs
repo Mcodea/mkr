@@ -9,13 +9,14 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 {
     public void ExportSheet(string path, IdentificationStudy model, PiStudy tuning, PiSimulationStudy simulation)
     {
-        var sources = Sources();
+        var training = imports.ReadImport(project.Id, model.TrainingId);
+        var validation = imports.ReadImport(project.Id, model.ValidationId);
         var reviewStore = studies as Mkr.Infrastructure.SqliteProjectStore
             ?? throw new InvalidOperationException("Historique des validations indisponible.");
         var reviews = new[] { model.Id, tuning.Id, simulation.Id }
             .SelectMany(id => reviewStore.ReadReviewHistory(project.Id, id)).OrderBy(r => r.RecordedAt).ToArray();
         Mkr.Infrastructure.StudySheet.Export(path, project.Name, model, tuning, simulation,
-            sources.Single(x => x.Id == model.TrainingId), sources.Single(x => x.Id == model.ValidationId), reviews);
+            training.Summary, validation.Summary, reviews, training.Acquisition, validation.Acquisition);
     }
 
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
