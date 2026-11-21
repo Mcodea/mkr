@@ -120,6 +120,15 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return study;
     }
 
+    public Task<PiTransferResult> TransferAsync(IdentificationStudy model, PiStudy tuning, bool simc,
+        PiScenario scenario, double manual, double at, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || model.Id != tuning.ModelId)
+            throw new InvalidOperationException("Le transfert PI exige le modèle FOPDT associé au réglage.");
+        return piEngine.SimulateTransferAsync(model.Result, simc ? tuning.Result.Simc : tuning.Result.Imc,
+            scenario, manual, at, token);
+    }
+
     public Task<(PiSimulationResult Result, string EngineVersion)> PreviewPiAsync(
         IdentificationStudy model, PiStudy tuning, PiScenario scenario, CancellationToken token)
     {

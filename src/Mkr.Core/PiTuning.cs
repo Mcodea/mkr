@@ -9,8 +9,15 @@ public sealed record PiStudy(Guid Id, Guid ModelId, DateTimeOffset CalculatedAt,
     public string Label => $"{Result.ResponseSeconds:G5} s · {CalculatedAt.ToLocalTime():g}";
 }
 
+public sealed record PiTransferPoint(double Seconds, string Mode, double Pv, double? Cv, double? Mv);
+public sealed record PiTransferResult(string AlgorithmVersion, string[] Warnings, double TransferBumpMv,
+    double SaturationSeconds, double RateLimitedSeconds, PiTransferPoint[] Points);
+
 public interface IPiEngine
 {
+    Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
+        PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token);
+
     Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
         IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token);
 
