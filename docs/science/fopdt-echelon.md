@@ -23,3 +23,15 @@ Tests : réponse analytique, gain signé et échelon de validation inverse, cade
 Pour les points d’estimation, on linéarise la réponse dans les coordonnées gain d’échelon normalisé, log(τ) et retard mis à l’échelle par τ. Si la matrice de sensibilités J a un rang numérique suffisant, on calcule les erreurs-types à partir de la diagonale de s²(JᵀJ)⁻¹ par décomposition en valeurs singulières. La variance résiduelle s² vaut SSE/(n−3). Les erreurs-types sont reconverties dans les unités des paramètres. Elles sont conditionnelles aux paliers, à l’origine de temps et aux écarts de mesure supposés indépendants et de variance constante.
 
 Cette approximation est omise si |autocorrélation à un échantillon| dépasse 0,3, en présence d’un avertissement de domaine, si le résidu est presque nul, si le retard coïncide numériquement avec un échantillon ou si le rapport des valeurs singulières est inférieur ou égal à 10⁻⁶. Ces seuils sont des garde-fous révisables. Ils ne valident pas les hypothèses. Cet indicateur ne quantifie ni l’erreur de modèle, ni les incertitudes du niveau initial, de la MV ou de l’origine de l’échelon. Les tests utilisent un bruit blanc à graine fixe et une perturbation autocorrélée.
+
+### Comparaison sur essai indépendant
+
+L’opération IPC `compare_models` reçoit `trials` (les deux essais du contrat
+d’identification), `maximumRmse` en unité de PV et `maximumResidualLagOne`
+sans dimension. Les deux candidats utilisent les mêmes essais. La sélection
+retient le modèle d’ordre minimal satisfaisant les seuils de validation et les
+contrôles de résolution. Si les deux candidats échouent, le résultat contient
+`selected: null` et les motifs par candidat. Les seuils sont des critères
+d’acceptation de l’étude. Chaque ajustement expose aussi `rangeNormalizedRmse`,
+la RMSE divisée par l’étendue observée de PV sur l’essai concerné. Une étendue
+nulle donne une valeur indéterminée.
