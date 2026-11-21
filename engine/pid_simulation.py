@@ -7,7 +7,7 @@ Output clamps and rate constraints follow the existing MKR PI simulation convent
 import math
 
 from fopdt_simulation import grid_index, mv_increment, number, plant_step, second_order_step
-from pi_simulation import response_metrics
+from pi_simulation import additional_metrics, response_metrics
 
 
 def calculate(payload):
@@ -139,6 +139,7 @@ def calculate(payload):
         algorithmVersion="0.2.0",
         controllerForm="proportional" if proportional_only else "ideal_dependent_pid_derivative_on_pv",
         warnings=warnings,
+        **additional_metrics(points, sp, response_end),
         iae=iae, ise=ise, finalError=sp-pv,
         saturationSeconds=saturated, rateLimitedSeconds=rate_limited,
         frozenSteps=frozen, points=points,

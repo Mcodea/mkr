@@ -32,3 +32,13 @@ class SecondOrderStepTests(unittest.TestCase):
         self.assertAlmostEqual(disturbed["finalError"], 0.25, places=6)
         with self.assertRaises(ValueError):
             calculate({**scenario, "controller": {"kind": "P", "kp": -0.5}})
+
+    def test_tracking_and_travel_oracle(self):
+        from pi_simulation import additional_metrics
+        points = [{"seconds": t, "pv": pv, "mv": mv} for t, pv, mv in
+                  [(0, 0, 2), (1, -1, 1), (2, -2, None)]]
+        r = additional_metrics(points, -2, 2)
+        self.assertEqual(r["itae"], 1)
+        self.assertEqual(r["mvTravel"], 3)
+        self.assertAlmostEqual(r["riseTimeSeconds"], 1.6)
+        self.assertIsNone(additional_metrics(points, -2, 1)["riseTimeSeconds"])
