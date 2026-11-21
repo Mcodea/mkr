@@ -133,12 +133,15 @@ def diagnostics(step, gain, response):
     variance = float(np.dot(centered, centered))
     total = float(np.sum((step.observations - np.mean(step.observations)) ** 2))
     sse = float(np.dot(residual, residual))
+    observed_range = float(np.ptp(step.observations))
+    rmse = math.sqrt(sse / len(predicted))
     ratio = sse / total if total else math.inf
     indices = np.unique(np.linspace(0, len(predicted) - 1, min(500, len(predicted)), dtype=int))
     return dict(
         samples=len(predicted), inputStep=step.amplitude, baseline=step.baseline,
         onsetIntervalSeconds=step.onset_interval, horizonSeconds=float(step.times[-1]),
-        rmse=math.sqrt(sse / len(predicted)), mae=float(np.mean(np.abs(residual))),
+        rmse=rmse, rangeNormalizedRmse=rmse / observed_range if observed_range > 0 else None,
+        mae=float(np.mean(np.abs(residual))),
         rSquared=1 - ratio if math.isfinite(ratio) else None,
         residualLagOne=float(np.dot(centered[1:], centered[:-1]) / variance) if variance else None,
         points=[dict(seconds=float(step.times[i]), observed=float(step.observations[i]),
