@@ -50,6 +50,12 @@ def respond(raw):
             return {**response, "result": operation(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "select_strategy":
+        from strategy_selection import select
+        try:
+            return {**response, "result": select(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] == "compare_tunings":
         from tuning_comparison import compare
         try:
