@@ -283,6 +283,10 @@ try
     var artifact = Environment.GetEnvironmentVariable("MKR_SAMPLE_PDF");
     if (!string.IsNullOrWhiteSpace(artifact)) File.Copy(sheetPath, artifact, overwrite: true);
 
+    var acquisitionDb = Path.Combine(directory.FullName, "acquisition.db");
+    new SqliteProjectStore(acquisitionDb).Add(project);
+    await AcquisitionChecks.Run(acquisitionDb, project.Id, engine);
+
     // The sensitivity matrix keeps fixed PI coefficients and survives SQLite reopening.
     var (sensitivity, robustnessVersion) = await engine.AnalyzeRobustnessAsync(
         fit, linkedPi, scenario, 20, default);

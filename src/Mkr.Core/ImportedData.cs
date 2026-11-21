@@ -14,7 +14,7 @@ public sealed record ImportSummary(Guid Id, string FileName, string Sha256, Date
 }
 
 public sealed record CsvImport(ImportSummary Summary, string Delimiter, CsvMapping Mapping,
-    CsvResult Result, string EngineVersion, byte[] Original);
+    CsvResult Result, string EngineVersion, byte[] Original, AcquisitionOrigin? Acquisition = null);
 
 public interface ICsvEngine
 {

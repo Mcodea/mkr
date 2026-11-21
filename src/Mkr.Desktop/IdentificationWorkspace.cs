@@ -148,6 +148,10 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     private static void CheckRecordedUnit(StepImport source, string mvUnit, string pvUnit)
     {
+        if (source.Import.Acquisition is { } acquisition &&
+            (source.Columns.MvColumn != "MV" || source.Columns.PvColumn != "PV" ||
+             mvUnit != acquisition.Source.CommandUnit || pvUnit != acquisition.Source.ProcessUnit))
+            throw new CsvInputException("fit_recorded_mapping");
         var recorded = source.Import.Mapping;
         if ((source.Columns.MvColumn == recorded.ValueColumn && (recorded.Role != "MV" || recorded.Unit != mvUnit)) ||
             (source.Columns.PvColumn == recorded.ValueColumn && (recorded.Role != "PV" || recorded.Unit != pvUnit)))
