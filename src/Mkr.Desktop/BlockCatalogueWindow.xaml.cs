@@ -24,7 +24,13 @@ public partial class BlockCatalogueWindow : Window
             string? Read(string key) => block.GetProperty(key).GetString();
             var facts = block.GetProperty("facts").EnumerateArray().Select(fact =>
                 $"{fact.GetProperty("claim").GetString()}\n{sources[fact.GetProperty("source").GetString()!]}");
-            var evidence = string.Join("\n\n", facts);
+            var parameters = block.GetProperty("parameters").EnumerateArray().Select(parameter =>
+            {
+                string? Detail(string key) => parameter.TryGetProperty(key, out var value) ? value.GetString() : null;
+                var source = sources[parameter.GetProperty("source").GetString()!];
+                return $"{Detail("name")} {Detail("iecType")} · {Detail("label")} · {Detail("unit")}\n{source}";
+            });
+            var evidence = string.Join("\n\n", parameters.Concat(facts));
             _cards.Add(new Card(Read("name")!,
                 $"{Read("manufacturer")} · {Read("software")}\nCPU : {Read("cpu") ?? "à vérifier"}\nVersion logicielle : {Read("softwareVersion") ?? "à vérifier"}",
                 Read("status") == "verified" ? "Fiche documentaire vérifiée" : "Compatibilité à vérifier",
