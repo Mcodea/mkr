@@ -63,13 +63,15 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
-    elif request["operation"] in ("calculate_pi", "calculate_simc_pid", "simulate_pi", "simulate_open_loop"):
+    elif request["operation"] in ("calculate_pi", "calculate_simc_pid", "simulate_pi", "simulate_open_loop", "simulate_pi_transition"):
         if request["operation"] == "calculate_pi":
             from pi_tuning import calculate
         elif request["operation"] == "calculate_simc_pid":
             from pid_tuning import calculate
         elif request["operation"] == "simulate_pi":
             from pi_simulation import calculate
+        elif request["operation"] == "simulate_pi_transition":
+            from pi_mode_transition import calculate
         else:
             from open_loop_simulation import calculate
         try:
