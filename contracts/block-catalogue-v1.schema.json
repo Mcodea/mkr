@@ -177,6 +177,25 @@
               ],
               "additionalProperties": false
             }
+          },
+          "verifiedStrategies": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "P",
+                "PI",
+                "PID"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "verifiedFunctions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "required": [

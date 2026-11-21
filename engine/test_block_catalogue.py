@@ -15,3 +15,12 @@ class CatalogueTests(unittest.TestCase):
         result = convert(dict(name="PIDFF", target={"cpu": "M340"}, parameters={"kp": 3}))
         self.assertFalse(result["converted"])
         self.assertIsNone(result["parameters"])
+
+    def test_recommendation_keeps_provenance_and_specific_missing_functions(self):
+        from block_catalogue import recommend
+        result = recommend(dict(target={"cpu": "M340"}, strategy="PI", functions=["tracking"],
+                                studyId="S1", modelRunId="M1"))
+        self.assertEqual(result["decision"], "insufficient_evidence")
+        self.assertEqual(result["eligible"], [])
+        self.assertEqual(result["modelRunId"], "M1")
+        self.assertTrue(all("tracking" in item["missingFunctions"] for item in result["evaluated"]))

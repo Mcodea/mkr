@@ -43,9 +43,10 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
-    elif request["operation"] in ("lookup_blocks", "convert_block_settings"):
-        from block_catalogue import lookup, convert
-        operation = lookup if request["operation"] == "lookup_blocks" else convert
+    elif request["operation"] in ("lookup_blocks", "convert_block_settings", "recommend_blocks"):
+        from block_catalogue import lookup, convert, recommend
+        operation = {"lookup_blocks": lookup, "convert_block_settings": convert,
+                     "recommend_blocks": recommend}[request["operation"]]
         try:
             return {**response, "result": operation(request["payload"])}
         except ValueError as error:
