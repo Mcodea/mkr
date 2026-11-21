@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "catalogueVersion": "2026-11-21.1",
+  "sources": [
+    {
+      "id": "SE-33002535-16",
+      "document": "33002535K01000",
+      "edition": "16",
+      "section": "Notice du manuel",
+      "date": "2020-09-06",
+      "url": "https://www.se.com/us/en/download/document/33002535K01000/",
+      "scope": "Manuel de la bibliothèque Control Expert. La version 16 désigne le document.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PREMIUM-2012",
+      "document": "Modicon Premium Automation Catalogue",
+      "edition": "2012",
+      "section": "Controllers, page 6/14",
+      "url": "https://iportal.se.com/Contents/docs/MODICON%20PREMIUM%20AUTOMATION%20CATALOGUE.PDF",
+      "scope": "Description des blocs du catalogue Premium.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PIDFF-AW",
+      "document": "FAQ000279186",
+      "edition": "2026-04-20",
+      "section": "Purpose of aw_type",
+      "url": "https://www.se.com/be/fr/faqs/FAQ000279186/",
+      "scope": "Paramètre aw_type du PIDFF dans Control Expert.",
+      "consultedOn": "2026-11-21"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "PIDFF",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SE-PREMIUM-2012",
+          "claim": "PID à structure parallèle ou mixte dans le catalogue Premium."
+        },
+        {
+          "source": "SE-PIDFF-AW",
+          "claim": "aw_type configure l’anti-windup du PIDFF."
+        }
+      ]
+    },
+    {
+      "name": "PI_B",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SE-PREMIUM-2012",
+          "claim": "Régulateur PI de base à structure mixte dans le catalogue Premium."
+        }
+      ]
+    },
+    {
+      "name": "PIFINT",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": []
+    }
+  ]
+}

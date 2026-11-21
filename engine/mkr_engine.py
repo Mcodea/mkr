@@ -43,6 +43,13 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
+    elif request["operation"] in ("lookup_blocks", "convert_block_settings"):
+        from block_catalogue import lookup, convert
+        operation = lookup if request["operation"] == "lookup_blocks" else convert
+        try:
+            return {**response, "result": operation(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] == "compare_tunings":
         from tuning_comparison import compare
         try:
