@@ -22,7 +22,7 @@
                     <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding Target}" TextWrapping="Wrap" Margin="0,6,0,12"/>
                     <TextBlock Text="{Binding Status}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding Evidence}" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                    <TextBlock x:Name="Evidence" Text="{Binding Evidence}" TextWrapping="Wrap" Margin="0,14,0,0"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>
