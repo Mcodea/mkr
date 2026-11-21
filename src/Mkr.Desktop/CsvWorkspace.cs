@@ -33,6 +33,9 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
         return result;
     }
 
+    public Task<CsvImport> SaveCaptureAsync(IReadOnlyList<AcquiredSample> samples, AcquisitionOrigin origin, CancellationToken token)
+        => Mkr.Infrastructure.AcquisitionArchive.SaveAsync(project.Id, store, engine, samples, origin, token);
+
     public async Task<CsvImport> AnalyzeAndSaveAsync(CsvMapping mapping, CancellationToken token)
     {
         var original = _original ?? throw new InvalidOperationException("Aucun CSV chargé.");

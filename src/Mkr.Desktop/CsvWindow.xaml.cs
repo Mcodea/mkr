@@ -28,6 +28,19 @@ public partial class CsvWindow : Window
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
+    private void OpenAcquisition(object sender, RoutedEventArgs args)
+    {
+        var window = new AcquisitionWindow(_workspace) { Owner = this };
+        if (window.ShowDialog() == true && window.SavedImport is { } recorded)
+        {
+            Analyze.IsEnabled = false;
+            Imports.ItemsSource = _workspace.List();
+            Imports.SelectedItem = recorded.Summary;
+            ShowImport(recorded);
+            StatusText.Text = "Acquisition enregistrée dans le projet.";
+        }
+    }
+
     private async void ChooseCsv(object sender, RoutedEventArgs args)
     {
         var dialog = new OpenFileDialog { Filter = "Fichiers CSV (*.csv)|*.csv" };
@@ -155,6 +168,8 @@ public partial class CsvWindow : Window
         Role.SelectedItem = import.Mapping.Role;
         Unit.Text = import.Mapping.Unit;
         Delimiter.SelectedValue = import.Delimiter;
+        if (import.Acquisition is { } origin)
+            Report.Text += $"  |  Modbus TCP · offset {origin.Source.FirstRegister} · unités PV {origin.Source.ProcessUnit}, MV {origin.Source.CommandUnit} · horodatage UTC de réception · fin : {origin.StopReason}.";
         var quality = import.Result.Quality!;
         Report.Text += $"  |  {import.Summary.FileName}  |  SHA-256 : {import.Summary.Sha256}\n" +
             $"{import.Mapping.Role} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +
