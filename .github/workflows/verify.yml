@@ -35,3 +35,6 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Tester la description physique et les profils
         run: dotnet run --project tests/Mkr.PhysicalLoop.Tests -c Release --no-build
+      - name: Vérifier le parcours graphique du catalogue
+        shell: powershell
+        run: .\tests\windows\catalogue.ps1
