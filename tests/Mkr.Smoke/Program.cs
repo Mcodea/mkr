@@ -261,6 +261,11 @@ try
         restored.ListPi(Guid.NewGuid(), study.Id).Count == 0, "PI settings stay linked to the source model and project.");
 
     var scenario = new PiScenario(0.1, 5, 1, -0.1, 0.1, 0.2, 3, 0.25);
+    var transfer = await engine.SimulateTransferAsync(fit, linkedPi.Simc,
+        scenario with { Disturbance = 0 }, 2, 1, default);
+    Require(transfer.Points[9].Mode == "manual" && transfer.Points[10].Mode == "automatic" &&
+        transfer.Points[9].Mv == scenario.MaximumMv && transfer.Points[10].Mv == transfer.Points[9].Mv &&
+        transfer.TransferBumpMv == 0, "PI manual-to-automatic transfer uses the actual limited output.");
     var (simulation, simulationVersion) = await engine.SimulatePiAsync(fit, linkedPi, scenario, default);
     Require(simulation.Imc.Points.Length == 51 && simulation.Imc.Points.All(p => p.Mv is null or >= -0.1 and <= 0.1) &&
         simulation.Imc.Points[^1].Mv is null && simulation.Imc.SaturationSeconds > 0 &&
