@@ -62,6 +62,38 @@ public partial class SimulationWindow : Window
         return true;
     }
 
+    private async void RunTransfer(object sender, RoutedEventArgs args)
+    {
+        if (!TryReadScenario(out var scenario)) return;
+        if (!Read(ManualMv, out var manual) || !Read(SwitchTime, out var at) ||
+            at <= 0 || at >= scenario.DurationSeconds)
+        {
+            Message.Text = "Renseignez la commande manuelle et un instant de bascule compris entre le début et la fin du scénario.";
+            return;
+        }
+        var token = _lifetime.Token;
+        bool simc = TransferTune.SelectedIndex == 1;
+        ScenarioForm.IsEnabled = false;
+        Message.Text = "Simulation du transfert en cours…";
+        try
+        {
+            var transfer = await _workspace.TransferAsync(_model, _tuning, simc, scenario, manual, at, token);
+            token.ThrowIfCancellationRequested();
+            var first = Array.FindIndex(transfer.Points, p => p.Mode == "automatic");
+            var before = transfer.Points[first - 1];
+            var after = transfer.Points[first];
+            string method = simc ? "SIMC" : "IMC / Lambda";
+            string warnings = string.Join(", ", transfer.Warnings);
+            Message.Text = $"Essai hors ligne {method} à {after.Seconds:G6} s · ΔMV manuelle demandée {manual:G6} {_model.MvUnit}\n" +
+                $"ΔMV appliquée avant → après : {before.Mv:G6} → {after.Mv:G6} {_model.MvUnit} · saut de commande : {transfer.TransferBumpMv:G6} {_model.MvUnit}\n" +
+                $"ΔPV à la bascule : {after.Pv:G6} {_model.PvUnit} · saturation : {transfer.SaturationSeconds:G6} s · limitation de vitesse : {transfer.RateLimitedSeconds:G6} s\n" +
+                $"Avertissements moteur : {warnings}";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { ScenarioForm.IsEnabled = true; }
+    }
+
     private void OpenPidPrototype(object sender, RoutedEventArgs args)
     {
         if (!TryReadScenario(out var scenario))
