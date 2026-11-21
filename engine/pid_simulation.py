@@ -6,8 +6,8 @@ Output clamps and rate constraints follow the existing MKR PI simulation convent
 """
 import math
 
-from fopdt_simulation import grid_index, mv_increment, number, plant_step
-from pi_simulation import response_metrics
+from fopdt_simulation import grid_index, mv_increment, number, plant_step, second_order_step
+from pi_simulation import additional_metrics, response_metrics
 
 
 def calculate(payload):
@@ -16,7 +16,7 @@ def calculate(payload):
         "durationSeconds", "setpoint", "minimumMv", "maximumMv",
         "disturbance", "disturbanceAtSeconds",
     }
-    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate", "measurementNoise"} != required:
+    if not isinstance(payload, dict) or payload.keys() - {"maximumMvRate", "measurementNoise", "secondTauSeconds"} != required:
         raise ValueError("pid_input")
     gain, tau, delay, h, duration, sp, lower, upper, disturbance, event = (
         number(payload[key]) for key in (
@@ -29,6 +29,9 @@ def calculate(payload):
             not lower < 0 < upper or not 0 <= event <= duration):
         raise ValueError("pid_domain")
     controller = payload["controller"]
+    proportional_only = isinstance(controller, dict) and controller.keys() == {"kind", "kp"} and controller["kind"] == "P"
+    if proportional_only:
+        controller = dict(kp=controller["kp"], tiSeconds=1, tdSeconds=0, filterSeconds=0)
     if not isinstance(controller, dict) or controller.keys() != {
         "kp", "tiSeconds", "tdSeconds", "filterSeconds"
     }:
@@ -46,7 +49,11 @@ def calculate(payload):
     n, event_index = grid_index(duration, h), grid_index(event, h)
     if not 2 <= n <= 5000:
         raise ValueError("pid_grid")
-    advance = plant_step(gain, tau, delay, h, duration)
+    if "secondTauSeconds" in payload:
+        fast = number(payload["secondTauSeconds"])
+        advance = second_order_step(gain, tau, fast, delay, h, duration)
+    else:
+        advance = plant_step(gain, tau, delay, h, duration)
     # Sensor noise is a deterministic input, never an implicit random draw.
     noisy = "measurementNoise" in payload
     if noisy:
@@ -84,7 +91,7 @@ def calculate(payload):
         mv = max(effective_lower, min(effective_upper, bounded))
         previous_mv = mv
 
-        step_integral = kp * h / ti * error
+        step_integral = 0.0 if proportional_only else kp * h / ti * error
         if not math.isfinite(step_integral):
             raise ValueError("pid_range")
         # Conditional integration at actuator bounds incl. rate limit;
@@ -130,8 +137,9 @@ def calculate(payload):
 
     return dict(
         algorithmVersion="0.2.0",
-        controllerForm="ideal_dependent_pid_derivative_on_pv",
+        controllerForm="proportional" if proportional_only else "ideal_dependent_pid_derivative_on_pv",
         warnings=warnings,
+        **additional_metrics(points, sp, response_end),
         iae=iae, ise=ise, finalError=sp-pv,
         saturationSeconds=saturated, rateLimitedSeconds=rate_limited,
         frozenSteps=frozen, points=points,

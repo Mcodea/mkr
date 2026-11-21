@@ -18,6 +18,26 @@ def response_metrics(points, reference):
     return dict(windowEndSeconds=points[-1]["seconds"], overshootPv=overshoot, settlingSeconds=settling)
 
 
+def additional_metrics(points, sp, window_end):
+    """Left-endpoint ITAE; total MV travel includes departure from zero deviation."""
+    itae = travel = previous_mv = 0.0
+    for current, following in zip(points, points[1:]):
+        dt = following["seconds"] - current["seconds"]
+        itae += current["seconds"] * abs(sp - current["pv"]) * dt
+        travel += abs(current["mv"] - previous_mv)
+        previous_mv = current["mv"]
+    crossings = []
+    if sp:
+        for threshold in (0.1, 0.9):
+            for left, right in zip(points[:window_end], points[1:window_end+1]):
+                a, b = left["pv"]/sp, right["pv"]/sp
+                if a < threshold <= b:
+                    crossings.append(left["seconds"] + (threshold-a)/(b-a) * (right["seconds"]-left["seconds"]))
+                    break
+    rise = crossings[1] - crossings[0] if len(crossings) == 2 else None
+    return dict(itae=itae, mvTravel=travel, riseTimeSeconds=rise)
+
+
 def calculate(payload):
     required = {"gain", "tauSeconds", "delaySeconds", "imc", "simc", "sampleSeconds", "durationSeconds",
                 "setpoint", "minimumMv", "maximumMv", "disturbance", "disturbanceAtSeconds"}
@@ -74,7 +94,7 @@ def calculate(payload):
             ys = advance(ys, us)
 
         points.append(dict(seconds=duration, pv=ys, cv=None, mv=None, disturbance=None))
-        return dict(iae=iae, ise=ise, saturationSeconds=saturated, rateLimitedSeconds=rate_limited,
+        return dict(**additional_metrics(points, sp, window_end), iae=iae, ise=ise, saturationSeconds=saturated, rateLimitedSeconds=rate_limited,
                     frozenSteps=frozen, finalError=sp - ys, points=points,
                     setpointResponse=response_metrics(points[:window_end + 1], sp))
 

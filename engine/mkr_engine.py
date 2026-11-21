@@ -43,6 +43,12 @@ def respond(raw):
         code = "invalid_request"
     elif request["version"] != 1:
         code = "unsupported_version"
+    elif request["operation"] == "compare_tunings":
+        from tuning_comparison import compare
+        try:
+            return {**response, "result": compare(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] in ("calculate_pi", "calculate_simc_pid", "simulate_pi", "simulate_open_loop"):
         if request["operation"] == "calculate_pi":
             from pi_tuning import calculate
