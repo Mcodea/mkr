@@ -7,6 +7,17 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     IIdentificationEngine engine, IPiStore piStore, IPiEngine piEngine, IOpenLoopEngine openLoopEngine,
     IPidPrototypeEngine pidEngine)
 {
+    public void ExportSheet(string path, IdentificationStudy model, PiStudy tuning, PiSimulationStudy simulation)
+    {
+        var sources = Sources();
+        var reviewStore = studies as Mkr.Infrastructure.SqliteProjectStore
+            ?? throw new InvalidOperationException("Historique des validations indisponible.");
+        var reviews = new[] { model.Id, tuning.Id, simulation.Id }
+            .SelectMany(id => reviewStore.ReadReviewHistory(project.Id, id)).OrderBy(r => r.RecordedAt).ToArray();
+        Mkr.Infrastructure.StudySheet.Export(path, project.Name, model, tuning, simulation,
+            sources.Single(x => x.Id == model.TrainingId), sources.Single(x => x.Id == model.ValidationId), reviews);
+    }
+
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
     public string[] Columns(ImportSummary source) => imports.ReadImport(project.Id, source.Id).Result.Headers;

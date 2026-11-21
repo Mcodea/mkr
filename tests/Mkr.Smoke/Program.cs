@@ -275,6 +275,14 @@ try
         reopenedSimulation.Result.Imc.SetpointResponse == simulation.Imc.SetpointResponse &&
         restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
+    var sheetPath = Path.Combine(directory.FullName, "study.pdf");
+    StudySheet.Export(sheetPath, project.Name, study, reopenedPi, reopenedSimulation,
+        training.Summary, validation.Summary, Array.Empty<ReviewEvent>());
+    using (var sheet = PdfSharp.Pdf.IO.PdfReader.Open(sheetPath, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+        Require(sheet.PageCount >= 2, "A reopened saved simulation produces a readable multipage study PDF.");
+    var artifact = Environment.GetEnvironmentVariable("MKR_SAMPLE_PDF");
+    if (!string.IsNullOrWhiteSpace(artifact)) File.Copy(sheetPath, artifact, overwrite: true);
+
     // The sensitivity matrix keeps fixed PI coefficients and survives SQLite reopening.
     var (sensitivity, robustnessVersion) = await engine.AnalyzeRobustnessAsync(
         fit, linkedPi, scenario, 20, default);
