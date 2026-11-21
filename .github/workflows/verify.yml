@@ -45,3 +45,15 @@ jobs:
           name: MKR-exemple-fiche-PDF
           path: mkr-etude-synthetique.pdf
           if-no-files-found: error
+      - name: Construire le paquet Windows autonome
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -OutputDirectory portable-MKR
+      - name: Ouvrir le catalogue depuis le paquet autonome
+        shell: powershell
+        run: ./tests/windows/catalogue.ps1 -Executable portable-MKR/Mkr.Desktop.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MKR-Windows-x64
+          path: portable-MKR/
+          retention-days: 30
+          if-no-files-found: error

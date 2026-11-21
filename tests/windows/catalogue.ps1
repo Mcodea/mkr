@@ -1,4 +1,5 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param([string]$Executable = "src/Mkr.Desktop/bin/Release/net10.0-windows/Mkr.Desktop.exe")
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 $root = [System.Windows.Automation.AutomationElement]::RootElement
@@ -15,7 +16,7 @@ function Wait-Element($parent, $property, $value) {
     throw "Élément WPF introuvable : $value"
 }
 
-$exe = Resolve-Path 'src/Mkr.Desktop/bin/Release/net10.0-windows/Mkr.Desktop.exe'
+$exe = Resolve-Path $Executable
 $process = Start-Process -FilePath $exe.Path -PassThru
 try {
     $nameProperty = [System.Windows.Automation.AutomationElement]::NameProperty

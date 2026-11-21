@@ -17,7 +17,8 @@ public partial class App : Application
             Trace.Listeners.Add(new TextWriterTraceListener(Path.Combine(directory, "mkr.log")));
             Trace.AutoFlush = true;
             var store = new SqliteProjectStore(Path.Combine(directory, "projects.db"));
-            var python = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
+            var bundled = Path.Combine(AppContext.BaseDirectory, "python", "python.exe");
+            var python = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? (File.Exists(bundled) ? bundled : "python");
             var engine = new PythonDiagnostics(python, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
             var model = new WorkspaceViewModel(store, engine);
             MainWindow = new WindowView(store, engine, project => new IdentificationWorkspace(project, store, store, engine, store, engine, engine, engine)) { DataContext = model };
