@@ -45,7 +45,7 @@ def generate(directory: Path):
                 pv += rng.gauss(0, case["noise"])
                 writer.writerow(((epoch + timedelta(seconds=second)).isoformat(), mv, f"{pv:.9f}"))
         reference[name] = case
-    (directory / "truth.json").write_text(json.dumps(reference, indent=2) + "\n", encoding="utf-8")
+    (directory / "truth.json").write_text(json.dumps(reference, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

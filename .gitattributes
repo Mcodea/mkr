@@ -1,0 +1,2 @@
+samples/synthetic/*.csv text eol=lf
+samples/synthetic/truth.json text eol=lf
