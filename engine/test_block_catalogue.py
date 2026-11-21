@@ -24,3 +24,15 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(result["eligible"], [])
         self.assertEqual(result["modelRunId"], "M1")
         self.assertTrue(all("tracking" in item["missingFunctions"] for item in result["evaluated"]))
+
+    def test_pidff_typed_parameters_remain_documentary(self):
+        result = lookup({"name": "PIDFF"})
+        entry, = result["entries"]
+        params = {p["name"]: p for p in entry["parameters"]}
+        self.assertEqual({k: p["iecType"] for k, p in params.items()}, {
+            "kp": "REAL", "ti": "TIME", "td": "TIME",
+            "mix_par": "BOOL", "rev_dir": "BOOL", "en_rcpy": "BOOL",
+        })
+        references = {s["id"] for s in result["sources"]}
+        self.assertTrue(all(p["source"] in references for p in params.values()))
+        self.assertFalse(entry["selectable"])
