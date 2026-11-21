@@ -16,7 +16,21 @@ try
     Throws<ArgumentException>(() => Project.Create(new string('x', 121)));
 
     store.Add(project);
+    var reviewRun = Guid.NewGuid();
+    store.RecordReview(project.Id, reviewRun, ReviewStage.Model, null, ReviewState.Calculated,
+        "Relecteur", "Identification terminée", "essai-1");
     var reopened = new SqliteProjectStore(path);
+    Throws<InvalidOperationException>(() => reopened.RecordReview(project.Id, reviewRun, ReviewStage.Model,
+        ReviewState.Calculated, ReviewState.Approved, "Relecteur", "Saut de vérification", "essai-1"));
+    reopened.RecordReview(project.Id, reviewRun, ReviewStage.Model, ReviewState.Calculated,
+        ReviewState.Verified, "Relecteur", "Comparaison indépendante", "essai-2");
+    Throws<InvalidOperationException>(() => store.RecordReview(project.Id, reviewRun, ReviewStage.Model,
+        ReviewState.Calculated, ReviewState.Rejected, "Relecteur", "Vue obsolète", "essai-1"));
+    var history = reopened.ReadReviewHistory(project.Id, reviewRun);
+    Require(history.Count == 2 && history[1].State == ReviewState.Verified &&
+        history[1].Evidence == "essai-2", "Only committed review events survive reopening.");
+    Require(reopened.ReadReviewHistory(project.Id, Guid.NewGuid()).Count == 0,
+        "Review events are isolated by run.");
     Require(reopened.List().Single() == project, "Project survives reopening and migration replay.");
     Throws<SqliteException>(() => reopened.Add(project));
     Require(reopened.List().Single() == project, "Duplicate insert preserves the original project.");
@@ -126,6 +140,7 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            DROP TABLE study_reviews;
             DROP TABLE pi_simulations;
             DROP TABLE pi_studies;
             DROP INDEX identification_studies_project;

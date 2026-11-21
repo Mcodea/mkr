@@ -99,14 +99,82 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                     PRAGMA user_version = 6;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 6;
             case 6:
+                command.CommandText = """
+                    CREATE TABLE study_reviews (
+                        sequence INTEGER PRIMARY KEY,
+                        project_id TEXT NOT NULL REFERENCES projects(id),
+                        run_id TEXT NOT NULL, stage TEXT NOT NULL, state TEXT NOT NULL,
+                        reviewer TEXT NOT NULL, reason TEXT NOT NULL, evidence TEXT NOT NULL,
+                        recorded_at TEXT NOT NULL
+                    );
+                    CREATE INDEX study_review_history ON study_reviews(project_id, run_id, stage, sequence);
+                    PRAGMA user_version = 7;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 7:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
         }
 
         transaction.Commit();
+    }
+
+    public ReviewEvent RecordReview(Guid projectId, Guid runId, ReviewStage stage,
+        ReviewState? expected, ReviewState next, string reviewer, string reason, string evidence)
+    {
+        if (runId == Guid.Empty || !Enum.IsDefined(stage))
+            throw new ArgumentException("Étude ou étape invalide.");
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction(deferred: false);
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$run", runId.ToString());
+        command.Parameters.AddWithValue("$stage", stage.ToString());
+        command.CommandText = """
+            SELECT state FROM study_reviews WHERE project_id=$project AND run_id=$run AND stage=$stage
+            ORDER BY sequence DESC LIMIT 1
+            """;
+        string? current = command.ExecuteScalar() as string;
+        if (current != expected?.ToString())
+            throw new InvalidOperationException("La revue a changé. Rechargez son historique.");
+        StudyReview.Validate(expected, next, reviewer, reason, evidence);
+        var now = DateTimeOffset.UtcNow;
+        command.CommandText = """
+            INSERT INTO study_reviews(project_id,run_id,stage,state,reviewer,reason,evidence,recorded_at)
+            VALUES ($project,$run,$stage,$state,$reviewer,$reason,$evidence,$date)
+            """;
+        command.Parameters.AddWithValue("$state", next.ToString());
+        command.Parameters.AddWithValue("$reviewer", reviewer);
+        command.Parameters.AddWithValue("$reason", reason);
+        command.Parameters.AddWithValue("$evidence", evidence);
+        command.Parameters.AddWithValue("$date", now.ToString("O", CultureInfo.InvariantCulture));
+        command.ExecuteNonQuery();
+        transaction.Commit();
+        return new(projectId, runId, stage, next, reviewer, reason, evidence, now);
+    }
+
+    public IReadOnlyList<ReviewEvent> ReadReviewHistory(Guid projectId, Guid runId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT stage, state, reviewer, reason, evidence, recorded_at
+            FROM study_reviews WHERE project_id=$project AND run_id=$run ORDER BY sequence
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$run", runId.ToString());
+        using var rows = command.ExecuteReader();
+        var history = new List<ReviewEvent>();
+        while (rows.Read())
+            history.Add(new(projectId, runId, Enum.Parse<ReviewStage>(rows.GetString(0)),
+                Enum.Parse<ReviewState>(rows.GetString(1)), rows.GetString(2), rows.GetString(3),
+                rows.GetString(4), DateTimeOffset.ParseExact(rows.GetString(5), "O", CultureInfo.InvariantCulture)));
+        return history;
     }
 
     public IReadOnlyList<Project> List()
