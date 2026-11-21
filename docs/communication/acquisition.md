@@ -17,3 +17,7 @@ liaison interrompt la session. L’utilisateur peut conserver le préfixe acquis
 avec son motif d’arrêt. Le CSV, son empreinte, le mapping et les unités sont
 archivés dans le projet. Le test Windows utilise un serveur sur 127.0.0.1.
 La compatibilité avec une configuration de CPU réelle reste à qualifier.
+
+## Comparaison CSV et Modbus (COM-001)
+
+Le test Windows transmet deux échelons distincts sur un serveur TCP local. Un fichier historique indépendant est construit avec les valeurs envoyées et les mêmes heures de réception. Il utilise un séparateur et un ordre de colonnes différents. Le test emprunte le parcours fichier de CsvWorkspace, rouvre les quatre sources depuis SQLite, contrôle leurs provenances et compare la qualité de PV, le modèle FOPDT, l’erreur sur le second échelon et les deux réglages PI. Cette comparaison à horodatages identiques isole l’effet du canal d’entrée. La synchronisation des horloges d’un historien réel relève d’un essai distinct.
