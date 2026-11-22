@@ -94,7 +94,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $null = Find $ident $name 'Étude exploratoire enregistrée.'
     Verify-Comparison $ident
     $combo = Find $ident $id 'StudyList'
-    $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).GetCurrentSelection()
+    $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
     $savedLabel = $selected[0].Current.Name
     if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8}$' -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
     $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
