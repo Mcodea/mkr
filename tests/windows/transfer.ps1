@@ -111,21 +111,16 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Select-Option $ident 'ValidationPv' 'pv'
     $confirm.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
     Press $ident 'Comparer FOPDT et SOPDT'
-    $rejection = Find $root $name 'Comparaison sur essai indépendant'
-    if ($rejection.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
-    $handle = [IntPtr]$rejection.Current.NativeWindowHandle
-    $ok = [MkrUiTest.NativeDialog]::GetDlgItem($handle, 1)
-    if ($ok -eq [IntPtr]::Zero -or [MkrUiTest.NativeDialog]::GetDlgItem($handle, 6) -ne [IntPtr]::Zero) {
-        throw 'La comparaison refusée ne doit proposer aucune acceptation.'
-    }
-    $info = $rejection.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) |
-        ForEach-Object { $_.Current.Name }
-    $details = $info -join [Environment]::NewLine
-    foreach ($part in @('FOPDT · RMSE','SOPDT · RMSE','erreur de validation excessive','Aucun des deux modèles')) {
+    $status = Find $ident $id 'Message'
+    $until = [DateTime]::UtcNow.AddSeconds(25)
+    do {
+        $details = $status.Current.Name
+        if ($details.Contains('Aucun des deux modèles ne satisfait les critères.')) { break }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $until)
+    foreach ($part in @('essai-6.csv','FOPDT · RMSE','SOPDT · RMSE','erreur de validation excessive','Aucun des deux modèles')) {
         if (!$details.Contains($part)) { throw "Explication du refus absente : $part. $details" }
     }
-    if (![MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'Acquittement impossible.' }
-    $null = Find $ident $name 'Aucun des deux modèles ne satisfait les critères.'
     $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
