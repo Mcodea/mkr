@@ -220,6 +220,9 @@ public partial class IdentificationWindow : Window
         _shown = StudyList.SelectedItem as IdentificationStudy;
         _plotFrom = _plotTo = _dragStartX = null;
         OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        SopdtPanel.Visibility = _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
+        SopdtReport.Text = "";
+        SopdtResponse.Clear();
         PiList.ItemsSource = null;
         PiResponse.Clear();
         PiReport.Text = "";
@@ -286,6 +289,34 @@ public partial class IdentificationWindow : Window
                 string.Join(Environment.NewLine, CandidateLines(saved, study.PvUnit));
         }
         DrawPlot();
+    }
+
+    private async void CalculateSopdt(object sender, RoutedEventArgs args)
+    {
+        SopdtReport.Text = "";
+        if (_shown is not { Family: ModelFamily.SOPDT } model || !ReadTolerance(SopdtResponse, out var seconds))
+        {
+            Message.Text = "Indiquez un temps de réponse strictement positif en secondes.";
+            return;
+        }
+        Form.IsEnabled = SopdtPanel.IsEnabled = false;
+        var token = _lifetime.Token;
+        try
+        {
+            var pid = await _workspace.CalculateSopdtPidAsync(model, seconds, token);
+            token.ThrowIfCancellationRequested();
+            string unit = $"{model.MvUnit}/{model.PvUnit}";
+            SopdtReport.Text = $"Cible {seconds:G5} s · étude {model.Id.ToString()[..8]} · algorithme {pid.AlgorithmVersion}\n" +
+                $"Forme série : Kc {pid.Series.Kc:G6} {unit}, Ti {pid.Series.TiSeconds:G6} s, Td {pid.Series.TdSeconds:G6} s\n" +
+                $"Forme idéale : Kp {pid.Ideal.Kp:G6} {unit}, Ti {pid.Ideal.TiSeconds:G6} s, Td {pid.Ideal.TdSeconds:G6} s\n" +
+                "Calcul continu exploratoire. Filtre dérivé à définir, limites de l’actionneur et équivalence constructeur à vérifier.";
+            if (pid.Warnings.Contains("tight_response"))
+                SopdtReport.Text += "\nLa cible demandée est plus courte que le retard du procédé.";
+            Message.Text = "Réglage PID théorique affiché.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = SopdtPanel.IsEnabled = true; }
     }
 
     private async void CalculatePi(object sender, RoutedEventArgs args)
