@@ -18,6 +18,7 @@ public static class StudySheet
         if (model.Id != pi.ModelId || pi.Id != sim.PiId || training.Id != model.TrainingId ||
             validation.Id != model.ValidationId)
             throw new InvalidDataException("Les résultats proviennent de plusieurs études.");
+        SimulationExportValidation.CheckSeries(sim);
         if (OperatingSystem.IsWindows()) GlobalFontSettings.UseWindowsFontsUnderWindows = true;
         var doc = new Document();
         doc.Info.Title = "MKR — Fiche de mise au point";
