@@ -63,6 +63,9 @@ public static class StudySheet
         var scenario = sim.Scenario;
         Line($"Consigne en écart {N(scenario.Setpoint)} {model.PvUnit} · pas {N(scenario.SampleSeconds)} s · durée {N(scenario.DurationSeconds)} s.");
         Line($"Bornes de commande {N(scenario.MinimumMv)} à {N(scenario.MaximumMv)} {model.MvUnit} · perturbation {N(scenario.Disturbance)} {model.MvUnit} à {N(scenario.DisturbanceAtSeconds)} s.");
+        Line(scenario.MaximumMvRate is { } rate
+            ? $"Vitesse maximale de commande {N(rate)} {model.MvUnit}/s."
+            : "Aucune limite de vitesse de commande configurée.");
         Heading("Bloc et mise au point");
         Line("Correspondance constructeur non établie dans cette étude. La CPU, la version de bibliothèque, le sens d’action, les unités et les limites du bloc restent à vérifier sur banc.");
         Heading("Traçabilité");
@@ -83,6 +86,7 @@ public static class StudySheet
         {
             var font = new XFont("Arial", 10);
             g.DrawString("Réponses simulées · IMC (bleu) et SIMC (orange)", new XFont("Arial", 16), XBrushes.Black, 44, 52);
+            g.DrawString($"Simulation {sim.Id}", font, XBrushes.Black, 44, 74);
             void Plot(string label, Func<SimulationPoint, double?> field, double top)
             {
                 var curves = new[] { sim.Result.Imc.Points, sim.Result.Simc.Points };
