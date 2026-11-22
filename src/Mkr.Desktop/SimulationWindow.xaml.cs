@@ -378,7 +378,7 @@ public partial class SimulationWindow : Window
     private void ExportSheet(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } simulation) return;
-        var dialog = new SaveFileDialog { FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
+        var dialog = new SaveFileDialog { Title = "Exporter la fiche enregistrée", FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
