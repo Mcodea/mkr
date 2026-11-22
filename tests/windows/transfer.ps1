@@ -208,6 +208,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
         Fill $sim $entry.Key $entry.Value
     }
+    Fill $sim 'Rate' '0.5'
     Press $sim 'Simuler et enregistrer'
     $null = Find $sim $name 'Simulation enregistrée.'
     Fill $sim 'Setpoint' '3'
@@ -233,6 +234,35 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if ($series.Count -lt 2 -or @($series | Where-Object { $_.sp_delta -ne '1' }).Count -gt 0) {
         throw 'Les séries exportées doivent reprendre la consigne du scénario enregistré.'
     }
+    Fill $sim 'Rate' '2'
+    Press $sim 'Fiche de mise au point (PDF)…'
+    $dialog = Find $root $name 'Exporter la fiche enregistrée'
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue PDF hors du processus MKR.' }
+    $save = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
+    if ($save -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($save, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Bouton Enregistrer le PDF inaccessible.'
+    }
+    $null = Find $sim $name 'Fiche de mise au point exportée.'
+    $pdfPath = [IO.Path]::ChangeExtension($files[0].FullName, '.pdf')
+    $OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+    @'
+import sys
+from pathlib import Path
+from uuid import UUID
+from pypdf import PdfReader
+
+path = Path(sys.argv[1])
+pages = PdfReader(path).pages
+simulation = str(UUID(path.stem.removeprefix("MKR-")))
+body = " ".join(" ".join(page.extract_text().split()) for page in pages[:-1])
+for expected in ("Consigne en écart 1 bar", "Vitesse maximale de commande 0,5 %/s."):
+    if expected not in body:
+        raise ValueError(f"Missing saved condition: {expected}")
+if simulation not in body or simulation not in pages[-1].extract_text():
+    raise ValueError("The report, plot and CSV must identify the same simulation")
+'@ | python -X utf8 - $pdfPath
+    if ($LASTEXITCODE -ne 0) { throw 'La relecture du PDF a échoué.' }
+    Fill $sim 'Rate' ''
     Fill $sim 'Setpoint' '1'
     Press $sim 'Tester le transfert'
     $status = Find $sim $id 'Message'
