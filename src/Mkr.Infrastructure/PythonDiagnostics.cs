@@ -32,28 +32,45 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (ReadCsvResult(result, expectQuality: true), version);
     }
 
+    private static object Source(StepImport source)
+    {
+        var fields = new Dictionary<string, object>
+        {
+            ["raw"] = source.Import.Original,
+            ["delimiter"] = source.Import.Delimiter,
+            ["timeColumn"] = source.Columns.TimeColumn,
+            ["mvColumn"] = source.Columns.MvColumn,
+            ["pvColumn"] = source.Columns.PvColumn
+        };
+        if (source.Window is { } window)
+        {
+            if (!window.IsValid)
+                throw new CsvInputException("fit_window");
+            fields["rowStart"] = window.RowStart;
+            fields["rowEnd"] = window.RowEnd;
+        }
+        return fields;
+    }
+
+    public async Task<ModelComparison> CompareAsync(StepImport training, StepImport validation,
+        double mvTolerance, double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token)
+    {
+        var trials = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
+        var (json, _) = await CallAsync("compare_models", new { trials, maximumRmse, maximumResidualLagOne }, token);
+        var report = json.Deserialize<ModelComparison>(JsonOptions);
+        if (report?.Candidates is not { Count: 2 } candidates ||
+            !candidates.TryGetValue("FOPDT", out var first) || !candidates.TryGetValue("SOPDT", out var second) ||
+            candidates.Values.Any(c => c?.RejectionReasons is null || !double.IsFinite(c.ValidationRmse) || c.ValidationRmse < 0))
+            throw new InvalidDataException("Comparaison de modèles incomplète.");
+        string? expected = first.RejectionReasons.Length == 0 ? "FOPDT" : second.RejectionReasons.Length == 0 ? "SOPDT" : null;
+        if (report.Selected != expected || report.Decision != (expected is null ? "insufficient_evidence" : "lowest_acceptable_order"))
+            throw new InvalidDataException("Décision de comparaison incohérente.");
+        return report;
+    }
+
     public async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
         StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token)
     {
-        static object Source(StepImport source)
-        {
-            var fields = new Dictionary<string, object>
-            {
-                ["raw"] = source.Import.Original,
-                ["delimiter"] = source.Import.Delimiter,
-                ["timeColumn"] = source.Columns.TimeColumn,
-                ["mvColumn"] = source.Columns.MvColumn,
-                ["pvColumn"] = source.Columns.PvColumn
-            };
-            if (source.Window is { } window)
-            {
-                if (!window.IsValid)
-                    throw new CsvInputException("fit_window");
-                fields["rowStart"] = window.RowStart;
-                fields["rowEnd"] = window.RowEnd;
-            }
-            return fields;
-        }
         var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
         var operation = family switch
         {
