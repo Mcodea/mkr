@@ -161,10 +161,21 @@
                         <TextBlock Text="Boucle et objectif de régulation" FontSize="17" FontWeight="SemiBold"/>
                         <TextBlock Text="Indiquez le repère de la boucle, la grandeur régulée, le point de fonctionnement habituel avec son unité et le résultat recherché." TextWrapping="Wrap"/>
                     </StackPanel>
-                    <TextBox Grid.Row="1" x:Name="Description" AcceptsReturn="True"
-                             MaxLength="4000" TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
-                             AutomationProperties.Name="Description du procédé"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Label Content="Repère de la boucle" Target="{Binding ElementName=LoopTag}"/>
+                            <TextBox x:Name="LoopTag"/>
+                            <Label Content="Grandeur régulée" Target="{Binding ElementName=LoopControlledQuantity}"/>
+                            <TextBox x:Name="LoopControlledQuantity"/>
+                            <Label Content="Point de fonctionnement et unité" Target="{Binding ElementName=LoopOperatingPoint}"/>
+                            <TextBox x:Name="LoopOperatingPoint"/>
+                            <Label Content="Objectif de régulation" Target="{Binding ElementName=LoopObjective}"/>
+                            <TextBox x:Name="LoopObjective"/>
+                            <Label Content="Description du procédé" Target="{Binding ElementName=Description}"/>
+                            <TextBox x:Name="Description" MinHeight="80" AcceptsReturn="True" MaxLength="4000"
+                                     TextWrapping="Wrap" AutomationProperties.Name="Description du procédé"/>
+                        </StackPanel>
+                    </ScrollViewer>
                     <Button Grid.Row="2" Content="_Enregistrer la description"
                             Click="SaveDescription" HorizontalAlignment="Left"
                             Margin="0,12,0,0" Style="{StaticResource MkrPrimaryButton}"/>
