@@ -295,6 +295,26 @@ try
         reopenedSimulation.Result.Imc.SetpointResponse == simulation.Imc.SetpointResponse &&
         restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
+    var csvPath = Path.Combine(directory.FullName, "series.csv");
+    SimulationCsv.Export(csvPath, reopenedSimulation);
+    var savedBytes = File.ReadAllBytes(csvPath);
+    var shiftedPoints = simulation.Simc.Points.ToArray();
+    shiftedPoints[^1] = shiftedPoints[^1] with { Seconds = shiftedPoints[^1].Seconds + 1 };
+    foreach (var invalidPoints in new[] { shiftedPoints, shiftedPoints[..^1] })
+    {
+        var invalidStudy = simulationStudy with
+        {
+            Result = simulation with { Simc = simulation.Simc with { Points = invalidPoints } }
+        };
+        Throws<InvalidDataException>(() => SimulationCsv.Export(csvPath, invalidStudy));
+        Require(File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Failed series export preserves the existing CSV.");
+    }
+    using (File.Open(csvPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        Throws<IOException>(() => SimulationCsv.Export(csvPath, reopenedSimulation));
+    Require(!Directory.EnumerateFiles(directory.FullName, ".*.tmp").Any() &&
+        File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Locked destination preserves the original and releases staging files.");
+    SimulationCsv.Export(csvPath, reopenedSimulation);
+    Require(File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Export succeeds on retry after unlocking.");
     var sheetPath = Path.Combine(directory.FullName, "study.pdf");
     StudySheet.Export(sheetPath, project.Name, study, reopenedPi, reopenedSimulation,
         training.Summary, validation.Summary, Array.Empty<ReviewEvent>());
