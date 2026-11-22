@@ -12,7 +12,7 @@ public partial class App : Application
         base.OnStartup(e);
         try
         {
-            var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MKR");
+            var directory = Environment.GetEnvironmentVariable("MKR_DATA_DIRECTORY") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MKR");
             Directory.CreateDirectory(directory);
             Trace.Listeners.Add(new TextWriterTraceListener(Path.Combine(directory, "mkr.log")));
             Trace.AutoFlush = true;
