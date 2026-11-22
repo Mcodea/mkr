@@ -88,6 +88,13 @@ try {
     $bench = Find $root $name 'MKR — Catalogue des blocs'
     Fill $bench 'Filter' 'PIDFF'
     $null = Find $bench $name 'Compatibilité à vérifier'
+    $context = (Find $bench $id 'LoopContext').Current.Name
+    Press $bench 'Copier le relevé de banc'
+    $null = Find $bench $name 'Relevé PIDFF copié.'
+    $sheet = Get-Clipboard -Raw
+    foreach ($field in @('Repère : PIC-202', 'Grandeur régulée : Pression de refoulement', 'Point de fonctionnement : 5 bar', 'Objectif : Maintenir la pression aval', "Description : Procédé d’essai")) {
+        if (!$context.Contains($field) -or !$sheet.Contains($field)) { throw "Champ de boucle absent du relevé : $field" }
+    }
     $bench.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
