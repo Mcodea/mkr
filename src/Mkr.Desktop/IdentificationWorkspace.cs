@@ -32,10 +32,9 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return engine.PreviewTrialAsync(new StepImport(original, columns), token);
     }
 
-    public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
+    private (StepImport, StepImport) ReadTrials(ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
-        double mvTolerance, double pvTolerance, CancellationToken token,
-        StepWindow? trainingWindow = null, StepWindow? validationWindow = null)
+        StepWindow? trainingWindow, StepWindow? validationWindow)
     {
         var train = new StepImport(imports.ReadImport(project.Id, training.Id), trainColumns, trainingWindow);
         var check = new StepImport(imports.ReadImport(project.Id, validation.Id), valColumns, validationWindow);
@@ -43,6 +42,24 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
             throw new CsvInputException("fit_independence");
         CheckRecordedUnit(train, mvUnit, pvUnit);
         CheckRecordedUnit(check, mvUnit, pvUnit);
+        return (train, check);
+    }
+
+    public Task<ModelComparison> CompareAsync(ImportSummary training, StepColumns trainColumns,
+        ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
+        double mvTolerance, double pvTolerance, double maximumRmse, double maximumLag,
+        CancellationToken token, StepWindow? trainingWindow, StepWindow? validationWindow)
+    {
+        var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
+        return engine.CompareAsync(train, check, mvTolerance, pvTolerance, maximumRmse, maximumLag, token);
+    }
+
+    public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
+        ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
+        double mvTolerance, double pvTolerance, CancellationToken token,
+        StepWindow? trainingWindow = null, StepWindow? validationWindow = null)
+    {
+        var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
         var (result, version) = await engine.IdentifyAsync(family, train, check, mvTolerance, pvTolerance, token);
         token.ThrowIfCancellationRequested();
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
