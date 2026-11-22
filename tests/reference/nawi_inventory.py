@@ -1,42 +1,34 @@
-"""Inspect the published NAWI open-loop archives. DOI 10.7481/1963162."""
+"""Inventory the two open-loop archives published under DOI 10.7481/1963162."""
+from collections import Counter
 from hashlib import sha256
 from io import BytesIO
 from pathlib import PurePosixPath
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-from openpyxl import load_workbook
-from pypdf import PdfReader
+
+ARCHIVES = {
+    "Dataset2_2021_06_OpenLoopExperiments.zip": "5f2f237f1b90ab7efd240dfd993558d767a8342c095608492baad1f368569d97",
+    "Dataset4_2021_08_OpenLoopExperiments.zip": "2d2906bdfd93019ceb1fa4ff495ff428acd47209e2a2f634b27ba08bd792057d",
+}
 
 
-def inspect(archive_name):
-    with urlopen("https://data.openei.org/files/6474/" + archive_name, timeout=60) as response:
+def inspect(name, expected_digest):
+    with urlopen("https://data.openei.org/files/6474/" + name, timeout=60) as response:
         data = response.read()
-    print(archive_name, "SHA256", sha256(data).hexdigest())
+    if sha256(data).hexdigest() != expected_digest:
+        raise ValueError(f"Source revision changed: {name}")
+    print(name, expected_digest)
     with ZipFile(BytesIO(data)) as archive:
-        for entry in archive.infolist():
-            path = PurePosixPath(entry.filename)
-            if entry.is_dir() or "__MACOSX" in path.parts:
-                continue
-            print(path, entry.file_size)
-            if "readme" in path.name.lower():
-                raw = archive.read(entry)
-                if path.suffix.lower() == ".pdf":
-                    for page in PdfReader(BytesIO(raw)).pages:
-                        print(page.extract_text())
-                elif path.suffix.lower() in {".txt", ".md"}:
-                    print(raw.decode("utf-8", errors="replace"))
-            if path.suffix.lower() == ".xlsx":
-                workbook = load_workbook(BytesIO(archive.read(entry)), read_only=True, data_only=True)
-                try:
-                    for sheet in workbook:
-                        print(sheet.title, sheet.max_row, sheet.max_column)
-                        for row in sheet.iter_rows(max_row=3, values_only=True):
-                            print(row)
-                finally:
-                    workbook.close()
+        files = [PurePosixPath(entry.filename) for entry in archive.infolist() if not entry.is_dir()]
+        for directory, count in sorted(Counter(p.parent for p in files if p.suffix.lower() == ".csv").items()):
+            print(directory, count, "CSV")
+        for path in files:
+            if path.name.lower() == "readme.txt":
+                print(path)
+                print(archive.read(str(path)).decode("utf-8-sig"))
 
 
 if __name__ == "__main__":
-    for name in ("Dataset2_2021_06_OpenLoopExperiments.zip", "Dataset4_2021_08_OpenLoopExperiments.zip"):
-        inspect(name)
+    for archive_name, digest in ARCHIVES.items():
+        inspect(archive_name, digest)
