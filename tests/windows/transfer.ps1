@@ -208,6 +208,24 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
         Fill $sim $entry.Key $entry.Value
     }
+    Press $sim 'Simuler et enregistrer'
+    $null = Find $sim $name 'Simulation enregistrée.'
+    Fill $sim 'Setpoint' '3'
+    $report = (Find $sim $id 'Report').Current.Name
+    if (!$report.Contains('ΔSP 1 bar') -or !$report.Contains('durée 10 s')) { throw "Scénario enregistré ambigu. $report" }
+    Press $sim 'Exporter les séries enregistrées…'
+    $dialog = Find $root $name 'Exporter les séries enregistrées'
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }
+    $fileBox = Find $dialog $id '1001'
+    $exportPath = Join-Path $Fixture ([Guid]::NewGuid().ToString() + '.csv')
+    $fileBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($exportPath)
+    (Find $dialog $id '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $null = Find $sim $name 'Séries simulées exportées.'
+    $series = @(Import-Csv -LiteralPath $exportPath)
+    if ($series.Count -lt 2 -or @($series | Where-Object { $_.sp_delta -ne '1' }).Count -gt 0) {
+        throw 'Les séries exportées doivent reprendre la consigne du scénario enregistré.'
+    }
+    Fill $sim 'Setpoint' '1'
     Press $sim 'Tester le transfert'
     $status = Find $sim $id 'Message'
     $until = [DateTime]::UtcNow.AddSeconds(25)
