@@ -30,6 +30,25 @@ function Fill($parent, $field, $value) {
     $box = Find $parent $id $field
     $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value)
 }
+function Select-Option($parent, $field, $pattern) {
+    $combo = Find $parent $id $field
+    $expand = $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $expand.Expand()
+    $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $item = $null
+    do {
+        $item = $items.FindItemByProperty($item, $null, $null)
+        if (!$item) { throw "Option absente dans $field : $pattern" }
+    } until ($item.Current.Name -like $pattern)
+    $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $expand.Collapse()
+}
+function Verify-Comparison($window) {
+    $report = (Find $window $id 'FitReport').Current.Name
+    foreach ($part in @('Comparaison enregistrée','modèle retenu FOPDT','RMSE ≤ 0','FOPDT · RMSE','SOPDT · RMSE')) {
+        if (!$report.Contains($part)) { throw "Information de comparaison absente : $part. Rapport : $report" }
+    }
+}
 $study = (Get-Content -LiteralPath (Join-Path $Fixture 'study.txt') -Raw).Trim()
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
@@ -46,6 +65,69 @@ try {
     $project = Find $root $name "MKR — Projet initial"
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
+    Select-Option $ident 'TrainingSource' 'essai-1.csv*'
+    Select-Option $ident 'ValidationSource' 'essai-2.csv*'
+    foreach ($prefix in @('Training', 'Validation')) {
+        Select-Option $ident ($prefix + 'Time') 'timestamp'
+        Select-Option $ident ($prefix + 'Mv') 'mv'
+        Select-Option $ident ($prefix + 'Pv') 'pv'
+    }
+    foreach ($entry in @{MvUnit='%';PvUnit='bar';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
+        Fill $ident $entry.Key $entry.Value
+    }
+    $confirm = Find $ident $id 'Confirmed'
+    $confirm.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Press $ident 'Comparer FOPDT et SOPDT'
+    $dialog = Find $root $name 'Comparaison sur essai indépendant'
+    $accept = Find $dialog $id '6'
+    $accept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $null = Find $ident $name 'Étude exploratoire enregistrée.'
+    Verify-Comparison $ident
+    $combo = Find $ident $id 'StudyList'
+    $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).GetCurrentSelection()
+    $savedLabel = $selected[0].Current.Name
+    if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8} $id 'StudyList'
+    $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+    $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $option = $null
+    do {
+        $option = $container.FindItemByProperty($option, $null, $null)
+        if (!$option) { throw "Étude de référence absente du sélecteur : $study" }
+    } until ($option.Current.Name -like "*$study" -or $option.Current.AutomationId -like "$study*")
+    $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
+    Press $ident 'Simuler en boucle fermée…'
+    $sim = Find $root $name 'MKR — Simulation PI'
+    foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
+        Fill $sim $entry.Key $entry.Value
+    }
+    Press $sim 'Tester le transfert'
+    $status = Find $sim $id 'Message'
+    $until = [DateTime]::UtcNow.AddSeconds(25)
+    do {
+        $message = $status.Current.Name
+        if ($message -like '*2 → 2 %*' -and $message -like '*saut de commande : 0 %*' -and $message -like '*IMC / Lambda*') { 
+            Write-Output 'Transfert manuel 9 %, sortie bornée 2 %, première commande automatique 2 %.'
+            return
+        }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $until)
+    throw "Résultat de transfert inattendu : $message"
+}
+catch {
+    Write-Host $_.ScriptStackTrace
+    throw
+}
+finally {
+    if (!$process.HasExited) { Stop-Process -Id $process.Id }
+}
+ -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
+    $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Press $project 'Identification…'
+    $ident = Find $root $name 'MKR — Identification'
+    Select-Option $ident 'StudyList' $savedLabel
+    Verify-Comparison $ident
+    Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     $studies = Find $ident $id 'StudyList'
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
