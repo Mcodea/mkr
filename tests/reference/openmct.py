@@ -1,6 +1,7 @@
 """Inventory physical motor records from Von Chong & Cardenas, DOI 10.17632/5xvg43r9r8.2."""
 import argparse
 import csv
+import math
 from io import BytesIO, TextIOWrapper
 from itertools import groupby
 from pathlib import PurePosixPath
@@ -9,6 +10,13 @@ from zipfile import ZipFile
 
 
 URL = "https://api.data.mendeley.com/datasets/5xvg43r9r8/zip/file_downloaded?version=2"
+
+
+def actuation(row):
+    pwm, speed, interval = (float(row[key]) for key in ("PWM", "MEAS", "DT_ms"))
+    if not all(map(math.isfinite, (pwm, speed, interval))) or interval <= 0:
+        raise ValueError("Invalid actuation, speed or sample interval")
+    return pwm
 
 
 def inspect(archive):
@@ -25,7 +33,7 @@ def inspect(archive):
             if not {"PWM", "MEAS", "DT_ms"}.issubset(reader.fieldnames or []):
                 raise ValueError(f"{path}: unexpected columns {reader.fieldnames}")
             levels = [(value, sum(1 for _ in group)) for value, group in
-                      groupby(reader, key=lambda row: float(row["PWM"]))]
+                      groupby(reader, key=actuation)]
             if len(levels) < 2:
                 raise ValueError(f"{path}: no recorded change in actuation")
             print(path, metadata, "samples", sum(n for _, n in levels), "first plateaus", levels[:12])
