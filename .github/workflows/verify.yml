@@ -61,6 +61,8 @@ jobs:
       - name: Construire le paquet Windows autonome
         shell: pwsh
         run: ./scripts/package-windows.ps1 -OutputDirectory portable-MKR
+      - name: Installer le lecteur PDF de vérification
+        run: python -m pip install --only-binary=:all: pypdf==5.9.0
       - name: Tester le transfert PI depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/transfer.ps1 -Executable portable-MKR/Mkr.Desktop.exe -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
