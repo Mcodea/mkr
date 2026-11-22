@@ -19,19 +19,7 @@ public partial class WindowView : Window
         InitializeComponent();
     }
 
-    private void OpenCatalogue(object sender, RoutedEventArgs args)
-    {
-        try
-        {
-            new BlockCatalogueWindow { Owner = this }.ShowDialog();
-        }
-        catch (Exception error)
-        {
-            Trace.TraceError("catalogue.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible de lire le catalogue installé.", "MKR",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this);
 
     private void OpenProject(object sender, RoutedEventArgs args)
     {
