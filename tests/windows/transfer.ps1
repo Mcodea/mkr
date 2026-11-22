@@ -86,42 +86,7 @@ try {
     $combo = Find $ident $id 'StudyList'
     $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).GetCurrentSelection()
     $savedLabel = $selected[0].Current.Name
-    if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8} $id 'StudyList'
-    $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
-    $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
-    $option = $null
-    do {
-        $option = $container.FindItemByProperty($option, $null, $null)
-        if (!$option) { throw "Étude de référence absente du sélecteur : $study" }
-    } until ($option.Current.Name -like "*$study" -or $option.Current.AutomationId -like "$study*")
-    $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-    $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
-    Press $ident 'Simuler en boucle fermée…'
-    $sim = Find $root $name 'MKR — Simulation PI'
-    foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
-        Fill $sim $entry.Key $entry.Value
-    }
-    Press $sim 'Tester le transfert'
-    $status = Find $sim $id 'Message'
-    $until = [DateTime]::UtcNow.AddSeconds(25)
-    do {
-        $message = $status.Current.Name
-        if ($message -like '*2 → 2 %*' -and $message -like '*saut de commande : 0 %*' -and $message -like '*IMC / Lambda*') { 
-            Write-Output 'Transfert manuel 9 %, sortie bornée 2 %, première commande automatique 2 %.'
-            return
-        }
-        Start-Sleep -Milliseconds 200
-    } while ([DateTime]::UtcNow -lt $until)
-    throw "Résultat de transfert inattendu : $message"
-}
-catch {
-    Write-Host $_.ScriptStackTrace
-    throw
-}
-finally {
-    if (!$process.HasExited) { Stop-Process -Id $process.Id }
-}
- -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
+    if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8}$' -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
     $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
