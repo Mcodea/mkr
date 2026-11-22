@@ -30,6 +30,25 @@ function Fill($parent, $field, $value) {
     $box = Find $parent $id $field
     $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value)
 }
+function Select-Option($parent, $field, $pattern) {
+    $combo = Find $parent $id $field
+    $expand = $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $expand.Expand()
+    $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $item = $null
+    do {
+        $item = $items.FindItemByProperty($item, $null, $null)
+        if (!$item) { throw "Option absente dans $field : $pattern" }
+    } until ($item.Current.Name -like $pattern)
+    $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $expand.Collapse()
+}
+function Verify-Comparison($window) {
+    $report = (Find $window $id 'FitReport').Current.Name
+    foreach ($part in @('Comparaison enregistrée','modèle retenu FOPDT','RMSE ≤ 0','FOPDT · RMSE','SOPDT · RMSE')) {
+        if (!$report.Contains($part)) { throw "Information de comparaison absente : $part. Rapport : $report" }
+    }
+}
 $study = (Get-Content -LiteralPath (Join-Path $Fixture 'study.txt') -Raw).Trim()
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
@@ -46,6 +65,44 @@ try {
     $project = Find $root $name "MKR — Projet initial"
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
+    Select-Option $ident 'TrainingSource' 'essai-1.csv*'
+    Select-Option $ident 'ValidationSource' 'essai-2.csv*'
+    foreach ($prefix in @('Training', 'Validation')) {
+        Select-Option $ident ($prefix + 'Time') 'timestamp'
+        Select-Option $ident ($prefix + 'Mv') 'mv'
+        Select-Option $ident ($prefix + 'Pv') 'pv'
+    }
+    foreach ($entry in @{MvUnit='%';PvUnit='bar';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
+        Fill $ident $entry.Key $entry.Value
+    }
+    $confirm = Find $ident $id 'Confirmed'
+    $confirm.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Press $ident 'Comparer FOPDT et SOPDT'
+    $dialog = Find $root $name 'Comparaison sur essai indépendant'
+    # WPF MessageBox is a native Win32 dialog. Activate its IDYES button.
+    Add-Type -Namespace MkrUiTest -Name NativeDialog -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern System.IntPtr GetDlgItem(System.IntPtr dialog, int id);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool PostMessage(System.IntPtr target, uint msg, System.IntPtr wParam, System.IntPtr lParam);
+'@
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
+    $yes = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 6)
+    if ($yes -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($yes, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Confirmation Oui inaccessible.'
+    }
+    $null = Find $ident $name 'Étude exploratoire enregistrée.'
+    Verify-Comparison $ident
+    $combo = Find $ident $id 'StudyList'
+    $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
+    $savedLabel = $selected[0].Current.Name
+    if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8}$' -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
+    $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Press $project 'Identification…'
+    $ident = Find $root $name 'MKR — Identification'
+    Select-Option $ident 'StudyList' $savedLabel
+    Verify-Comparison $ident
+    Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     $studies = Find $ident $id 'StudyList'
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)

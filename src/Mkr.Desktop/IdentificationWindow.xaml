@@ -16,7 +16,13 @@
                         <StackPanel>
                             <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
-                            <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" />
+                            <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" >
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                            </ComboBox>
                             <Label Content="Temps" Target="{Binding ElementName=TrainingTime}" />
                             <ComboBox x:Name="TrainingTime" Width="95" />
                             <Label Content="MV" Target="{Binding ElementName=TrainingMv}" />
@@ -36,7 +42,13 @@
                         <StackPanel>
                             <WrapPanel Margin="6">
                             <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
-                            <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" />
+                            <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" >
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                            </ComboBox>
                             <Label Content="Temps" Target="{Binding ElementName=ValidationTime}" />
                             <ComboBox x:Name="ValidationTime" Width="95" />
                             <Label Content="MV" Target="{Binding ElementName=ValidationMv}" />
