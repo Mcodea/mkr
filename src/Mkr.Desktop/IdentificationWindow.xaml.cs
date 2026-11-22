@@ -152,6 +152,7 @@ public partial class IdentificationWindow : Window
         var token = _lifetime.Token;
         try
         {
+            ModelComparison? accepted = null;
             if (sender == CompareModels)
             {
                 if (!ReadTolerance(MaximumRmse, out var rmse) || !ReadTolerance(MaximumLag, out var lag) || lag > 1)
@@ -164,32 +165,27 @@ public partial class IdentificationWindow : Window
                 token.ThrowIfCancellationRequested();
                 var lines = new List<string> { $"Essai de validation : {validation.FileName}",
                     $"Seuils : RMSE ≤ {rmse:G5} {pvUnit} · |r₁| ≤ {lag:G5}" };
-                foreach (var (name, candidate) in comparison.Candidates)
-                {
-                    var reasons = candidate.RejectionReasons.Select(reason => reason switch
-                    {
-                        "validation_rmse" => "erreur de validation excessive",
-                        "validation_residuals" => "corrélation résiduelle excessive ou indéterminée",
-                        "parameter_bound" => "paramètre en borne",
-                        "short_horizon" => "durée d’essai insuffisante",
-                        "fast_pole_resolution" => "pôle rapide mal résolu",
-                        "ill_conditioned" => "estimation mal conditionnée",
-                        _ => reason
-                    });
-                    lines.Add($"{name} · RMSE {candidate.ValidationRmse:G5} {pvUnit} · r₁ {candidate.ValidationResidualLagOne?.ToString("G4") ?? "indéterminé"} · " +
-                        (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", reasons)));
-                }
+                lines.AddRange(CandidateLines(comparison, pvUnit));
                 lines.Add(comparison.Selected is { } selected
                     ? $"Modèle proposé : {selected}, ordre le plus faible satisfaisant les critères."
                     : "Aucun des deux modèles ne satisfait les critères.");
                 Message.Text = lines[^1];
-                MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                if (comparison.Selected is null)
+                {
+                    MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+                lines.Add("Estimer et enregistrer ce modèle avec les critères et les résultats de comparaison ?");
+                if (MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                family = Enum.Parse<ModelFamily>(comparison.Selected);
+                FamilyChoice.SelectedItem = family;
+                accepted = comparison;
             }
             var study = await _workspace.CalculateAsync(family, training, trainColumns, validation, valColumns,
                 mvUnit, pvUnit, mvTolerance, pvTolerance, token,
-                _trainingSelection?.Window, _validationSelection?.Window);
+                _trainingSelection?.Window, _validationSelection?.Window, accepted);
             var studies = _workspace.Studies();
             StudyList.ItemsSource = studies;
             StudyList.SelectedItem = studies.First(item => item.Id == study.Id);
@@ -198,6 +194,25 @@ public partial class IdentificationWindow : Window
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
         finally { Form.IsEnabled = true; }
+    }
+
+    private static IEnumerable<string> CandidateLines(ModelComparison comparison, string pvUnit)
+    {
+        foreach (var (name, candidate) in comparison.Candidates)
+        {
+            var reasons = candidate.RejectionReasons.Select(reason => reason switch
+            {
+                "validation_rmse" => "erreur de validation excessive",
+                "validation_residuals" => "corrélation résiduelle excessive ou indéterminée",
+                "parameter_bound" => "paramètre en borne",
+                "short_horizon" => "durée d’essai insuffisante",
+                "fast_pole_resolution" => "pôle rapide mal résolu",
+                "ill_conditioned" => "estimation mal conditionnée",
+                _ => reason
+            });
+            yield return $"{name} · RMSE {candidate.ValidationRmse:G5} {pvUnit} · r₁ {candidate.ValidationResidualLagOne?.ToString("G4") ?? "indéterminé"} · " +
+                (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", reasons));
+        }
     }
 
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
@@ -264,6 +279,12 @@ public partial class IdentificationWindow : Window
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
+        if (study.Comparison is { } saved)
+        {
+            FitReport.Text += $"\nComparaison enregistrée · version {saved.AlgorithmVersion} · modèle retenu {saved.Selected}\n" +
+                $"Seuils : RMSE ≤ {saved.Criteria.MaximumRmse:G5} {study.PvUnit} · |r₁| ≤ {saved.Criteria.MaximumResidualLagOne:G5}\n" +
+                string.Join(Environment.NewLine, CandidateLines(saved, study.PvUnit));
+        }
         DrawPlot();
     }
 
