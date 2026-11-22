@@ -146,6 +146,41 @@ public partial class IdentificationWindow : Window
         var token = _lifetime.Token;
         try
         {
+            if (sender == CompareModels)
+            {
+                if (!ReadTolerance(MaximumRmse, out var rmse) || !ReadTolerance(MaximumLag, out var lag) || lag > 1)
+                {
+                    Message.Text = "Indiquez une RMSE maximale positive en unité PV et une limite de corrélation supérieure à 0 et inférieure ou égale à 1.";
+                    return;
+                }
+                var comparison = await _workspace.CompareAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
+                    mvTolerance, pvTolerance, rmse, lag, token, _trainingSelection?.Window, _validationSelection?.Window);
+                token.ThrowIfCancellationRequested();
+                var lines = new List<string> { $"Essai de validation : {validation.FileName}",
+                    $"Seuils : RMSE ≤ {rmse:G5} {pvUnit} · |r₁| ≤ {lag:G5}" };
+                foreach (var (name, candidate) in comparison.Candidates)
+                {
+                    var reasons = candidate.RejectionReasons.Select(reason => reason switch
+                    {
+                        "validation_rmse" => "erreur de validation excessive",
+                        "validation_residuals" => "corrélation résiduelle excessive ou indéterminée",
+                        "parameter_bound" => "paramètre en borne",
+                        "short_horizon" => "durée d’essai insuffisante",
+                        "fast_pole_resolution" => "pôle rapide mal résolu",
+                        "ill_conditioned" => "estimation mal conditionnée",
+                        _ => reason
+                    });
+                    lines.Add($"{name} · RMSE {candidate.ValidationRmse:G5} {pvUnit} · r₁ {candidate.ValidationResidualLagOne?.ToString("G4") ?? "indéterminé"} · " +
+                        (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", reasons)));
+                }
+                lines.Add(comparison.Selected is { } selected
+                    ? $"Modèle proposé : {selected}, ordre le plus faible satisfaisant les critères."
+                    : "Aucun des deux modèles ne satisfait les critères.");
+                Message.Text = lines[^1];
+                MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             var study = await _workspace.CalculateAsync(family, training, trainColumns, validation, valColumns,
                 mvUnit, pvUnit, mvTolerance, pvTolerance, token,
                 _trainingSelection?.Window, _validationSelection?.Window);

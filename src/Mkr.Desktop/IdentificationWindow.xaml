@@ -62,6 +62,13 @@
                         <Label Content="Tolérance PV avant échelon" Target="{Binding ElementName=PvTolerance}" />
                         <TextBox x:Name="PvTolerance" Width="82" />
                     </WrapPanel>
+                    <WrapPanel Margin="0,0,0,8">
+                        <Label Content="RMSE maximale (unité PV)" Target="{Binding ElementName=MaximumRmse}"/>
+                        <TextBox x:Name="MaximumRmse" Width="76"/>
+                        <Label Content="Corrélation résiduelle maximale |r₁|" Target="{Binding ElementName=MaximumLag}"/>
+                        <TextBox x:Name="MaximumLag" Width="76"/>
+                        <Button x:Name="CompareModels" Content="Comparer FOPDT et SOPDT" Click="Calculate"/>
+                    </WrapPanel>
                     <CheckBox x:Name="Confirmed" Margin="0,2,0,8">
                         <TextBlock TextWrapping="Wrap" Text="Les deux essais ont été réalisés en boucle ouverte, sans saturation connue, avec les mêmes unités et dans des conditions comparables." />
                     </CheckBox>
