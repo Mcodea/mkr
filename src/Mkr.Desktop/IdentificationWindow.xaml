@@ -70,7 +70,14 @@
                         <ComboBox x:Name="FamilyChoice" Width="95" Margin="0,0,8,0" />
                         <Button Content="_Estimer et enregistrer" Click="Calculate" />
                         <Label Content="Études" Target="{Binding ElementName=StudyList}" Margin="10,0,0,0" />
-                        <ComboBox x:Name="StudyList" Width="260" DisplayMemberPath="Label" SelectionChanged="ShowStudy" />
+                        <ComboBox x:Name="StudyList" Width="260" DisplayMemberPath="Label" SelectionChanged="ShowStudy" >
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem">
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    <Setter Property="AutomationProperties.AutomationId" Value="{Binding Id}"/>
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
+                        </ComboBox>
                     </WrapPanel>
                 </StackPanel>
                 <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
