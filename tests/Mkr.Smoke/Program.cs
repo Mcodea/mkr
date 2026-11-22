@@ -392,6 +392,20 @@ try
     }
     catch (OperationCanceledException) { }
 
+    var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
+    if (!string.IsNullOrEmpty(fixture))
+    {
+        Directory.CreateDirectory(fixture);
+        using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path }.ToString());
+        using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(fixture, "projects.db"), Pooling = false
+        }.ToString());
+        source.Open();
+        destination.Open();
+        source.BackupDatabase(destination);
+        File.WriteAllText(Path.Combine(fixture, "study.txt"), study.Id.ToString()[..8]);
+    }
     Console.WriteLine("Project validation, SQLite migration/persistence, IPC round trip, CSV provenance, FOPDT/SOPDT/integrator holdout and persistence, PI settings, closed-loop simulation, seven-case PI sensitivity persistence and pre-cancellation passed.");
 }
 finally
