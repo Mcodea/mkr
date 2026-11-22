@@ -92,14 +92,14 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
-    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5)
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5, int secondsPerSample = 1)
     {
         var csv = new StringBuilder("timestamp;mv;pv\n");
         var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
         for (var i = 0; i < 60; i++)
         {
             var t = i - 6;
-            var x = Math.Max(0, t - delaySeconds);
+            var x = Math.Max(0, t - delaySeconds / secondsPerSample);
             var response = family switch
             {
                 ModelFamily.SOPDT => 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3,
@@ -107,7 +107,7 @@ try
                 _ => 1 - Math.Exp(-x / 4)
             };
             var y = 8 - 3 * amplitude * response;
-            csv.Append(FormattableString.Invariant($"{start.AddSeconds(i):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
+            csv.Append(FormattableString.Invariant($"{start.AddSeconds(i * secondsPerSample):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
         }
 
         // The CSV parser accepts up to six fractional digits; use an exact seconds representation.
@@ -421,6 +421,20 @@ try
         restored.SaveStudy(project.Id, rapidStudy);
         Directory.CreateDirectory(fixture);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
+        const double transportDelay = 34 * 60;
+        const int samplePeriod = 90;
+        var transportTraining = await SaveStepAsync(9, 2, delaySeconds: transportDelay, secondsPerSample: samplePeriod);
+        var transportValidation = await SaveStepAsync(10, -1.5, delaySeconds: transportDelay, secondsPerSample: samplePeriod);
+        var (transportFit, transportVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+            new StepImport(transportTraining, columns), new StepImport(transportValidation, columns), 0.01, 0.01, default);
+        Require(Math.Abs(transportFit.DelaySeconds - transportDelay) < 0.01 &&
+            transportFit.TauSeconds is { } transportTau && Math.Abs(transportTau - 4 * samplePeriod) < 0.01 &&
+            Math.Abs(transportFit.Gain + 3) < 1e-5 && transportFit.Validation.Rmse < 1e-5 &&
+            !transportFit.Warnings.Contains("delay_resolution"), "Long fractional-sample delay and holdout response.");
+        var transportStudy = new IdentificationStudy(Guid.NewGuid(), transportTraining.Summary.Id, transportValidation.Summary.Id,
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, transportVersion, transportFit);
+        restored.SaveStudy(project.Id, transportStudy);
+        File.WriteAllText(Path.Combine(fixture, "transport-study.txt"), transportStudy.Id.ToString()[..8]);
         using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false }.ToString());
         using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
         {
