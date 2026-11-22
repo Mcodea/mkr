@@ -131,6 +131,14 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Select-Option $ident 'StudyList' $savedLabel
     Verify-Comparison $ident
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
+    Select-Option $ident 'StudyList' 'SOPDT*'
+    Fill $ident 'SopdtResponse' '2'
+    Press $ident 'Calculer le PID SIMC'
+    $null = Find $ident $name 'Réglage PID théorique affiché.'
+    $report = (Find $ident $id 'SopdtReport').Current.Name
+    foreach ($part in @('Cible 2 s','Forme série : Kc -','Forme idéale : Kp -','%/bar','Filtre dérivé à définir')) {
+        if (!$report.Contains($part)) { throw "Sortie PID manquante : $part. $report" }
+    }
     $studies = Find $ident $id 'StudyList'
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
