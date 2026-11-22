@@ -44,8 +44,17 @@ try {
     $studies = Find $ident $id 'StudyList'
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     $listItems = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::ListItem)
-    $option = $studies.FindAll($scope, $listItems) | Where-Object { $_.Current.Name -like "*$study" } | Select-Object -First 1
-    if (!$option) { throw "Étude FOPDT de référence introuvable : $study" }
+    $until = [DateTime]::UtcNow.AddSeconds(12)
+    do {
+        $options = $root.FindAll($scope, $listItems)
+        $option = $options | Where-Object {
+            $_.Current.ProcessId -eq $process.Id -and
+            ($_.Current.AutomationId -like "$study*" -or $_.Current.Name -like "*$study")
+        } | Select-Object -First 1
+        if ($option) { break }
+        Start-Sleep -Milliseconds 150
+    } while ([DateTime]::UtcNow -lt $until)
+    if (!$option) { throw "Étude introuvable : $study. Éléments : $($options | ForEach-Object { $_.Current.Name })" }
     $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $ident 'Simuler en boucle fermée…'
     $sim = Find $root $name 'MKR — Simulation PI'
