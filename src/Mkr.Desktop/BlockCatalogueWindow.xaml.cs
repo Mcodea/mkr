@@ -10,6 +10,20 @@ public partial class BlockCatalogueWindow : Window
     private sealed record Card(string Name, string Target, string Status, string Evidence, string BenchSheet);
     private readonly List<Card> _cards = new();
 
+    internal static void OpenFor(Window owner)
+    {
+        try
+        {
+            new BlockCatalogueWindow { Owner = owner }.ShowDialog();
+        }
+        catch (Exception error)
+        {
+            System.Diagnostics.Trace.TraceError("catalogue.open {0}", error.GetType().Name);
+            MessageBox.Show(owner, "Impossible de lire le catalogue installé.", "MKR",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     public BlockCatalogueWindow()
     {
         InitializeComponent();
