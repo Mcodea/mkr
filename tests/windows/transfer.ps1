@@ -48,19 +48,14 @@ try {
     $ident = Find $root $name 'MKR — Identification'
     $studies = Find $ident $id 'StudyList'
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
-    $listItems = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::ListItem)
-    $until = [DateTime]::UtcNow.AddSeconds(12)
+    $container = $studies.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $option = $null
     do {
-        $options = $root.FindAll($scope, $listItems)
-        $option = $options | Where-Object {
-            $_.Current.ProcessId -eq $process.Id -and
-            ($_.Current.AutomationId -like "$study*" -or $_.Current.Name -like "*$study")
-        } | Select-Object -First 1
-        if ($option) { break }
-        Start-Sleep -Milliseconds 150
-    } while ([DateTime]::UtcNow -lt $until)
-    if (!$option) { throw "Étude introuvable : $study. Éléments : $($options | ForEach-Object { $_.Current.Name })" }
+        $option = $container.FindItemByProperty($option, $null, $null)
+        if (!$option) { throw "Étude de référence absente du sélecteur : $study" }
+    } until ($option.Current.Name -like "*$study" -or $option.Current.AutomationId -like "$study*")
     $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
     Press $ident 'Simuler en boucle fermée…'
     $sim = Find $root $name 'MKR — Simulation PI'
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
