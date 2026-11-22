@@ -132,7 +132,17 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Verify-Comparison $ident
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     Select-Option $ident 'StudyList' 'SOPDT*'
-    Fill $ident 'SopdtResponse' '2'
+    $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    $initial = [double]::Parse($target.Current.Value)
+    if (!$target.Current.IsReadOnly -or $initial -le 0) { throw 'Cible initiale invalide.' }
+    Press $ident 'Calculer le PID SIMC'
+    $null = Find $ident $name 'Réglage PID théorique affiché.'
+    Select-Option $ident 'ResponseProfile' 'Plus lente'
+    if ([double]::Parse($target.Current.Value) -le $initial) { throw 'Profil lent invalide.' }
+    Select-Option $ident 'ResponseProfile' 'Plus rapide'
+    if ([double]::Parse($target.Current.Value) -ge $initial) { throw 'Profil rapide invalide.' }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' '2'
     Press $ident 'Calculer le PID SIMC'
     $null = Find $ident $name 'Réglage PID théorique affiché.'
     $report = (Find $ident $id 'SopdtReport').Current.Name
