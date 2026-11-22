@@ -19,4 +19,6 @@ Vérification : cas de gain négatif, activation et inactivation de la borne int
 
 ## Choix guidé de la cible en identification
 
-Pour le PI sur FOPDT et le PID sur SOPDT, le point de départ MKR vaut max(τ lente, 2θ), avec la constante unique pour un FOPDT. « Plus lente » double cette cible et « Plus rapide » la divise par deux. Ces profils sont une heuristique MKR pour explorer le modèle. Ils ne garantissent ni marge de stabilité ni temps d’établissement. La saisie personnalisée reste possible. La cible effectivement utilisée figure dans le résultat. Comparer les performances en simulation avant toute validation sur site.
+Pour explorer un réglage rapide (« tight control »), la règle SIMC publiée est τc = θ, où θ représente le retard effectif du modèle utilisé pour le réglage. MKR utilise le retard du modèle identifié sélectionné. Pour la comparaison PI, le calcul IMC reçoit la même valeur de λ afin de comparer les méthodes à cible égale. La recommandation de départ est propre à SIMC. [Skogestad, 2003](https://doi.org/10.1016/S0959-1524(02)00062-8)
+
+Une cible plus longue peut être justifiée par des contraintes de robustesse ou d’effort de commande. Si le retard est nul ou signalé comme mal résolu, MKR laisse la cible automatique vide. Une exigence explicite peut être saisie en mode personnalisé. [Skogestad, 2006, équations 5 et 6](https://skoge.folk.ntnu.no/publications/2006/skogestad_iecr_smooth-pid/ie0602815.pdf)
