@@ -297,6 +297,8 @@ public partial class IdentificationWindow : Window
 
     private void ResponseTargetChanged(object sender, TextChangedEventArgs args)
     {
+        bool hasTarget = ReadTolerance(ResponseTarget, out _);
+        ComparePiButton.IsEnabled = CalculatePidButton.IsEnabled = hasTarget;
         if (SopdtReport is not null && SopdtReport.Text.Length > 0)
         {
             SopdtReport.Text = "";
