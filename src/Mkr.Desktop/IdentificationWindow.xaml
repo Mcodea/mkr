@@ -149,7 +149,7 @@
                 <GroupBox x:Name="SopdtPanel" Header="Réglage PID théorique · SIMC" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
-                            <Button Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
+                            <Button x:Name="CalculatePidButton" IsEnabled="False" Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
                         </WrapPanel>
                         <TextBlock x:Name="SopdtReport" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
                     </StackPanel>
@@ -157,7 +157,7 @@
                 <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
-                            <Button Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
+                            <Button x:Name="ComparePiButton" IsEnabled="False" Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
                             <Label Content="Réglages enregistrés" Target="{Binding ElementName=PiList}" />
