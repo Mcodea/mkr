@@ -12,8 +12,8 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     private string? _delimiter;
 
     public string ProjectName => project.Name;
-    public string ReadDescription() => store.ReadDescription(project.Id);
-    public void SaveDescription(string description) => store.SaveDescription(project.Id, description);
+    public LoopBrief ReadLoopBrief() => store.ReadLoopBrief(project.Id);
+    public void SaveLoopBrief(LoopBrief brief) => store.SaveLoopBrief(project.Id, brief);
     public IReadOnlyList<ImportSummary> List() => store.ListImports(project.Id);
     public CsvImport Open(Guid id) => store.ReadImport(project.Id, id);
 
