@@ -71,6 +71,11 @@ try
     Require(migrated.List().Single().Id == project.Id && migrated.ReadDescription(project.Id) == "",
         "Migration from schema v1 preserves the original project.");
     migrated.SaveDescription(project.Id, "Procédé d’essai");
+    var brief = migrated.ReadLoopBrief(project.Id);
+    Require(brief == new LoopBrief("", "", "", "", "Procédé d’essai"), "Legacy description remains available.");
+    brief = brief with { Tag = "PIC-101", ControlledQuantity = "Pression", OperatingPoint = "4 bar", Objective = "Tenir la pression aval" };
+    migrated.SaveLoopBrief(project.Id, brief);
+    Require(new SqliteProjectStore(legacyPath).ReadLoopBrief(project.Id) == brief, "Loop definition survives reopening.");
     var raw = Encoding.UTF8.GetBytes("t;mesure\r\n2025-01-01T00:00:00Z;2\r\n2025-01-01T00:00:01Z;4\r\n");
     var preview = await engine.InspectAsync(raw, ";", default);
     Require(preview.RowCount == 2 && preview.Quality is null, "CSV inspection returns unmodified fields.");
@@ -144,6 +149,10 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            ALTER TABLE projects DROP COLUMN loop_tag;
+            ALTER TABLE projects DROP COLUMN controlled_quantity;
+            ALTER TABLE projects DROP COLUMN operating_point;
+            ALTER TABLE projects DROP COLUMN control_objective;
             DROP TABLE study_reviews;
             DROP TABLE pi_simulations;
             DROP TABLE pi_studies;
