@@ -30,8 +30,14 @@ public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid Validati
     public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}";
 }
 
+public sealed record ModelCandidate(double ValidationRmse, double? ValidationResidualLagOne, string[] RejectionReasons);
+public sealed record ModelComparison(string? Selected, Dictionary<string, ModelCandidate> Candidates, string Decision);
+
 public interface IIdentificationEngine
 {
+    Task<ModelComparison> CompareAsync(StepImport training, StepImport validation, double mvTolerance,
+        double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token);
+
     Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token);
     Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token);
