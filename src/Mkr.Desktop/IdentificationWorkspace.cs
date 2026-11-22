@@ -73,6 +73,13 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     public IReadOnlyList<PiStudy> PiStudies(Guid modelId) => piStore.ListPi(project.Id, modelId);
 
+    public Task<SopdtPid> CalculateSopdtPidAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.SOPDT)
+            throw new InvalidOperationException("Sélectionnez une étude du second ordre.");
+        return piEngine.CalculateSopdtPidAsync(model.Result, responseSeconds, token);
+    }
+
     public async Task<PiStudy> CalculatePiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
     {
         if (model.Family != ModelFamily.FOPDT || model.Result.TauSeconds is not { } tau)
