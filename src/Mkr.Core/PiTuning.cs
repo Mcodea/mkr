@@ -13,8 +13,14 @@ public sealed record PiTransferPoint(double Seconds, string Mode, double Pv, dou
 public sealed record PiTransferResult(string AlgorithmVersion, string[] Warnings, double TransferBumpMv,
     double SaturationSeconds, double RateLimitedSeconds, PiTransferPoint[] Points);
 
+public sealed record SeriesPid(double Kc, double TiSeconds, double TdSeconds);
+public sealed record IdealPid(double Kp, double TiSeconds, double TdSeconds);
+public sealed record SopdtPid(string AlgorithmVersion, string Method, string ControllerForm, string TimeUnit,
+    SeriesPid Series, IdealPid Ideal, string[] Warnings);
+
 public interface IPiEngine
 {
+    Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token);
     Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
         PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token);
 
