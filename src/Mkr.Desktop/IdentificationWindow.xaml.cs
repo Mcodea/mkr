@@ -172,8 +172,8 @@ public partial class IdentificationWindow : Window
                 Message.Text = lines[^1];
                 if (comparison.Selected is null)
                 {
-                    MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    lines.Add("Avant un nouvel essai, examinez les courbes et les résidus de validation. Vérifiez les unités, les plages choisies et les conditions du procédé pour les deux acquisitions.");
+                    Message.Text = string.Join(Environment.NewLine, lines);
                     return;
                 }
                 lines.Add("Estimer et enregistrer ce modèle avec les critères et les résultats de comparaison ?");
