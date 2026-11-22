@@ -43,6 +43,12 @@ function Select-Option($parent, $field, $pattern) {
     $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     $expand.Collapse()
 }
+function Study-Labels($window) {
+    $combo = Find $window $id 'StudyList'
+    $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $item = $null
+    while ($item = $items.FindItemByProperty($item, $null, $null)) { $item.Current.Name }
+}
 function Verify-Comparison($window) {
     $report = (Find $window $id 'FitReport').Current.Name
     foreach ($part in @('Comparaison enregistrée','modèle retenu FOPDT','RMSE ≤ 0','FOPDT · RMSE','SOPDT · RMSE')) {
@@ -97,9 +103,36 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $selected = $combo.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
     $savedLabel = $selected[0].Current.Name
     if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8}$' -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
+    $before = @(Study-Labels $ident)
+    # The holdout now follows an integrating process, unlike the training trace.
+    Select-Option $ident 'ValidationSource' 'essai-6.csv*'
+    Select-Option $ident 'ValidationTime' 'timestamp'
+    Select-Option $ident 'ValidationMv' 'mv'
+    Select-Option $ident 'ValidationPv' 'pv'
+    $confirm.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Press $ident 'Comparer FOPDT et SOPDT'
+    $rejection = Find $root $name 'Comparaison sur essai indépendant'
+    if ($rejection.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
+    $handle = [IntPtr]$rejection.Current.NativeWindowHandle
+    $ok = [MkrUiTest.NativeDialog]::GetDlgItem($handle, 1)
+    if ($ok -eq [IntPtr]::Zero -or [MkrUiTest.NativeDialog]::GetDlgItem($handle, 6) -ne [IntPtr]::Zero) {
+        throw 'La comparaison refusée ne doit proposer aucune acceptation.'
+    }
+    $info = $rejection.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) |
+        ForEach-Object { $_.Current.Name }
+    $details = $info -join [Environment]::NewLine
+    foreach ($part in @('FOPDT · RMSE','SOPDT · RMSE','erreur de validation excessive','Aucun des deux modèles')) {
+        if (!$details.Contains($part)) { throw "Explication du refus absente : $part. $details" }
+    }
+    if (![MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'Acquittement impossible.' }
+    $null = Find $ident $name 'Aucun des deux modèles ne satisfait les critères.'
     $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
+    $after = @(Study-Labels $ident)
+    if ($before.Count -ne $after.Count -or (Compare-Object $before $after)) {
+        throw 'Les études enregistrées ont changé après le refus.'
+    }
     Select-Option $ident 'StudyList' $savedLabel
     Verify-Comparison $ident
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
