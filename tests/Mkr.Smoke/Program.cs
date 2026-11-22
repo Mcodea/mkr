@@ -310,7 +310,14 @@ try
         Require(File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Failed series export preserves the existing CSV.");
     }
     using (File.Open(csvPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-        Throws<IOException>(() => SimulationCsv.Export(csvPath, reopenedSimulation));
+    {
+        try
+        {
+            SimulationCsv.Export(csvPath, reopenedSimulation);
+            throw new InvalidOperationException("A locked Windows destination must reject replacement.");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+    }
     Require(!Directory.EnumerateFiles(directory.FullName, ".*.tmp").Any() &&
         File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Locked destination preserves the original and releases staging files.");
     SimulationCsv.Export(csvPath, reopenedSimulation);
