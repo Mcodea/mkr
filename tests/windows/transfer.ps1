@@ -216,13 +216,17 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $sim 'Exporter les séries enregistrées…'
     $dialog = Find $root $name 'Exporter les séries enregistrées'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }
-    $fileNameHost = Find $dialog $id 'FileNameControlHost'
-    $fileBox = Find $fileNameHost $type ([System.Windows.Automation.ControlType]::Edit)
-    $exportPath = Join-Path $Fixture ([Guid]::NewGuid().ToString() + '.csv')
-    $fileBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($exportPath)
+    if ($report -notmatch 'Simulation enregistrée ([0-9a-f]{8})') { throw 'Identifiant de simulation absent.' }
+    $mask = "MKR-$($Matches[1])*.csv"
     (Find $dialog $id '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     $null = Find $sim $name 'Séries simulées exportées.'
-    $series = @(Import-Csv -LiteralPath $exportPath)
+    $folders = @([Environment]::GetFolderPath('MyDocuments'), $Fixture, (Get-Location).Path,
+        (Split-Path -Parent $start.FileName)) | Select-Object -Unique
+    $files = @(foreach ($folder in $folders) {
+        Get-ChildItem -LiteralPath $folder -Filter $mask -File
+    })
+    if ($files.Count -ne 1) { throw "Export introuvable ou ambigu : $mask" }
+    $series = @(Import-Csv -LiteralPath $files[0].FullName)
     if ($series.Count -lt 2 -or @($series | Where-Object { $_.sp_delta -ne '1' }).Count -gt 0) {
         throw 'Les séries exportées doivent reprendre la consigne du scénario enregistré.'
     }
