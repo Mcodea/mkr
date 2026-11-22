@@ -218,7 +218,10 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }
     if ($report -notmatch 'Simulation enregistrée ([0-9a-f]{8})') { throw 'Identifiant de simulation absent.' }
     $mask = "MKR-$($Matches[1])*.csv"
-    (Find $dialog $id '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $save = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
+    if ($save -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($save, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Bouton Enregistrer inaccessible.'
+    }
     $null = Find $sim $name 'Séries simulées exportées.'
     $folders = @([Environment]::GetFolderPath('MyDocuments'), $Fixture, (Get-Location).Path,
         (Split-Path -Parent $start.FileName)) | Select-Object -Unique
