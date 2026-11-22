@@ -121,12 +121,18 @@ public partial class IdentificationWindow : Window
         var mvUnit = MvUnit.Text.Trim();
         var pvUnit = PvUnit.Text.Trim();
         if (FamilyChoice.SelectedItem is not ModelFamily family || TrainingSource.SelectedItem is not ImportSummary training ||
-            ValidationSource.SelectedItem is not ImportSummary validation || training.Id == validation.Id ||
+            ValidationSource.SelectedItem is not ImportSummary validation ||
             trainColumns is null || valColumns is null || mvUnit.Length == 0 || pvUnit.Length == 0 ||
             !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance) ||
             Confirmed.IsChecked != true)
         {
             Message.Text = "Indiquez deux imports, trois colonnes distinctes par essai, les unités et tolérances positives, puis confirmez les conditions d’essai.";
+            return;
+        }
+
+        if (training.Id == validation.Id)
+        {
+            Message.Text = "Le même import est sélectionné deux fois. Sélectionnez un autre essai pour la validation.";
             return;
         }
 
@@ -430,7 +436,8 @@ public partial class IdentificationWindow : Window
             "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
             "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
-            "fit_independence" => "Les deux essais doivent provenir de fichiers distincts et de plages temporelles disjointes.",
+            "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
+            "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints.",
             "fit_step" => "Il faut un seul échelon MV et deux plateaux dans la tolérance déclarée.",
             "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
             "fit_response" => "La variation de PV ne suffit pas pour estimer un modèle.",
