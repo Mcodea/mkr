@@ -22,6 +22,7 @@
                     <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding Target}" TextWrapping="Wrap" Margin="0,6,0,12"/>
                     <TextBlock Text="{Binding Status}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="LoopContext" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,10,0,0"/>
                     <Button x:Name="CopySheet" Content="Copier le relevé de banc" Click="CopyBenchSheet"
                             HorizontalAlignment="Left" Margin="0,10,0,0" Padding="8,4">
                         <Button.Style>
