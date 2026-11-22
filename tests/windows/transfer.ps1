@@ -79,8 +79,18 @@ try {
     $confirm.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
     Press $ident 'Comparer FOPDT et SOPDT'
     $dialog = Find $root $name 'Comparaison sur essai indépendant'
-    $accept = Find $dialog $id '6'
-    $accept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    # WPF MessageBox is a native Win32 dialog. Activate its IDYES button.
+    Add-Type -Namespace MkrUiTest -Name NativeDialog -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern System.IntPtr GetDlgItem(System.IntPtr dialog, int id);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool PostMessage(System.IntPtr target, uint msg, System.IntPtr wParam, System.IntPtr lParam);
+'@
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
+    $yes = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 6)
+    if ($yes -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($yes, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Confirmation Oui inaccessible.'
+    }
     $null = Find $ident $name 'Étude exploratoire enregistrée.'
     Verify-Comparison $ident
     $combo = Find $ident $id 'StudyList'
