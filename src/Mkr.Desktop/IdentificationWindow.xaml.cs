@@ -173,8 +173,7 @@ public partial class IdentificationWindow : Window
                 if (comparison.Selected is null)
                 {
                     lines.Add("Avant un nouvel essai, examinez les courbes et les résidus de validation. Vérifiez les unités, les plages choisies et les conditions du procédé pour les deux acquisitions.");
-                    MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    Message.Text = string.Join(Environment.NewLine, lines);
                     return;
                 }
                 lines.Add("Estimer et enregistrer ce modèle avec les critères et les résultats de comparaison ?");
