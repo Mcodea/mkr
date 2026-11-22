@@ -396,7 +396,7 @@ try
     if (!string.IsNullOrEmpty(fixture))
     {
         Directory.CreateDirectory(fixture);
-        using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
+        using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false }.ToString());
         using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
         {
             DataSource = Path.Combine(fixture, "projects.db"), Pooling = false
