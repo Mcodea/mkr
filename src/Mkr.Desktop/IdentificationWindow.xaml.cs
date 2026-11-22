@@ -224,7 +224,7 @@ public partial class IdentificationWindow : Window
         SopdtReport.Text = "";
         TargetPanel.Visibility = _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
             ? Visibility.Visible : Visibility.Collapsed;
-        ResponseProfile.SelectedIndex = 1;
+        ResponseProfile.SelectedIndex = 0;
         UpdateResponseTarget();
         PiList.ItemsSource = null;
         PiReport.Text = "";
@@ -306,21 +306,26 @@ public partial class IdentificationWindow : Window
 
     private void UpdateResponseTarget()
     {
-        if (_shown?.Result.TauSeconds is not double tau || TargetPanel.Visibility != Visibility.Visible)
+        if (_shown is null || TargetPanel.Visibility != Visibility.Visible)
             return;
 
-        ResponseTarget.IsReadOnly = ResponseProfile.SelectedIndex != 3;
+        var model = _shown.Result;
+        ResponseTarget.IsReadOnly = ResponseProfile.SelectedIndex == 0;
         if (!ResponseTarget.IsReadOnly)
-            return;
-
-        double baseline = Math.Max(tau, 2 * _shown.Result.DelaySeconds);
-        double target = ResponseProfile.SelectedIndex switch
         {
-            0 => 2 * baseline,
-            2 => baseline / 2,
-            _ => baseline
-        };
-        ResponseTarget.Text = target.ToString("G12", CultureInfo.CurrentCulture);
+            TargetHelp.Text = "Saisissez la cible définie pour cette étude, en secondes.";
+            return;
+        }
+
+        if (model.DelaySeconds <= 0 || model.Warnings.Contains("delay_resolution"))
+        {
+            ResponseTarget.Clear();
+            TargetHelp.Text = "Retard nul ou mal résolu par les mesures. Affinez l’identification du retard ou choisissez Personnalisée si l’étude impose une cible.";
+            return;
+        }
+
+        ResponseTarget.Text = model.DelaySeconds.ToString("R", CultureInfo.CurrentCulture);
+        TargetHelp.Text = "SIMC, Skogestad (2003) · Pour explorer une réponse rapide, τc = retard du modèle. Vérifiez en simulation le temps obtenu et l’effort de commande.";
     }
 
     private async void CalculateSopdt(object sender, RoutedEventArgs args)
