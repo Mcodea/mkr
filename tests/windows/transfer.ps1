@@ -69,6 +69,21 @@ try {
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
     $project = Find $root $name "MKR — Projet initial"
+    (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Fill $project 'LoopTag' 'PIC-202'
+    Fill $project 'LoopControlledQuantity' 'Pression de refoulement'
+    Fill $project 'LoopOperatingPoint' '5 bar'
+    Fill $project 'LoopObjective' 'Maintenir la pression aval'
+    Press $project 'Enregistrer la description'
+    $null = Find $project $name 'Description enregistrée.'
+    $project.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Press $main 'Ouvrir le projet sélectionné'
+    $project = Find $root $name 'MKR — Projet initial'
+    (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    foreach ($entry in @{LoopTag='PIC-202'; LoopControlledQuantity='Pression de refoulement'; LoopOperatingPoint='5 bar'; LoopObjective='Maintenir la pression aval'; Description='Procédé d’essai'}.GetEnumerator()) {
+        $value = (Find $project $id $entry.Key).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+        if ($value -ne $entry.Value) { throw "Fiche de boucle incorrecte après réouverture : $($entry.Key)" }
+    }
     Press $project 'Préparer les essais sur banc…'
     $bench = Find $root $name 'MKR — Catalogue des blocs'
     Fill $bench 'Filter' 'PIDFF'
