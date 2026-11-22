@@ -38,7 +38,7 @@ try {
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name 'MKR — Banc d’essai'
+    $project = Find $root $name "MKR — Banc d’essai"
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
     $studies = Find $ident $id 'StudyList'
