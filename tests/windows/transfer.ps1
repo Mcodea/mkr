@@ -18,10 +18,15 @@ function Find($parent, $property, $value) {
     throw "Élément introuvable : $value"
 }
 function Press($parent, $caption) {
-    $button = Find $parent $name $caption
+    $captionCondition = [System.Windows.Automation.PropertyCondition]::new($name, $caption)
+    $buttonType = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Button)
+    $condition = [System.Windows.Automation.AndCondition]::new($captionCondition, $buttonType)
+    $button = $parent.FindFirst($scope, $condition)
+    if (!$button) { throw "Bouton introuvable : $caption" }
     $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
 function Fill($parent, $field, $value) {
+    Write-Host "Saisie : $field"
     $box = Find $parent $id $field
     $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value)
 }
@@ -73,6 +78,10 @@ try {
         Start-Sleep -Milliseconds 200
     } while ([DateTime]::UtcNow -lt $until)
     throw "Résultat de transfert inattendu : $message"
+}
+catch {
+    Write-Host $_.ScriptStackTrace
+    throw
 }
 finally {
     if (!$process.HasExited) { Stop-Process -Id $process.Id }
