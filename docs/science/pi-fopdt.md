@@ -16,3 +16,7 @@ La forme est idéale continue, `u = u₀ + Kp(e + ∫e dt / Ti)` avec `e = SP �
 Les réglages héritent du statut exploratoire de l’étude. Lorsque la cible est plus courte que le retard estimé, le logiciel demande d’examiner la robustesse. Les limitations d’actionneur, l’anti-windup, la discrétisation et le comportement en présence de perturbations nécessitent une simulation ou des essais appropriés avant toute application.
 
 Vérification : cas de gain négatif, activation et inactivation de la borne intégrale SIMC, rejet des entrées hors domaine. Dans le cas IMC sans retard, un test évalue la boucle fermée à plusieurs fréquences et retrouve la réponse analytique `1/(λs+1)` du modèle nominal continu. [Skogestad, 2003](https://doi.org/10.1016/S0959-1524(02)00062-8)
+
+## Choix guidé de la cible en identification
+
+Pour le PI sur FOPDT et le PID sur SOPDT, le point de départ MKR vaut max(τ lente, 2θ), avec la constante unique pour un FOPDT. « Plus lente » double cette cible et « Plus rapide » la divise par deux. Ces profils sont une heuristique MKR pour explorer le modèle. Ils ne garantissent ni marge de stabilité ni temps d’établissement. La saisie personnalisée reste possible. La cible effectivement utilisée figure dans le résultat. Comparer les performances en simulation avant toute validation sur site.
