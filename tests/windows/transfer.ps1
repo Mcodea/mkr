@@ -69,6 +69,11 @@ try {
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
     $project = Find $root $name "MKR — Projet initial"
+    Press $project 'Préparer les essais sur banc…'
+    $bench = Find $root $name 'MKR — Catalogue des blocs'
+    Fill $bench 'Filter' 'PIDFF'
+    $null = Find $bench $name 'Compatibilité à vérifier'
+    $bench.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
     Select-Option $ident 'TrainingSource' 'essai-1.csv*'
