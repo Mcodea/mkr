@@ -216,7 +216,8 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $sim 'Exporter les séries enregistrées…'
     $dialog = Find $root $name 'Exporter les séries enregistrées'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }
-    $fileBox = Find $dialog $id '1001'
+    $fileNameHost = Find $dialog $id 'FileNameControlHost'
+    $fileBox = Find $fileNameHost $type ([System.Windows.Automation.ControlType]::Edit)
     $exportPath = Join-Path $Fixture ([Guid]::NewGuid().ToString() + '.csv')
     $fileBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($exportPath)
     (Find $dialog $id '1').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
