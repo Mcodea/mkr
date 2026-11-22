@@ -244,23 +244,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     }
     $null = Find $sim $name 'Fiche de mise au point exportée.'
     $pdfPath = [IO.Path]::ChangeExtension($files[0].FullName, '.pdf')
-    $OutputEncoding = New-Object System.Text.UTF8Encoding($false)
-    @'
-import sys
-from pathlib import Path
-from uuid import UUID
-from pypdf import PdfReader
-
-path = Path(sys.argv[1])
-pages = PdfReader(path).pages
-simulation = str(UUID(path.stem.removeprefix("MKR-")))
-body = " ".join(" ".join(page.extract_text().split()) for page in pages[:-1])
-for expected in ("Consigne en écart 1 bar", "Vitesse maximale de commande 0,5 %/s."):
-    if expected not in body:
-        raise ValueError(f"Missing saved condition: {expected}")
-if simulation not in body or simulation not in pages[-1].extract_text():
-    raise ValueError("The report, plot and CSV must identify the same simulation")
-'@ | python -X utf8 - $pdfPath
+    python -X utf8 (Join-Path $PSScriptRoot 'verify_study_pdf.py') $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'La relecture du PDF a échoué.' }
     Fill $sim 'Rate' ''
     Fill $sim 'Setpoint' '1'
