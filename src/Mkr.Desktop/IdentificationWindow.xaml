@@ -137,15 +137,13 @@
                         <WrapPanel>
                             <Label Content="Réponse" Target="{Binding ElementName=ResponseProfile}"/>
                             <ComboBox x:Name="ResponseProfile" SelectionChanged="ChangeResponseProfile" Width="180">
-                                <ComboBoxItem Content="Plus lente"/>
-                                <ComboBoxItem Content="Point de départ"/>
-                                <ComboBoxItem Content="Plus rapide"/>
+                                <ComboBoxItem Content="SIMC · réponse rapide"/>
                                 <ComboBoxItem Content="Personnalisée"/>
                             </ComboBox>
                             <Label Content="Cible de calcul (s)" Target="{Binding ElementName=ResponseTarget}"/>
                             <TextBox x:Name="ResponseTarget" TextChanged="ResponseTargetChanged" Width="100"/>
                         </WrapPanel>
-                        <TextBlock Text="MKR propose une cible à partir du modèle. Le temps réellement obtenu doit être vérifié en simulation." TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="TargetHelp" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </StackPanel>
                 </GroupBox>
                 <GroupBox x:Name="SopdtPanel" Header="Réglage PID théorique · SIMC" Visibility="Collapsed" Margin="0,8,0,0">
