@@ -39,7 +39,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var train = new StepImport(imports.ReadImport(project.Id, training.Id), trainColumns, trainingWindow);
         var check = new StepImport(imports.ReadImport(project.Id, validation.Id), valColumns, validationWindow);
         if (train.Import.Summary.Sha256 == check.Import.Summary.Sha256)
-            throw new CsvInputException("fit_independence");
+            throw new CsvInputException("fit_duplicate_source");
         CheckRecordedUnit(train, mvUnit, pvUnit);
         CheckRecordedUnit(check, mvUnit, pvUnit);
         return (train, check);
