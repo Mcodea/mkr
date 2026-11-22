@@ -144,9 +144,19 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $ident 'Comparer IMC/Lambda et SIMC'
     $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
     if (!(Find $ident $id 'PiReport').Current.Name.Contains('2040 s')) { throw 'Cible absente du résultat PI enregistré.' }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' '3000'
+    Press $ident 'Simuler le réglage enregistré…'
+    $savedSimulation = Find $root $name 'MKR — Simulation PI'
+    $units = (Find $savedSimulation $id 'Units').Current.Name
+    if (!$units.Contains('2040 s') -or $units.Contains('3000 s')) {
+        throw "La simulation doit reprendre le réglage enregistré. $units"
+    }
+    $savedSimulation.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     $shortId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$shortId"
     $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if ((Find $ident $id 'SimulateSavedPi').Current.IsEnabled) { throw 'Simulation active sans réglage enregistré.' }
     $help = (Find $ident $id 'TargetHelp').Current.Name
     if (!$target.Current.IsReadOnly -or $target.Current.Value -ne '' -or
         (Find $ident $id 'ComparePiButton').Current.IsEnabled -or !$help.Contains('Retard nul ou mal résolu')) {
@@ -193,7 +203,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     } until ($option.Current.Name -like "*$study" -or $option.Current.AutomationId -like "$study*")
     $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
-    Press $ident 'Simuler en boucle fermée…'
+    Press $ident 'Simuler le réglage enregistré…'
     $sim = Find $root $name 'MKR — Simulation PI'
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
         Fill $sim $entry.Key $entry.Value
