@@ -133,6 +133,19 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return preview;
     }
 
+    public async Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token)
+    {
+        var payload = new { model.Gain, model.TauSeconds, model.DelaySeconds, model.SecondTauSeconds, responseSeconds };
+        var (json, _) = await CallAsync("calculate_simc_pid", payload, token).ConfigureAwait(false);
+        var pid = json.Deserialize<SopdtPid>(JsonOptions);
+        if (pid is not { Method: "SIMC_SOPDT", ControllerForm: "continuous_ideal_unfiltered_error", TimeUnit: "s",
+            Series: { TiSeconds: > 0, TdSeconds: > 0 }, Ideal: { TiSeconds: > 0, TdSeconds: > 0 }, Warnings: not null } ||
+            string.IsNullOrWhiteSpace(pid.AlgorithmVersion) || Math.Sign(pid.Series.Kc) != Math.Sign(model.Gain) ||
+            Math.Sign(pid.Ideal.Kp) != Math.Sign(model.Gain))
+            throw new InvalidDataException("Réglage PID SOPDT incompatible avec le contrat.");
+        return pid;
+    }
+
     public async Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token)
     {

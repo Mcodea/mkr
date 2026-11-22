@@ -132,6 +132,16 @@
                 </Border>
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <GroupBox x:Name="SopdtPanel" Header="Réglage PID théorique · SIMC" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Label Content="Temps de réponse choisi (s)" Target="{Binding ElementName=SopdtResponse}"/>
+                            <TextBox x:Name="SopdtResponse" Width="80"/>
+                            <Button Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="SopdtReport" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                </GroupBox>
                 <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>

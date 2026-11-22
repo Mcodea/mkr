@@ -259,6 +259,11 @@ try
     Require(reopenedThird.Family == ModelFamily.Integrateur && reopenedThird.Result.TauSeconds is null,
         "Integrating model persists without a finite time constant.");
 
+    var theoreticalPid = await engine.CalculateSopdtPidAsync(second, 2, default);
+    Require(theoreticalPid.Series.Kc < 0 && theoreticalPid.Ideal.Kp < 0 &&
+        theoreticalPid.Series.TdSeconds == second.SecondTauSeconds &&
+        Math.Abs(theoreticalPid.Ideal.TiSeconds - theoreticalPid.Series.TiSeconds - theoreticalPid.Series.TdSeconds) < 1e-10,
+        "SOPDT PID retains the fitted fast pole and the series-to-ideal integral time.");
     var (pi, _) = await engine.CalculatePiAsync(-2, 100, 3, 2, default);
     Require(pi.Imc == new PiCoefficients(-10, 100, -0.1) && pi.Simc == new PiCoefficients(-10, 20, -0.5) &&
         pi.Warnings.Contains("tight_response"), "PI settings match the signed analytical case.");
