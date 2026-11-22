@@ -6,13 +6,18 @@ from itertools import groupby
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-URL = "https://data.mendeley.com/public-files/datasets/5xvg43r9r8/versions/2/downloads/dataset.zip"
+URL = "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/5xvg43r9r8-2.zip"
 
 with urlopen(URL, timeout=90) as response:
     archive = ZipFile(BytesIO(response.read()))
+found = []
 for path in archive.namelist():
     if "03_system_identification/" in path and path.lower().endswith("raw_data.txt"):
+        found.append(path)
         lines = archive.read(path).decode("utf-8-sig").splitlines()
         print(path, len(lines), lines[:2])
         rows = list(csv.reader(lines[1:]))
         print([(v, len(list(g))) for v, g in groupby(rows, key=lambda r: r[5])][:20])
+
+if len(found) < 2:
+    raise ValueError(f"Expected multiple raw identification files: {archive.namelist()[:50]}")
