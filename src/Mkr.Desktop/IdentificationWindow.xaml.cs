@@ -402,6 +402,7 @@ public partial class IdentificationWindow : Window
 
     private void ShowPi(object sender, SelectionChangedEventArgs args)
     {
+        SimulateSavedPi.IsEnabled = PiList.SelectedItem is PiStudy;
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
         {
             PiReport.Text = "";
@@ -413,7 +414,7 @@ public partial class IdentificationWindow : Window
             $"Kp = {settings.Kp:G5} {ratio}, Ti = {settings.TiSeconds:G5} s, Ki parallèle = {settings.ParallelKi:G5} {ratio}/s";
         var tight = result.Warnings.Contains("tight_response")
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
-        PiReport.Text = $"Cible : {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
+        PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
             $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
             "Forme idéale continue, e = SP − PV. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
