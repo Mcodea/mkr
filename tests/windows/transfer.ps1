@@ -137,10 +137,9 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if (!$target.Current.IsReadOnly -or $initial -le 0) { throw 'Cible initiale invalide.' }
     Press $ident 'Calculer le PID SIMC'
     $null = Find $ident $name 'Réglage PID théorique affiché.'
-    Select-Option $ident 'ResponseProfile' 'Plus lente'
-    if ([double]::Parse($target.Current.Value) -le $initial) { throw 'Profil lent invalide.' }
-    Select-Option $ident 'ResponseProfile' 'Plus rapide'
-    if ([double]::Parse($target.Current.Value) -ge $initial) { throw 'Profil rapide invalide.' }
+    $fit = (Find $ident $id 'FitReport').Current.Name
+    $delayLabel = 'θ = ' + $initial.ToString('G5') + ' s'
+    if (!$fit.Contains($delayLabel)) { throw "La cible SIMC diffère du retard identifié. $fit" }
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
     Fill $ident 'ResponseTarget' '2'
     Press $ident 'Calculer le PID SIMC'
