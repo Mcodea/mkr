@@ -327,6 +327,24 @@ try
         training.Summary, validation.Summary, Array.Empty<ReviewEvent>());
     using (var sheet = PdfSharp.Pdf.IO.PdfReader.Open(sheetPath, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
         Require(sheet.PageCount >= 2, "A reopened saved simulation produces a readable multipage study PDF.");
+    var originalSheet = File.ReadAllBytes(sheetPath);
+    var duplicatedImc = simulation.Imc.Points.ToArray();
+    var duplicatedSimc = simulation.Simc.Points.ToArray();
+    duplicatedImc[^1] = duplicatedImc[^1] with { Seconds = duplicatedImc[^2].Seconds };
+    duplicatedSimc[^1] = duplicatedSimc[^1] with { Seconds = duplicatedSimc[^2].Seconds };
+    var duplicateStudy = simulationStudy with
+    {
+        Result = simulation with
+        {
+            Imc = simulation.Imc with { Points = duplicatedImc },
+            Simc = simulation.Simc with { Points = duplicatedSimc }
+        }
+    };
+    Throws<InvalidDataException>(() => SimulationCsv.Export(csvPath, duplicateStudy));
+    Throws<InvalidDataException>(() => StudySheet.Export(sheetPath, project.Name, study, reopenedPi,
+        duplicateStudy, training.Summary, validation.Summary, Array.Empty<ReviewEvent>()));
+    Require(File.ReadAllBytes(sheetPath).SequenceEqual(originalSheet) &&
+        File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Duplicate timestamps preserve both previous exports.");
     var artifact = Environment.GetEnvironmentVariable("MKR_SAMPLE_PDF");
     if (!string.IsNullOrWhiteSpace(artifact)) File.Copy(sheetPath, artifact, overwrite: true);
 
