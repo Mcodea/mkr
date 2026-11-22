@@ -42,6 +42,15 @@ public static class StudySheet
                      $"pause {origin.Source.IntervalMs} ms · horodatage UTC de réception · fin {origin.StopReason}");
             Line($"SHA-256  {source.Sha256}");
         }
+        if (model.Comparison is { } comparison)
+        {
+            Heading("Choix du modèle");
+            Line($"Famille retenue : {comparison.Selected} · comparaison version {comparison.AlgorithmVersion}");
+            Line($"Seuils de validation : RMSE ≤ {N(comparison.Criteria.MaximumRmse)} {model.PvUnit} · |r₁| ≤ {N(comparison.Criteria.MaximumResidualLagOne)}.");
+            foreach (var (name, candidate) in comparison.Candidates)
+                Line($"{name} · RMSE {N(candidate.ValidationRmse)} {model.PvUnit} · r₁ {N(candidate.ValidationResidualLagOne)} · " +
+                    (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", candidate.RejectionReasons)));
+        }
         Heading("Réglages PI génériques");
         Line($"Erreur = consigne − mesure. Cible de réponse {N(pi.Result.ResponseSeconds)} s.");
         foreach (var (label, coefficients, result) in new[] {
