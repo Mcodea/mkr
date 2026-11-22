@@ -130,6 +130,11 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     }
     Select-Option $ident 'StudyList' $savedLabel
     Verify-Comparison $ident
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' ''
+    if ((Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI active sans cible.' }
+    Fill $ident 'ResponseTarget' '2'
+    if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI indisponible avec une cible valide.' }
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     Select-Option $ident 'StudyList' 'SOPDT*'
     $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
@@ -141,6 +146,11 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $delayLabel = 'θ = ' + $initial.ToString('G5') + ' s'
     if (!$fit.Contains($delayLabel)) { throw "La cible SIMC diffère du retard identifié. $fit" }
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    foreach ($invalid in @('', '0', '-1', 'abc')) {
+        Fill $ident 'ResponseTarget' $invalid
+        if ((Find $ident $id 'CalculatePidButton').Current.IsEnabled) { throw "Calcul PID actif avec la cible '$invalid'." }
+        if ((Find $ident $id 'SopdtReport').Current.Name) { throw 'Ancien résultat PID encore affiché.' }
+    }
     Fill $ident 'ResponseTarget' '2'
     Press $ident 'Calculer le PID SIMC'
     $null = Find $ident $name 'Réglage PID théorique affiché.'
