@@ -28,6 +28,8 @@ public partial class CsvWindow : Window
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
+    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this);
+
     private void OpenAcquisition(object sender, RoutedEventArgs args)
     {
         var window = new AcquisitionWindow(_workspace) { Owner = this };
