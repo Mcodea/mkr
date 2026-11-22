@@ -128,6 +128,10 @@ try
     Require(Math.Abs(fit.Gain + 3) < 1e-5 && fit.TauSeconds is { } firstTau && Math.Abs(firstTau - 4) < 1e-5 &&
         Math.Abs(fit.DelaySeconds - 2.5) < 1e-5 && fit.Validation.Rmse < 1e-6,
         "Analytic FOPDT parameters and holdout prediction agree through the process boundary.");
+    var comparison = await engine.CompareAsync(new(training, columns), new(validation, columns),
+        0.01, 0.01, 1, 1, default);
+    Require(Math.Abs(comparison.Candidates["FOPDT"].ValidationRmse - fit.Validation.Rmse) < 1e-9 &&
+        comparison.Candidates.ContainsKey("SOPDT"), "Model comparison uses the selected independent trial.");
     var study = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id, validation.Summary.Id, columns, columns,
         "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, fitVersion, fit);
     restored.SaveStudy(project.Id, study);
