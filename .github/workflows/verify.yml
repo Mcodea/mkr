@@ -31,6 +31,7 @@ jobs:
         run: python -m unittest discover -s engine -v
       - name: Tester SQLite et le processus Python depuis .NET
         env:
+          MKR_TRANSFER_FIXTURE: ${{ runner.temp }}/mkr-transfer-fixture
           MKR_SAMPLE_PDF: mkr-etude-synthetique.pdf
         run: dotnet run --project tests/Mkr.Smoke -c Release --no-build
       - name: Tester les imports, l’affectation et la qualité temporelle
@@ -48,6 +49,9 @@ jobs:
       - name: Construire le paquet Windows autonome
         shell: pwsh
         run: ./scripts/package-windows.ps1 -OutputDirectory portable-MKR
+      - name: Tester le transfert PI depuis le paquet autonome
+        shell: powershell
+        run: ./tests/windows/transfer.ps1 -Executable portable-MKR/Mkr.Desktop.exe -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
       - name: Ouvrir le catalogue depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/catalogue.ps1 -Executable portable-MKR/Mkr.Desktop.exe
