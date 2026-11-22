@@ -1,0 +1,20 @@
+name: Inventaire des essais NAWI
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/nawi.yml'
+      - 'tests/reference/nawi_inventory.py'
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pypdf==5.9.0 openpyxl==3.1.5
+      - run: python tests/reference/nawi_inventory.py
