@@ -133,7 +133,7 @@ try
     Require(Math.Abs(comparison.Candidates["FOPDT"].ValidationRmse - fit.Validation.Rmse) < 1e-9 &&
         comparison.Candidates.ContainsKey("SOPDT"), "Model comparison uses the selected independent trial.");
     var study = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id, validation.Summary.Id, columns, columns,
-        "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, fitVersion, fit);
+        "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, fitVersion, fit, Comparison: comparison);
     restored.SaveStudy(project.Id, study);
     Throws<InvalidDataException>(() => restored.SaveStudy(Guid.NewGuid(), study with { Id = Guid.NewGuid() }));
     using (var v3 = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -159,6 +159,12 @@ try
     Require(persisted.Id == study.Id && persisted.Family == ModelFamily.FOPDT && persisted.ValidationId == validation.Summary.Id &&
         persisted.Result.Validation.Points.SequenceEqual(fit.Validation.Points), "Study provenance survives reopening.");
 
+    Require(persisted.Comparison is { } storedComparison &&
+        storedComparison.Criteria == comparison.Criteria && storedComparison.Selected == comparison.Selected &&
+        storedComparison.AlgorithmVersion == comparison.AlgorithmVersion &&
+        storedComparison.Candidates["SOPDT"].ValidationRmse == comparison.Candidates["SOPDT"].ValidationRmse &&
+        storedComparison.Candidates["SOPDT"].RejectionReasons.SequenceEqual(comparison.Candidates["SOPDT"].RejectionReasons),
+        "Model choice and holdout criteria survive SQLite reopening.");
     // Row-window fit preserves untouched originals and survives SQLite JSON reopening.
     var selectedRange = new StepWindow(0, 55);
     var (windowFit, windowEngineVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
