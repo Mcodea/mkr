@@ -222,9 +222,11 @@ public partial class IdentificationWindow : Window
         OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtPanel.Visibility = _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
-        SopdtResponse.Clear();
+        TargetPanel.Visibility = _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
+            ? Visibility.Visible : Visibility.Collapsed;
+        ResponseProfile.SelectedIndex = 1;
+        UpdateResponseTarget();
         PiList.ItemsSource = null;
-        PiResponse.Clear();
         PiReport.Text = "";
         if (_shown is { Family: ModelFamily.FOPDT } model)
         {
@@ -291,15 +293,45 @@ public partial class IdentificationWindow : Window
         DrawPlot();
     }
 
+    private void ChangeResponseProfile(object sender, SelectionChangedEventArgs args) => UpdateResponseTarget();
+
+    private void ResponseTargetChanged(object sender, TextChangedEventArgs args)
+    {
+        if (SopdtReport is not null && SopdtReport.Text.Length > 0)
+        {
+            SopdtReport.Text = "";
+            Message.Text = "";
+        }
+    }
+
+    private void UpdateResponseTarget()
+    {
+        if (_shown?.Result.TauSeconds is not double tau || TargetPanel.Visibility != Visibility.Visible)
+            return;
+
+        ResponseTarget.IsReadOnly = ResponseProfile.SelectedIndex != 3;
+        if (!ResponseTarget.IsReadOnly)
+            return;
+
+        double baseline = Math.Max(tau, 2 * _shown.Result.DelaySeconds);
+        double target = ResponseProfile.SelectedIndex switch
+        {
+            0 => 2 * baseline,
+            2 => baseline / 2,
+            _ => baseline
+        };
+        ResponseTarget.Text = target.ToString("G12", CultureInfo.CurrentCulture);
+    }
+
     private async void CalculateSopdt(object sender, RoutedEventArgs args)
     {
         SopdtReport.Text = "";
-        if (_shown is not { Family: ModelFamily.SOPDT } model || !ReadTolerance(SopdtResponse, out var seconds))
+        if (_shown is not { Family: ModelFamily.SOPDT } model || !ReadTolerance(ResponseTarget, out var seconds))
         {
             Message.Text = "Indiquez un temps de réponse strictement positif en secondes.";
             return;
         }
-        Form.IsEnabled = SopdtPanel.IsEnabled = false;
+        Form.IsEnabled = TargetPanel.IsEnabled = SopdtPanel.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -316,17 +348,17 @@ public partial class IdentificationWindow : Window
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = SopdtPanel.IsEnabled = true; }
+        finally { Form.IsEnabled = TargetPanel.IsEnabled = SopdtPanel.IsEnabled = true; }
     }
 
     private async void CalculatePi(object sender, RoutedEventArgs args)
     {
-        if (_shown is not { Family: ModelFamily.FOPDT } model || !ReadTolerance(PiResponse, out var seconds))
+        if (_shown is not { Family: ModelFamily.FOPDT } model || !ReadTolerance(ResponseTarget, out var seconds))
         {
             Message.Text = "Sélectionnez une étude FOPDT et indiquez un temps de réponse strictement positif en secondes.";
             return;
         }
-        Form.IsEnabled = PiPanel.IsEnabled = false;
+        Form.IsEnabled = TargetPanel.IsEnabled = PiPanel.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -338,7 +370,7 @@ public partial class IdentificationWindow : Window
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = PiPanel.IsEnabled = true; }
+        finally { Form.IsEnabled = TargetPanel.IsEnabled = PiPanel.IsEnabled = true; }
     }
 
     private void OpenLoop(object sender, RoutedEventArgs args)
