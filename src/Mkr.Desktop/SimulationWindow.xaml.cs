@@ -256,7 +256,9 @@ public partial class SimulationWindow : Window
             "delay_beyond_horizon" => "Le retard atteint ou dépasse l’horizon du scénario.",
             _ => "Simulation exploratoire sur modèle nominal."
         });
-        Report.Text = $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
+        Report.Text = $"Simulation enregistrée {simulation.Id.ToString()[..8]} · durée {input.DurationSeconds:G6} s · " +
+            $"ΔSP {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
+            $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
             $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
             $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
@@ -394,7 +396,7 @@ public partial class SimulationWindow : Window
     {
         if (_shown is not { } simulation)
             return;
-        var dialog = new SaveFileDialog { FileName = "mkr-simulation-pi.csv", Filter = "CSV (*.csv)|*.csv" };
+        var dialog = new SaveFileDialog { Title = "Exporter les séries enregistrées", FileName = $"MKR-{simulation.Id:N}.csv", Filter = "CSV (*.csv)|*.csv" };
         if (dialog.ShowDialog(this) != true)
             return;
         try
