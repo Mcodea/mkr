@@ -7,10 +7,9 @@ public static class SimulationCsv
 {
     public static void Export(string path, PiSimulationStudy simulation)
     {
+        SimulationExportValidation.CheckSeries(simulation);
         var imc = simulation.Result.Imc.Points;
         var simc = simulation.Result.Simc.Points;
-        if (imc.Length == 0 || imc.Length != simc.Length)
-            throw new InvalidDataException("Les séries IMC et SIMC doivent contenir le même nombre de points.");
 
         var destination = Path.GetFullPath(path);
         var temporary = Path.Combine(Path.GetDirectoryName(destination)!, $".{Guid.NewGuid():N}.tmp");
@@ -23,8 +22,6 @@ public static class SimulationCsv
                 {
                     var left = imc[i];
                     var right = simc[i];
-                    if (left.Seconds != right.Seconds || left.Disturbance != right.Disturbance)
-                        throw new InvalidDataException("Les séries IMC et SIMC diffèrent par leur chronologie ou leur perturbation.");
                     writer.WriteLine(FormattableString.Invariant(
                         $"{left.Seconds:G17},{simulation.Scenario.Setpoint:G17},{left.Pv:G17},{left.Cv:G17},{left.Mv:G17},{right.Pv:G17},{right.Cv:G17},{right.Mv:G17},{left.Disturbance:G17}"));
                 }
