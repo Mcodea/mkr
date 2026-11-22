@@ -92,14 +92,14 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
-    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT)
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5)
     {
         var csv = new StringBuilder("timestamp;mv;pv\n");
         var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
         for (var i = 0; i < 60; i++)
         {
             var t = i - 6;
-            var x = Math.Max(0, t - 2.5);
+            var x = Math.Max(0, t - delaySeconds);
             var response = family switch
             {
                 ModelFamily.SOPDT => 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3,
@@ -410,7 +410,17 @@ try
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {
+        var rapidTraining = await SaveStepAsync(7, 2, delaySeconds: 0.5);
+        var rapidValidation = await SaveStepAsync(8, -1.5, delaySeconds: 0.5);
+        var (rapidFit, rapidVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+            new StepImport(rapidTraining, columns), new StepImport(rapidValidation, columns), 0.01, 0.01, default);
+        Require(rapidFit.DelaySeconds > 0 && rapidFit.DelaySeconds < 1 && rapidFit.Warnings.Contains("delay_resolution"),
+            "A positive half-sample delay must raise the resolution warning.");
+        var rapidStudy = new IdentificationStudy(Guid.NewGuid(), rapidTraining.Summary.Id, rapidValidation.Summary.Id,
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, rapidVersion, rapidFit);
+        restored.SaveStudy(project.Id, rapidStudy);
         Directory.CreateDirectory(fixture);
+        File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
         using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false }.ToString());
         using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
         {
