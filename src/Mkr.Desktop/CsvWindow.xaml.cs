@@ -22,7 +22,12 @@ public partial class CsvWindow : Window
         Title = $"MKR — {workspace.ProjectName}";
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
-        Description.Text = workspace.ReadDescription();
+        var brief = workspace.ReadLoopBrief();
+        LoopTag.Text = brief.Tag;
+        LoopControlledQuantity.Text = brief.ControlledQuantity;
+        LoopOperatingPoint.Text = brief.OperatingPoint;
+        LoopObjective.Text = brief.Objective;
+        Description.Text = brief.Description;
         Imports.ItemsSource = workspace.List();
         StatusText.Text = "Choisissez un CSV ou ouvrez un import enregistré.";
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
@@ -132,7 +137,7 @@ public partial class CsvWindow : Window
     {
         try
         {
-            _workspace.SaveDescription(Description.Text);
+            _workspace.SaveLoopBrief(new(LoopTag.Text, LoopControlledQuantity.Text, LoopOperatingPoint.Text, LoopObjective.Text, Description.Text));
             StatusText.Text = "Description enregistrée.";
         }
         catch (Exception error) { ShowError(error); }
