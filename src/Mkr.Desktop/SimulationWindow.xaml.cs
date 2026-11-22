@@ -405,7 +405,7 @@ public partial class SimulationWindow : Window
             Message.Text = "Séries simulées exportées.";
         }
         catch (InvalidDataException error) { Message.Text = error.Message; }
-        catch (IOException error)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             Trace.TraceError("csv.export {0}", error.GetType().Name);
             Message.Text = "Écriture du CSV impossible. Vérifiez le dossier et si le fichier est ouvert.";
