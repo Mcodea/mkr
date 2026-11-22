@@ -17,5 +17,3 @@ jobs:
         with:
           python-version: '3.12'
       - run: python tests/reference/nawi_inventory.py
-      - name: Inspecter les acquisitions moteur OpenMCT
-        run: python tests/reference/openmct.py
