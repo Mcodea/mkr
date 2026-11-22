@@ -135,6 +135,22 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if ((Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI active sans cible.' }
     Fill $ident 'ResponseTarget' '2'
     if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI indisponible avec une cible valide.' }
+    $shortId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$shortId"
+    $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    $help = (Find $ident $id 'TargetHelp').Current.Name
+    if (!$target.Current.IsReadOnly -or $target.Current.Value -ne '' -or
+        (Find $ident $id 'ComparePiButton').Current.IsEnabled -or !$help.Contains('Retard nul ou mal résolu')) {
+        throw "Recommandation incohérente pour un retard inférieur au pas de mesure. $help"
+    }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' '3'
+    if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Cible documentée inaccessible.' }
+    Select-Option $ident 'ResponseProfile' 'SIMC*'
+    if ($target.Current.Value -ne '' -or (Find $ident $id 'ComparePiButton').Current.IsEnabled) {
+        throw 'La cible personnalisée a été conservée comme recommandation SIMC.'
+    }
+    Write-Output 'Retard positif inférieur au pas de mesure : recommandation SIMC indisponible.'
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     Select-Option $ident 'StudyList' 'SOPDT*'
     $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
