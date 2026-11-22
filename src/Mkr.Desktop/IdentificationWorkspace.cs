@@ -57,14 +57,16 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, CancellationToken token,
-        StepWindow? trainingWindow = null, StepWindow? validationWindow = null)
+        StepWindow? trainingWindow = null, StepWindow? validationWindow = null, ModelComparison? comparison = null)
     {
+        if (comparison is not null && comparison.Selected != family.ToString())
+            throw new InvalidOperationException("La famille à enregistrer diffère de celle retenue dans la comparaison.");
         var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
         var (result, version) = await engine.IdentifyAsync(family, train, check, mvTolerance, pvTolerance, token);
         token.ThrowIfCancellationRequested();
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
             mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result,
-            family, trainingWindow, validationWindow);
+            family, trainingWindow, validationWindow, comparison);
         studies.SaveStudy(project.Id, study);
         return study;
     }

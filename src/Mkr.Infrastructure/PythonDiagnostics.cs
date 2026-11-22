@@ -63,7 +63,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             candidates.Values.Any(c => c?.RejectionReasons is null || !double.IsFinite(c.ValidationRmse) || c.ValidationRmse < 0))
             throw new InvalidDataException("Comparaison de modèles incomplète.");
         string? expected = first.RejectionReasons.Length == 0 ? "FOPDT" : second.RejectionReasons.Length == 0 ? "SOPDT" : null;
-        if (report.Selected != expected || report.Decision != (expected is null ? "insufficient_evidence" : "lowest_acceptable_order"))
+        if (string.IsNullOrWhiteSpace(report.AlgorithmVersion) || report.Criteria != new ComparisonCriteria(maximumRmse, maximumResidualLagOne) ||
+            report.Selected != expected || report.Decision != (expected is null ? "insufficient_evidence" : "lowest_acceptable_order"))
             throw new InvalidDataException("Décision de comparaison incohérente.");
         return report;
     }

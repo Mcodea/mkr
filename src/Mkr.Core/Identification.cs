@@ -25,13 +25,15 @@ public sealed record IdentificationResult(string AlgorithmVersion, double Gain, 
 public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid ValidationId, StepColumns TrainingColumns,
     StepColumns ValidationColumns, string MvUnit, string PvUnit, double MvTolerance, double PvTolerance,
     DateTimeOffset CalculatedAt, string EngineVersion, IdentificationResult Result, ModelFamily Family = ModelFamily.FOPDT,
-    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null)
+    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null, ModelComparison? Comparison = null)
 {
     public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}";
 }
 
 public sealed record ModelCandidate(double ValidationRmse, double? ValidationResidualLagOne, string[] RejectionReasons);
-public sealed record ModelComparison(string? Selected, Dictionary<string, ModelCandidate> Candidates, string Decision);
+public sealed record ComparisonCriteria(double MaximumRmse, double MaximumResidualLagOne);
+public sealed record ModelComparison(string? Selected, Dictionary<string, ModelCandidate> Candidates, string Decision,
+    string AlgorithmVersion, ComparisonCriteria Criteria);
 
 public interface IIdentificationEngine
 {
