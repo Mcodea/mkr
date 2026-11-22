@@ -135,6 +135,15 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if ((Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI active sans cible.' }
     Fill $ident 'ResponseTarget' '2'
     if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI indisponible avec une cible valide.' }
+    $transportId = (Get-Content -LiteralPath (Join-Path $Fixture 'transport-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$transportId"
+    $transportTarget = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2040) -ge 0.01) {
+        throw 'Cible SIMC attendue proche de 2040 secondes pour le retard de transport de 34 minutes.'
+    }
+    Press $ident 'Comparer IMC/Lambda et SIMC'
+    $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
+    if (!(Find $ident $id 'PiReport').Current.Name.Contains('2040 s')) { throw 'Cible absente du résultat PI enregistré.' }
     $shortId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$shortId"
     $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
