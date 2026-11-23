@@ -32,5 +32,13 @@ for label, filename in (("Estimation", "essai-1.csv"), ("Validation", "essai-2.c
     ):
         if expected not in trial:
             raise ValueError(f"Missing {expected!r} in {label}: {trial!r}")
+validation_plot = pages[-2]
+plot_text = validation_plot.extract_text()
+for expected in ("Validation indépendante du modèle", "Mesure observée", "prédiction", "PV (bar)", "RMSE"):
+    if expected not in plot_text:
+        raise ValueError(f"Missing {expected!r} on the validation plot")
+operators = [operator for _, operator in validation_plot.get_contents().operations]
+if operators.count(b"l") < 2 or operators.count(b"S") < 2:
+    raise ValueError("Missing validation curves in the exported PDF")
 if simulation not in body or simulation not in pages[-1].extract_text():
     raise ValueError("The report, plot and CSV must identify the same simulation")
