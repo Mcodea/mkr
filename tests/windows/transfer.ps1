@@ -101,11 +101,20 @@ try {
     Select-Option $ident 'TrainingSource' 'essai-1.csv*'
     Select-Option $ident 'ValidationSource' 'essai-2.csv*'
     foreach ($prefix in @('Training', 'Validation')) {
-        Select-Option $ident ($prefix + 'Time') 'timestamp'
+        foreach ($field in @{Time='timestamp'; Pv='pv'}.GetEnumerator()) {
+            $box = Find $ident $id ($prefix + $field.Key)
+            $items = $box.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
+            if ($items.Count -ne 1 -or $items[0].Current.Name -ne $field.Value) { throw "Affectation enregistrée perdue : $prefix $($field.Key)" }
+        }
+        $mv = Find $ident $id ($prefix + 'Mv')
+        if ($mv.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection().Count -ne 0) {
+            throw "MV déduite sans affectation enregistrée."
+        }
         Select-Option $ident ($prefix + 'Mv') 'mv'
-        Select-Option $ident ($prefix + 'Pv') 'pv'
+
     }
-    foreach ($entry in @{MvUnit='%';PvUnit='bar';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
+    if ((Find $ident $id 'PvUnit').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne 'bar') { throw 'Unité PV enregistrée perdue.' }
+    foreach ($entry in @{MvUnit='%';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
         Fill $ident $entry.Key $entry.Value
     }
     $confirm = Find $ident $id 'Confirmed'
