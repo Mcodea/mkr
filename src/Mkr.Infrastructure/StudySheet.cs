@@ -48,10 +48,18 @@ public static class StudySheet
         }
         Heading("Modèle et essais");
         Line($"{model.Family} · gain {N(model.Result.Gain)} {model.PvUnit}/{model.MvUnit} · constante de temps {N(model.Result.TauSeconds)} s · retard {N(model.Result.DelaySeconds)} s");
-        Line($"Racine de l’erreur quadratique moyenne (RMSE) sur validation indépendante : {N(model.Result.Validation.Rmse)} {model.PvUnit}.");
-        foreach (var (label, source, origin) in new[] { ("Estimation", training, trainingOrigin), ("Validation", validation, validationOrigin) })
+        foreach (var (label, source, origin, columns, window, fit) in new[]
+        {
+            ("Estimation", training, trainingOrigin, model.TrainingColumns, model.TrainingWindow, model.Result.Training),
+            ("Validation", validation, validationOrigin, model.ValidationColumns, model.ValidationWindow, model.Result.Validation)
+        })
         {
             Line($"{label} · {source.FileName}");
+            Line($"Temps : {columns.TimeColumn} · commande MV : {columns.MvColumn} · mesure PV : {columns.PvColumn}");
+            var range = window is null ? "fichier complet"
+                : $"indices {window.RowStart} à {window.RowEnd} inclus (première donnée = 0, en-tête exclu)";
+            Line($"Plage utilisée : {range} · {fit.Samples} échantillons");
+            Line($"RMSE : {N(fit.Rmse)} {model.PvUnit} · erreur absolue moyenne : {N(fit.Mae)} {model.PvUnit}");
             if (origin is not null)
                 Line($"Modbus TCP · unité {origin.Source.UnitId} · offset {origin.Source.FirstRegister} · " +
                      $"pause {origin.Source.IntervalMs} ms · horodatage UTC de réception · fin {origin.StopReason}");
