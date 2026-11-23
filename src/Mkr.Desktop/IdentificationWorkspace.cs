@@ -16,7 +16,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var reviews = new[] { model.Id, tuning.Id, simulation.Id }
             .SelectMany(id => reviewStore.ReadReviewHistory(project.Id, id)).OrderBy(r => r.RecordedAt).ToArray();
         Mkr.Infrastructure.StudySheet.Export(path, project.Name, model, tuning, simulation,
-            training.Summary, validation.Summary, reviews, training.Acquisition, validation.Acquisition);
+            training.Summary, validation.Summary, reviews, training.Acquisition, validation.Acquisition,
+            imports.ReadLoopBrief(project.Id));
     }
 
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
