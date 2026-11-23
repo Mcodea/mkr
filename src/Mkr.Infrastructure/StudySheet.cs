@@ -13,7 +13,7 @@ public static class StudySheet
 
     public static void Export(string path, string project, IdentificationStudy model, PiStudy pi,
         PiSimulationStudy sim, ImportSummary training, ImportSummary validation, IReadOnlyList<ReviewEvent> reviews,
-        AcquisitionOrigin? trainingOrigin = null, AcquisitionOrigin? validationOrigin = null)
+        AcquisitionOrigin? trainingOrigin = null, AcquisitionOrigin? validationOrigin = null, LoopBrief? loop = null)
     {
         if (model.Id != pi.ModelId || pi.Id != sim.PiId || training.Id != model.TrainingId ||
             validation.Id != model.ValidationId)
@@ -32,6 +32,20 @@ public static class StudySheet
         section.AddParagraph("Fiche de mise au point", "Heading1");
         Line(project);
         Line($"Simulation enregistrée le {sim.CalculatedAt:yyyy-MM-dd HH:mm:ss zzz}");
+        if (loop is not null)
+        {
+            var fields = new[] {
+                ("Repère", loop.Tag), ("Grandeur régulée", loop.ControlledQuantity),
+                ("Point de fonctionnement", loop.OperatingPoint), ("Objectif", loop.Objective),
+                ("Description", loop.Description)
+            };
+            if (fields.Any(field => !string.IsNullOrWhiteSpace(field.Item2)))
+            {
+                Heading("Fiche de boucle du projet au moment de l’export");
+                foreach (var (label, value) in fields)
+                    if (!string.IsNullOrWhiteSpace(value)) Line($"{label} : {value}");
+            }
+        }
         Heading("Modèle et essais");
         Line($"{model.Family} · gain {N(model.Result.Gain)} {model.PvUnit}/{model.MvUnit} · constante de temps {N(model.Result.TauSeconds)} s · retard {N(model.Result.DelaySeconds)} s");
         Line($"Racine de l’erreur quadratique moyenne (RMSE) sur validation indépendante : {N(model.Result.Validation.Rmse)} {model.PvUnit}.");
