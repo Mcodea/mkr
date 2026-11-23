@@ -54,10 +54,20 @@ public partial class IdentificationWindow : Window
     {
         try
         {
-            var columns = source.SelectedItem is ImportSummary item ? _workspace.Columns(item) : [];
-            time.ItemsSource = mv.ItemsSource = pv.ItemsSource = columns;
-            time.SelectedIndex = mv.SelectedIndex = pv.SelectedIndex = -1;
             Confirmed.IsChecked = false;
+            var saved = source.SelectedItem is ImportSummary item ? _workspace.ReadSource(item) : null;
+            var mapping = saved?.Mapping;
+            var acquisition = saved?.Acquisition?.Source;
+            time.ItemsSource = mv.ItemsSource = pv.ItemsSource = saved?.Result.Headers;
+            time.SelectedItem = mapping?.TimeColumn;
+            mv.SelectedItem = acquisition is not null ? "MV" : mapping?.Role == "MV" ? mapping.ValueColumn : null;
+            pv.SelectedItem = acquisition is not null ? "PV" : mapping?.Role == "PV" ? mapping.ValueColumn : null;
+            time.IsEnabled = mv.IsEnabled = pv.IsEnabled = acquisition is null;
+            if (source == TrainingSource)
+            {
+                MvUnit.Text = acquisition?.CommandUnit ?? (mapping?.Role == "MV" ? mapping.Unit : "");
+                PvUnit.Text = acquisition?.ProcessUnit ?? (mapping?.Role == "PV" ? mapping.Unit : "");
+            }
         }
         catch (Exception error) { ShowError(error); }
     }
