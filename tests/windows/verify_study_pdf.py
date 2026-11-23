@@ -7,7 +7,16 @@ path = Path(sys.argv[1])
 pages = PdfReader(path).pages
 simulation = str(UUID(path.stem.removeprefix("MKR-")))
 body = " ".join(" ".join(page.extract_text().split()) for page in pages[:-1])
-for expected in ("Consigne en écart 1 bar", "Vitesse maximale de commande 0,5 %/s."):
+for expected in (
+    "Fiche de boucle du projet au moment de l’export",
+    "Repère : PIC-202",
+    "Grandeur régulée : Pression de refoulement",
+    "Point de fonctionnement : 5 bar",
+    "Objectif : Maintenir la pression aval",
+    "Description : Procédé d’essai",
+    "Consigne en écart 1 bar",
+    "Vitesse maximale de commande 0,5 %/s.",
+):
     if expected not in body:
         raise ValueError(f"Missing saved condition {expected!r} in {body!r}")
 if simulation not in body or simulation not in pages[-1].extract_text():
