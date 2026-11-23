@@ -22,7 +22,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
-    public string[] Columns(ImportSummary source) => imports.ReadImport(project.Id, source.Id).Result.Headers;
+    public CsvImport ReadSource(ImportSummary source) => imports.ReadImport(project.Id, source.Id);
 
     public Task<TrialPreview> PreviewTrialAsync(ImportSummary source, StepColumns columns,
         CancellationToken token)
@@ -186,7 +186,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     private static void CheckRecordedUnit(StepImport source, string mvUnit, string pvUnit)
     {
         if (source.Import.Acquisition is { } acquisition &&
-            (source.Columns.MvColumn != "MV" || source.Columns.PvColumn != "PV" ||
+            (source.Columns.TimeColumn != source.Import.Mapping.TimeColumn || source.Columns.MvColumn != "MV" || source.Columns.PvColumn != "PV" ||
              mvUnit != acquisition.Source.CommandUnit || pvUnit != acquisition.Source.ProcessUnit))
             throw new CsvInputException("fit_recorded_mapping");
         var recorded = source.Import.Mapping;
