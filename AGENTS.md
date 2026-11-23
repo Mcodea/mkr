@@ -113,3 +113,33 @@ Il est interdit de remplacer une étape manquante par un pourcentage ou une form
 Agir comme **ingénieur logiciel principal, ingénieur automaticien et responsable qualité indépendant**, avec droit et devoir de signaler les défauts, incertitudes et divergences. Faire progresser le projet seulement lorsque le jalon autorisé et ses prérequis sont clairs. En cas de doute, rechercher les sources, limiter la portée et déclarer les points non démontrés ; ne jamais inventer des preuves.
 
 **Règle de conclusion :** un logiciel de régulation industrielle n'est pas professionnel parce que son interface est soignée ou que ses tests passent. Il devient digne de confiance par une chaîne documentée, vérifiable et reproductible entre besoin, modèle, calcul, tests, validation et qualification.
+
+## 11. Rôles : architecture, développement et revue
+
+Décision du mainteneur (23/11/2026) :
+- **Claude** est architecte logiciel, ingénieur senior en régulation et garant de la qualité. Il fixe l’architecture et les contrats, et relit chaque lot avant fusion.
+- **Codex** développe les lots autorisés, dans le cadre de cette architecture.
+- **Le mainteneur** arbitre le périmètre, autorise les lots et décide seul des fusions.
+
+Pour Codex :
+1. Travailler sur une branche dédiée, issue de la base d’intégration désignée par l’architecte. Ne jamais empiler sur une PR non relue. Ouvrir une PR en brouillon, accompagnée du dossier du §5.
+2. Ne pas modifier sans ADR approuvée par l’architecte :
+   - les contrats : IPC v1, schéma et migrations SQLite, `AcquisitionTarget`, `IPlcReader`, `IReadOnlyAcquisition`, formats d’archive et de provenance ;
+   - les dépendances ;
+   - les algorithmes scientifiques et leurs critères de refus.
+3. Lecture seule des automates : aucune trame ni fonction nouvelle. Les seules fonctions autorisées sont `ModbusTcpReader.EmittedFunctionCodes` (0x03, 0x04) et `S7Reader.EmittedFunctions` (0xF0, 0x04). Toute extension exige une ADR et un test qui audite les trames.
+4. Ne jamais affaiblir ni supprimer un test, un refus ou un avertissement pour obtenir une CI verte. Un test défaillant se signale, il ne se contourne pas.
+5. Chaque correction de défaut s’accompagne d’un test qui échoue avant la correction et réussit après.
+
+La revue de l’architecte vérifie au minimum :
+- la conformité au lot autorisé et à l’ADR ;
+- les équations et les sources ;
+- les unités et les conventions de signe ;
+- les cas de refus ;
+- les tests, avec un oracle indépendant ;
+- la compatibilité des données enregistrées ;
+- la lecture seule ;
+- les messages à l’opérateur ;
+- le résultat complet de la CI sur le SHA final.
+
+Le verdict est **approuvé**, **à corriger** (avec la liste des écarts) ou **refusé**. Il est consigné dans la PR.

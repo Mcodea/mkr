@@ -176,7 +176,7 @@ public partial class CsvWindow : Window
         Unit.Text = import.Mapping.Unit;
         Delimiter.SelectedValue = import.Delimiter;
         if (import.Acquisition is { } origin)
-            Report.Text += $"  |  Modbus TCP · offset {origin.Source.FirstRegister} · unités PV {origin.Source.ProcessUnit}, MV {origin.Source.CommandUnit} · horodatage UTC de réception · fin : {origin.StopReason}.";
+            Report.Text += $"  |  {origin.Describe()} · unités PV {origin.ProcessUnit}, MV {origin.CommandUnit}.";
         var quality = import.Result.Quality!;
         Report.Text += $"  |  {import.Summary.FileName}  |  SHA-256 : {import.Summary.Sha256}\n" +
             $"{import.Mapping.Role} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +

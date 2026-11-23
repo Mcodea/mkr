@@ -61,8 +61,11 @@ public static class StudySheet
             Line($"Plage utilisée : {range} · {fit.Samples} échantillons");
             Line($"RMSE : {N(fit.Rmse)} {model.PvUnit} · erreur absolue moyenne : {N(fit.Mae)} {model.PvUnit}");
             if (origin is not null)
-                Line($"Modbus TCP · unité {origin.Source.UnitId} · offset {origin.Source.FirstRegister} · " +
-                     $"pause {origin.Source.IntervalMs} ms · horodatage UTC de réception · fin {origin.StopReason}");
+            {
+                Line(origin.Describe());
+                foreach (var gap in origin.Statistics?.Gaps ?? [])
+                    Line($"Lacune {gap.From:HH:mm:ss.fff}–{gap.To:HH:mm:ss.fff} UTC · {gap.MissedSamples} mesure(s) · {gap.Reason}");
+            }
             Line($"SHA-256  {source.Sha256}");
         }
         if (model.Comparison is { } comparison)

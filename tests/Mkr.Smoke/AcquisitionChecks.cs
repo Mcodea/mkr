@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Mkr.Desktop;
 using Mkr.Core;
 using Mkr.Infrastructure;
+using Mkr.Infrastructure.Plc;
 
 internal static class AcquisitionChecks
 {
@@ -15,8 +16,7 @@ internal static class AcquisitionChecks
         {
             using var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
-            var source = new RegisterSource("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port,
-                7, 42, swapped, "bar", "%", 100);
+            var target = Target(((IPEndPoint)listener.LocalEndpoint).Port, 7, 42, swapped);
             using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             async Task Serve()
             {
@@ -44,15 +44,19 @@ internal static class AcquisitionChecks
             }
             var service = Serve();
             var samples = new List<AcquiredSample>();
-            await new ModbusAcquisition().CaptureAsync(source, 3, samples.Add, limit.Token);
+            var capture = await new PlcAcquisition().CaptureAsync(target, new AcquisitionPlan(3, 100), samples.Add, null, limit.Token);
             await service;
+            if (capture.StopReason != "sample_limit")
+                throw new Exception("Unexpected capture stop " + capture.StopReason);
             if (samples.Count != 3 || samples[0].Sp != 2.5f || samples[0].Pv != -1.25f || samples[2].Mv != 1.5f)
                 throw new Exception("Unexpected decoded values.");
             var store = new SqliteProjectStore(db);
-            var origin = new AcquisitionOrigin(source, "sample_limit", "receiver_utc");
+            var origin = new AcquisitionOrigin(null, capture.StopReason, "receiver_utc_midpoint", target,
+                new AcquisitionPlan(3, 100), capture.Statistics);
             var saved = await AcquisitionArchive.SaveAsync(project, store, engine, samples, origin, limit.Token);
             var reopened = new SqliteProjectStore(db).ReadImport(project, saved.Summary.Id);
-            if (reopened.Acquisition != origin || reopened.Result.Quality?.ValidValues != 3 ||
+            if (System.Text.Json.JsonSerializer.Serialize(reopened.Acquisition) != System.Text.Json.JsonSerializer.Serialize(origin) ||
+                reopened.Acquisition?.Target != target || reopened.Result.Quality?.ValidValues != 3 ||
                 reopened.Result.Quality.InvalidTimestamps != 0 || !saved.Original.SequenceEqual(reopened.Original))
                 throw new Exception("Capture did not survive the study archive round trip.");
         }
@@ -63,14 +67,13 @@ internal static class AcquisitionChecks
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-        var source = new RegisterSource("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port,
-            1, 0, false, "bar", "%", 100);
+        var target = Target(((IPEndPoint)listener.LocalEndpoint).Port, 1, 0, false);
         var store = new SqliteProjectStore(db);
         async Task<(CsvImport Live, CsvImport File)> Trial(float amplitude)
         {
             const int count = 44;
             var samples = new List<AcquiredSample>();
-            var reading = new ModbusAcquisition().CaptureAsync(source, count, samples.Add, limit.Token);
+            var reading = new PlcAcquisition().CaptureAsync(target, new AcquisitionPlan(count, 100), samples.Add, null, limit.Token);
             using var peer = await listener.AcceptTcpClientAsync(limit.Token);
             using var stream = peer.GetStream();
             var transmitted = new List<(float Mv, float Pv)>();
@@ -92,9 +95,11 @@ internal static class AcquisitionChecks
                 BinaryPrimitives.WriteSingleBigEndian(reply.AsSpan(17), mv);
                 await stream.WriteAsync(reply, limit.Token);
             }
-            await reading;
+            var captured = await reading;
+            if (captured.StopReason != "sample_limit" || samples.Count != count)
+                throw new Exception("Simulated trial capture incomplete: " + captured.StopReason);
             var saved = await AcquisitionArchive.SaveAsync(project, store, engine, samples,
-                new(source, "sample_limit", "receiver_utc"), limit.Token);
+                new(null, captured.StopReason, "receiver_utc_midpoint", target, new AcquisitionPlan(count, 100), captured.Statistics), limit.Token);
             var live = new SqliteProjectStore(db).ReadImport(project, saved.Summary.Id);
             // Build an independent historian file from values sent by the server.
             // Only the receiver timestamps are shared with the connected path.
@@ -103,7 +108,7 @@ internal static class AcquisitionChecks
             {
                 var timestamp = samples[i].ReceivedAt.UtcDateTime;
                 var (mv, pv) = transmitted[i];
-                csv.Append(FormattableString.Invariant($"{mv:R};{timestamp:yyyy-MM-ddTHH:mm:ss.ffffffZ};4;{pv:R}\n"));
+                csv.Append(FormattableString.Invariant($"{(double)mv:R};{timestamp:yyyy-MM-ddTHH:mm:ss.ffffffZ};4;{(double)pv:R}\n"));
             }
             var csvPath = Path.Combine(Path.GetDirectoryName(db)!, $"historian-{saved.Summary.Id}.csv");
             await File.WriteAllTextAsync(csvPath, csv.ToString(), limit.Token);
@@ -140,15 +145,18 @@ internal static class AcquisitionChecks
             throw new Exception("Identical timestamped signals must produce identical PI coefficients.");
     }
 
+    private static AcquisitionTarget Target(int port, byte unit, int first, bool lowWordFirst) =>
+        new(PlcProtocol.ModbusTcp, "127.0.0.1", port, new(first, PlcDataType.Real32), new(first + 2, PlcDataType.Real32),
+            new(first + 4, PlcDataType.Real32), "bar", "%", lowWordFirst ? ByteOrder.CDAB : ByteOrder.ABCD, unit);
+
     private static async Task CheckInterruptedSession()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var source = new RegisterSource("127.0.0.1", ((IPEndPoint)listener.LocalEndpoint).Port,
-            1, 0, false, "bar", "%", 100);
+        var target = Target(((IPEndPoint)listener.LocalEndpoint).Port, 1, 0, false);
         var samples = new List<AcquiredSample>();
-        var capture = new ModbusAcquisition().CaptureAsync(source, 4, samples.Add, stop.Token);
+        var capture = new PlcAcquisition().CaptureAsync(target, new AcquisitionPlan(2, 100), samples.Add, null, stop.Token);
         using var peer = await listener.AcceptTcpClientAsync(stop.Token);
         using var stream = peer.GetStream();
         byte[] request = new byte[12];
@@ -161,8 +169,9 @@ internal static class AcquisitionChecks
         await stream.ReadExactlyAsync(request, stop.Token);
         good[1] = 77;
         await stream.WriteAsync(good, stop.Token);
-        try { await capture; }
-        catch (InvalidDataException) when (samples.Count == 1) { return; }
-        throw new Exception("Mismatched transaction must terminate capture and preserve its valid prefix.");
+        var result = await capture;
+        // A mismatched transaction is never decoded: the valid prefix is kept and the slot is a recorded gap.
+        if (samples.Count != 1 || result.Statistics.Gaps.Length != 1 || result.Statistics.Gaps[0].Reason != "modbus_frame")
+            throw new Exception("Mismatched transaction must be rejected as a gap and preserve the valid prefix.");
     }
 }

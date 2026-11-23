@@ -57,7 +57,7 @@ public partial class IdentificationWindow : Window
             Confirmed.IsChecked = false;
             var saved = source.SelectedItem is ImportSummary item ? _workspace.ReadSource(item) : null;
             var mapping = saved?.Mapping;
-            var acquisition = saved?.Acquisition?.Source;
+            var acquisition = saved?.Acquisition;
             time.ItemsSource = mv.ItemsSource = pv.ItemsSource = saved?.Result.Headers;
             time.SelectedItem = mapping?.TimeColumn;
             mv.SelectedItem = acquisition is not null ? "MV" : mapping?.Role == "MV" ? mapping.ValueColumn : null;

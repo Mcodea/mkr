@@ -187,7 +187,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (source.Import.Acquisition is { } acquisition &&
             (source.Columns.TimeColumn != source.Import.Mapping.TimeColumn || source.Columns.MvColumn != "MV" || source.Columns.PvColumn != "PV" ||
-             mvUnit != acquisition.Source.CommandUnit || pvUnit != acquisition.Source.ProcessUnit))
+             mvUnit != acquisition.CommandUnit || pvUnit != acquisition.ProcessUnit))
             throw new CsvInputException("fit_recorded_mapping");
         var recorded = source.Import.Mapping;
         if ((source.Columns.MvColumn == recorded.ValueColumn && (recorded.Role != "MV" || recorded.Unit != mvUnit)) ||

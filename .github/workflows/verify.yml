@@ -48,6 +48,12 @@ jobs:
         run: dotnet run --project tests/Mkr.Smoke -c Release --no-build
       - name: Tester les imports, l’affectation et la qualité temporelle
         run: python -m unittest discover -s tests -v
+      - name: Installer les serveurs de référence Modbus et S7
+        run: python -m pip install --only-binary=:all: -r tests/interop/requirements.txt
+      - name: Tester l’acquisition en lecture seule (Modbus TCP, S7comm, interopérabilité)
+        env:
+          MKR_INTEROP_PYTHON: python
+        run: dotnet run --project tests/Mkr.Communication.Tests -c Release --no-build
       - name: Tester la description physique et les profils
         run: dotnet run --project tests/Mkr.PhysicalLoop.Tests -c Release --no-build
       - name: Vérifier le parcours graphique du catalogue
@@ -77,6 +83,9 @@ jobs:
       - name: Tester le transfert PI depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/transfer.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
+      - name: Tester l’acquisition Schneider et Siemens depuis le paquet autonome
+        shell: powershell
+        run: ./tests/windows/acquisition.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
       - name: Ouvrir le catalogue depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/catalogue.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe"
