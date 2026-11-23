@@ -113,8 +113,18 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                     PRAGMA user_version = 7;
                     """;
                 command.ExecuteNonQuery();
-                break;
+                goto case 7;
             case 7:
+                command.CommandText = """
+                    ALTER TABLE projects ADD COLUMN loop_tag TEXT NOT NULL DEFAULT '';
+                    ALTER TABLE projects ADD COLUMN controlled_quantity TEXT NOT NULL DEFAULT '';
+                    ALTER TABLE projects ADD COLUMN operating_point TEXT NOT NULL DEFAULT '';
+                    ALTER TABLE projects ADD COLUMN control_objective TEXT NOT NULL DEFAULT '';
+                    PRAGMA user_version = 8;
+                    """;
+                command.ExecuteNonQuery();
+                break;
+            case 8:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -199,6 +209,36 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         command.Parameters.AddWithValue("$name", project.Name);
         command.Parameters.AddWithValue("$created", project.CreatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         command.ExecuteNonQuery();
+    }
+
+    public LoopBrief ReadLoopBrief(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT loop_tag, controlled_quantity, operating_point, control_objective, description FROM projects WHERE id = $project";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        using var reader = command.ExecuteReader();
+        if (!reader.Read()) throw new InvalidDataException("Projet introuvable.");
+        return new(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4));
+    }
+
+    public void SaveLoopBrief(Guid projectId, LoopBrief brief)
+    {
+        if (brief.Description.Length > 4000)
+            throw new ArgumentException("La description est limitée à 4 000 caractères.", nameof(brief));
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE projects SET loop_tag = $tag, controlled_quantity = $quantity, operating_point = $point,
+                control_objective = $objective, description = $description WHERE id = $project
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$tag", brief.Tag);
+        command.Parameters.AddWithValue("$quantity", brief.ControlledQuantity);
+        command.Parameters.AddWithValue("$point", brief.OperatingPoint);
+        command.Parameters.AddWithValue("$objective", brief.Objective);
+        command.Parameters.AddWithValue("$description", brief.Description);
+        if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Projet introuvable.");
     }
 
     public string ReadDescription(Guid projectId)

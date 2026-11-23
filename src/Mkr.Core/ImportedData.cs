@@ -23,8 +23,12 @@ public interface ICsvEngine
         CsvMapping mapping, CancellationToken token);
 }
 
+public sealed record LoopBrief(string Tag, string ControlledQuantity, string OperatingPoint, string Objective, string Description);
+
 public interface IImportStore
 {
+    LoopBrief ReadLoopBrief(Guid projectId);
+    void SaveLoopBrief(Guid projectId, LoopBrief brief);
     string ReadDescription(Guid projectId);
     void SaveDescription(Guid projectId, string description);
     IReadOnlyList<ImportSummary> ListImports(Guid projectId);

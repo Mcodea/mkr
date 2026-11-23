@@ -17,9 +17,9 @@
             <StackPanel>
                 <TextBlock Text="MKR  /  PROJET  /  DONNÉES"
                            FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MkrAccent}"/>
-                <TextBlock Text="Préparation des données" FontSize="27" FontWeight="SemiBold"
+                <TextBlock Text="Étude de régulation" FontSize="27" FontWeight="SemiBold"
                            Margin="0,7,0,3"/>
-                <TextBlock Text="Importez, qualifiez et conservez les historiques du procédé."
+                <TextBlock Text="Décrivez la boucle dans Procédé, puis sélectionnez les données pour identifier le modèle et comparer les réglages."
                            Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
             </StackPanel>
             <Border Grid.Column="1" Padding="12,7" Margin="12,0,0,0"
@@ -157,12 +157,25 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Description du procédé"
-                               FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                    <TextBox Grid.Row="1" x:Name="Description" AcceptsReturn="True"
-                             MaxLength="4000" TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
-                             AutomationProperties.Name="Description du procédé"/>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Boucle et objectif de régulation" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock Text="Indiquez le repère de la boucle, la grandeur régulée, le point de fonctionnement habituel avec son unité et le résultat recherché." TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Label Content="Repère de la boucle" Target="{Binding ElementName=LoopTag}"/>
+                            <TextBox x:Name="LoopTag"/>
+                            <Label Content="Grandeur régulée" Target="{Binding ElementName=LoopControlledQuantity}"/>
+                            <TextBox x:Name="LoopControlledQuantity"/>
+                            <Label Content="Point de fonctionnement et unité" Target="{Binding ElementName=LoopOperatingPoint}"/>
+                            <TextBox x:Name="LoopOperatingPoint"/>
+                            <Label Content="Objectif de régulation" Target="{Binding ElementName=LoopObjective}"/>
+                            <TextBox x:Name="LoopObjective"/>
+                            <Label Content="Description du procédé" Target="{Binding ElementName=Description}"/>
+                            <TextBox x:Name="Description" MinHeight="80" AcceptsReturn="True" MaxLength="4000"
+                                     TextWrapping="Wrap" AutomationProperties.Name="Description du procédé"/>
+                        </StackPanel>
+                    </ScrollViewer>
                     <Button Grid.Row="2" Content="_Enregistrer la description"
                             Click="SaveDescription" HorizontalAlignment="Left"
                             Margin="0,12,0,0" Style="{StaticResource MkrPrimaryButton}"/>
@@ -180,9 +193,13 @@
                            VerticalAlignment="Center" Margin="0,0,12,0"
                            Foreground="{StaticResource MkrMuted}"
                            AutomationProperties.LiveSetting="Polite"/>
-                <Button Grid.Column="1" Content="_Identification…" Click="OpenIdentification"
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Content="Préparer les essais sur _banc…" Click="OpenCatalogue" Margin="0,0,8,0"
+                            ToolTip="Consulter les fiches constructeur et préparer le relevé de banc"/>
+                    <Button Content="_Identification…" Click="OpenIdentification"
                         Style="{StaticResource MkrPrimaryButton}"
                         ToolTip="Ouvrir les études d’identification du projet"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

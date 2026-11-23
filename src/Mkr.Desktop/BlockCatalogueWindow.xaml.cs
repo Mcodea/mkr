@@ -1,3 +1,4 @@
+using Mkr.Core;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -10,9 +11,42 @@ public partial class BlockCatalogueWindow : Window
     private sealed record Card(string Name, string Target, string Status, string Evidence, string BenchSheet);
     private readonly List<Card> _cards = new();
 
-    public BlockCatalogueWindow()
+    internal static void OpenFor(Window owner, Func<LoopBrief>? readBrief = null)
+    {
+        try
+        {
+            new BlockCatalogueWindow(readBrief?.Invoke()) { Owner = owner }.ShowDialog();
+        }
+        catch (Exception error)
+        {
+            System.Diagnostics.Trace.TraceError("catalogue.open {0}", error.GetType().Name);
+            MessageBox.Show(owner, "Impossible de lire le catalogue installé.", "MKR",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private BlockCatalogueWindow(LoopBrief? brief)
     {
         InitializeComponent();
+        var context = new List<string>();
+        if (brief is not null)
+        {
+            void Add(string label, string? value)
+            {
+                if (!string.IsNullOrWhiteSpace(value)) context.Add($"{label} : {value}");
+            }
+            Add("Repère", brief.Tag);
+            Add("Grandeur régulée", brief.ControlledQuantity);
+            Add("Point de fonctionnement", brief.OperatingPoint);
+            Add("Objectif", brief.Objective);
+            Add("Description", brief.Description);
+        }
+        if (context.Count > 0)
+        {
+            context.Insert(0, "Fiche de boucle enregistrée");
+            LoopContext.Text = string.Join(Environment.NewLine, context);
+            LoopContext.Visibility = Visibility.Visible;
+        }
         using var stream = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "engine", "catalogue", "schneider.json"));
         using var document = JsonDocument.Parse(stream);
         var root = document.RootElement;
@@ -38,6 +72,14 @@ public partial class BlockCatalogueWindow : Window
                 $"Constructeur : {Read("manufacturer")} · Logiciel : {Read("software")}",
                 "Statut initial : essai à réaliser",
                 "",
+            };
+            if (context.Count > 0)
+            {
+                sheet.AddRange(context);
+                sheet.Add("");
+            }
+            sheet.AddRange(new[]
+            {
                 "Identification de la configuration observée",
                 "Référence CPU :",
                 "Version firmware :",
@@ -48,7 +90,7 @@ public partial class BlockCatalogueWindow : Window
                 "Plage et unité de commande :",
                 "",
                 "Paramètres relevés sur l’instance"
-            };
+            });
             foreach (var parameter in block.GetProperty("parameters").EnumerateArray())
             {
                 var source = sources[parameter.GetProperty("source").GetString()!];

@@ -69,16 +69,52 @@ try {
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
     $project = Find $root $name "MKR — Projet initial"
+    (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Fill $project 'LoopTag' 'PIC-202'
+    Fill $project 'LoopControlledQuantity' 'Pression de refoulement'
+    Fill $project 'LoopOperatingPoint' '5 bar'
+    Fill $project 'LoopObjective' 'Maintenir la pression aval'
+    Press $project 'Enregistrer la description'
+    $null = Find $project $name 'Description enregistrée.'
+    $project.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Press $main 'Ouvrir le projet sélectionné'
+    $project = Find $root $name 'MKR — Projet initial'
+    (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    foreach ($entry in @{LoopTag='PIC-202'; LoopControlledQuantity='Pression de refoulement'; LoopOperatingPoint='5 bar'; LoopObjective='Maintenir la pression aval'; Description="Procédé d’essai"}.GetEnumerator()) {
+        $value = (Find $project $id $entry.Key).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+        if ($value -ne $entry.Value) { throw "Fiche de boucle incorrecte après réouverture : $($entry.Key)" }
+    }
+    Press $project 'Préparer les essais sur banc…'
+    $bench = Find $root $name 'MKR — Catalogue des blocs'
+    Fill $bench 'Filter' 'PIDFF'
+    $null = Find $bench $name 'Compatibilité à vérifier'
+    $context = (Find $bench $id 'LoopContext').Current.Name
+    Press $bench 'Copier le relevé de banc'
+    $null = Find $bench $name 'Relevé PIDFF copié.'
+    $sheet = Get-Clipboard -Raw
+    foreach ($field in @('Repère : PIC-202', 'Grandeur régulée : Pression de refoulement', 'Point de fonctionnement : 5 bar', 'Objectif : Maintenir la pression aval', "Description : Procédé d’essai")) {
+        if (!$context.Contains($field) -or !$sheet.Contains($field)) { throw "Champ de boucle absent du relevé : $field" }
+    }
+    $bench.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
     $ident = Find $root $name 'MKR — Identification'
     Select-Option $ident 'TrainingSource' 'essai-1.csv*'
     Select-Option $ident 'ValidationSource' 'essai-2.csv*'
     foreach ($prefix in @('Training', 'Validation')) {
-        Select-Option $ident ($prefix + 'Time') 'timestamp'
+        foreach ($field in @{Time='timestamp'; Pv='pv'}.GetEnumerator()) {
+            $box = Find $ident $id ($prefix + $field.Key)
+            $items = $box.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()
+            if ($items.Count -ne 1 -or $items[0].Current.Name -ne $field.Value) { throw "Affectation enregistrée perdue : $prefix $($field.Key)" }
+        }
+        $mv = Find $ident $id ($prefix + 'Mv')
+        if ($mv.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection().Count -ne 0) {
+            throw "MV déduite sans affectation enregistrée."
+        }
         Select-Option $ident ($prefix + 'Mv') 'mv'
-        Select-Option $ident ($prefix + 'Pv') 'pv'
+
     }
-    foreach ($entry in @{MvUnit='%';PvUnit='bar';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
+    if ((Find $ident $id 'PvUnit').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value -ne 'bar') { throw 'Unité PV enregistrée perdue.' }
+    foreach ($entry in @{MvUnit='%';MvTolerance='1e-2';PvTolerance='1e-2';MaximumRmse='1e-3';MaximumLag='1'}.GetEnumerator()) {
         Fill $ident $entry.Key $entry.Value
     }
     $confirm = Find $ident $id 'Confirmed'
@@ -130,9 +166,63 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     }
     Select-Option $ident 'StudyList' $savedLabel
     Verify-Comparison $ident
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' ''
+    if ((Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI active sans cible.' }
+    Fill $ident 'ResponseTarget' '2'
+    if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Comparaison PI indisponible avec une cible valide.' }
+    $transportId = (Get-Content -LiteralPath (Join-Path $Fixture 'transport-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$transportId"
+    $transportTarget = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2040) -ge 0.01) {
+        throw 'Cible SIMC attendue proche de 2040 secondes pour le retard de transport de 34 minutes.'
+    }
+    Press $ident 'Comparer IMC/Lambda et SIMC'
+    $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
+    if (!(Find $ident $id 'PiReport').Current.Name.Contains('2040 s')) { throw 'Cible absente du résultat PI enregistré.' }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' '3000'
+    Press $ident 'Simuler le réglage enregistré…'
+    $savedSimulation = Find $root $name 'MKR — Simulation PI'
+    $units = (Find $savedSimulation $id 'Units').Current.Name
+    if (!$units.Contains('2040 s') -or $units.Contains('3000 s')) {
+        throw "La simulation doit reprendre le réglage enregistré. $units"
+    }
+    $savedSimulation.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    $shortId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$shortId"
+    $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if ((Find $ident $id 'SimulateSavedPi').Current.IsEnabled) { throw 'Simulation active sans réglage enregistré.' }
+    $help = (Find $ident $id 'TargetHelp').Current.Name
+    if (!$target.Current.IsReadOnly -or $target.Current.Value -ne '' -or
+        (Find $ident $id 'ComparePiButton').Current.IsEnabled -or !$help.Contains('Retard nul ou mal résolu')) {
+        throw "Recommandation incohérente pour un retard inférieur au pas de mesure. $help"
+    }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    Fill $ident 'ResponseTarget' '3'
+    if (!(Find $ident $id 'ComparePiButton').Current.IsEnabled) { throw 'Cible documentée inaccessible.' }
+    Select-Option $ident 'ResponseProfile' 'SIMC*'
+    if ($target.Current.Value -ne '' -or (Find $ident $id 'ComparePiButton').Current.IsEnabled) {
+        throw 'La cible personnalisée a été conservée comme recommandation SIMC.'
+    }
+    Write-Output 'Retard positif inférieur au pas de mesure : recommandation SIMC indisponible.'
     Write-Output 'Comparaison FOPDT/SOPDT acceptée et relue depuis une nouvelle fenêtre.'
     Select-Option $ident 'StudyList' 'SOPDT*'
-    Fill $ident 'SopdtResponse' '2'
+    $target = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    $initial = [double]::Parse($target.Current.Value)
+    if (!$target.Current.IsReadOnly -or $initial -le 0) { throw 'Cible initiale invalide.' }
+    Press $ident 'Calculer le PID SIMC'
+    $null = Find $ident $name 'Réglage PID théorique affiché.'
+    $fit = (Find $ident $id 'FitReport').Current.Name
+    $delayLabel = 'θ = ' + $initial.ToString('G5') + ' s'
+    if (!$fit.Contains($delayLabel)) { throw "La cible SIMC diffère du retard identifié. $fit" }
+    Select-Option $ident 'ResponseProfile' 'Personnalisée'
+    foreach ($invalid in @('', '0', '-1', 'abc')) {
+        Fill $ident 'ResponseTarget' $invalid
+        if ((Find $ident $id 'CalculatePidButton').Current.IsEnabled) { throw "Calcul PID actif avec la cible '$invalid'." }
+        if ((Find $ident $id 'SopdtReport').Current.Name) { throw 'Ancien résultat PID encore affiché.' }
+    }
+    Fill $ident 'ResponseTarget' '2'
     Press $ident 'Calculer le PID SIMC'
     $null = Find $ident $name 'Réglage PID théorique affiché.'
     $report = (Find $ident $id 'SopdtReport').Current.Name
@@ -149,11 +239,51 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     } until ($option.Current.Name -like "*$study" -or $option.Current.AutomationId -like "$study*")
     $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
-    Press $ident 'Simuler en boucle fermée…'
+    Press $ident 'Simuler le réglage enregistré…'
     $sim = Find $root $name 'MKR — Simulation PI'
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
         Fill $sim $entry.Key $entry.Value
     }
+    Fill $sim 'Rate' '0.5'
+    Press $sim 'Simuler et enregistrer'
+    $null = Find $sim $name 'Simulation enregistrée.'
+    Fill $sim 'Setpoint' '3'
+    $report = (Find $sim $id 'Report').Current.Name
+    if (!$report.Contains('ΔSP 1 bar') -or !$report.Contains('durée 10 s')) { throw "Scénario enregistré ambigu. $report" }
+    Press $sim 'Exporter les séries enregistrées…'
+    $dialog = Find $root $name 'Exporter les séries enregistrées'
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }
+    if ($report -notmatch 'Simulation enregistrée ([0-9a-f]{8})') { throw 'Identifiant de simulation absent.' }
+    $mask = "MKR-$($Matches[1])*.csv"
+    $save = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
+    if ($save -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($save, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Bouton Enregistrer inaccessible.'
+    }
+    $null = Find $sim $name 'Séries simulées exportées.'
+    $folders = @([Environment]::GetFolderPath('MyDocuments'), $Fixture, (Get-Location).Path,
+        (Split-Path -Parent $start.FileName)) | Select-Object -Unique
+    $files = @(foreach ($folder in $folders) {
+        Get-ChildItem -LiteralPath $folder -Filter $mask -File
+    })
+    if ($files.Count -ne 1) { throw "Export introuvable ou ambigu : $mask" }
+    $series = @(Import-Csv -LiteralPath $files[0].FullName)
+    if ($series.Count -lt 2 -or @($series | Where-Object { $_.sp_delta -ne '1' }).Count -gt 0) {
+        throw 'Les séries exportées doivent reprendre la consigne du scénario enregistré.'
+    }
+    Fill $sim 'Rate' '2'
+    Press $sim 'Fiche de mise au point (PDF)…'
+    $dialog = Find $root $name 'Exporter la fiche enregistrée'
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue PDF hors du processus MKR.' }
+    $save = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
+    if ($save -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($save, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) {
+        throw 'Bouton Enregistrer le PDF inaccessible.'
+    }
+    $null = Find $sim $name 'Fiche de mise au point exportée.'
+    $pdfPath = [IO.Path]::ChangeExtension($files[0].FullName, '.pdf')
+    python -X utf8 (Join-Path $PSScriptRoot 'verify_study_pdf.py') $pdfPath
+    if ($LASTEXITCODE -ne 0) { throw 'La relecture du PDF a échoué.' }
+    Fill $sim 'Rate' ''
+    Fill $sim 'Setpoint' '1'
     Press $sim 'Tester le transfert'
     $status = Find $sim $id 'Message'
     $until = [DateTime]::UtcNow.AddSeconds(25)

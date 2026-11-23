@@ -54,10 +54,20 @@ public partial class IdentificationWindow : Window
     {
         try
         {
-            var columns = source.SelectedItem is ImportSummary item ? _workspace.Columns(item) : [];
-            time.ItemsSource = mv.ItemsSource = pv.ItemsSource = columns;
-            time.SelectedIndex = mv.SelectedIndex = pv.SelectedIndex = -1;
             Confirmed.IsChecked = false;
+            var saved = source.SelectedItem is ImportSummary item ? _workspace.ReadSource(item) : null;
+            var mapping = saved?.Mapping;
+            var acquisition = saved?.Acquisition?.Source;
+            time.ItemsSource = mv.ItemsSource = pv.ItemsSource = saved?.Result.Headers;
+            time.SelectedItem = mapping?.TimeColumn;
+            mv.SelectedItem = acquisition is not null ? "MV" : mapping?.Role == "MV" ? mapping.ValueColumn : null;
+            pv.SelectedItem = acquisition is not null ? "PV" : mapping?.Role == "PV" ? mapping.ValueColumn : null;
+            time.IsEnabled = mv.IsEnabled = pv.IsEnabled = acquisition is null;
+            if (source == TrainingSource)
+            {
+                MvUnit.Text = acquisition?.CommandUnit ?? (mapping?.Role == "MV" ? mapping.Unit : "");
+                PvUnit.Text = acquisition?.ProcessUnit ?? (mapping?.Role == "PV" ? mapping.Unit : "");
+            }
         }
         catch (Exception error) { ShowError(error); }
     }
@@ -222,9 +232,11 @@ public partial class IdentificationWindow : Window
         OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtPanel.Visibility = _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
-        SopdtResponse.Clear();
+        TargetPanel.Visibility = _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
+            ? Visibility.Visible : Visibility.Collapsed;
+        ResponseProfile.SelectedIndex = 0;
+        UpdateResponseTarget();
         PiList.ItemsSource = null;
-        PiResponse.Clear();
         PiReport.Text = "";
         if (_shown is { Family: ModelFamily.FOPDT } model)
         {
@@ -291,15 +303,52 @@ public partial class IdentificationWindow : Window
         DrawPlot();
     }
 
+    private void ChangeResponseProfile(object sender, SelectionChangedEventArgs args) => UpdateResponseTarget();
+
+    private void ResponseTargetChanged(object sender, TextChangedEventArgs args)
+    {
+        bool hasTarget = ReadTolerance(ResponseTarget, out _);
+        ComparePiButton.IsEnabled = CalculatePidButton.IsEnabled = hasTarget;
+        if (SopdtReport is not null && SopdtReport.Text.Length > 0)
+        {
+            SopdtReport.Text = "";
+            Message.Text = "";
+        }
+    }
+
+    private void UpdateResponseTarget()
+    {
+        if (_shown is null || TargetPanel.Visibility != Visibility.Visible)
+            return;
+
+        var model = _shown.Result;
+        ResponseTarget.IsReadOnly = ResponseProfile.SelectedIndex == 0;
+        if (!ResponseTarget.IsReadOnly)
+        {
+            TargetHelp.Text = "Saisissez la cible définie pour cette étude, en secondes.";
+            return;
+        }
+
+        if (model.DelaySeconds <= 0 || model.Warnings.Contains("delay_resolution"))
+        {
+            ResponseTarget.Clear();
+            TargetHelp.Text = "Retard nul ou mal résolu par les mesures. Affinez l’identification du retard ou choisissez Personnalisée si l’étude impose une cible.";
+            return;
+        }
+
+        ResponseTarget.Text = model.DelaySeconds.ToString("R", CultureInfo.CurrentCulture);
+        TargetHelp.Text = "SIMC, Skogestad (2003) · Pour explorer une réponse rapide, τc = retard du modèle. Vérifiez en simulation le temps obtenu et l’effort de commande.";
+    }
+
     private async void CalculateSopdt(object sender, RoutedEventArgs args)
     {
         SopdtReport.Text = "";
-        if (_shown is not { Family: ModelFamily.SOPDT } model || !ReadTolerance(SopdtResponse, out var seconds))
+        if (_shown is not { Family: ModelFamily.SOPDT } model || !ReadTolerance(ResponseTarget, out var seconds))
         {
             Message.Text = "Indiquez un temps de réponse strictement positif en secondes.";
             return;
         }
-        Form.IsEnabled = SopdtPanel.IsEnabled = false;
+        Form.IsEnabled = TargetPanel.IsEnabled = SopdtPanel.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -316,17 +365,17 @@ public partial class IdentificationWindow : Window
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = SopdtPanel.IsEnabled = true; }
+        finally { Form.IsEnabled = TargetPanel.IsEnabled = SopdtPanel.IsEnabled = true; }
     }
 
     private async void CalculatePi(object sender, RoutedEventArgs args)
     {
-        if (_shown is not { Family: ModelFamily.FOPDT } model || !ReadTolerance(PiResponse, out var seconds))
+        if (_shown is not { Family: ModelFamily.FOPDT } model || !ReadTolerance(ResponseTarget, out var seconds))
         {
             Message.Text = "Sélectionnez une étude FOPDT et indiquez un temps de réponse strictement positif en secondes.";
             return;
         }
-        Form.IsEnabled = PiPanel.IsEnabled = false;
+        Form.IsEnabled = TargetPanel.IsEnabled = PiPanel.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -338,7 +387,7 @@ public partial class IdentificationWindow : Window
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = PiPanel.IsEnabled = true; }
+        finally { Form.IsEnabled = TargetPanel.IsEnabled = PiPanel.IsEnabled = true; }
     }
 
     private void OpenLoop(object sender, RoutedEventArgs args)
@@ -363,6 +412,7 @@ public partial class IdentificationWindow : Window
 
     private void ShowPi(object sender, SelectionChangedEventArgs args)
     {
+        SimulateSavedPi.IsEnabled = PiList.SelectedItem is PiStudy;
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
         {
             PiReport.Text = "";
@@ -374,7 +424,7 @@ public partial class IdentificationWindow : Window
             $"Kp = {settings.Kp:G5} {ratio}, Ti = {settings.TiSeconds:G5} s, Ki parallèle = {settings.ParallelKi:G5} {ratio}/s";
         var tight = result.Warnings.Contains("tight_response")
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
-        PiReport.Text = $"Cible : {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
+        PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
             $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
             "Forme idéale continue, e = SP − PV. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
@@ -490,7 +540,7 @@ public partial class IdentificationWindow : Window
             "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
             "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
             "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints.",
-            "fit_step" => "Il faut un seul échelon MV et deux plateaux dans la tolérance déclarée.",
+            "fit_step" => "Sélectionnez une plage qui montre la commande avant et après un seul changement de niveau. Si la commande est déjà au nouveau niveau à la première mesure, utilisez un enregistrement qui commence avant le changement. Vérifiez aussi la stabilité des deux plateaux dans la tolérance déclarée.",
             "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
             "fit_response" => "La variation de PV ne suffit pas pour estimer un modèle.",
             "fit_amplitude" => "Les amplitudes absolues des échelons doivent rester dans un rapport de 0,5 à 2.",

@@ -13,11 +13,12 @@ public static class StudySheet
 
     public static void Export(string path, string project, IdentificationStudy model, PiStudy pi,
         PiSimulationStudy sim, ImportSummary training, ImportSummary validation, IReadOnlyList<ReviewEvent> reviews,
-        AcquisitionOrigin? trainingOrigin = null, AcquisitionOrigin? validationOrigin = null)
+        AcquisitionOrigin? trainingOrigin = null, AcquisitionOrigin? validationOrigin = null, LoopBrief? loop = null)
     {
         if (model.Id != pi.ModelId || pi.Id != sim.PiId || training.Id != model.TrainingId ||
             validation.Id != model.ValidationId)
             throw new InvalidDataException("Les résultats proviennent de plusieurs études.");
+        SimulationExportValidation.CheckSeries(sim);
         if (OperatingSystem.IsWindows()) GlobalFontSettings.UseWindowsFontsUnderWindows = true;
         var doc = new Document();
         doc.Info.Title = "MKR — Fiche de mise au point";
@@ -31,12 +32,34 @@ public static class StudySheet
         section.AddParagraph("Fiche de mise au point", "Heading1");
         Line(project);
         Line($"Simulation enregistrée le {sim.CalculatedAt:yyyy-MM-dd HH:mm:ss zzz}");
+        if (loop is not null)
+        {
+            var fields = new[] {
+                ("Repère", loop.Tag), ("Grandeur régulée", loop.ControlledQuantity),
+                ("Point de fonctionnement", loop.OperatingPoint), ("Objectif", loop.Objective),
+                ("Description", loop.Description)
+            };
+            if (fields.Any(field => !string.IsNullOrWhiteSpace(field.Item2)))
+            {
+                Heading("Fiche de boucle du projet au moment de l’export");
+                foreach (var (label, value) in fields)
+                    if (!string.IsNullOrWhiteSpace(value)) Line($"{label} : {value}");
+            }
+        }
         Heading("Modèle et essais");
         Line($"{model.Family} · gain {N(model.Result.Gain)} {model.PvUnit}/{model.MvUnit} · constante de temps {N(model.Result.TauSeconds)} s · retard {N(model.Result.DelaySeconds)} s");
-        Line($"Racine de l’erreur quadratique moyenne (RMSE) sur validation indépendante : {N(model.Result.Validation.Rmse)} {model.PvUnit}.");
-        foreach (var (label, source, origin) in new[] { ("Estimation", training, trainingOrigin), ("Validation", validation, validationOrigin) })
+        foreach (var (label, source, origin, columns, window, fit) in new[]
+        {
+            ("Estimation", training, trainingOrigin, model.TrainingColumns, model.TrainingWindow, model.Result.Training),
+            ("Validation", validation, validationOrigin, model.ValidationColumns, model.ValidationWindow, model.Result.Validation)
+        })
         {
             Line($"{label} · {source.FileName}");
+            Line($"Temps : {columns.TimeColumn} · commande MV : {columns.MvColumn} · mesure PV : {columns.PvColumn}");
+            var range = window is null ? "fichier complet"
+                : $"indices {window.RowStart} à {window.RowEnd} inclus (première donnée = 0, en-tête exclu)";
+            Line($"Plage utilisée : {range} · {fit.Samples} échantillons");
+            Line($"RMSE : {N(fit.Rmse)} {model.PvUnit} · erreur absolue moyenne : {N(fit.Mae)} {model.PvUnit}");
             if (origin is not null)
                 Line($"Modbus TCP · unité {origin.Source.UnitId} · offset {origin.Source.FirstRegister} · " +
                      $"pause {origin.Source.IntervalMs} ms · horodatage UTC de réception · fin {origin.StopReason}");
@@ -63,6 +86,9 @@ public static class StudySheet
         var scenario = sim.Scenario;
         Line($"Consigne en écart {N(scenario.Setpoint)} {model.PvUnit} · pas {N(scenario.SampleSeconds)} s · durée {N(scenario.DurationSeconds)} s.");
         Line($"Bornes de commande {N(scenario.MinimumMv)} à {N(scenario.MaximumMv)} {model.MvUnit} · perturbation {N(scenario.Disturbance)} {model.MvUnit} à {N(scenario.DisturbanceAtSeconds)} s.");
+        Line(scenario.MaximumMvRate is { } rate
+            ? $"Vitesse maximale de commande {N(rate)} {model.MvUnit}/s."
+            : "Aucune limite de vitesse de commande configurée.");
         Heading("Bloc et mise au point");
         Line("Correspondance constructeur non établie dans cette étude. La CPU, la version de bibliothèque, le sens d’action, les unités et les limites du bloc restent à vérifier sur banc.");
         Heading("Traçabilité");
@@ -78,11 +104,36 @@ public static class StudySheet
         var renderer = new PdfDocumentRenderer { Document = doc };
         renderer.RenderDocument();
         using var pdf = renderer.PdfDocument;
+        var validationPoints = model.Result.Validation.Points;
+        if (validationPoints is { Length: > 1 } && validationPoints[^1].Seconds > validationPoints[0].Seconds)
+        {
+            using var graph = XGraphics.FromPdfPage(pdf.AddPage());
+            var font = new XFont("Arial", 10);
+            graph.DrawString("Validation indépendante du modèle", new XFont("Arial", 16), XBrushes.Black, 44, 52);
+            graph.DrawString($"Modèle {model.Id}", font, XBrushes.Black, 44, 74);
+            graph.DrawString("Mesure observée (bleu) et prédiction (orange pointillé)", font, XBrushes.Black, 44, 100);
+            var low = validationPoints.Min(p => Math.Min(p.Observed, p.Predicted));
+            var high = validationPoints.Max(p => Math.Max(p.Observed, p.Predicted));
+            var first = validationPoints[0].Seconds;
+            var last = validationPoints[^1].Seconds;
+            graph.DrawString($"PV ({model.PvUnit}) · min {N(low)} · max {N(high)}", font, XBrushes.Black, 44, 134);
+            graph.DrawRectangle(XPens.Gray, 44, 148, 490, 250);
+            XPoint Position(double seconds, double value) => new(
+                44 + 490 * ((seconds - first) / (last - first)),
+                high == low ? 273 : 398 - 250 * ((value - low) / (high - low)));
+            graph.DrawLines(new XPen(XColors.SteelBlue, 1.5),
+                validationPoints.Select(p => Position(p.Seconds, p.Observed)).ToArray());
+            var predictionPen = new XPen(XColors.DarkOrange, 1.2) { DashStyle = XDashStyle.Dash };
+            graph.DrawLines(predictionPen, validationPoints.Select(p => Position(p.Seconds, p.Predicted)).ToArray());
+            graph.DrawString($"Temps : {N(first)} à {N(last)} s", font, XBrushes.Black, 44, 420);
+            graph.DrawString($"RMSE : {N(model.Result.Validation.Rmse)} {model.PvUnit}", font, XBrushes.Black, 44, 446);
+        }
         var page = pdf.AddPage();
         using (var g = XGraphics.FromPdfPage(page))
         {
             var font = new XFont("Arial", 10);
             g.DrawString("Réponses simulées · IMC (bleu) et SIMC (orange)", new XFont("Arial", 16), XBrushes.Black, 44, 52);
+            g.DrawString($"Simulation {sim.Id}", font, XBrushes.Black, 44, 74);
             void Plot(string label, Func<SimulationPoint, double?> field, double top)
             {
                 var curves = new[] { sim.Result.Imc.Points, sim.Result.Simc.Points };

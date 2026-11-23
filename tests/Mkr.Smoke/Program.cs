@@ -71,6 +71,11 @@ try
     Require(migrated.List().Single().Id == project.Id && migrated.ReadDescription(project.Id) == "",
         "Migration from schema v1 preserves the original project.");
     migrated.SaveDescription(project.Id, "Procédé d’essai");
+    var brief = migrated.ReadLoopBrief(project.Id);
+    Require(brief == new LoopBrief("", "", "", "", "Procédé d’essai"), "Legacy description remains available.");
+    brief = brief with { Tag = "PIC-101", ControlledQuantity = "Pression", OperatingPoint = "4 bar", Objective = "Tenir la pression aval" };
+    migrated.SaveLoopBrief(project.Id, brief);
+    Require(new SqliteProjectStore(legacyPath).ReadLoopBrief(project.Id) == brief, "Loop definition survives reopening.");
     var raw = Encoding.UTF8.GetBytes("t;mesure\r\n2025-01-01T00:00:00Z;2\r\n2025-01-01T00:00:01Z;4\r\n");
     var preview = await engine.InspectAsync(raw, ";", default);
     Require(preview.RowCount == 2 && preview.Quality is null, "CSV inspection returns unmodified fields.");
@@ -92,14 +97,14 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
-    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT)
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5, int secondsPerSample = 1)
     {
         var csv = new StringBuilder("timestamp;mv;pv\n");
         var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
         for (var i = 0; i < 60; i++)
         {
             var t = i - 6;
-            var x = Math.Max(0, t - 2.5);
+            var x = Math.Max(0, t - delaySeconds / secondsPerSample);
             var response = family switch
             {
                 ModelFamily.SOPDT => 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3,
@@ -107,7 +112,7 @@ try
                 _ => 1 - Math.Exp(-x / 4)
             };
             var y = 8 - 3 * amplitude * response;
-            csv.Append(FormattableString.Invariant($"{start.AddSeconds(i):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
+            csv.Append(FormattableString.Invariant($"{start.AddSeconds(i * secondsPerSample):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
         }
 
         // The CSV parser accepts up to six fractional digits; use an exact seconds representation.
@@ -144,6 +149,10 @@ try
         v3.Open();
         using var command = v3.CreateCommand();
         command.CommandText = """
+            ALTER TABLE projects DROP COLUMN loop_tag;
+            ALTER TABLE projects DROP COLUMN controlled_quantity;
+            ALTER TABLE projects DROP COLUMN operating_point;
+            ALTER TABLE projects DROP COLUMN control_objective;
             DROP TABLE study_reviews;
             DROP TABLE pi_simulations;
             DROP TABLE pi_studies;
@@ -295,11 +304,56 @@ try
         reopenedSimulation.Result.Imc.SetpointResponse == simulation.Imc.SetpointResponse &&
         restored.ListSimulations(Guid.NewGuid(), piStudy.Id).Count == 0, "Simulation series and scenario persist with provenance.");
 
+    var csvPath = Path.Combine(directory.FullName, "series.csv");
+    SimulationCsv.Export(csvPath, reopenedSimulation);
+    var savedBytes = File.ReadAllBytes(csvPath);
+    var shiftedPoints = simulation.Simc.Points.ToArray();
+    shiftedPoints[^1] = shiftedPoints[^1] with { Seconds = shiftedPoints[^1].Seconds + 1 };
+    foreach (var invalidPoints in new[] { shiftedPoints, shiftedPoints[..^1] })
+    {
+        var invalidStudy = simulationStudy with
+        {
+            Result = simulation with { Simc = simulation.Simc with { Points = invalidPoints } }
+        };
+        Throws<InvalidDataException>(() => SimulationCsv.Export(csvPath, invalidStudy));
+        Require(File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Failed series export preserves the existing CSV.");
+    }
+    using (File.Open(csvPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+    {
+        try
+        {
+            SimulationCsv.Export(csvPath, reopenedSimulation);
+            throw new InvalidOperationException("A locked Windows destination must reject replacement.");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+    }
+    Require(!Directory.EnumerateFiles(directory.FullName, ".*.tmp").Any() &&
+        File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Locked destination preserves the original and releases staging files.");
+    SimulationCsv.Export(csvPath, reopenedSimulation);
+    Require(File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Export succeeds on retry after unlocking.");
     var sheetPath = Path.Combine(directory.FullName, "study.pdf");
     StudySheet.Export(sheetPath, project.Name, study, reopenedPi, reopenedSimulation,
         training.Summary, validation.Summary, Array.Empty<ReviewEvent>());
     using (var sheet = PdfSharp.Pdf.IO.PdfReader.Open(sheetPath, PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
         Require(sheet.PageCount >= 2, "A reopened saved simulation produces a readable multipage study PDF.");
+    var originalSheet = File.ReadAllBytes(sheetPath);
+    var duplicatedImc = simulation.Imc.Points.ToArray();
+    var duplicatedSimc = simulation.Simc.Points.ToArray();
+    duplicatedImc[^1] = duplicatedImc[^1] with { Seconds = duplicatedImc[^2].Seconds };
+    duplicatedSimc[^1] = duplicatedSimc[^1] with { Seconds = duplicatedSimc[^2].Seconds };
+    var duplicateStudy = simulationStudy with
+    {
+        Result = simulation with
+        {
+            Imc = simulation.Imc with { Points = duplicatedImc },
+            Simc = simulation.Simc with { Points = duplicatedSimc }
+        }
+    };
+    Throws<InvalidDataException>(() => SimulationCsv.Export(csvPath, duplicateStudy));
+    Throws<InvalidDataException>(() => StudySheet.Export(sheetPath, project.Name, study, reopenedPi,
+        duplicateStudy, training.Summary, validation.Summary, Array.Empty<ReviewEvent>()));
+    Require(File.ReadAllBytes(sheetPath).SequenceEqual(originalSheet) &&
+        File.ReadAllBytes(csvPath).SequenceEqual(savedBytes), "Duplicate timestamps preserve both previous exports.");
     var artifact = Environment.GetEnvironmentVariable("MKR_SAMPLE_PDF");
     if (!string.IsNullOrWhiteSpace(artifact)) File.Copy(sheetPath, artifact, overwrite: true);
 
@@ -410,7 +464,31 @@ try
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {
+        var rapidTraining = await SaveStepAsync(7, 2, delaySeconds: 0.5);
+        var rapidValidation = await SaveStepAsync(8, -1.5, delaySeconds: 0.5);
+        var (rapidFit, rapidVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+            new StepImport(rapidTraining, columns), new StepImport(rapidValidation, columns), 0.01, 0.01, default);
+        Require(rapidFit.DelaySeconds > 0 && rapidFit.DelaySeconds < 1 && rapidFit.Warnings.Contains("delay_resolution"),
+            "A positive half-sample delay must raise the resolution warning.");
+        var rapidStudy = new IdentificationStudy(Guid.NewGuid(), rapidTraining.Summary.Id, rapidValidation.Summary.Id,
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, rapidVersion, rapidFit);
+        restored.SaveStudy(project.Id, rapidStudy);
         Directory.CreateDirectory(fixture);
+        File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
+        const double transportDelay = 34 * 60;
+        const int samplePeriod = 90;
+        var transportTraining = await SaveStepAsync(9, 2, delaySeconds: transportDelay, secondsPerSample: samplePeriod);
+        var transportValidation = await SaveStepAsync(10, -1.5, delaySeconds: transportDelay, secondsPerSample: samplePeriod);
+        var (transportFit, transportVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+            new StepImport(transportTraining, columns), new StepImport(transportValidation, columns), 0.01, 0.01, default);
+        Require(Math.Abs(transportFit.DelaySeconds - transportDelay) < 0.01 &&
+            transportFit.TauSeconds is { } transportTau && Math.Abs(transportTau - 4 * samplePeriod) < 0.01 &&
+            Math.Abs(transportFit.Gain + 3) < 1e-5 && transportFit.Validation.Rmse < 1e-5 &&
+            !transportFit.Warnings.Contains("delay_resolution"), "Long fractional-sample delay and holdout response.");
+        var transportStudy = new IdentificationStudy(Guid.NewGuid(), transportTraining.Summary.Id, transportValidation.Summary.Id,
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, transportVersion, transportFit);
+        restored.SaveStudy(project.Id, transportStudy);
+        File.WriteAllText(Path.Combine(fixture, "transport-study.txt"), transportStudy.Id.ToString()[..8]);
         using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false }.ToString());
         using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
         {

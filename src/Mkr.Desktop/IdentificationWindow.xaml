@@ -132,12 +132,24 @@
                 </Border>
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <GroupBox x:Name="TargetPanel" Header="Comportement souhaité" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Label Content="Réponse" Target="{Binding ElementName=ResponseProfile}"/>
+                            <ComboBox x:Name="ResponseProfile" SelectionChanged="ChangeResponseProfile" Width="180">
+                                <ComboBoxItem Content="SIMC · réponse rapide"/>
+                                <ComboBoxItem Content="Personnalisée"/>
+                            </ComboBox>
+                            <Label Content="Cible de calcul (s)" Target="{Binding ElementName=ResponseTarget}"/>
+                            <TextBox x:Name="ResponseTarget" TextChanged="ResponseTargetChanged" Width="100"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="TargetHelp" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </GroupBox>
                 <GroupBox x:Name="SopdtPanel" Header="Réglage PID théorique · SIMC" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
-                            <Label Content="Temps de réponse choisi (s)" Target="{Binding ElementName=SopdtResponse}"/>
-                            <TextBox x:Name="SopdtResponse" Width="80"/>
-                            <Button Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
+                            <Button x:Name="CalculatePidButton" IsEnabled="False" Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
                         </WrapPanel>
                         <TextBlock x:Name="SopdtReport" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
                     </StackPanel>
@@ -145,14 +157,12 @@
                 <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
-                            <Label Content="_Temps de réponse choisi (s)" Target="{Binding ElementName=PiResponse}" />
-                            <TextBox x:Name="PiResponse" Width="80" />
-                            <Button Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
+                            <Button x:Name="ComparePiButton" IsEnabled="False" Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
                             <Label Content="Réglages enregistrés" Target="{Binding ElementName=PiList}" />
                             <ComboBox x:Name="PiList" Width="245" DisplayMemberPath="Label" SelectionChanged="ShowPi" />
-                            <Button Content="Simuler en boucle _fermée…" Click="OpenSimulation" Margin="8,0,0,0" />
+                            <Button x:Name="SimulateSavedPi" IsEnabled="False" Content="Simuler le réglage _enregistré…" Click="OpenSimulation" Margin="8,0,0,0" />
                         </WrapPanel>
                         <TextBlock x:Name="PiReport" TextWrapping="Wrap" Margin="0,8,0,0" />
                     </StackPanel>

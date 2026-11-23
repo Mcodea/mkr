@@ -27,13 +27,13 @@
                             AutomationProperties.Name="Ouvrir le catalogue des blocs"/>
                     <TextBlock Text="PARCOURS D'INGÉNIERIE" Foreground="#AEC4DD" FontSize="10"
                                FontWeight="SemiBold" Margin="2,28,0,13"/>
-                    <TextBlock Text="01   Projet et procédé" Foreground="White" Margin="2,0,0,13"/>
-                    <TextBlock Text="02   Données et qualité" Foreground="#C6D7EA" Margin="2,0,0,13"/>
+                    <TextBlock Text="01   Boucle et objectif" Foreground="White" Margin="2,0,0,13"/>
+                    <TextBlock Text="02   Acquisition et qualité" Foreground="#C6D7EA" Margin="2,0,0,13"/>
                     <TextBlock Text="03   Identification" Foreground="#C6D7EA" Margin="2,0,0,13"/>
                     <TextBlock Text="04   Réglage et simulation" Foreground="#C6D7EA" Margin="2,0,0,13"
                                TextWrapping="Wrap"/>
-                    <TextBlock Text="Étapes accessibles depuis un projet selon les fonctions disponibles."
-                               Foreground="#AEC4DD" FontSize="11" TextWrapping="Wrap" Margin="2,16,2,0"/>
+                    <TextBlock Text="05   Préparation des essais sur banc" Foreground="#C6D7EA" TextWrapping="Wrap" Margin="2,0,0,13"/>
+                    <TextBlock Text="06   Fiche et séries enregistrées" Foreground="#C6D7EA" TextWrapping="Wrap" Margin="2,0,0,13"/>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" Text="MKR  ·  Application Windows"
                            Foreground="#AEC4DD" FontSize="11"/>

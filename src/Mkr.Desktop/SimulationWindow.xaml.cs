@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Text;
+using Mkr.Infrastructure;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -256,7 +256,9 @@ public partial class SimulationWindow : Window
             "delay_beyond_horizon" => "Le retard atteint ou dépasse l’horizon du scénario.",
             _ => "Simulation exploratoire sur modèle nominal."
         });
-        Report.Text = $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
+        Report.Text = $"Simulation enregistrée {simulation.Id.ToString()[..8]} · durée {input.DurationSeconds:G6} s · " +
+            $"ΔSP {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
+            $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
             $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
             $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
@@ -376,7 +378,7 @@ public partial class SimulationWindow : Window
     private void ExportSheet(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } simulation) return;
-        var dialog = new SaveFileDialog { FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
+        var dialog = new SaveFileDialog { Title = "Exporter la fiche enregistrée", FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
@@ -394,17 +396,19 @@ public partial class SimulationWindow : Window
     {
         if (_shown is not { } simulation)
             return;
-        var dialog = new SaveFileDialog { FileName = "mkr-simulation-pi.csv", Filter = "CSV (*.csv)|*.csv" };
+        var dialog = new SaveFileDialog { Title = "Exporter les séries enregistrées", FileName = $"MKR-{simulation.Id:N}.csv", Filter = "CSV (*.csv)|*.csv" };
         if (dialog.ShowDialog(this) != true)
             return;
         try
         {
-            var csv = new StringBuilder("time_s,sp_delta,imc_pv,imc_cv,imc_mv,simc_pv,simc_cv,simc_mv,disturbance_mv\r\n");
-            foreach (var (imc, simc) in simulation.Result.Imc.Points.Zip(simulation.Result.Simc.Points))
-                csv.Append(FormattableString.Invariant(
-                    $"{imc.Seconds:G17},{simulation.Scenario.Setpoint:G17},{imc.Pv:G17},{imc.Cv:G17},{imc.Mv:G17},{simc.Pv:G17},{simc.Cv:G17},{simc.Mv:G17},{imc.Disturbance:G17}\r\n"));
-            File.WriteAllText(dialog.FileName, csv.ToString(), new UTF8Encoding(false));
+            SimulationCsv.Export(dialog.FileName, simulation);
             Message.Text = "Séries simulées exportées.";
+        }
+        catch (InvalidDataException error) { Message.Text = error.Message; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            Trace.TraceError("csv.export {0}", error.GetType().Name);
+            Message.Text = "Écriture du CSV impossible. Vérifiez le dossier et si le fichier est ouvert.";
         }
         catch (Exception error) { ShowError(error); }
     }
