@@ -157,6 +157,13 @@ public partial class IdentificationWindow : Window
             return;
         }
 
+        // Validation criteria are mandatory for every estimate, not only for the comparison (audit NC-02).
+        if (!ReadTolerance(MaximumRmse, out var rmse) || !ReadTolerance(MaximumLag, out var lag) || lag > 1)
+        {
+            Message.Text = "Indiquez les critères de validation : une RMSE maximale positive en unité PV et une limite de corrélation supérieure à 0 et inférieure ou égale à 1.";
+            return;
+        }
+        var criteria = new ComparisonCriteria(rmse, lag);
         Form.IsEnabled = false;
         Message.Text = "Estimation et évaluation…";
         var token = _lifetime.Token;
@@ -165,11 +172,6 @@ public partial class IdentificationWindow : Window
             ModelComparison? accepted = null;
             if (sender == CompareModels)
             {
-                if (!ReadTolerance(MaximumRmse, out var rmse) || !ReadTolerance(MaximumLag, out var lag) || lag > 1)
-                {
-                    Message.Text = "Indiquez une RMSE maximale positive en unité PV et une limite de corrélation supérieure à 0 et inférieure ou égale à 1.";
-                    return;
-                }
                 var comparison = await _workspace.CompareAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
                     mvTolerance, pvTolerance, rmse, lag, token, _trainingSelection?.Window, _validationSelection?.Window);
                 token.ThrowIfCancellationRequested();
@@ -194,32 +196,39 @@ public partial class IdentificationWindow : Window
                 accepted = comparison;
             }
             var study = await _workspace.CalculateAsync(family, training, trainColumns, validation, valColumns,
-                mvUnit, pvUnit, mvTolerance, pvTolerance, token,
+                mvUnit, pvUnit, mvTolerance, pvTolerance, criteria, token,
                 _trainingSelection?.Window, _validationSelection?.Window, accepted);
             var studies = _workspace.Studies();
             StudyList.ItemsSource = studies;
             StudyList.SelectedItem = studies.First(item => item.Id == study.Id);
-            Message.Text = "Étude exploratoire enregistrée.";
+            Message.Text = study.IsAcceptedForTuning
+                ? "Étude exploratoire enregistrée."
+                : "Étude enregistrée mais refusée à la validation indépendante : " +
+                  string.Join(", ", study.Assessment!.Reasons.Select(ReasonText)) +
+                  ". Aucun réglage ne peut en être déduit.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
         finally { Form.IsEnabled = true; }
     }
 
+    private static string ReasonText(string reason) => reason switch
+    {
+        "validation_rmse" => "erreur de validation excessive",
+        "validation_residuals" => "corrélation résiduelle excessive ou indéterminée",
+        "parameter_bound" => "paramètre en borne",
+        "short_horizon" => "durée d’essai insuffisante",
+        "fast_pole_resolution" => "pôle rapide mal résolu",
+        "ill_conditioned" => "estimation mal conditionnée",
+        "integrator_validation_tail" => "essai de validation non intégrant",
+        _ => reason
+    };
+
     private static IEnumerable<string> CandidateLines(ModelComparison comparison, string pvUnit)
     {
         foreach (var (name, candidate) in comparison.Candidates)
         {
-            var reasons = candidate.RejectionReasons.Select(reason => reason switch
-            {
-                "validation_rmse" => "erreur de validation excessive",
-                "validation_residuals" => "corrélation résiduelle excessive ou indéterminée",
-                "parameter_bound" => "paramètre en borne",
-                "short_horizon" => "durée d’essai insuffisante",
-                "fast_pole_resolution" => "pôle rapide mal résolu",
-                "ill_conditioned" => "estimation mal conditionnée",
-                _ => reason
-            });
+            var reasons = candidate.RejectionReasons.Select(ReasonText);
             yield return $"{name} · RMSE {candidate.ValidationRmse:G5} {pvUnit} · r₁ {candidate.ValidationResidualLagOne?.ToString("G4") ?? "indéterminé"} · " +
                 (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", reasons));
         }
@@ -229,16 +238,19 @@ public partial class IdentificationWindow : Window
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
         _plotFrom = _plotTo = _dragStartX = null;
-        OpenLoopButton.Visibility = PiPanel.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
-        SopdtPanel.Visibility = _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
+        // Tuning panels exist only for a model accepted on its independent validation trial (NC-02).
+        bool tunable = _shown?.IsAcceptedForTuning == true;
+        OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        PiPanel.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        SopdtPanel.Visibility = tunable && _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
-        TargetPanel.Visibility = _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
+        TargetPanel.Visibility = tunable && _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
             ? Visibility.Visible : Visibility.Collapsed;
         ResponseProfile.SelectedIndex = 0;
         UpdateResponseTarget();
         PiList.ItemsSource = null;
         PiReport.Text = "";
-        if (_shown is { Family: ModelFamily.FOPDT } model)
+        if (_shown is { Family: ModelFamily.FOPDT } model && tunable)
         {
             try
             {
@@ -294,6 +306,12 @@ public partial class IdentificationWindow : Window
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
+        FitReport.Text += study.Assessment is { } decision
+            ? $"\nValidation indépendante · version {decision.AlgorithmVersion} · RMSE ≤ {decision.Criteria.MaximumRmse:G5} {study.PvUnit} · " +
+              $"|r₁| ≤ {decision.Criteria.MaximumResidualLagOne:G5} · " +
+              (decision.Accepted ? "modèle accepté" : "MODÈLE REFUSÉ : " + string.Join(", ", decision.Reasons.Select(ReasonText)) +
+                  ". Réglage et simulation en boucle fermée indisponibles.")
+            : study.IsAcceptedForTuning ? "" : "\nAucune décision de validation enregistrée : réglage indisponible. Refaites l’estimation avec des critères.";
         if (study.Comparison is { } saved)
         {
             FitReport.Text += $"\nComparaison enregistrée · version {saved.AlgorithmVersion} · modèle retenu {saved.Selected}\n" +

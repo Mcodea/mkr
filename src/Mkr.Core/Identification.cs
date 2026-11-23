@@ -25,10 +25,35 @@ public sealed record IdentificationResult(string AlgorithmVersion, double Gain, 
 public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid ValidationId, StepColumns TrainingColumns,
     StepColumns ValidationColumns, string MvUnit, string PvUnit, double MvTolerance, double PvTolerance,
     DateTimeOffset CalculatedAt, string EngineVersion, IdentificationResult Result, ModelFamily Family = ModelFamily.FOPDT,
-    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null, ModelComparison? Comparison = null)
+    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null, ModelComparison? Comparison = null,
+    ValidationAssessment? Assessment = null)
 {
-    public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}";
+    public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}" +
+        (IsAcceptedForTuning ? "" : " · refusée");
+
+    /// <summary>
+    /// True only when the independent validation trial satisfied declared criteria:
+    /// an explicit assessment, or (studies recorded before it existed) a comparison that selected this family.
+    /// Tuning and closed-loop simulation are refused otherwise (audit NC-02).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsAcceptedForTuning => Assessment is { } assessment
+        ? assessment.Accepted
+        : Comparison?.Selected == Family.ToString();
+
+    public void RequireAcceptedForTuning()
+    {
+        if (IsAcceptedForTuning) return;
+        throw new ModelNotAcceptedException(Assessment is { Reasons.Length: > 0 } a
+            ? $"Modèle refusé à la validation indépendante ({string.Join(", ", a.Reasons)}). Aucun réglage ni simulation en boucle fermée ne peut en être déduit."
+            : "Cette étude ne comporte aucune décision de validation indépendante. Refaites l’estimation avec des critères de validation.");
+    }
 }
+
+public sealed class ModelNotAcceptedException(string message) : InvalidOperationException(message);
+
+/// <summary>Decision of the validation gate (engine/validation_gate.py) for one identified model.</summary>
+public sealed record ValidationAssessment(string AlgorithmVersion, bool Accepted, string[] Reasons, ComparisonCriteria Criteria);
 
 public sealed record ModelCandidate(double ValidationRmse, double? ValidationResidualLagOne, string[] RejectionReasons);
 public sealed record ComparisonCriteria(double MaximumRmse, double MaximumResidualLagOne);
@@ -43,6 +68,11 @@ public interface IIdentificationEngine
     Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token);
     Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token);
+
+    /// <summary>Identifies the model and applies the validation gate on the independent trial.</summary>
+    Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsync(ModelFamily family,
+        StepImport training, StepImport validation, double mvTolerance, double pvTolerance,
+        ComparisonCriteria criteria, CancellationToken token);
 }
 
 public interface IIdentificationStore

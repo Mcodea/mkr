@@ -77,6 +77,14 @@ public static class StudySheet
                 Line($"{name} · RMSE {N(candidate.ValidationRmse)} {model.PvUnit} · r₁ {N(candidate.ValidationResidualLagOne)} · " +
                     (candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : string.Join(", ", candidate.RejectionReasons)));
         }
+        Heading("Décision de validation");
+        Line(model.Assessment is { } decision
+            ? $"Validation indépendante version {decision.AlgorithmVersion} · RMSE ≤ {N(decision.Criteria.MaximumRmse)} {model.PvUnit} · " +
+              $"|r₁| ≤ {N(decision.Criteria.MaximumResidualLagOne)} · " +
+              (decision.Accepted ? "modèle accepté." : "modèle refusé : " + string.Join(", ", decision.Reasons) + ".")
+            : model.Comparison?.Selected == model.Family.ToString()
+                ? "Modèle accepté par la comparaison FOPDT/SOPDT ci-dessus (étude antérieure à la décision explicite)."
+                : "AUCUN CRITÈRE DE VALIDATION N’A ÉTÉ APPLIQUÉ À CE MODÈLE. Les réglages ci-dessous ne sont pas utilisables.");
         Heading("Réglages PI génériques");
         Line($"Erreur = consigne − mesure. Cible de réponse {N(pi.Result.ResponseSeconds)} s.");
         foreach (var (label, coefficients, result) in new[] {

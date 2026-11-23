@@ -49,7 +49,7 @@ try
 
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
-    Require(await engine.GetVersionAsync(default) == "0.9.0", "Python round trip returns the expected version.");
+    Require(await engine.GetVersionAsync(default) == "0.10.0", "Python round trip returns the expected version.");
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -227,7 +227,7 @@ try
 
     var (openLoop, openLoopVersion) = await engine.SimulateOpenLoopAsync(persisted.Result,
         new OpenLoopScenario(1, 8, 4, 1, -2, 2, 1), default);
-    Require(openLoopVersion == "0.9.0" && openLoop.Points.Length == 9 &&
+    Require(openLoopVersion == "0.10.0" && openLoop.Points.Length == 9 &&
         openLoop.Points[0].AppliedMv == 0 && openLoop.Points[1].RequestedMv == 4 &&
         openLoop.Points[1].AppliedMv == 1 && openLoop.Points[2].AppliedMv == 2 && openLoop.Points[3].Pv == 0 &&
         Math.Abs(openLoop.Points[4].Pv - (-3 * (1 - Math.Exp(-0.5 / 4)))) < 1e-5 &&
@@ -461,6 +461,27 @@ try
     }
     catch (OperationCanceledException) { }
 
+    // NC-02: every estimate carries a validation decision; a refused model is kept but cannot be tuned.
+    var gate = new Mkr.Desktop.IdentificationWorkspace(project, restored, restored, engine, restored, engine, engine, engine);
+    var strict = new ComparisonCriteria(0.001, 0.5);
+    var refused = await gate.CalculateAsync(ModelFamily.FOPDT, trainingSecond.Summary, columns, validationSecond.Summary, columns,
+        "%", "bar", 0.01, 0.01, strict, default);
+    Require(refused.Assessment is { Accepted: false } decision && decision.Reasons.Contains("validation_rmse") &&
+        !refused.IsAcceptedForTuning && refused.Label.EndsWith("refusée"), "A first-order fit of a second-order holdout is refused.");
+    var reopenedRefusal = new SqliteProjectStore(legacyPath).ListStudies(project.Id).Single(item => item.Id == refused.Id).Assessment;
+    Require(reopenedRefusal is { Accepted: false } r && r.Criteria == strict && r.AlgorithmVersion == refused.Assessment!.AlgorithmVersion &&
+        r.Reasons.SequenceEqual(refused.Assessment.Reasons), "The refusal survives SQLite reopening.");
+    await ThrowsAsync<ModelNotAcceptedException>(() => gate.CalculatePiAsync(refused, 2, default));
+    await ThrowsAsync<ModelNotAcceptedException>(() => gate.CalculatePiAsync(refused with { Assessment = null }, 2, default));
+    var acceptedSecond = await gate.CalculateAsync(ModelFamily.SOPDT, trainingSecond.Summary, columns, validationSecond.Summary, columns,
+        "%", "bar", 0.01, 0.01, strict, default);
+    Require(acceptedSecond.IsAcceptedForTuning, "The second-order model of the same trials is accepted.");
+    Require((await gate.CalculateSopdtPidAsync(acceptedSecond, 2, default)).Series.Kc != 0, "An accepted model can be tuned.");
+    await ThrowsAsync<ModelNotAcceptedException>(() => gate.CalculateSopdtPidAsync(acceptedSecond with
+    {
+        Assessment = acceptedSecond.Assessment! with { Accepted = false, Reasons = ["validation_rmse"] }
+    }, 2, default));
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {
@@ -470,8 +491,11 @@ try
             new StepImport(rapidTraining, columns), new StepImport(rapidValidation, columns), 0.01, 0.01, default);
         Require(rapidFit.DelaySeconds > 0 && rapidFit.DelaySeconds < 1 && rapidFit.Warnings.Contains("delay_resolution"),
             "A positive half-sample delay must raise the resolution warning.");
+        var (_, rapidAssessment, _) = await engine.AssessAsync(ModelFamily.FOPDT, new StepImport(rapidTraining, columns),
+            new StepImport(rapidValidation, columns), 0.01, 0.01, new ComparisonCriteria(0.001, 1), default);
+        Require(rapidAssessment.Accepted, "The short-delay fixture passes its independent validation.");
         var rapidStudy = new IdentificationStudy(Guid.NewGuid(), rapidTraining.Summary.Id, rapidValidation.Summary.Id,
-            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, rapidVersion, rapidFit);
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, rapidVersion, rapidFit, Assessment: rapidAssessment);
         restored.SaveStudy(project.Id, rapidStudy);
         Directory.CreateDirectory(fixture);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
@@ -485,8 +509,11 @@ try
             transportFit.TauSeconds is { } transportTau && Math.Abs(transportTau - 4 * samplePeriod) < 0.01 &&
             Math.Abs(transportFit.Gain + 3) < 1e-5 && transportFit.Validation.Rmse < 1e-5 &&
             !transportFit.Warnings.Contains("delay_resolution"), "Long fractional-sample delay and holdout response.");
+        var (_, transportAssessment, _) = await engine.AssessAsync(ModelFamily.FOPDT, new StepImport(transportTraining, columns),
+            new StepImport(transportValidation, columns), 0.01, 0.01, new ComparisonCriteria(0.001, 1), default);
+        Require(transportAssessment.Accepted, "The transport-delay fixture passes its independent validation.");
         var transportStudy = new IdentificationStudy(Guid.NewGuid(), transportTraining.Summary.Id, transportValidation.Summary.Id,
-            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, transportVersion, transportFit);
+            columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, transportVersion, transportFit, Assessment: transportAssessment);
         restored.SaveStudy(project.Id, transportStudy);
         File.WriteAllText(Path.Combine(fixture, "transport-study.txt"), transportStudy.Id.ToString()[..8]);
         using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false }.ToString());
@@ -510,6 +537,13 @@ static void Require(bool condition, string message)
 {
     if (!condition)
         throw new InvalidOperationException(message);
+}
+
+static async Task ThrowsAsync<T>(Func<Task> operation) where T : Exception
+{
+    try { await operation(); }
+    catch (T) { return; }
+    throw new InvalidOperationException($"Expected {typeof(T).Name}.");
 }
 
 static void Throws<T>(Action operation) where T : Exception

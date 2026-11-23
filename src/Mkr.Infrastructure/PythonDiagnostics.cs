@@ -82,7 +82,30 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             _ => throw new ArgumentOutOfRangeException(nameof(family))
         };
         var (result, version) = await CallAsync(operation, payload, token).ConfigureAwait(false);
-        var fit = result.Deserialize<IdentificationResult>(JsonOptions);
+        return (CheckFit(family, result.Deserialize<IdentificationResult>(JsonOptions)), version);
+    }
+
+    public async Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsync(
+        ModelFamily family, StepImport training, StepImport validation, double mvTolerance, double pvTolerance,
+        ComparisonCriteria criteria, CancellationToken token)
+    {
+        var trials = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
+        var payload = new
+        {
+            family = family.ToString(), trials, maximumRmse = criteria.MaximumRmse,
+            maximumResidualLagOne = criteria.MaximumResidualLagOne
+        };
+        var (result, version) = await CallAsync("assess_model", payload, token).ConfigureAwait(false);
+        var fit = CheckFit(family, result.GetProperty("report").Deserialize<IdentificationResult>(JsonOptions));
+        var assessment = result.GetProperty("assessment").Deserialize<ValidationAssessment>(JsonOptions);
+        if (assessment is null || string.IsNullOrWhiteSpace(assessment.AlgorithmVersion) || assessment.Reasons is null ||
+            assessment.Criteria != criteria || assessment.Accepted != (assessment.Reasons.Length == 0))
+            throw new InvalidDataException("Décision de validation incompatible avec le contrat.");
+        return (fit, assessment, version);
+    }
+
+    private static IdentificationResult CheckFit(ModelFamily family, IdentificationResult? fit)
+    {
         if (fit is null || string.IsNullOrEmpty(fit.AlgorithmVersion) ||
             fit.DelaySeconds < 0 || fit.Gain == 0 || fit.Warnings is null ||
             fit.Training?.Points is not { Length: >= 2 } || fit.Validation?.Points is not { Length: >= 2 })
@@ -104,7 +127,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         };
         if (!validTimeConstants)
             throw new InvalidDataException("Constantes de temps incompatibles avec la famille de modèle.");
-        return (fit, version);
+        return fit;
     }
 
     public async Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token)
@@ -436,7 +459,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ? 30 : 10));
+        deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ||
+            operation is "assess_model" or "compare_models" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

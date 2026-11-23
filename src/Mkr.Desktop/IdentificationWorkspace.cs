@@ -57,17 +57,18 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
-        double mvTolerance, double pvTolerance, CancellationToken token,
+        double mvTolerance, double pvTolerance, ComparisonCriteria criteria, CancellationToken token,
         StepWindow? trainingWindow = null, StepWindow? validationWindow = null, ModelComparison? comparison = null)
     {
-        if (comparison is not null && comparison.Selected != family.ToString())
-            throw new InvalidOperationException("La famille à enregistrer diffère de celle retenue dans la comparaison.");
+        if (comparison is not null && (comparison.Selected != family.ToString() || comparison.Criteria != criteria))
+            throw new InvalidOperationException("La famille ou les critères à enregistrer diffèrent de ceux de la comparaison.");
         var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
-        var (result, version) = await engine.IdentifyAsync(family, train, check, mvTolerance, pvTolerance, token);
+        // Every study carries the validation decision; a refused study is kept for traceability but cannot be tuned.
+        var (result, assessment, version) = await engine.AssessAsync(family, train, check, mvTolerance, pvTolerance, criteria, token);
         token.ThrowIfCancellationRequested();
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
             mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result,
-            family, trainingWindow, validationWindow, comparison);
+            family, trainingWindow, validationWindow, comparison, assessment);
         studies.SaveStudy(project.Id, study);
         return study;
     }
@@ -78,6 +79,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.SOPDT)
             throw new InvalidOperationException("Sélectionnez une étude du second ordre.");
+        model.RequireAcceptedForTuning();
         return piEngine.CalculateSopdtPidAsync(model.Result, responseSeconds, token);
     }
 
@@ -85,6 +87,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || model.Result.TauSeconds is not { } tau)
             throw new InvalidOperationException("Ce calcul PI exige une étude FOPDT.");
+        model.RequireAcceptedForTuning();
         var (result, version) = await piEngine.CalculatePiAsync(model.Result.Gain, tau,
             model.Result.DelaySeconds, responseSeconds, token);
         token.ThrowIfCancellationRequested();
@@ -100,6 +103,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
             throw new InvalidOperationException("La comparaison PI doit référencer le modèle FOPDT sélectionné.");
+        model.RequireAcceptedForTuning();
         var (result, version) = await piEngine.SimulatePiAsync(model.Result, tuning.Result, scenario, token);
         token.ThrowIfCancellationRequested();
         var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow, version, scenario, result);
@@ -112,6 +116,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
             throw new InvalidOperationException("La comparaison combinée exige le modèle FOPDT associé au réglage PI.");
+        model.RequireAcceptedForTuning();
         var (nominal, nominalVersion) = await piEngine.SimulatePiAsync(
             model.Result, tuning.Result, scenario, token);
         token.ThrowIfCancellationRequested();
@@ -131,6 +136,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
             throw new InvalidOperationException("L'analyse de robustesse exige le modèle FOPDT associé au réglage PI.");
+        model.RequireAcceptedForTuning();
         // Nominal simulation and sensitivity are part of one saved study:
         // no partial SQLite write if either calculation fails.
         var (nominal, nominalVersion) = await piEngine.SimulatePiAsync(
@@ -152,6 +158,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || model.Id != tuning.ModelId)
             throw new InvalidOperationException("Le transfert PI exige le modèle FOPDT associé au réglage.");
+        model.RequireAcceptedForTuning();
         return piEngine.SimulateTransferAsync(model.Result, simc ? tuning.Result.Simc : tuning.Result.Imc,
             scenario, manual, at, token);
     }
@@ -161,6 +168,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
             throw new InvalidOperationException("La référence PI doit provenir du même modèle FOPDT.");
+        model.RequireAcceptedForTuning();
         return piEngine.SimulatePiAsync(model.Result, tuning.Result, scenario, token);
     }
 
@@ -171,6 +179,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id ||
             model.Result.TauSeconds is not > 0)
             throw new InvalidOperationException("L'essai PID exige un modèle FOPDT et le réglage PI associés.");
+        model.RequireAcceptedForTuning();
         // Explicitly offline, non-persistent prototype. The source model and tune are immutable.
         return pidEngine.SimulatePidPrototypeAsync(model.Result, controller, scenario, token);
     }

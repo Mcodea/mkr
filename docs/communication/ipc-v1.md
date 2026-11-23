@@ -27,3 +27,10 @@ Le moteur 0.7 ajoute `simulate_pi`. La requête contient les paramètres FOPDT `
 Le moteur 0.8 ajoute `simulate_open_loop`. La requête associe les paramètres FOPDT `gain`, `tauSeconds`, `delaySeconds` aux champs `sampleSeconds`, `durationSeconds`, `stepMv`, `stepAtSeconds`, `minimumMv` et `maximumMv`. La réponse contient `algorithmVersion`, `warnings`, `steadyPv`, `saturationSeconds` et `points`. Chaque point donne `seconds`, `pv`, `requestedMv` et `appliedMv`. Les deux commandes sont nulles au dernier point. Les entrées invalides renvoient `sim_input`, `sim_domain` ou `sim_grid`.
 
 Le moteur 0.9 accepte `maximumMvRate` facultatif (absent, nul au sens JSON, ou strictement positif) pour les deux opérations de simulation. Les résultats ajoutent `rateLimitedSeconds`. Chaque série PI contient aussi `setpointResponse` avec `windowEndSeconds`, `overshootPv` et `settlingSeconds`. Les deux dernières valeurs peuvent être nulles.
+
+Le moteur 0.10 ajoute `assess_model`, la décision de validation indépendante exigée avant tout réglage (audit NC-02).
+- **Requête :** `family` (`FOPDT`, `SOPDT`, `Integrateur` ou `BroidaFOPDT`), `trials` (le même objet que `compare_models`), `maximumRmse` en unité de PV et `maximumResidualLagOne` (0 < valeur ≤ 1).
+- **Réponse :** `report`, le résultat d'identification de la famille, et `assessment`, qui contient `algorithmVersion`, `accepted`, `reasons` et `criteria`.
+- **Règle d'acceptation :** elle est commune à `compare_models` et figure dans `engine/validation_gate.py`. Elle porte sur la RMSE de validation et la corrélation des résidus de validation. Les avertissements `parameter_bound`, `short_horizon`, `fast_pole_resolution`, `ill_conditioned` et `integrator_validation_tail` sont bloquants.
+- **Erreurs :** des critères invalides renvoient `fit_comparison_limits`.
+- **Délai :** le client accorde 30 secondes à `assess_model` et à `compare_models`.

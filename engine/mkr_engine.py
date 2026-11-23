@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
-ENGINE_VERSION = "0.9.0"
+ENGINE_VERSION = "0.10.0"
 MAX_REQUEST_BYTES = 2_900_000
 
 
@@ -80,10 +80,13 @@ def respond(raw):
             code = str(error)
         else:
             return {**response, "result": result}
-    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida", "compare_models"):
+    elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida",
+                                  "compare_models", "assess_model"):
         try:
             if request["operation"] == "compare_models":
                 from model_comparison import compare as identify
+            elif request["operation"] == "assess_model":
+                from validation_gate import assess as identify
             elif request["operation"] == "identify_fopdt":
                 from fopdt import identify
             elif request["operation"] == "identify_sopdt":
