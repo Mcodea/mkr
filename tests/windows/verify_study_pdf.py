@@ -19,5 +19,18 @@ for expected in (
 ):
     if expected not in body:
         raise ValueError(f"Missing saved condition {expected!r} in {body!r}")
+for label, filename in (("Estimation", "essai-1.csv"), ("Validation", "essai-2.csv")):
+    start = body.index(f"{label} · {filename}")
+    end = body.index("SHA-256", start)
+    trial = body[start:end]
+    for expected in (
+        "Temps : timestamp · commande MV : mv · mesure PV : pv",
+        "Plage utilisée : fichier complet",
+        "échantillons",
+        "RMSE :",
+        "erreur absolue moyenne :",
+    ):
+        if expected not in trial:
+            raise ValueError(f"Missing {expected!r} in {label}: {trial!r}")
 if simulation not in body or simulation not in pages[-1].extract_text():
     raise ValueError("The report, plot and CSV must identify the same simulation")
