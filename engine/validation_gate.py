@@ -5,7 +5,14 @@ tuning can start from a model whose holdout prediction fails the declared criter
 """
 import math
 
-VERSION = "1.0.0"
+from scipy.stats import f as fisher
+
+VERSION = "1.1.0"
+# Default acceptance criteria are derived from the measured pre-step noise only (never from a fit),
+# so that thresholds are fixed before the model is seen.
+NOISE_MULTIPLE = 2.0          # RMSE of a correct model on white noise is close to sigma.
+DEFAULT_MAXIMUM_LAG = 0.5     # Lag-one residual correlation tolerated for a structurally adequate model.
+SIGNIFICANCE = 0.99           # Holdout F-test level for preferring the second-order model.
 # Estimation warnings that make the parameters unusable for tuning.
 BLOCKING_WARNINGS = {
     "parameter_bound", "short_horizon", "fast_pole_resolution", "ill_conditioned",
@@ -63,3 +70,32 @@ def assess(payload):
         from broida import identify
     report = identify(payload["trials"])
     return dict(report=report, assessment=assessment(report, criteria))
+
+
+def suggest(payload):
+    """Proposes criteria from the noise measured on both pre-step plateaus and the declared PV tolerance."""
+    from fopdt import read_trials
+    training, validation = read_trials(payload)
+    sigma = math.sqrt((training.baseline_noise ** 2 + validation.baseline_noise ** 2) / 2)
+    tolerance = payload["pvTolerance"]
+    maximum_rmse = max(NOISE_MULTIPLE * sigma, tolerance / 2)
+    return dict(algorithmVersion=VERSION, baselineNoise=sigma, maximumRmse=maximum_rmse,
+                maximumResidualLagOne=DEFAULT_MAXIMUM_LAG,
+                basis="noise" if NOISE_MULTIPLE * sigma >= tolerance / 2 else "pv_tolerance",
+                noiseMultiple=NOISE_MULTIPLE, trainingNoise=training.baseline_noise,
+                validationNoise=validation.baseline_noise)
+
+
+def significantly_better(first, second):
+    """Holdout F-test: does the second model reduce the validation mean square error significantly?
+
+    Both models predict the same validation samples. Under equal adequacy the MSE ratio follows
+    approximately F(n, n). Round-off level errors are uninterpretable and never decide.
+    """
+    a, b = first["validation"], second["validation"]
+    scale = max(abs(point["observed"]) for point in a["points"])
+    if a["rmse"] <= 32 * math.ulp(scale) or b["rmse"] <= 0:
+        return False, None
+    ratio = (a["rmse"] / b["rmse"]) ** 2
+    critical = float(fisher.ppf(SIGNIFICANCE, a["samples"], b["samples"]))
+    return ratio > critical, dict(mseRatio=ratio, critical=critical, level=SIGNIFICANCE)

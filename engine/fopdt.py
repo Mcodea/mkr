@@ -20,6 +20,8 @@ class Step:
     onset_interval: float
     first_time: datetime
     last_time: datetime
+    # Sample standard deviation of PV on the pre-step plateau: measured noise, independent of any fit.
+    baseline_noise: float = 0.0
 
 
 def number(cell):
@@ -83,7 +85,8 @@ def read_step(source, input_tolerance, output_tolerance):
     relative = np.array([(date - dates[i]).total_seconds() for date in dates[i:]])
     if np.any(np.diff(relative) <= 0):
         raise ValueError("fit_time")
-    return Step(relative, outputs[i:], baseline, delta, onset - float(times[i - 1]), dates[0], dates[-1])
+    return Step(relative, outputs[i:], baseline, delta, onset - float(times[i - 1]), dates[0], dates[-1],
+                float(np.std(outputs[:i], ddof=1)))
 
 
 # Above this ratio of onset uncertainty to delay, the delay is reported as an interval (audit NC-03).
@@ -158,7 +161,7 @@ def diagnostics(step, gain, response):
     round_off = rmse <= 32 * math.ulp(float(np.max(np.abs(step.observations))))
     indices = np.unique(np.linspace(0, len(predicted) - 1, min(500, len(predicted)), dtype=int))
     return dict(
-        samples=len(predicted), inputStep=step.amplitude, baseline=step.baseline,
+        samples=len(predicted), inputStep=step.amplitude, baseline=step.baseline, baselineNoise=step.baseline_noise,
         onsetIntervalSeconds=step.onset_interval, horizonSeconds=float(step.times[-1]),
         rmse=rmse, rangeNormalizedRmse=rmse / observed_range if observed_range > 0 else None,
         mae=float(np.mean(np.abs(residual))),

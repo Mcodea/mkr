@@ -46,6 +46,14 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return (train, check);
     }
 
+    public Task<CriteriaSuggestion> SuggestCriteriaAsync(ImportSummary training, StepColumns trainColumns,
+        ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
+        double mvTolerance, double pvTolerance, CancellationToken token, StepWindow? trainingWindow, StepWindow? validationWindow)
+    {
+        var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
+        return engine.SuggestCriteriaAsync(train, check, mvTolerance, pvTolerance, token);
+    }
+
     public Task<ModelComparison> CompareAsync(ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, double maximumRmse, double maximumLag,

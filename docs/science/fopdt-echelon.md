@@ -35,3 +35,18 @@ contrôles de résolution. Si les deux candidats échouent, le résultat contien
 d’acceptation de l’étude. Chaque ajustement expose aussi `rangeNormalizedRmse`,
 la RMSE divisée par l’étendue observée de PV sur l’essai concerné. Une étendue
 nulle donne une valeur indéterminée.
+
+### Critères proposés et test sur l'essai de validation (audit NC-04)
+
+**Opération `suggest_criteria`.**
+- Elle reçoit les deux essais et calcule σ, l'écart-type de PV sur les plateaux avant échelon, combiné quadratiquement entre les deux essais.
+- Elle propose une RMSE maximale de max(2σ, tolérance PV / 2) et une limite |r₁| ≤ 0,5.
+- Ces critères sont calculés **sans regarder l'ajustement**, donc fixés avant que le modèle soit connu. Pour un modèle correct sur bruit blanc, la RMSE de validation est proche de σ.
+
+**Préférence pour le second ordre.**
+- Si les deux modèles satisfont les critères, la comparaison retient quand même le SOPDT lorsqu'il prédit l'essai de validation significativement mieux. La règle est un test F à 99 % sur le rapport des erreurs quadratiques moyennes de validation, F(n, n) (décision `significantly_better_higher_order`, champ `holdoutTest`).
+- Le test est ignoré pour des erreurs au niveau de l'arrondi. Les deux prédictions portent sur les mêmes échantillons, donc le seuil F est une approximation prudente, pas une probabilité exacte.
+
+**Vérification.**
+- **Cas de l'audit :** SOPDT vrai (20 s, 12 s), σ = 0,02, seuils laxistes 0,2 / 0,9. Le SOPDT est maintenant retenu, alors que le FOPDT l'était auparavant.
+- **Cas inverse :** FOPDT vrai, σ = 0,02, critères proposés. Le FOPDT est retenu dans 100 tirages sur 100 (10 sont dans les tests automatiques).

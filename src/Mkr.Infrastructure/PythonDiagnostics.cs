@@ -62,11 +62,29 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             !candidates.TryGetValue("FOPDT", out var first) || !candidates.TryGetValue("SOPDT", out var second) ||
             candidates.Values.Any(c => c?.RejectionReasons is null || !double.IsFinite(c.ValidationRmse) || c.ValidationRmse < 0))
             throw new InvalidDataException("Comparaison de modèles incomplète.");
-        string? expected = first.RejectionReasons.Length == 0 ? "FOPDT" : second.RejectionReasons.Length == 0 ? "SOPDT" : null;
+        bool firstAccepted = first.RejectionReasons.Length == 0, secondAccepted = second.RejectionReasons.Length == 0;
+        bool higherOrder = report.Decision == "significantly_better_higher_order";
+        string? expected = higherOrder ? "SOPDT" : firstAccepted ? "FOPDT" : secondAccepted ? "SOPDT" : null;
         if (string.IsNullOrWhiteSpace(report.AlgorithmVersion) || report.Criteria != new ComparisonCriteria(maximumRmse, maximumResidualLagOne) ||
-            report.Selected != expected || report.Decision != (expected is null ? "insufficient_evidence" : "lowest_acceptable_order"))
+            report.Selected != expected ||
+            (higherOrder && (!firstAccepted || !secondAccepted || report.HoldoutTest is not { } test || !(test.MseRatio > test.Critical))) ||
+            (!higherOrder && report.Decision != (expected is null ? "insufficient_evidence" : "lowest_acceptable_order")))
             throw new InvalidDataException("Décision de comparaison incohérente.");
         return report;
+    }
+
+    public async Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation,
+        double mvTolerance, double pvTolerance, CancellationToken token)
+    {
+        var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
+        var (json, _) = await CallAsync("suggest_criteria", payload, token).ConfigureAwait(false);
+        var suggestion = json.Deserialize<CriteriaSuggestion>(JsonOptions);
+        if (suggestion is null || string.IsNullOrWhiteSpace(suggestion.AlgorithmVersion) ||
+            !double.IsFinite(suggestion.BaselineNoise) || suggestion.BaselineNoise < 0 ||
+            !(suggestion.MaximumRmse > 0) || suggestion.MaximumResidualLagOne is not (> 0 and <= 1) ||
+            suggestion.Basis is not ("noise" or "pv_tolerance"))
+            throw new InvalidDataException("Proposition de critères incompatible avec le contrat.");
+        return suggestion;
     }
 
     public async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
@@ -460,7 +478,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ||
-            operation is "assess_model" or "compare_models" ? 30 : 10));
+            operation is "assess_model" or "compare_models" or "suggest_criteria" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

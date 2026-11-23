@@ -68,7 +68,14 @@ public sealed record ValidationAssessment(string AlgorithmVersion, bool Accepted
 public sealed record ModelCandidate(double ValidationRmse, double? ValidationResidualLagOne, string[] RejectionReasons);
 public sealed record ComparisonCriteria(double MaximumRmse, double MaximumResidualLagOne);
 public sealed record ModelComparison(string? Selected, Dictionary<string, ModelCandidate> Candidates, string Decision,
-    string AlgorithmVersion, ComparisonCriteria Criteria);
+    string AlgorithmVersion, ComparisonCriteria Criteria, HoldoutTest? HoldoutTest = null);
+
+/// <summary>Holdout F-test of the validation mean square errors, FOPDT over SOPDT (audit NC-04).</summary>
+public sealed record HoldoutTest(double MseRatio, double Critical, double Level);
+
+/// <summary>Criteria proposed from the measured pre-step noise only, before any fit is seen.</summary>
+public sealed record CriteriaSuggestion(string AlgorithmVersion, double BaselineNoise, double MaximumRmse,
+    double MaximumResidualLagOne, string Basis, double NoiseMultiple);
 
 public interface IIdentificationEngine
 {
@@ -76,6 +83,9 @@ public interface IIdentificationEngine
         double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token);
 
     Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token);
+
+    Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation, double mvTolerance,
+        double pvTolerance, CancellationToken token);
     Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token);
 

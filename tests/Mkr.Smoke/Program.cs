@@ -137,6 +137,11 @@ try
         0.01, 0.01, 1, 1, default);
     Require(Math.Abs(comparison.Candidates["FOPDT"].ValidationRmse - fit.Validation.Rmse) < 1e-9 &&
         comparison.Candidates.ContainsKey("SOPDT"), "Model comparison uses the selected independent trial.");
+    var suggestion = await engine.SuggestCriteriaAsync(new(training, columns), new(validation, columns), 0.01, 0.01, default);
+    Require(suggestion is { BaselineNoise: 0, Basis: "pv_tolerance", MaximumRmse: 0.005, MaximumResidualLagOne: 0.5 },
+        "Noise-free plateaus propose half the declared PV tolerance as the validation threshold.");
+    Require(comparison.Decision == "lowest_acceptable_order" && comparison.HoldoutTest is null,
+        "Exact first-order trials keep the lowest order without a holdout test.");
     var study = new IdentificationStudy(Guid.NewGuid(), training.Summary.Id, validation.Summary.Id, columns, columns,
         "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, fitVersion, fit, Comparison: comparison);
     restored.SaveStudy(project.Id, study);

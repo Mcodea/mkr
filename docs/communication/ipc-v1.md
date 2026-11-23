@@ -34,3 +34,8 @@ Le moteur 0.10 ajoute `assess_model`, la décision de validation indépendante e
 - **Règle d'acceptation :** elle est commune à `compare_models` et figure dans `engine/validation_gate.py`. Elle porte sur la RMSE de validation et la corrélation des résidus de validation. Les avertissements `parameter_bound`, `short_horizon`, `fast_pole_resolution`, `ill_conditioned` et `integrator_validation_tail` sont bloquants.
 - **Erreurs :** des critères invalides renvoient `fit_comparison_limits`.
 - **Délai :** le client accorde 30 secondes à `assess_model` et à `compare_models`.
+
+Le moteur 0.10 ajoute aussi `suggest_criteria`, appelée avec les mêmes champs que `identify_fopdt`.
+- **Réponse :** `algorithmVersion`, `baselineNoise`, `maximumRmse`, `maximumResidualLagOne`, `basis` (`noise` ou `pv_tolerance`), `noiseMultiple`, `trainingNoise` et `validationNoise`.
+- **Évolution de `compare_models` (version 1.1.0) :** le champ `decision` peut valoir `significantly_better_higher_order`, avec `holdoutTest` (`mseRatio`, `critical`, `level`). Ce champ vaut null quand le test n'est pas applicable.
+- **Diagnostics :** chaque diagnostic d'ajustement ajoute `baselineNoise`.

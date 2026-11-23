@@ -4,7 +4,14 @@ import unittest
 from mkr_engine import respond
 from test_fopdt import source as first_order
 from test_sopdt import source as second_order
-from validation_gate import assess
+import base64
+import math
+from datetime import datetime, timedelta, timezone
+
+import numpy as np
+
+from model_comparison import compare
+from validation_gate import assess, suggest
 
 
 def payload(family, training, validation, rmse=0.01, lag=0.5):
@@ -53,6 +60,65 @@ class ValidationGateTests(unittest.TestCase):
         reply = respond(json.dumps(request).encode())
         self.assertFalse(reply["result"]["assessment"]["accepted"])
         self.assertAlmostEqual(reply["result"]["report"]["gain"], -3, places=5)
+
+
+def noisy(day, sigma, slow=20.0, fast=None, seed=0):
+    """FOPDT (or SOPDT when fast is set) step with white noise on every PV sample, 0.5 s cadence."""
+    rng = np.random.default_rng(seed + day)
+    start = datetime(2026, 5, day, tzinfo=timezone.utc)
+    lines = ["timestamp,mv,pv"]
+    for i in range(600):
+        t = 0.5 * i
+        x = max(0.0, t - 13.0)
+        shape = (1 - math.exp(-x / slow)) if fast is None else \
+            1 - (slow * math.exp(-x / slow) - fast * math.exp(-x / fast)) / (slow - fast)
+        lines.append(f"{(start + timedelta(seconds=t)).isoformat()},{1.0 if t >= 10 else 0.0},{2 * shape + sigma * rng.standard_normal()!r}")
+    return dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=",",
+                timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+
+
+class CriteriaFromNoiseTests(unittest.TestCase):
+    def trials(self, sigma, fast=None, seed=0):
+        return dict(training=noisy(1, sigma, fast=fast, seed=seed), validation=noisy(2, sigma, fast=fast, seed=seed),
+                    mvTolerance=1e-6, pvTolerance=max(4 * sigma, 1e-6))
+
+    def test_suggestion_uses_the_measured_plateau_noise_only(self):
+        trials = self.trials(0.02)
+        result = suggest(trials)
+        self.assertAlmostEqual(result["baselineNoise"], 0.02, delta=0.008)   # 20 pre-step samples per trial
+        floor = trials["pvTolerance"] / 2
+        self.assertAlmostEqual(result["maximumRmse"], max(2 * result["baselineNoise"], floor))
+        self.assertEqual(result["basis"], "noise" if 2 * result["baselineNoise"] >= floor else "pv_tolerance")
+        self.assertEqual(result["maximumResidualLagOne"], 0.5)
+        # A tighter declared tolerance lets the measured noise set the threshold.
+        tight = suggest({**trials, "pvTolerance": 0.05})
+        self.assertEqual(tight["basis"], "noise")
+        self.assertAlmostEqual(tight["maximumRmse"], 2 * tight["baselineNoise"])
+        # Without measurable noise the declared PV tolerance sets the floor.
+        exact = suggest(dict(training=first_order(1), validation=first_order(2), mvTolerance=0.01, pvTolerance=0.01))
+        self.assertEqual((exact["baselineNoise"], exact["maximumRmse"], exact["basis"]), (0.0, 0.005, "pv_tolerance"))
+
+    def test_audit_case_lax_thresholds_no_longer_hide_the_second_pole(self):
+        # Audit NC-04: true SOPDT (20 s, 12 s), sigma 0.02, thresholds 0.2 / 0.9 used to select FOPDT.
+        trials = self.trials(0.02, fast=12.0)
+        result = compare(dict(trials=trials, maximumRmse=0.2, maximumResidualLagOne=0.9))
+        self.assertEqual(result["candidates"]["FOPDT"]["rejectionReasons"], [])
+        self.assertEqual((result["selected"], result["decision"]), ("SOPDT", "significantly_better_higher_order"))
+        self.assertGreater(result["holdoutTest"]["mseRatio"], result["holdoutTest"]["critical"])
+
+    def test_true_first_order_keeps_parsimony_with_suggested_criteria(self):
+        for seed in range(10):
+            with self.subTest(seed=seed):
+                trials = self.trials(0.02, seed=seed)
+                criteria = suggest(trials)
+                result = compare(dict(trials=trials, maximumRmse=criteria["maximumRmse"],
+                                      maximumResidualLagOne=criteria["maximumResidualLagOne"]))
+                self.assertEqual(result["selected"], "FOPDT")
+
+    def test_exact_data_never_triggers_the_holdout_test(self):
+        result = compare(dict(trials=dict(training=first_order(1), validation=first_order(2), mvTolerance=0.01,
+                                          pvTolerance=0.01), maximumRmse=0.001, maximumResidualLagOne=0.5))
+        self.assertEqual((result["selected"], result["decision"], result["holdoutTest"]), ("FOPDT", "lowest_acceptable_order", None))
 
 
 if __name__ == "__main__":

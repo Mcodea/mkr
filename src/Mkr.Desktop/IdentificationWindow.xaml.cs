@@ -124,6 +124,38 @@ public partial class IdentificationWindow : Window
         finally { Form.IsEnabled = true; }
     }
 
+    private async void ProposeCriteria(object sender, RoutedEventArgs args)
+    {
+        var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
+        var valColumns = ReadColumns(ValidationTime, ValidationMv, ValidationPv);
+        if (TrainingSource.SelectedItem is not ImportSummary training || ValidationSource.SelectedItem is not ImportSummary validation ||
+            trainColumns is null || valColumns is null || MvUnit.Text.Trim().Length == 0 || PvUnit.Text.Trim().Length == 0 ||
+            !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance))
+        {
+            Message.Text = "Choisissez les deux essais, leurs colonnes, les unités et les tolérances avant de proposer des critères.";
+            return;
+        }
+        Form.IsEnabled = false;
+        var token = _lifetime.Token;
+        try
+        {
+            var proposal = await _workspace.SuggestCriteriaAsync(training, trainColumns, validation, valColumns,
+                MvUnit.Text.Trim(), PvUnit.Text.Trim(), mvTolerance, pvTolerance, token,
+                _trainingSelection?.Window, _validationSelection?.Window);
+            token.ThrowIfCancellationRequested();
+            MaximumRmse.Text = proposal.MaximumRmse.ToString("G4", CultureInfo.CurrentCulture);
+            MaximumLag.Text = proposal.MaximumResidualLagOne.ToString("G4", CultureInfo.CurrentCulture);
+            Message.Text = $"Bruit mesuré sur les plateaux avant échelon : σ = {proposal.BaselineNoise:G4} {PvUnit.Text}. " +
+                (proposal.Basis == "noise"
+                    ? $"RMSE maximale = {proposal.NoiseMultiple:G2} σ."
+                    : "Bruit inférieur à la résolution déclarée : RMSE maximale = moitié de la tolérance PV.") +
+                " Ces critères sont fixés avant tout ajustement. Modifiez-les si l’étude impose une exigence.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = true; }
+    }
+
     private async void Calculate(object sender, RoutedEventArgs args)
     {
         var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
@@ -179,7 +211,9 @@ public partial class IdentificationWindow : Window
                     $"Seuils : RMSE ≤ {rmse:G5} {pvUnit} · |r₁| ≤ {lag:G5}" };
                 lines.AddRange(CandidateLines(comparison, pvUnit));
                 lines.Add(comparison.Selected is { } selected
-                    ? $"Modèle proposé : {selected}, ordre le plus faible satisfaisant les critères."
+                    ? comparison.Decision == "significantly_better_higher_order" && comparison.HoldoutTest is { } test
+                        ? $"Modèle proposé : {selected}. Les deux modèles satisfont les critères, mais le second ordre prédit l’essai de validation significativement mieux (rapport des erreurs quadratiques {test.MseRatio:G3} > {test.Critical:G3}, niveau {test.Level:P0})."
+                        : $"Modèle proposé : {selected}, ordre le plus faible satisfaisant les critères."
                     : "Aucun des deux modèles ne satisfait les critères.");
                 Message.Text = lines[^1];
                 if (comparison.Selected is null)
