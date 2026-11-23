@@ -104,6 +104,30 @@ public static class StudySheet
         var renderer = new PdfDocumentRenderer { Document = doc };
         renderer.RenderDocument();
         using var pdf = renderer.PdfDocument;
+        var validationPoints = model.Result.Validation.Points;
+        if (validationPoints is { Length: > 1 } && validationPoints[^1].Seconds > validationPoints[0].Seconds)
+        {
+            using var graph = XGraphics.FromPdfPage(pdf.AddPage());
+            var font = new XFont("Arial", 10);
+            graph.DrawString("Validation indépendante du modèle", new XFont("Arial", 16), XBrushes.Black, 44, 52);
+            graph.DrawString($"Modèle {model.Id}", font, XBrushes.Black, 44, 74);
+            graph.DrawString("Mesure observée (bleu) et prédiction (orange pointillé)", font, XBrushes.Black, 44, 100);
+            var low = validationPoints.Min(p => Math.Min(p.Observed, p.Predicted));
+            var high = validationPoints.Max(p => Math.Max(p.Observed, p.Predicted));
+            var first = validationPoints[0].Seconds;
+            var last = validationPoints[^1].Seconds;
+            graph.DrawString($"PV ({model.PvUnit}) · min {N(low)} · max {N(high)}", font, XBrushes.Black, 44, 134);
+            graph.DrawRectangle(XPens.Gray, 44, 148, 490, 250);
+            XPoint Position(double seconds, double value) => new(
+                44 + 490 * ((seconds - first) / (last - first)),
+                high == low ? 273 : 398 - 250 * ((value - low) / (high - low)));
+            graph.DrawLines(new XPen(XColors.SteelBlue, 1.5),
+                validationPoints.Select(p => Position(p.Seconds, p.Observed)).ToArray());
+            var predictionPen = new XPen(XColors.DarkOrange, 1.2) { DashStyle = XDashStyle.Dash };
+            graph.DrawLines(predictionPen, validationPoints.Select(p => Position(p.Seconds, p.Predicted)).ToArray());
+            graph.DrawString($"Temps : {N(first)} à {N(last)} s", font, XBrushes.Black, 44, 420);
+            graph.DrawString($"RMSE : {N(model.Result.Validation.Rmse)} {model.PvUnit}", font, XBrushes.Black, 44, 446);
+        }
         var page = pdf.AddPage();
         using (var g = XGraphics.FromPdfPage(page))
         {
