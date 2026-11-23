@@ -8,9 +8,9 @@ import math
 
 import numpy as np
 
-from fopdt import basis, diagnostics, read_trials
+from fopdt import basis, delay_interval, delay_warnings, diagnostics, read_trials
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 FRACTIONS = (0.28, 0.40)
 TAIL_SIZE = 6
 
@@ -76,14 +76,13 @@ def identify(payload):
     tolerance = payload["pvTolerance"]
     gain, tau, delay, t28, t40, plateau = estimate(training, tolerance)
     warnings = ["two_point_estimator", "measured_tail_plateau", "interpolated_crossings"]
-    if delay <= training.onset_interval:
-        warnings.append("delay_resolution")
+    warnings.extend(delay_warnings(delay, training))
     # Estimate is independent of validation: use only pre-existing parameters.
     fit_train = diagnostics(training, gain, basis(training.times, tau, delay))
     fit_validation = diagnostics(validation, gain, basis(validation.times, tau, delay))
     return dict(
         algorithmVersion=VERSION,
-        gain=gain, tauSeconds=tau, delaySeconds=delay,
+        gain=gain, tauSeconds=tau, delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training),
         tauLowerSeconds=None, tauUpperSeconds=None,
         delayUpperSeconds=float(training.times[-1]),
         standardErrors=None, secondTauSeconds=None, warnings=warnings,

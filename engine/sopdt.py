@@ -4,7 +4,7 @@ import math
 import numpy as np
 from scipy.optimize import least_squares
 
-from fopdt import diagnostics, read_trials
+from fopdt import delay_interval, delay_warnings, diagnostics, read_trials
 
 
 def basis(times, tau_slow, tau_fast, delay):
@@ -53,8 +53,7 @@ def identify(payload):
     warnings = []
     if fast <= 1.02 * low or slow >= 0.98 * horizon or delay >= 0.49 * horizon:
         warnings.append("parameter_bound")
-    if delay <= training.onset_interval:
-        warnings.append("delay_resolution")
+    warnings.extend(delay_warnings(delay, training))
     if min(training.times[-1], validation.times[-1]) - delay < 5 * slow:
         warnings.append("short_horizon")
     if fast < cadence:
@@ -64,7 +63,7 @@ def identify(payload):
     train_fit = diagnostics(training, gain, basis(training.times, slow, fast, delay))
     if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > 0.3:
         warnings.append("correlated_residuals")
-    return dict(algorithmVersion="1.0.0", gain=gain, tauSeconds=slow, secondTauSeconds=fast,
-                delaySeconds=delay, tauLowerSeconds=low, tauUpperSeconds=horizon,
+    return dict(algorithmVersion="1.1.0", gain=gain, tauSeconds=slow, secondTauSeconds=fast,
+                delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training), tauLowerSeconds=low, tauUpperSeconds=horizon,
                 delayUpperSeconds=horizon / 2, warnings=warnings, training=train_fit,
                 validation=diagnostics(validation, gain, basis(validation.times, slow, fast, delay)))

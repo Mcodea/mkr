@@ -99,7 +99,7 @@ class BroidaTests(unittest.TestCase):
                                     mvTolerance=.01, pvTolerance=.01))
         response = respond(json.dumps(request).encode())
         self.assertNotIn("error", response)
-        self.assertEqual(response["result"]["algorithmVersion"], "1.0.0")
+        self.assertEqual(response["result"]["algorithmVersion"], "1.1.0")
         self.assertIn("crossing28Seconds", response["result"]["broidaEvidence"])
         request["payload"]["training"] = source(1, tau=20, delay=2, cadence=.5)
         invalid = respond(json.dumps(request).encode())

@@ -276,6 +276,7 @@ public partial class IdentificationWindow : Window
             "interpolated_crossings" => "Instants 28 % / 40 % interpolés linéairement entre deux échantillons réels.",
             "parameter_bound" => "Un paramètre est proche d’une borne de recherche.",
             "delay_resolution" => "Le retard estimé est inférieur ou égal à la résolution de détection de l’échelon.",
+            "delay_onset_uncertainty" => $"L’instant de l’échelon n’est connu qu’à {result.Training.OnsetIntervalSeconds:G4} s près : retard réel entre {result.DelaySeconds:G5} et {result.TuningDelaySeconds:G5} s. Un échantillonnage plus fin réduirait cet écart.",
             "short_horizon" => "Au moins un essai est trop court au regard de la constante de temps lente après le retard.",
             "correlated_residuals" => "Résidus autocorrélés sur l’essai d’estimation.",
             "delay_derivative" => "Le retard estimé est trop proche d’un instant échantillonné pour linéariser sa réponse.",
@@ -302,7 +303,7 @@ public partial class IdentificationWindow : Window
             : "";
 
         FitReport.Text = $"Modèle {family} exploratoire · K = {result.Gain:G5} {gainUnit}" +
-            $"{timeConstants} · θ = {result.DelaySeconds:G5} s\n" +
+            $"{timeConstants} · θ = {result.DelaySeconds:G5} s (intervalle {result.DelaySeconds:G5} – {result.TuningDelaySeconds:G5} s)\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
@@ -354,8 +355,11 @@ public partial class IdentificationWindow : Window
             return;
         }
 
-        ResponseTarget.Text = model.DelaySeconds.ToString("R", CultureInfo.CurrentCulture);
-        TargetHelp.Text = "SIMC, Skogestad (2003) · Pour explorer une réponse rapide, τc = retard du modèle. Vérifiez en simulation le temps obtenu et l’effort de commande.";
+        // Tight SIMC (τc = θ) on the conservative delay bound: an underestimated delay makes the loop aggressive.
+        ResponseTarget.Text = model.TuningDelaySeconds.ToString("R", CultureInfo.CurrentCulture);
+        TargetHelp.Text = $"SIMC, Skogestad (2003) · Pour explorer une réponse rapide, τc = retard. MKR retient la borne prudente " +
+            $"{model.TuningDelaySeconds:G5} s : l’échelon de MV a eu lieu entre deux mesures, le retard réel est compris entre " +
+            $"{model.DelaySeconds:G5} et {model.TuningDelaySeconds:G5} s. Vérifiez en simulation le temps obtenu et l’effort de commande.";
     }
 
     private async void CalculateSopdt(object sender, RoutedEventArgs args)

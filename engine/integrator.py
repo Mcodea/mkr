@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from fopdt import diagnostics, read_trials
+from fopdt import delay_interval, delay_warnings, diagnostics, read_trials
 
 
 def profile_delay(times, observed):
@@ -51,13 +51,12 @@ def identify(payload):
     warnings = []
     if fraction >= 0.49:
         warnings.append("parameter_bound")
-    if delay <= training.onset_interval:
-        warnings.append("delay_resolution")
+    warnings.extend(delay_warnings(delay, training))
     if math.copysign(1, gain * validation.amplitude) * tail_change(validation) <= 4 * payload["pvTolerance"]:
         warnings.append("integrator_validation_tail")
     train_fit = diagnostics(training, gain, np.maximum(training.times - delay, 0))
     if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > 0.3:
         warnings.append("correlated_residuals")
-    return dict(algorithmVersion="1.0.0", gain=gain, delaySeconds=delay,
+    return dict(algorithmVersion="1.1.0", gain=gain, delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training),
                 delayUpperSeconds=horizon / 2, warnings=warnings,
                 training=train_fit, validation=diagnostics(validation, gain, np.maximum(validation.times - delay, 0)))

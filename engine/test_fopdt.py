@@ -106,6 +106,31 @@ class FopdtTests(unittest.TestCase):
         self.assertIsNone(report["training"]["residualLagOne"])
         self.assertNotIn("correlated_residuals", report["warnings"])
 
+    def test_step_between_samples_publishes_a_delay_interval(self):
+        # Audit NC-03: the MV step at 9.1 s is first seen at the 10 s sample; true delay 3 s.
+        def trial(day, onset=9.1, delay=3.0, tau=20.0):
+            start = datetime(2026, 4, day, tzinfo=timezone.utc)
+            lines = ["timestamp,mv,pv"]
+            for i in range(300):
+                t = float(i)
+                x = max(0.0, t - onset - delay)
+                lines.append(f"{(start + timedelta(seconds=t)).isoformat()},{1.0 if t >= onset else 0.0},{2 * (1 - math.exp(-x / tau))!r}")
+            return dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=",",
+                        timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+        report = identify(dict(training=trial(1), validation=trial(2), mvTolerance=0.01, pvTolerance=0.01))
+        low, high = report["delayIntervalSeconds"]
+        self.assertEqual(low, report["delaySeconds"])
+        self.assertAlmostEqual(high - low, 1.0)
+        self.assertLess(report["delaySeconds"], 3.0)          # the bias the audit demonstrated
+        self.assertLessEqual(low, 3.0)
+        self.assertGreaterEqual(high, 3.0)                    # the interval contains the truth
+        self.assertIn("delay_onset_uncertainty", report["warnings"])
+        # A well-resolved delay (onset interval ≤ 10 % of the delay) raises no warning.
+        resolved = identify(dict(training=trial(3, onset=10.0, delay=15.0), validation=trial(4, onset=10.0, delay=15.0),
+                                 mvTolerance=0.01, pvTolerance=0.01))
+        self.assertNotIn("delay_onset_uncertainty", resolved["warnings"])
+        self.assertAlmostEqual(resolved["delaySeconds"], 15.0, places=5)
+
     def test_zero_delay_is_resolution_limited(self):
         report = calculate(source(1, delay=0), source(2, delay=0))
         self.assertLess(report["delaySeconds"], 1e-5)

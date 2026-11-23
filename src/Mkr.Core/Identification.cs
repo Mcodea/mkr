@@ -20,7 +20,17 @@ public sealed record BroidaEvidence(double Crossing28Seconds, double Crossing40S
 public sealed record IdentificationResult(string AlgorithmVersion, double Gain, double? TauSeconds, double DelaySeconds,
     double? TauLowerSeconds, double? TauUpperSeconds, double DelayUpperSeconds, string[] Warnings,
     FitDiagnostics Training, FitDiagnostics Validation, FitStandardErrors? StandardErrors = null,
-    double? SecondTauSeconds = null, BroidaEvidence? BroidaEvidence = null);
+    double? SecondTauSeconds = null, BroidaEvidence? BroidaEvidence = null, double[]? DelayIntervalSeconds = null)
+{
+    /// <summary>
+    /// Conservative delay for tuning: the MV step happened between the last unchanged sample and the first
+    /// changed one, so the true delay may exceed the estimate by up to that interval (audit NC-03).
+    /// Studies recorded before the interval existed fall back to the training onset interval.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double TuningDelaySeconds => DelayIntervalSeconds is [_, var upper]
+        ? upper : DelaySeconds + Training.OnsetIntervalSeconds;
+}
 
 public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid ValidationId, StepColumns TrainingColumns,
     StepColumns ValidationColumns, string MvUnit, string PvUnit, double MvTolerance, double PvTolerance,

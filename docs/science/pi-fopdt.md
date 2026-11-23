@@ -19,7 +19,11 @@ Vérification : cas de gain négatif, activation et inactivation de la borne int
 
 ## Choix guidé de la cible en identification
 
-Pour explorer un réglage rapide (« tight control »), la règle SIMC publiée est τc = θ, où θ représente le retard effectif du modèle utilisé pour le réglage. MKR utilise le retard du modèle identifié sélectionné. Pour la comparaison PI, le calcul IMC reçoit la même valeur de λ afin de comparer les méthodes à cible égale. La recommandation de départ est propre à SIMC. [Skogestad, 2003](https://doi.org/10.1016/S0959-1524(02)00062-8)
+Pour explorer un réglage rapide (« tight control »), la règle SIMC publiée est τc = θ, où θ représente le retard effectif du modèle utilisé pour le réglage.
+
+MKR applique cette règle à la **borne prudente du retard** (audit NC-03). L'échelon de MV a eu lieu entre la dernière mesure inchangée et la première mesure modifiée, donc le retard réel est compris entre θ estimé et θ + Δ, où Δ est l'intervalle entre ces deux mesures. L'identification publie cet intervalle (`delayIntervalSeconds`) et avertit (`delay_onset_uncertainty`) quand Δ dépasse 10 % de θ.
+
+Sous-estimer le retard rend le réglage plus agressif. Exemple contrôlé : θ réel 3 s, Δ = 1 s, θ estimé 2,1 s. Avec τc = θ estimé, Kp est 43 % au-dessus de la règle appliquée au retard réel. Avec τc = θ + Δ, l'écart tombe à 15 %. Le calcul PI lui-même utilise le θ du modèle. Pour la comparaison PI, le calcul IMC reçoit la même valeur de λ afin de comparer les méthodes à cible égale. La recommandation de départ est propre à SIMC. [Skogestad, 2003](https://doi.org/10.1016/S0959-1524(02)00062-8)
 
 Une cible plus longue peut être justifiée par des contraintes de robustesse ou d’effort de commande. Si le retard est nul ou signalé comme mal résolu, MKR laisse la cible automatique vide. Une exigence explicite peut être saisie en mode personnalisé. [Skogestad, 2006, équations 5 et 6](https://skoge.folk.ntnu.no/publications/2006/skogestad_iecr_smooth-pid/ie0602815.pdf)
 

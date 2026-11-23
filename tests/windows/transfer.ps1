@@ -174,18 +174,19 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $transportId = (Get-Content -LiteralPath (Join-Path $Fixture 'transport-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$transportId"
     $transportTarget = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
-    if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2040) -ge 0.01) {
-        throw 'Cible SIMC attendue proche de 2040 secondes pour le retard de transport de 34 minutes.'
+    # NC-03: tight SIMC on the conservative delay bound, 2040 s estimated + 90 s onset interval.
+    if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2130) -ge 0.01) {
+        throw 'Cible SIMC attendue proche de 2130 secondes (retard de 34 minutes + intervalle d’échelon de 90 s).'
     }
     Press $ident 'Comparer IMC/Lambda et SIMC'
     $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
-    if (!(Find $ident $id 'PiReport').Current.Name.Contains('2040 s')) { throw 'Cible absente du résultat PI enregistré.' }
+    if (!(Find $ident $id 'PiReport').Current.Name.Contains('2130 s')) { throw 'Cible absente du résultat PI enregistré.' }
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
     Fill $ident 'ResponseTarget' '3000'
     Press $ident 'Simuler le réglage enregistré…'
     $savedSimulation = Find $root $name 'MKR — Simulation PI'
     $units = (Find $savedSimulation $id 'Units').Current.Name
-    if (!$units.Contains('2040 s') -or $units.Contains('3000 s')) {
+    if (!$units.Contains('2130 s') -or $units.Contains('3000 s')) {
         throw "La simulation doit reprendre le réglage enregistré. $units"
     }
     $savedSimulation.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()

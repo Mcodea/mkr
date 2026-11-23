@@ -8,7 +8,7 @@ from scipy.optimize import least_squares
 
 from csv_quality import NUMBER, TIMESTAMP, read_table
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 
 @dataclass
@@ -86,6 +86,23 @@ def read_step(source, input_tolerance, output_tolerance):
     return Step(relative, outputs[i:], baseline, delta, onset - float(times[i - 1]), dates[0], dates[-1])
 
 
+# Above this ratio of onset uncertainty to delay, the delay is reported as an interval (audit NC-03).
+ONSET_UNCERTAINTY_RATIO = 0.1
+
+
+def delay_warnings(delay, step):
+    """The MV step happened in (t[i-1], t[i]]: the true delay lies in [delay, delay + onset interval]."""
+    if delay <= step.onset_interval:
+        return ["delay_resolution"]
+    if step.onset_interval > ONSET_UNCERTAINTY_RATIO * delay:
+        return ["delay_onset_uncertainty"]
+    return []
+
+
+def delay_interval(delay, step):
+    return [delay, delay + step.onset_interval]
+
+
 def basis(times, tau, delay):
     return -np.expm1(-np.maximum(times - delay, 0) / tau)
 
@@ -157,7 +174,9 @@ def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
     correlation = diagnostics["residualLagOne"]
     if correlation is not None and abs(correlation) > 0.3:
         warnings.append("correlated_residuals")
-    if warnings or correlation is None:
+    # The onset interval is an exogenous uncertainty published as delayIntervalSeconds; it does not
+    # invalidate the local residual errors, which stay conditional on the measured step instant.
+    if set(warnings) - {"delay_onset_uncertainty"} or correlation is None:
         return None
 
     amplitude = gain * step.amplitude
@@ -208,13 +227,12 @@ def identify(payload):
     warnings = []
     if tau <= 1.02 * tau_low or tau >= 0.98 * tau_high or delay >= 0.98 * delay_high:
         warnings.append("parameter_bound")
-    if delay <= training.onset_interval:
-        warnings.append("delay_resolution")
+    warnings.extend(delay_warnings(delay, training))
     if min(training.times[-1], validation.times[-1]) - delay < 4 * tau:
         warnings.append("short_horizon")
     training_diagnostics = diagnostics(training, gain, basis(training.times, tau, delay))
     errors = conditional_errors(training, gain, tau, delay, training_diagnostics, warnings)
     return dict(algorithmVersion=VERSION, gain=gain, tauSeconds=tau, delaySeconds=delay,
-                tauLowerSeconds=tau_low, tauUpperSeconds=tau_high, delayUpperSeconds=delay_high,
+                delayIntervalSeconds=delay_interval(delay, training), tauLowerSeconds=tau_low, tauUpperSeconds=tau_high, delayUpperSeconds=delay_high,
                 warnings=warnings, standardErrors=errors, training=training_diagnostics,
                 validation=diagnostics(validation, gain, basis(validation.times, tau, delay)))
