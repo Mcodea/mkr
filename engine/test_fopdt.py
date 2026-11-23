@@ -99,6 +99,13 @@ class FopdtTests(unittest.TestCase):
         self.assertIn("correlated_residuals", report["warnings"])
         self.assertIsNone(report["standardErrors"])
 
+    def test_exact_response_raises_no_residual_warning(self):
+        # Audit NC-10: round-off residuals of an exact fit used to report correlated residuals.
+        report = calculate()
+        self.assertLess(report["training"]["rmse"], 1e-12)
+        self.assertIsNone(report["training"]["residualLagOne"])
+        self.assertNotIn("correlated_residuals", report["warnings"])
+
     def test_zero_delay_is_resolution_limited(self):
         report = calculate(source(1, delay=0), source(2, delay=0))
         self.assertLess(report["delaySeconds"], 1e-5)

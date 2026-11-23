@@ -8,7 +8,7 @@ from scipy.optimize import least_squares
 
 from csv_quality import NUMBER, TIMESTAMP, read_table
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 
 @dataclass
@@ -136,6 +136,9 @@ def diagnostics(step, gain, response):
     observed_range = float(np.ptp(step.observations))
     rmse = math.sqrt(sse / len(predicted))
     ratio = sse / total if total else math.inf
+    # Residuals at floating-point round-off carry no information about model structure:
+    # their correlation is reported as undetermined instead of raising a false warning (audit NC-10).
+    round_off = rmse <= 32 * math.ulp(float(np.max(np.abs(step.observations))))
     indices = np.unique(np.linspace(0, len(predicted) - 1, min(500, len(predicted)), dtype=int))
     return dict(
         samples=len(predicted), inputStep=step.amplitude, baseline=step.baseline,
@@ -143,7 +146,7 @@ def diagnostics(step, gain, response):
         rmse=rmse, rangeNormalizedRmse=rmse / observed_range if observed_range > 0 else None,
         mae=float(np.mean(np.abs(residual))),
         rSquared=1 - ratio if math.isfinite(ratio) else None,
-        residualLagOne=float(np.dot(centered[1:], centered[:-1]) / variance) if variance else None,
+        residualLagOne=float(np.dot(centered[1:], centered[:-1]) / variance) if variance and not round_off else None,
         points=[dict(seconds=float(step.times[i]), observed=float(step.observations[i]),
                      predicted=float(predicted[i])) for i in indices],
     )
