@@ -137,6 +137,9 @@
                 </Border>
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <Button x:Name="ReviewButton" Content="_Revue de l'étude…" Click="OpenReview"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        ToolTip="Calculé, vérifié, approuvé : décisions attribuées à l'identité de la session, règle des quatre yeux."/>
                 <Button x:Name="DriftButton" Content="_Vérifier le modèle sur un nouvel essai…" Click="CheckDrift"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
                         ToolTip="Choisissez le nouvel échelon en boucle ouverte dans la zone Validation, puis vérifiez si ce modèle accepté le décrit encore."/>

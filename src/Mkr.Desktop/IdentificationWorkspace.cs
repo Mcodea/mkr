@@ -54,6 +54,10 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return recorded;
     }
 
+    public IReadOnlyList<ReviewEvent> ReviewHistory(Guid runId) =>
+        (studies as Mkr.Infrastructure.SqliteProjectStore ?? throw new InvalidOperationException("Historique des validations indisponible."))
+            .ReadReviewHistory(project.Id, runId);
+
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
     public CsvImport ReadSource(ImportSummary source) => imports.ReadImport(project.Id, source.Id);

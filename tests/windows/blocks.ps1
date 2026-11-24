@@ -144,12 +144,35 @@ try {
     if ($message -like '*terminé*' -or [string]::IsNullOrWhiteSpace($message)) { throw "L'essai déjà utilisé doit être refusé. $message" }
     Write-Output "Essai déjà utilisé refusé : $message"
 
+    # ---- Review of a study: session identity, four-eyes rule, declared self-review ----
+    Press $ident "Revue de l'étude…"
+    $review = Find $root $name "MKR — Revue de l'étude"
+    if (!(Find $review $id 'Identity').Current.Name.Contains('[S-1-')) { throw "L'identité de session (SID) doit figurer dans la revue : $((Find $review $id 'Identity').Current.Name)" }
+    $null = Wait-Name $review 'StateLine' '*Aucune revue*'
+    if ((Find $review $id 'Verify').Current.IsEnabled -or !(Find $review $id 'Calculated').Current.IsEnabled) { throw 'Seul « calculé » doit être possible sans revue.' }
+    Press $review 'Marquer comme calculé'
+    $null = Wait-Name $review 'Status' '*Renseignez le motif*'
+    Fill $review 'Reason' 'Identification terminée'
+    Fill $review 'Evidence' 'essai-7 / essai-8'
+    Press $review 'Marquer comme calculé'
+    $null = Wait-Name $review 'StateLine' '*Calculé*'
+    Fill $review 'Reason' 'Relecture'
+    Press $review 'Vérifier'
+    $null = Wait-Name $review 'Status' '*même compte*'
+    (Find $review $id 'SelfReview').GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Press $review 'Vérifier'
+    $null = Wait-Name $review 'StateLine' '*Vérifié*'
+    $historyText = Wait-Value $review 'History' '*auto-revue déclarée*'
+    if (!$historyText.Contains('Calculé') -or !$historyText.Contains('Vérifié')) { throw "Historique de revue incomplet. $historyText" }
+    Close-Window $review
+    Write-Output 'Revue : identité de session, refus sans déclaration, auto-revue inscrite comme telle.'
+
     # ---- Audit log: the actions above are traced and the chain is intact ----
     Close-Window $ident
     Press $project "Journal d'audit…"
     $audit = Find $root $name "MKR — Journal d'audit"
     $entries = Wait-Value $audit 'Entries' '*block.values.shown*'
-    foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked')) {
+    foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked', 'review.recorded')) {
         if (!$entries.Contains($part)) { throw "Action absente du journal : $part. $entries" }
     }
     if (!$entries.Contains('NON QUALIFIÉES')) { throw "Une valeur de bloc affichée doit être tracée comme non qualifiée. $entries" }

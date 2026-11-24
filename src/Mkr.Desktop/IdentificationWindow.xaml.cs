@@ -320,6 +320,7 @@ public partial class IdentificationWindow : Window
         OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         PiPanel.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtPanel.Visibility = tunable && _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
+        ReviewButton.Visibility = _shown is null ? Visibility.Collapsed : Visibility.Visible;
         DriftButton.Visibility = tunable && _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur ? Visibility.Visible : Visibility.Collapsed;
         IntegratorButton.Visibility = tunable && _shown?.Family == ModelFamily.Integrateur ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
@@ -531,6 +532,13 @@ public partial class IdentificationWindow : Window
             return;
         }
         try { new BlockTargetWindow(_workspace, model, tuning) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { ShowError(error); }
+    }
+
+    private void OpenReview(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { } model) return;
+        try { new ReviewWindow(_workspace, model.Id, model.Label) { Owner = this }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
