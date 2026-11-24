@@ -170,7 +170,7 @@
                             <Button x:Name="SimulateSavedPi" IsEnabled="False" Content="Simuler le réglage _enregistré…" Click="OpenSimulation" Margin="8,0,0,0" />
                             <Button x:Name="PidffValues" IsEnabled="False" Content="_Valeurs du bloc PIDFF…" Click="ShowPidffValues" Margin="8,0,0,0"
                                     ToolTip="Valeurs documentaires du bloc Schneider PIDFF (structure mixte). Non qualifiées."/>
-                            <Button x:Name="OtherBlocks" IsEnabled="False" Content="Blocs PID_INT et PID_Compact…" Click="ShowOtherBlocks" Margin="8,0,0,0"
+                            <Button x:Name="OtherBlocks" IsEnabled="False" Content="Blocs PID__INT et PID__Compact…" Click="ShowOtherBlocks" Margin="8,0,0,0"
                                     ToolTip="Valeurs documentaires des blocs Schneider PID_INT et Siemens PID_Compact V2.x/V3.x. Non qualifiées."/>
                         </WrapPanel>
                         <TextBlock x:Name="PiReport" TextWrapping="Wrap" Margin="0,8,0,0" />
