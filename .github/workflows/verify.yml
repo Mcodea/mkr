@@ -21,9 +21,23 @@ permissions:
 jobs:
   windows:
     runs-on: windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
+      - name: Vérifier la syntaxe des scripts PowerShell
+        shell: powershell
+        run: |
+          # Parsed by PowerShell itself: a curly apostrophe inside a single-quoted string ends it (and breaks the script).
+          $failures = 0
+          foreach ($file in Get-ChildItem tests/windows, scripts -Filter *.ps1) {
+              $tokens = $null; $parseErrors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$parseErrors)
+              foreach ($parseError in $parseErrors) {
+                  Write-Host "::error file=$($file.FullName),line=$($parseError.Extent.StartLineNumber)::$($parseError.Message)"
+                  $failures++
+              }
+          }
+          if ($failures -gt 0) { exit 1 }
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
@@ -95,6 +109,9 @@ jobs:
       - name: Tester le transfert PI depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/transfer.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
+      - name: Tester la recherche d’essais dans un historique depuis le paquet autonome
+        shell: powershell
+        run: ./tests/windows/history.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
       - name: Tester l’acquisition Schneider et Siemens depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/acquisition.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"

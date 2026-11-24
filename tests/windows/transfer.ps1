@@ -176,7 +176,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $transportTarget = (Find $ident $id 'ResponseTarget').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
     # NC-03: tight SIMC on the conservative delay bound, 2040 s estimated + 90 s onset interval.
     if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2130) -ge 0.01) {
-        throw 'Cible SIMC attendue proche de 2130 secondes (retard de 34 minutes + intervalle d’échelon de 90 s).'
+        throw "Cible SIMC attendue proche de 2130 secondes (retard de 34 minutes + intervalle d’échelon de 90 s)."
     }
     Press $ident 'Comparer IMC/Lambda et SIMC'
     $null = Find $ident $name 'Réglages théoriques PI enregistrés.'

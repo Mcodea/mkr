@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [string]$Python = 'python')
+﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [string]$Python = 'python')
 # Drives the read-only acquisition window against independent reference servers
 # (pymodbus for Schneider Modbus TCP, the Snap7 library for Siemens S7comm).
 $ErrorActionPreference = 'Stop'
@@ -93,7 +93,7 @@ try {
     Fill $window 'ProcessUnit' 'bar'
     Fill $window 'CommandUnit' '%'
     Press $window 'Tester la lecture'
-    $null = Wait-Text $window 'Status' 'Lecture d’essai réussie*'
+    $null = Wait-Text $window 'Status' "Lecture d’essai réussie*"
     $latest = (Find $window $id 'Latest').Current.Name
     foreach ($part in @('SP 52.5 bar', 'PV 48.25 bar', 'MV -12.75 %')) {
         if (!$latest.Contains($part)) { throw "Valeur S7 absente : $part. Affichage : $latest" }
@@ -102,7 +102,7 @@ try {
     Fill $window 'Count' '5'
     $plan = (Find $window $id 'PlanSummary').Current.Name
     if (!$plan.StartsWith('Durée prévue : 00:00 (5 mesures toutes les 200 ms)')) { throw "Durée prévue absente : $plan" }
-    Press $window 'Démarrer l’acquisition'
+    Press $window "Démarrer l’acquisition"
     $null = Wait-Text $window 'Status' 'Nombre de mesures atteint.*'
     $progress = (Find $window $id 'ProgressText').Current.Name
     if (!$progress.StartsWith('5 / 5 mesures · 0 manquée')) { throw "Avancement inattendu : $progress" }
@@ -125,7 +125,7 @@ try {
     Fill $window 'ProcessUnit' 'bar'
     Fill $window 'CommandUnit' '%'
     Press $window 'Tester la lecture'
-    $null = Wait-Text $window 'Status' 'Lecture d’essai réussie*'
+    $null = Wait-Text $window 'Status' "Lecture d’essai réussie*"
     $latest = (Find $window $id 'Latest').Current.Name
     foreach ($part in @('SP 45.25 bar', 'PV -3.5 bar', 'MV 61.875 %')) {
         if (!$latest.Contains($part)) { throw "Valeur Modbus absente : $part. Affichage : $latest" }
@@ -135,7 +135,44 @@ try {
     Press $window 'Tester la lecture'
     $null = Wait-Text $window 'Status' '*Exception Modbus 02*'
     $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
-    Write-Output 'Acquisition S7 et Modbus vérifiée : lecture d’essai, progression, enregistrement et refus d’adresse.'
+
+    # Continuous recording: about 3.6 s at 100 ms, cut into segments of 10 readings that overlap by 2.
+    $window = Open-Acquisition $root $project
+    Fill $window 'Host' '127.0.0.1'
+    Fill $window 'Port' '15020'
+    Fill $window 'UnitId' '7'
+    Select-Option $window 'Order' 'CDAB*'
+    Fill $window 'SPOffset' '100'
+    Fill $window 'PVOffset' '102'
+    Fill $window 'MVOffset' '104'
+    Fill $window 'ProcessUnit' 'bar'
+    Fill $window 'CommandUnit' '%'
+    (Find $window $id 'Continuous').GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle()
+    Fill $window 'Period' '100'
+    Fill $window 'Hours' '0.001'
+    Fill $window 'SegmentSize' '10'
+    Fill $window 'Overlap' '2'
+    $plan = Wait-Text $window 'PlanSummary' '*segment(s)*'
+    if (!$plan.Contains('37 mesures')) { throw "Plan d’enregistrement continu inattendu : $plan" }
+    Add-Type -Namespace MkrUiTest -Name NativeDialog -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern System.IntPtr GetDlgItem(System.IntPtr dialog, int id);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern bool PostMessage(System.IntPtr target, uint msg, System.IntPtr wParam, System.IntPtr lParam);
+'@
+    Press $window "Démarrer l’enregistrement continu"
+    $dialog = Find $root $name 'Enregistrement continu'
+    if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
+    $ok = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
+    if ($ok -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'Bouton OK inaccessible.' }
+    $combo = Find $project $id 'Imports'
+    $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $labels = @(); $item = $null
+    while ($item = $items.FindItemByProperty($item, $null, $null)) { $labels += $item.Current.Name }
+    $segments = @($labels | Where-Object { $_ -like 'historique-*' })
+    if ($segments.Count -lt 4) { throw "Segments d’historique attendus dans le projet : $($labels -join ' | ')" }
+    Write-Output "Enregistrement continu vérifié : $($segments.Count) segments archivés."
+    Write-Output "Acquisition S7 et Modbus vérifiée : lecture d’essai, progression, enregistrement et refus d’adresse."
 } finally {
     if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id }
     if (-not $servers.HasExited) { Stop-Process -Id $servers.Id -Force }
