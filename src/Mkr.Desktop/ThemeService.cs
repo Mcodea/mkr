@@ -23,7 +23,7 @@ public static class ThemeService
     /// a theme switch then updates open windows too.
     /// </summary>
     public static void RegisterWindowDefaults() =>
-        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.InitializedEvent, new EventHandler((sender, _) =>
+        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) =>
         {
             if (sender is not Window window) return;
             window.SetResourceReference(Control.BackgroundProperty, "MkrCanvas");
