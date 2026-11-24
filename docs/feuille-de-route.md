@@ -36,3 +36,7 @@ Principe : le noyau (identification, validation, réglage, simulation) ne conna�
 2. Suivi des boucles après mise en service : comparer de nouvelles données au modèle validé (étape 10 et au-delà).
 3. Import OPC UA en lecture seule (étape 02).
 4. Test graphique Windows des champs de mode de l'acquisition.
+
+## Preuves
+
+État de maturité fonction par fonction : [validation/etat-de-maturite.md](validation/etat-de-maturite.md). Procédure de qualification sur banc avec critères chiffrés et rapport : [validation/kit-qualification.md](validation/kit-qualification.md). Aucun essai n'a pu être réalisé sur automate ou procédé réel.
