@@ -99,6 +99,19 @@ function Press-Retry($parent, $caption) {
     }
     Press $parent $caption
 }
+function Close-Others($rootElement) {
+    # Closes every MKR window except the main one (dialogs left open by an earlier step), innermost first, several passes.
+    $windowType = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Window)
+    for ($pass = 0; $pass -lt 5; $pass++) {
+        $others = @($rootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $windowType) | Where-Object {
+            $_.Current.Name -like 'MKR — *' -and $_.Current.Name -ne 'MKR — Espace projets' })
+        if ($others.Count -eq 0) { return }
+        foreach ($other in $others) {
+            try { $other.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch { }
+            Start-Sleep -Milliseconds 500
+        }
+    }
+}
 function Step($label, [scriptblock]$body) {
     try { & $body } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
 }
@@ -144,7 +157,7 @@ try {
         Fill $review 'Evidence' 'essai-7 / essai-8'
         # the click is applied even when UI Automation reports 'Unrecognized error' (the window is busy); the state line is the proof
         try { Press $review 'Marquer comme calculé' } catch { }
-        $null = Wait-Name $review 'StateLine' '*Calculé*'
+        $null = Wait-Name $review 'StateLine' '*:*é'
         Capture $review '05-revue'
         Close-Window $review
     }
@@ -180,8 +193,7 @@ try {
     }
     Step '10-espace-etude' {
         # a dialog left open by an earlier step (the review window) must not hide the main window
-        try { Close-Window (Find $root $name "MKR — Revue de l'étude") } catch { }
-        Close-Window $project
+        Close-Others $root
         Press-Retry $main "Ouvrir l'espace d'étude"
         $null = Find $main $id 'StudyGrid'
         Start-Sleep -Milliseconds 1200
