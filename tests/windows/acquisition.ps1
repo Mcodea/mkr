@@ -163,6 +163,10 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $window "Démarrer l’enregistrement continu"
     $dialog = Find $root $name 'MKR — Enregistrement continu terminé'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
+    $summaryText = (@($dialog.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join ' ')
+    if (!$summaryText.Contains('Durée prévue atteinte.') -or !$summaryText.Contains('segment(s) enregistré(s)') -or !$summaryText.Contains('37 mesures')) {
+        throw "Résumé de l’enregistrement continu inattendu : $summaryText"
+    }
     # A native message box: try the Win32 button first, then UI Automation; on failure list what the dialog contains.
     $dismissed = $false
     $until = [DateTime]::UtcNow.AddSeconds(15)
@@ -177,6 +181,13 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
             }
         }
         Start-Sleep -Milliseconds 300
+    }
+    if (!$dismissed) {
+        # This Windows build exposes the OK button as a pane: close the box as its window frame would (returns OK for an OK-only box).
+        $closer = $null
+        if ($dialog.TryGetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern, [ref]$closer)) {
+            $closer.Close(); $dismissed = $true
+        }
     }
     if (!$dismissed) {
         $content = @($dialog.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { "$($_.Current.ControlType.ProgrammaticName):$($_.Current.Name)" })
