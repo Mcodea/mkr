@@ -1,0 +1,154 @@
+﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture)
+# Captures of the real windows of the packaged application (for people without a Windows PC). Never fails the build.
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$scope = [System.Windows.Automation.TreeScope]::Descendants
+$elementType = [System.Windows.Automation.AutomationElement]
+$name = $elementType::NameProperty
+$id = $elementType::AutomationIdProperty
+$type = $elementType::ControlTypeProperty
+function Find($parent, $property, $value) {
+    $condition = [System.Windows.Automation.PropertyCondition]::new($property, $value)
+    $until = [DateTime]::UtcNow.AddSeconds(15)
+    do {
+        $found = $parent.FindFirst($scope, $condition)
+        if ($found) { return $found }
+        Start-Sleep -Milliseconds 150
+    } while ([DateTime]::UtcNow -lt $until)
+    throw "Élément introuvable : $value"
+}
+function Press($parent, $caption) {
+    $captionCondition = [System.Windows.Automation.PropertyCondition]::new($name, $caption)
+    $buttonType = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Button)
+    $button = $parent.FindFirst($scope, [System.Windows.Automation.AndCondition]::new($captionCondition, $buttonType))
+    if (!$button) { throw "Bouton introuvable : $caption" }
+    $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+}
+function Fill($parent, $field, $value) {
+    (Find $parent $id $field).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($value)
+}
+function Select-Option($parent, $field, $pattern) {
+    $combo = Find $parent $id $field
+    $expand = $combo.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $expand.Expand()
+    $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $item = $null
+    do {
+        $item = $items.FindItemByProperty($item, $null, $null)
+        if (!$item) { throw "Option absente dans $field : $pattern" }
+    } until ($item.Current.Name -like $pattern)
+    $item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    $expand.Collapse()
+}
+function Wait-Value($parent, $field, $pattern, $seconds = 25) {
+    $element = Find $parent $id $field
+    $until = [DateTime]::UtcNow.AddSeconds($seconds)
+    do {
+        $text = $element.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+        if ($text -like $pattern) { return $text }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $until)
+    throw "Texte attendu dans ${field} : $pattern. Obtenu : $text"
+}
+function Wait-Name($parent, $field, $pattern, $seconds = 25) {
+    $element = Find $parent $id $field
+    $until = [DateTime]::UtcNow.AddSeconds($seconds)
+    do {
+        $text = $element.Current.Name
+        if ($text -like $pattern) { return $text }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $until)
+    throw "Texte attendu dans ${field} : $pattern. Obtenu : $text"
+}
+function Texts($window) {
+    # A native message box exposes its text under a control type that varies with the Windows build: read every descendant name.
+    return (@($window.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join "`n")
+}
+function Close-Window($window) { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
+
+Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName System.Windows.Forms
+$out = Join-Path $env:RUNNER_TEMP 'mkr-captures'
+New-Item -ItemType Directory -Force -Path $out | Out-Null
+function Capture($window, $label) {
+    try {
+        Start-Sleep -Milliseconds 700
+        try { $window.SetFocus() } catch { }
+        Start-Sleep -Milliseconds 300
+        $r = $window.Current.BoundingRectangle
+        $x = [int][Math]::Max(0, $r.X); $y = [int][Math]::Max(0, $r.Y)
+        $w = [int][Math]::Min($r.Width, [System.Windows.Forms.SystemInformation]::VirtualScreen.Width - $x)
+        $h = [int][Math]::Min($r.Height, [System.Windows.Forms.SystemInformation]::VirtualScreen.Height - $y)
+        $bmp = New-Object System.Drawing.Bitmap $w, $h
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen($x, $y, 0, 0, (New-Object System.Drawing.Size $w, $h))
+        $g.Dispose()
+        $file = Join-Path $out "$label.png"
+        $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+        $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file))
+        Write-Host "##CAPTURE-BEGIN $label $w x $h"
+        for ($i = 0; $i -lt $b64.Length; $i += 3000) { Write-Host ("##C " + $b64.Substring($i, [Math]::Min(3000, $b64.Length - $i))) }
+        Write-Host "##CAPTURE-END $label"
+    } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
+}
+$start = New-Object System.Diagnostics.ProcessStartInfo
+$start.FileName = (Resolve-Path $Executable).Path
+$start.UseShellExecute = $false
+$start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
+$process = [System.Diagnostics.Process]::Start($start)
+try {
+    $root = $elementType::RootElement
+    $main = Find $root $name 'MKR — Espace projets'
+    Capture $main '01-espace-projets'
+    $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
+    $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Press $main 'Ouvrir le projet sélectionné'
+    $project = Find $root $name 'MKR — Projet initial'
+    Capture $project '02-projet'
+    Press $project 'Préparer les essais sur banc…'
+    $catalogue = Find $root $name 'MKR — Catalogue des blocs'
+    Fill $catalogue 'Filter' 'PIDFF'
+    $null = Find $catalogue $name 'Compatibilité à vérifier'
+    Capture $catalogue '03-catalogue-blocs'
+    Close-Window $catalogue
+    Press $project 'Identification…'
+    $ident = Find $root $name 'MKR — Identification'
+    $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$modelId"
+    Capture $ident '04-identification'
+    Press $ident 'Revue de l’étude…'
+    $review = Find $root $name 'MKR — Revue de l’étude'
+    Fill $review 'Reason' 'Identification terminée'
+    Fill $review 'Evidence' 'essai-7 / essai-8'
+    Press $review 'Marquer comme calculé'
+    $null = Wait-Name $review 'StateLine' '*Calculé*'
+    Capture $review '05-revue'
+    Close-Window $review
+    $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
+    Select-Option $ident 'StudyList' "*$integratorId"
+    Press $ident 'Régler le procédé intégrateur…'
+    $tuning = Find $root $name "MKR — Réglage d'un procédé intégrateur"
+    Fill $tuning 'ResponseSeconds' '8'
+    Press $tuning 'Calculer'
+    $null = Wait-Value $tuning 'Result' '*SIMC_integrating*'
+    Capture $tuning '06-reglage-integrateur'
+    Press $tuning 'Valeurs du bloc PIDFF…'
+    $values = Find $root $name 'MKR — Valeurs du bloc PIDFF (non qualifiées)'
+    $null = Wait-Value $values 'Values' '*NON QUALIFIÉ*'
+    Capture $values '07-valeurs-bloc-pidff'
+    Close-Window $values
+    Close-Window $tuning
+    Press $ident 'Blocs PID__INT et PID__Compact…'
+    Close-Window $ident
+    Press $project "Journal d'audit…"
+    $audit = Find $root $name "MKR — Journal d'audit"
+    $null = Wait-Value $audit 'Entries' '*review.recorded*'
+    Capture $audit '08-journal-audit'
+    Close-Window $audit
+} catch {
+    Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
+} finally {
+    if (-not $process.HasExited) { Stop-Process -Id $process.Id }
+}
+exit 0
