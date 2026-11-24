@@ -18,7 +18,7 @@
                             <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
                             <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" >
                                 <ComboBox.ItemContainerStyle>
-                                    <Style TargetType="ComboBoxItem">
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                                         <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
                                     </Style>
                                 </ComboBox.ItemContainerStyle>
@@ -47,7 +47,7 @@
                             <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
                             <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" >
                                 <ComboBox.ItemContainerStyle>
-                                    <Style TargetType="ComboBoxItem">
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                                         <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
                                     </Style>
                                 </ComboBox.ItemContainerStyle>
@@ -96,7 +96,7 @@
                         <Label Content="Études" Target="{Binding ElementName=StudyList}" Margin="10,0,0,0" />
                         <ComboBox x:Name="StudyList" Width="260" DisplayMemberPath="Label" SelectionChanged="ShowStudy" >
                             <ComboBox.ItemContainerStyle>
-                                <Style TargetType="ComboBoxItem">
+                                <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                                     <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
                                     <Setter Property="AutomationProperties.AutomationId" Value="{Binding Id}"/>
                                 </Style>
