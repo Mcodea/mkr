@@ -9,18 +9,18 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
                 <TextBlock Text="MKR  /  LABORATOIRE SCIENTIFIQUE  /  PID"
-                           FontSize="11" Foreground="{StaticResource MkrAccent}" FontWeight="SemiBold"/>
+                           FontSize="11" Foreground="{DynamicResource MkrAccent}" FontWeight="SemiBold"/>
                 <TextBlock Text="Essai PID filtré — hors ligne" FontSize="26" FontWeight="SemiBold"
                            Margin="0,7,0,5"/>
                 <TextBlock Text="Prototype non qualifié industriellement · Aucun paramètre envoyé vers un automate · Calculs non enregistrés"
-                           TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,0,0,15"/>
-                <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                           TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,15"/>
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
                     <StackPanel x:Name="InputPanel">
                         <TextBlock Text="01  ·  Paramètres manuels du régulateur" FontSize="16"
                                    FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="ContextInfo" TextWrapping="Wrap"
-                                   Foreground="{StaticResource MkrMuted}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
                         <WrapPanel Margin="0,0,0,8">
                             <Label Content="Kp" Target="{Binding ElementName=Kp}" VerticalAlignment="Center"/>
                             <TextBox x:Name="Kp" Width="90" Margin="0,0,12,0"/>
@@ -32,7 +32,7 @@
                             <TextBox x:Name="Tf" Width="90" Text="0.1"/>
                         </WrapPanel>
                         <TextBlock Text="P et I sur SP−PV · D uniquement sur PV · filtre discret Euler implicite · intégration conditionnelle."
-                                   Foreground="{StaticResource MkrMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
                         <WrapPanel>
                             <Button x:Name="RunButton" Content="_Comparer PID / PI" Click="Run"
                                     Style="{StaticResource MkrPrimaryButton}"
@@ -42,13 +42,13 @@
                     </StackPanel>
                 </Border>
                 <Border x:Name="ResultsPanel" Visibility="Collapsed"
-                        Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="02  ·  Comparaison des performances"
                                    FontWeight="SemiBold" FontSize="16" Margin="0,0,0,9"/>
                         <TextBlock x:Name="ResultMeta" TextWrapping="Wrap"
-                                   Foreground="{StaticResource MkrMuted}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
                         <DataGrid x:Name="Metrics" AutoGenerateColumns="False" IsReadOnly="True"
                                   CanUserAddRows="False" Height="150"
                                   AutomationProperties.Name="Comparaison des performances PI et PID">
@@ -65,18 +65,18 @@
                     </StackPanel>
                 </Border>
                 <Border x:Name="PlotPanel" Visibility="Collapsed"
-                        Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="03  ·  Courbes comparées sur le même horizon"
                                    FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="Legend" TextWrapping="Wrap"
-                                   Foreground="{StaticResource MkrMuted}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
                         <Canvas x:Name="Graph" Height="400" ClipToBounds="True"
-                                Background="{StaticResource MkrSurface}" SizeChanged="ResizeGraph"
+                                Background="{DynamicResource MkrSurface}" SizeChanged="ResizeGraph"
                                 AutomationProperties.Name="Comparaison temporelle SP PV PI et PID et MV appliquée"/>
                         <TextBlock Text="Simulation FOPDT nominale, valeurs d'écart. L'amélioration d'un indicateur n'est pas une garantie de stabilité ni de compatibilité constructeur."
-                                   Foreground="{StaticResource MkrMuted}" FontSize="11"
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>

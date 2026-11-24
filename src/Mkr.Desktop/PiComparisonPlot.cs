@@ -90,7 +90,7 @@ internal static class PiComparisonPlot
             double Y(double value) => top + trackHeight * (maximum - value) / (maximum - minimum);
             canvas.Children.Add(new Polyline
             {
-                Stroke = Brushes.SlateGray,
+                Stroke = PlotColors.Axis,
                 StrokeThickness = 1,
                 IsHitTestVisible = false,
                 Points = new PointCollection
@@ -99,10 +99,10 @@ internal static class PiComparisonPlot
                     new(Left + width, top + trackHeight)
                 }
             });
-            Label(title, Left, top - 21, Brushes.DimGray);
-            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, top - 8, Brushes.DimGray);
+            Label(title, Left, top - 21, PlotColors.Label);
+            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, top - 8, PlotColors.Label);
             Label(minimum.ToString("G5", CultureInfo.InvariantCulture), 2,
-                  top + trackHeight - 15, Brushes.DimGray);
+                  top + trackHeight - 15, PlotColors.Label);
             draw(Y);
         }
 
@@ -125,7 +125,7 @@ internal static class PiComparisonPlot
             canvas.Children.Add(new Line
             {
                 X1 = Left, X2 = Left + width, Y1 = reference, Y2 = reference,
-                Stroke = Brushes.SeaGreen, StrokeThickness = 1.4,
+                Stroke = PlotColors.Signal3, StrokeThickness = 1.4,
                 StrokeDashArray = new DoubleCollection { 5, 3 },
                 IsHitTestVisible = false
             });
@@ -158,8 +158,8 @@ internal static class PiComparisonPlot
                 Band(envelope.Imc, Colors.SteelBlue);
                 Band(envelope.Simc, Colors.DarkOrange);
             }
-            Curve(imc.Select(p => (p.Seconds, p.Pv)), y, Brushes.SteelBlue);
-            Curve(simc.Select(p => (p.Seconds, p.Pv)), y, Brushes.DarkOrange);
+            Curve(imc.Select(p => (p.Seconds, p.Pv)), y, PlotColors.Signal1);
+            Curve(simc.Select(p => (p.Seconds, p.Pv)), y, PlotColors.Signal2);
         });
 
         var commandImc = imc.Where(p => p.Cv.HasValue && p.Mv.HasValue).ToArray();
@@ -174,14 +174,14 @@ internal static class PiComparisonPlot
             Track($"{title} · ΔCV calculée / ΔMV appliquée ({mvUnit})", top, all, y =>
             {
                 Curve(points.Select(p => (p.Seconds, p.Cv!.Value)), y, command, dashed: true);
-                Curve(points.Select(p => (p.Seconds, p.Mv!.Value)), y, Brushes.MediumSeaGreen);
+                Curve(points.Select(p => (p.Seconds, p.Mv!.Value)), y, PlotColors.Signal3);
                 foreach (var limit in new[] { study.Scenario.MinimumMv, study.Scenario.MaximumMv })
                 {
                     var limitY = y(limit);
                     canvas.Children.Add(new Line
                     {
                         X1 = Left, X2 = Left + width, Y1 = limitY, Y2 = limitY,
-                        Stroke = Brushes.Gray, StrokeThickness = 0.7,
+                        Stroke = PlotColors.Axis, StrokeThickness = 0.7,
                         StrokeDashArray = new DoubleCollection { 2, 4 },
                         IsHitTestVisible = false
                     });
@@ -189,8 +189,8 @@ internal static class PiComparisonPlot
             });
         }
 
-        Commands("IMC/Lambda", secondTop, commandImc, Brushes.SteelBlue);
-        Commands("SIMC", thirdTop, commandSimc, Brushes.DarkOrange);
+        Commands("IMC/Lambda", secondTop, commandImc, PlotColors.Signal1);
+        Commands("SIMC", thirdTop, commandSimc, PlotColors.Signal2);
 
         if (study.Scenario.Disturbance != 0)
         {
@@ -200,32 +200,32 @@ internal static class PiComparisonPlot
                 var eventLine = new Line
                 {
                     X1 = X(time), X2 = X(time), Y1 = Top, Y2 = thirdTop + trackHeight,
-                    Stroke = Brushes.MediumVioletRed, StrokeThickness = 1.1,
+                    Stroke = PlotColors.Signal4, StrokeThickness = 1.1,
                     StrokeDashArray = new DoubleCollection { 3, 4 },
                     IsHitTestVisible = false
                 };
                 canvas.Children.Add(eventLine);
                 Label("Perturbation", Math.Min(X(time) + 5, Left + width - 100),
-                      thirdTop + trackHeight + 9, Brushes.MediumVioletRed);
+                      thirdTop + trackHeight + 9, PlotColors.Signal4);
             }
         }
 
-        Label($"{t0:G5} s", Left, thirdTop + trackHeight + 9, Brushes.DimGray);
+        Label($"{t0:G5} s", Left, thirdTop + trackHeight + 9, PlotColors.Label);
         Label($"{t1:G5} s", Math.Max(Left, Left + width - 80),
-              thirdTop + trackHeight + 9, Brushes.DimGray);
+              thirdTop + trackHeight + 9, PlotColors.Label);
         if (cursorSeconds is { } cursor && cursor >= t0 && cursor <= t1)
         {
             var cursorX = X(cursor);
             canvas.Children.Add(new Line
             {
                 X1 = cursorX, X2 = cursorX, Y1 = Top, Y2 = thirdTop + trackHeight,
-                Stroke = Brushes.DarkSlateGray, StrokeThickness = 1.2,
+                Stroke = PlotColors.Axis, StrokeThickness = 1.2,
                 StrokeDashArray = new DoubleCollection { 2, 3 },
                 IsHitTestVisible = false
             });
         }
 
         Label("Temps depuis le début du scénario (s)", Left,
-              thirdTop + trackHeight + 30, Brushes.DimGray);
+              thirdTop + trackHeight + 30, PlotColors.Label);
     }
 }

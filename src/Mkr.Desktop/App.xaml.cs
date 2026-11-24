@@ -35,6 +35,7 @@ public partial class App : Application
             Trace.Listeners.Add(new TextWriterTraceListener(Path.Combine(directory, "mkr.log")));
             Trace.AutoFlush = true;
             Mkr.Core.CurrentUser.Provider = new WindowsIdentityProvider();
+            ThemeService.Initialize(directory);
             var store = new SqliteProjectStore(Path.Combine(directory, "projects.db"));
             var bundled = Path.Combine(AppContext.BaseDirectory, "python", "python.exe");
             var python = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? (File.Exists(bundled) ? bundled : "python");

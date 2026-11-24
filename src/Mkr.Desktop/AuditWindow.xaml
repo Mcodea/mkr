@@ -9,13 +9,13 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{StaticResource MkrAccentPale}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+        <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap"
                        Text="Journal en ajout seul, chaîné par empreintes SHA-256 : une entrée modifiée ou retirée au milieu rompt la chaîne. Il ne protège pas d'une réécriture complète par quelqu'un qui peut tout écrire dans le fichier du projet : notez l'empreinte de tête ailleurs pour le détecter."/>
         </Border>
         <DockPanel Grid.Row="1" Margin="0,0,0,8">
-            <TextBlock x:Name="Count" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{StaticResource MkrMuted}"
+            <TextBlock x:Name="Count" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{DynamicResource MkrMuted}"
                        AutomationProperties.LiveSetting="Polite"/>
             <Label Content="_Filtrer" Target="{Binding ElementName=Filter}" DockPanel.Dock="Left"/>
             <TextBox x:Name="Filter" TextChanged="FilterChanged" Margin="0,0,12,0"

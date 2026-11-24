@@ -49,7 +49,7 @@ internal static class IdentificationDiagnosticsPlot
         var visible = valid.Where(p => p.Seconds >= start && p.Seconds <= end).ToArray();
         if (visible.Length < 2)
         {
-            Label(canvas, "Aucun intervalle exploitable dans la sélection.", Left, Top, Brushes.DimGray);
+            Label(canvas, "Aucun intervalle exploitable dans la sélection.", Left, Top, PlotColors.Label);
             return;
         }
 
@@ -79,7 +79,7 @@ internal static class IdentificationDiagnosticsPlot
         {
             var axis = new Polyline
             {
-                Stroke = Brushes.SlateGray, StrokeThickness = 1,
+                Stroke = PlotColors.Axis, StrokeThickness = 1,
                 Points = new PointCollection
                 {
                     new(Left, top), new(Left, top + TrackHeight),
@@ -87,23 +87,23 @@ internal static class IdentificationDiagnosticsPlot
                 }
             };
             canvas.Children.Add(axis);
-            Label(canvas, label, Left, top - 22, Brushes.DimGray);
-            Label(canvas, max.ToString("G5", CultureInfo.InvariantCulture), 4, top - 6, Brushes.DimGray);
+            Label(canvas, label, Left, top - 22, PlotColors.Label);
+            Label(canvas, max.ToString("G5", CultureInfo.InvariantCulture), 4, top - 6, PlotColors.Label);
             Label(canvas, min.ToString("G5", CultureInfo.InvariantCulture), 4,
-                  top + TrackHeight - 16, Brushes.DimGray);
+                  top + TrackHeight - 16, PlotColors.Label);
         }
 
         Track(Top, pvMin, pvMax, $"PV ({pvUnit}) — mesurée / prédite");
         var residualTop = Top + TrackHeight + Gap;
         Track(residualTop, residualMin, residualMax, $"Résidu ({pvUnit}) — mesurée − prédite");
 
-        var observed = new Polyline { Stroke = Brushes.SteelBlue, StrokeThickness = 2.3 };
+        var observed = new Polyline { Stroke = PlotColors.Signal1, StrokeThickness = 2.3 };
         var predicted = new Polyline
         {
-            Stroke = Brushes.DarkOrange, StrokeThickness = 2,
+            Stroke = PlotColors.Signal2, StrokeThickness = 2,
             StrokeDashArray = new DoubleCollection { 5, 3 }
         };
-        var residual = new Polyline { Stroke = Brushes.MediumVioletRed, StrokeThickness = 1.7 };
+        var residual = new Polyline { Stroke = PlotColors.Signal4, StrokeThickness = 1.7 };
         foreach (var point in visible)
         {
             var x = X(point.Seconds);
@@ -118,15 +118,15 @@ internal static class IdentificationDiagnosticsPlot
         var reference = new Line
         {
             X1 = Left, X2 = Left + width, Y1 = zero, Y2 = zero,
-            Stroke = Brushes.DarkGray, StrokeThickness = 1,
+            Stroke = PlotColors.Axis, StrokeThickness = 1,
             StrokeDashArray = new DoubleCollection { 3, 3 }
         };
         canvas.Children.Add(reference);
         canvas.Children.Add(residual);
-        Label(canvas, $"{start:G5} s", Left, Bottom + 8, Brushes.DimGray);
-        Label(canvas, $"{end:G5} s", Math.Max(Left, Left + width - 88), Bottom + 8, Brushes.DimGray);
+        Label(canvas, $"{start:G5} s", Left, Bottom + 8, PlotColors.Label);
+        Label(canvas, $"{end:G5} s", Math.Max(Left, Left + width - 88), Bottom + 8, PlotColors.Label);
         Label(canvas, $"Temps après échelon (s) · {visible.Length} points affichés",
-              Left, Bottom + 32, Brushes.DimGray);
+              Left, Bottom + 32, PlotColors.Label);
     }
 
     private static void Label(Canvas canvas, string text, double x, double y, Brush brush)

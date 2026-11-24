@@ -8,10 +8,10 @@
                    AutomationProperties.LiveSetting="Polite" />
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <TextBlock Text="MKR  /  RÉGLAGE  /  SIMULATION" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MkrAccent}" />
+                <TextBlock Text="MKR  /  RÉGLAGE  /  SIMULATION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}" />
                 <TextBlock FontSize="27" FontWeight="SemiBold" Text="Comparaison des réglages PI" Margin="0,6,0,0" />
                 <TextBlock x:Name="Units" TextWrapping="Wrap" Margin="0,6,0,10" />
-                <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                 <StackPanel x:Name="ScenarioForm">
                     <TextBlock Text="01  ·  Paramètres du scénario" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
                     <WrapPanel Margin="0,0,0,6">
@@ -69,20 +69,20 @@
                     </WrapPanel>
                 </StackPanel>
                 </Border>
-                <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="02  ·  Indicateurs de comparaison" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <TextBlock x:Name="Report" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border x:Name="RobustnessPanel" Visibility="Collapsed"
-                        Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="03  ·  Sensibilité des réglages PI"
                                    FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Foreground="{StaticResource MkrMuted}"/>
+                                   Foreground="{DynamicResource MkrMuted}"/>
                         <DataGrid x:Name="RobustnessGrid" HeadersVisibility="Column"
                                   AutoGenerateColumns="False" IsReadOnly="True"
                                   CanUserAddRows="False" MaxHeight="340"
@@ -99,38 +99,38 @@
                             </DataGrid.Columns>
                         </DataGrid>
                         <TextBlock Text="Étude exploratoire, un paramètre varie à la fois. Les coefficients PI restent fixes. Ne constitue pas une preuve de stabilité ni un intervalle de confiance."
-                                   FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}"
+                                   FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
                                    Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
-                <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}"
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock Text="04  ·  Analyse temporelle" FontSize="16"
                                    FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Foreground="{StaticResource MkrMuted}"/>
+                                   Foreground="{DynamicResource MkrMuted}"/>
                         <WrapPanel Margin="0,0,0,10">
                             <Button x:Name="ResetZoomButton" Content="_Réinitialiser le zoom"
                                     Click="ResetZoom" IsEnabled="False"
                                     ToolTip="Revenir à toute la durée de la simulation" Margin="0,0,12,0"/>
                             <TextBlock x:Name="ZoomStatus" Text="Horizon complet"
-                                       Foreground="{StaticResource MkrMuted}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"/>
                         </WrapPanel>
-                        <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                                Background="{StaticResource MkrCanvas}" CornerRadius="4"
+                        <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                                Background="{DynamicResource MkrCanvas}" CornerRadius="4"
                                 Padding="10,8" Margin="0,0,0,10">
                             <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré."
-                                       Foreground="{StaticResource MkrText}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource MkrText}" TextWrapping="Wrap"
                                        AutomationProperties.LiveSetting="Polite"/>
                         </Border>
                         <Canvas x:Name="Plot" Height="570" ClipToBounds="True" SizeChanged="ResizePlot"
-                                Background="{StaticResource MkrSurface}"
+                                Background="{DynamicResource MkrSurface}"
                                 MouseLeftButtonDown="StartPlotSelection"
                                 MouseLeftButtonUp="EndPlotSelection"
                                 AutomationProperties.Name="Réponses SP et PV, commandes calculées et MV appliquées IMC et SIMC"/>
                         <TextBlock Text="Glissez horizontalement pour zoomer ; cliquez pour inspecter un échantillon. ΔCV est la commande calculée avant limitation ; ΔMV est celle appliquée dans le modèle. Le zoom n'altère ni la simulation ni son export."
-                                   Foreground="{StaticResource MkrMuted}" FontSize="11" Margin="0,8,0,0"
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>

@@ -16,29 +16,29 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="MKR  /  PROJET  /  DONNÉES"
-                           FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MkrAccent}"/>
+                           FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
                 <TextBlock Text="Étude de régulation" FontSize="27" FontWeight="SemiBold"
                            Margin="0,7,0,3"/>
                 <TextBlock Text="Décrivez la boucle dans Procédé, puis sélectionnez les données pour identifier le modèle et comparer les réglages."
-                           Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+                           Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
             </StackPanel>
             <Border Grid.Column="1" Padding="12,7" Margin="12,0,0,0"
-                    BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                    Background="{StaticResource MkrSurface}" CornerRadius="5"
+                    BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                    Background="{DynamicResource MkrSurface}" CornerRadius="5"
                     VerticalAlignment="Top">
-                <TextBlock Text="CSV et acquisition en lecture seule" Foreground="{StaticResource MkrMuted}"
+                <TextBlock Text="CSV et acquisition en lecture seule" Foreground="{DynamicResource MkrMuted}"
                            FontSize="11"/>
             </Border>
         </Grid>
-        <TabControl Grid.Row="1" Background="{StaticResource MkrSurface}"
-                    BorderBrush="{StaticResource MkrBorder}" Padding="2">
+        <TabControl Grid.Row="1" Background="{DynamicResource MkrSurface}"
+                    BorderBrush="{DynamicResource MkrBorder}" Padding="2">
             <TabItem Header="_Données CSV">
                 <!-- One scrolling column: nothing can overlap, whatever the window height (the former fixed rows overlapped at 768 px). -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="14">
                     <StackPanel>
                         <StackPanel x:Name="Controls">
-                            <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                                    Background="{StaticResource MkrCanvas}" CornerRadius="6"
+                            <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                                    Background="{DynamicResource MkrCanvas}" CornerRadius="6"
                                     Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
                                     <TextBlock Text="01  ·  Source et format du fichier" FontSize="15"
@@ -75,14 +75,14 @@
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                                    Background="{StaticResource MkrSurface}" CornerRadius="6"
+                            <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                                    Background="{DynamicResource MkrSurface}" CornerRadius="6"
                                     Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
                                     <TextBlock Text="02  ·  Correspondance des variables"
                                                FontSize="15" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                     <TextBlock Text="Sélectionnez explicitement les colonnes, le rôle métier et l’unité physique. Aucun rôle n’est déduit automatiquement."
-                                               Foreground="{StaticResource MkrMuted}"
+                                               Foreground="{DynamicResource MkrMuted}"
                                                TextWrapping="Wrap" Margin="0,0,0,10"/>
                                     <WrapPanel>
                                         <StackPanel Margin="0,0,12,8">
@@ -111,8 +111,8 @@
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                                    Background="{StaticResource MkrSurface}" CornerRadius="6"
+                            <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                                    Background="{DynamicResource MkrSurface}" CornerRadius="6"
                                     Padding="14" Margin="0,0,0,12">
                                 <StackPanel>
                                     <TextBlock Text="03  ·  Imports enregistrés" FontSize="15"
@@ -129,8 +129,8 @@
                                 </StackPanel>
                             </Border>
                         </StackPanel>
-                    <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                            CornerRadius="6" Background="{StaticResource MkrSurface}" Padding="12">
+                    <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                            CornerRadius="6" Background="{DynamicResource MkrSurface}" Padding="12">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -139,7 +139,7 @@
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Aperçu du fichier" FontWeight="SemiBold" FontSize="15"/>
                                 <TextBlock Text="Lignes source affichées sans modification des valeurs brutes."
-                                           Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0"
+                                           Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                             <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" Height="260"
@@ -148,13 +148,13 @@
                         </Grid>
                     </Border>
                     <Border Margin="0,12,0,0" Padding="12"
-                            BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                            Background="{StaticResource MkrAccentPale}" CornerRadius="6">
+                            BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
+                            Background="{DynamicResource MkrAccentPale}" CornerRadius="6">
                         <StackPanel>
                             <TextBlock Text="Qualité et provenance" FontSize="13"
                                        FontWeight="SemiBold" Margin="0,0,0,5"/>
                             <TextBlock x:Name="Report" TextWrapping="Wrap"
-                                       Foreground="{StaticResource MkrText}"/>
+                                       Foreground="{DynamicResource MkrText}"/>
                         </StackPanel>
                     </Border>
                     </StackPanel>
@@ -192,7 +192,7 @@
                 </Grid>
             </TabItem>
         </TabControl>
-        <Border Grid.Row="2" BorderBrush="{StaticResource MkrBorder}"
+        <Border Grid.Row="2" BorderBrush="{DynamicResource MkrBorder}"
                 BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,14,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -201,7 +201,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="StatusText" TextWrapping="Wrap"
                            VerticalAlignment="Center" Margin="0,0,12,0"
-                           Foreground="{StaticResource MkrMuted}"
+                           Foreground="{DynamicResource MkrMuted}"
                            AutomationProperties.LiveSetting="Polite"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="Préparer les essais sur _banc…" Click="OpenCatalogue" Margin="0,0,8,0"

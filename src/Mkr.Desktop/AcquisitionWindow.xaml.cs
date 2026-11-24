@@ -214,10 +214,10 @@ public partial class AcquisitionWindow : Window
     {
         (ConnectionLight.Fill, ConnectionState.Text) = state switch
         {
-            AcquisitionState.Connecting => ((Brush)Brushes.Orange, "Connexion en cours…"),
-            AcquisitionState.Connected or AcquisitionState.Reading => (Brushes.SeaGreen, "Connecté · lecture seule"),
-            AcquisitionState.Reconnecting => (Brushes.Orange, "Liaison perdue · reconnexion…"),
-            _ => (Brushes.Gray, "Déconnecté")
+            AcquisitionState.Connecting => (PlotColors.Status("MkrWarning"), "Connexion en cours…"),
+            AcquisitionState.Connected or AcquisitionState.Reading => (PlotColors.Status("MkrSuccess"), "Connecté · lecture seule"),
+            AcquisitionState.Reconnecting => (PlotColors.Status("MkrWarning"), "Liaison perdue · reconnexion…"),
+            _ => (PlotColors.Status("MkrMuted"), "Déconnecté")
         };
         if (detail is not null) ConnectionState.Text += " · " + detail;
     }

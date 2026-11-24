@@ -20,11 +20,11 @@ internal static class ComparisonPlot
         var seconds = values[^1].Time;
         if (seconds <= 0)
             return;
-        var first = new Polyline { Stroke = Brushes.SteelBlue, StrokeThickness = 2.5 };
-        var second = new Polyline { Stroke = Brushes.DarkOrange, StrokeThickness = 2, StrokeDashArray = new DoubleCollection { 4, 2 } };
+        var first = new Polyline { Stroke = PlotColors.Signal1, StrokeThickness = 2.5 };
+        var second = new Polyline { Stroke = PlotColors.Signal2, StrokeThickness = 2, StrokeDashArray = new DoubleCollection { 4, 2 } };
         canvas.Children.Add(new System.Windows.Shapes.Path
         {
-            Stroke = Brushes.Gray,
+            Stroke = PlotColors.Axis,
             Data = Geometry.Parse(FormattableString.Invariant($"M {left},{top} L {left},{top + height} L {left + width},{top + height}"))
         });
         foreach (var point in values)

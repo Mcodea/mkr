@@ -405,17 +405,17 @@ public partial class IdentificationWindow : Window
         DrawPlot();
     }
 
-    private static SolidColorBrush Tone(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
+    private static Brush Tone(string key) => PlotColors.Status(key);
 
     private static Border Tile(string label, string value)
     {
         var tile = new Border
         {
-            Background = Brushes.White, BorderBrush = Tone("#D8E0EA"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6),
+            Background = Tone("MkrSurface"), BorderBrush = Tone("MkrBorder"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6),
             Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 6), MinWidth = 96
         };
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = Tone("#546579") });
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = Tone("MkrMuted") });
         stack.Children.Add(new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeights.SemiBold });
         tile.Child = stack;
         return tile;
@@ -427,9 +427,9 @@ public partial class IdentificationWindow : Window
         var result = study.Result;
         (string title, string detail, string badge, string fill, string line) = study.Assessment switch
         {
-            { Accepted: true } => ("MODÈLE ACCEPTÉ", "Validé sur l’essai indépendant : le réglage et la simulation sont disponibles.", "#1B7F4B", "#EAF6EF", "#9FD3B5"),
-            { } refused => ("MODÈLE REFUSÉ", "Motifs : " + string.Join(", ", refused.Reasons.Select(ReasonText)) + ". Aucun réglage n’est proposé.", "#B3261E", "#FCEDEB", "#E5A9A4"),
-            _ => ("NON DÉCIDÉ", "Aucune décision de validation enregistrée : refaites l’estimation avec des critères.", "#8A5A00", "#FFF4DB", "#E8CB86")
+            { Accepted: true } => ("MODÈLE ACCEPTÉ", "Validé sur l’essai indépendant : le réglage et la simulation sont disponibles.", "MkrSuccess", "MkrSuccessPale", "MkrSuccess"),
+            { } refused => ("MODÈLE REFUSÉ", "Motifs : " + string.Join(", ", refused.Reasons.Select(ReasonText)) + ". Aucun réglage n’est proposé.", "MkrDanger", "MkrDangerPale", "MkrDanger"),
+            _ => ("NON DÉCIDÉ", "Aucune décision de validation enregistrée : refaites l’estimation avec des critères.", "MkrWarning", "MkrWarningPale", "MkrWarning")
         };
         VerdictCard.Background = Tone(fill);
         VerdictCard.BorderBrush = Tone(line);

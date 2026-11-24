@@ -8,35 +8,43 @@
             <ColumnDefinition Width="220"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="{StaticResource MkrNavy}">
+        <Border Grid.Column="0" Background="{DynamicResource MkrNavy}">
             <DockPanel Margin="20,24,16,18" LastChildFill="False">
                 <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="MKR" FontSize="31" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="MKR" FontSize="31" FontWeight="Bold" Foreground="{DynamicResource MkrNavyText}"/>
                     <TextBlock Text="INGÉNIERIE DE RÉGULATION" FontSize="10" FontWeight="SemiBold"
-                               Foreground="#AEC4DD" TextWrapping="Wrap" Margin="0,3,0,28"/>
-                    <Border Background="{StaticResource MkrNavySoft}" Padding="12,12" CornerRadius="6">
+                               Foreground="{DynamicResource MkrNavyMuted}" TextWrapping="Wrap" Margin="0,3,0,28"/>
+                    <Border Background="{DynamicResource MkrNavySoft}" Padding="12,12" CornerRadius="6">
                         <StackPanel>
-                            <TextBlock Text="ESPACE DE TRAVAIL" Foreground="#BDCFDF" FontSize="10"
+                            <TextBlock Text="ESPACE DE TRAVAIL" Foreground="{DynamicResource MkrNavyMuted}" FontSize="10"
                                        FontWeight="SemiBold" Margin="0,0,0,10"/>
-                            <TextBlock Text="Projets" Foreground="White" FontWeight="SemiBold" FontSize="16"/>
+                            <TextBlock Text="Projets" Foreground="{DynamicResource MkrNavyText}" FontWeight="SemiBold" FontSize="16"/>
                             <TextBlock Text="Création, sélection et ouverture d'une étude"
-                                       Foreground="#D2DFEC" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,0"/>
+                                       Foreground="{DynamicResource MkrNavyText}" TextWrapping="Wrap" FontSize="11" Margin="0,6,0,0"/>
                         </StackPanel>
                     </Border>
                     <Button Content="_Catalogue des blocs" Click="OpenCatalogue" Margin="0,12,0,0"
                             AutomationProperties.Name="Ouvrir le catalogue des blocs"/>
-                    <TextBlock Text="PARCOURS D'INGÉNIERIE" Foreground="#AEC4DD" FontSize="10"
+                    <TextBlock Text="PARCOURS D'INGÉNIERIE" Foreground="{DynamicResource MkrNavyMuted}" FontSize="10"
                                FontWeight="SemiBold" Margin="2,28,0,13"/>
-                    <TextBlock Text="01   Boucle et objectif" Foreground="White" Margin="2,0,0,13"/>
-                    <TextBlock Text="02   Acquisition et qualité" Foreground="#C6D7EA" Margin="2,0,0,13"/>
-                    <TextBlock Text="03   Identification" Foreground="#C6D7EA" Margin="2,0,0,13"/>
-                    <TextBlock Text="04   Réglage et simulation" Foreground="#C6D7EA" Margin="2,0,0,13"
+                    <TextBlock Text="01   Boucle et objectif" Foreground="{DynamicResource MkrNavyText}" Margin="2,0,0,13"/>
+                    <TextBlock Text="02   Acquisition et qualité" Foreground="{DynamicResource MkrNavyMuted}" Margin="2,0,0,13"/>
+                    <TextBlock Text="03   Identification" Foreground="{DynamicResource MkrNavyMuted}" Margin="2,0,0,13"/>
+                    <TextBlock Text="04   Réglage et simulation" Foreground="{DynamicResource MkrNavyMuted}" Margin="2,0,0,13"
                                TextWrapping="Wrap"/>
-                    <TextBlock Text="05   Préparation des essais sur banc" Foreground="#C6D7EA" TextWrapping="Wrap" Margin="2,0,0,13"/>
-                    <TextBlock Text="06   Fiche et séries enregistrées" Foreground="#C6D7EA" TextWrapping="Wrap" Margin="2,0,0,13"/>
+                    <TextBlock Text="05   Préparation des essais sur banc" Foreground="{DynamicResource MkrNavyMuted}" TextWrapping="Wrap" Margin="2,0,0,13"/>
+                    <TextBlock Text="06   Fiche et séries enregistrées" Foreground="{DynamicResource MkrNavyMuted}" TextWrapping="Wrap" Margin="2,0,0,13"/>
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Bottom" Text="MKR  ·  Application Windows"
-                           Foreground="#AEC4DD" FontSize="11"/>
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Label Content="_Thème" Target="{Binding ElementName=ThemeChoice}" Padding="0,0,0,4" Foreground="{DynamicResource MkrNavyMuted}"/>
+                    <ComboBox x:Name="ThemeChoice" SelectionChanged="ThemeChanged" Margin="0,0,0,12"
+                              AutomationProperties.Name="Thème de l'interface">
+                        <ComboBoxItem Content="Suivre Windows" Tag="System"/>
+                        <ComboBoxItem Content="Clair" Tag="Light"/>
+                        <ComboBoxItem Content="Sombre" Tag="Dark"/>
+                    </ComboBox>
+                    <TextBlock Text="MKR  ·  Application Windows" Foreground="{DynamicResource MkrNavyMuted}" FontSize="11"/>
+                </StackPanel>
             </DockPanel>
         </Border>
         <Grid Grid.Column="1" Margin="28,23,28,20">
@@ -52,25 +60,25 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="PROJETS / ACCUEIL" Foreground="{StaticResource MkrAccent}"
+                    <TextBlock Text="PROJETS / ACCUEIL" Foreground="{DynamicResource MkrAccent}"
                                FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8"/>
                     <TextBlock Text="Mes projets" FontWeight="SemiBold" FontSize="29"/>
                     <TextBlock Text="Créez ou sélectionnez un projet pour accéder aux données et aux études."
-                               Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
+                               Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
                 </StackPanel>
-                <Border Grid.Column="1" VerticalAlignment="Top" BorderBrush="{StaticResource MkrBorder}"
-                        BorderThickness="1" Background="{StaticResource MkrSurface}" CornerRadius="5"
+                <Border Grid.Column="1" VerticalAlignment="Top" BorderBrush="{DynamicResource MkrBorder}"
+                        BorderThickness="1" Background="{DynamicResource MkrSurface}" CornerRadius="5"
                         Padding="10,7" Margin="14,5,0,0">
-                    <TextBlock Text="Espace local" Foreground="{StaticResource MkrMuted}" FontSize="11"/>
+                    <TextBlock Text="Espace local" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
                 </Border>
             </Grid>
-            <Border Grid.Row="1" Background="{StaticResource MkrSurface}"
-                    BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="8"
+            <Border Grid.Row="1" Background="{DynamicResource MkrSurface}"
+                    BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="8"
                     Padding="18" Margin="0,0,0,18">
                 <StackPanel>
                     <TextBlock Text="Nouveau projet" FontWeight="SemiBold" FontSize="16"/>
                     <TextBlock Text="Donnez un nom explicite à votre étude."
-                               Foreground="{StaticResource MkrMuted}" Margin="0,5,0,12"/>
+                               Foreground="{DynamicResource MkrMuted}" Margin="0,5,0,12"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -90,8 +98,8 @@
                     </Grid>
                 </StackPanel>
             </Border>
-            <Border Grid.Row="2" Background="{StaticResource MkrSurface}"
-                    BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="8"
+            <Border Grid.Row="2" Background="{DynamicResource MkrSurface}"
+                    BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="8"
                     Padding="16" MinHeight="120">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -102,12 +110,12 @@
                     <StackPanel Grid.Row="0" Margin="0,0,0,12">
                         <TextBlock Text="Projets enregistrés" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Text="Sélectionnez une ligne, puis ouvrez le projet."
-                                   Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0"/>
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <DataGrid x:Name="ProjectList" Grid.Row="1"
                               ItemsSource="{Binding Projects}"
                               AlternationCount="2"
-                              AlternatingRowBackground="{StaticResource MkrCanvas}"
+                              AlternatingRowBackground="{DynamicResource MkrCanvas}"
                               AutomationProperties.Name="Projets enregistrés"
                               SelectionMode="Single" IsReadOnly="True" CanUserAddRows="False"
                               AutoGenerateColumns="False">
@@ -124,7 +132,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Les projets sont enregistrés localement."
-                                   Foreground="{StaticResource MkrMuted}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"
                                    TextWrapping="Wrap" Margin="0,0,10,0"/>
                         <Button Grid.Column="1" Style="{StaticResource MkrPrimaryButton}"
                                 Content="_Ouvrir le projet sélectionné" Click="OpenProject"
@@ -132,7 +140,7 @@
                     </Grid>
                 </Grid>
             </Border>
-            <Border Grid.Row="3" BorderBrush="{StaticResource MkrBorder}"
+            <Border Grid.Row="3" BorderBrush="{DynamicResource MkrBorder}"
                     BorderThickness="0,1,0,0" Margin="0,18,0,0" Padding="0,12,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -140,7 +148,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"
-                               Foreground="{StaticResource MkrMuted}" Margin="0,0,12,0"
+                               Foreground="{DynamicResource MkrMuted}" Margin="0,0,12,0"
                                AutomationProperties.LiveSetting="Polite"/>
                     <Button Grid.Column="1" Content="_Vérifier le moteur Python"
                             Command="{Binding CheckEngine}"

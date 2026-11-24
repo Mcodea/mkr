@@ -17,6 +17,13 @@ public partial class WindowView : Window
         _engine = engine;
         _createIdentification = createIdentification;
         InitializeComponent();
+        ThemeChoice.SelectedIndex = (int)ThemeService.Choice;       // Initialize() ran at startup: reflect the active choice
+    }
+
+    private void ThemeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs args)
+    {
+        if (ThemeChoice.SelectedItem is System.Windows.Controls.ComboBoxItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice) && choice != ThemeService.Choice)
+            ThemeService.Apply(choice);
     }
 
     private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this);

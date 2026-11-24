@@ -56,15 +56,15 @@ internal static class PidPrototypePlot
             double Y(double value) => y0 + h * (maximum - value) / (maximum - minimum);
             canvas.Children.Add(new Polyline
             {
-                Stroke = Brushes.SlateGray, StrokeThickness = 1,
+                Stroke = PlotColors.Axis, StrokeThickness = 1,
                 Points = new PointCollection
                 {
                     new(left, y0), new(left, y0 + h), new(left + width, y0 + h)
                 }
             });
-            Label(title, left, y0 - 21, Brushes.DimGray);
-            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, y0 - 6, Brushes.DimGray);
-            Label(minimum.ToString("G5", CultureInfo.InvariantCulture), 2, y0 + h - 16, Brushes.DimGray);
+            Label(title, left, y0 - 21, PlotColors.Label);
+            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, y0 - 6, PlotColors.Label);
+            Label(minimum.ToString("G5", CultureInfo.InvariantCulture), 2, y0 + h - 16, PlotColors.Label);
             render(Y);
         }
 
@@ -89,12 +89,12 @@ internal static class PidPrototypePlot
                 canvas.Children.Add(new Line
                 {
                     X1 = left, X2 = left + width, Y1 = reference, Y2 = reference,
-                    Stroke = Brushes.SeaGreen, StrokeThickness = 1.4,
+                    Stroke = PlotColors.Signal3, StrokeThickness = 1.4,
                     StrokeDashArray = new DoubleCollection { 5, 3 },
                     IsHitTestVisible = false
                 });
-                Curve(piPoints.Select(p => (p.Seconds, p.Pv)), y, Brushes.SteelBlue);
-                Curve(pidPoints.Select(p => (p.Seconds, p.Pv)), y, Brushes.DarkOrange);
+                Curve(piPoints.Select(p => (p.Seconds, p.Pv)), y, PlotColors.Signal1);
+                Curve(pidPoints.Select(p => (p.Seconds, p.Pv)), y, PlotColors.Signal2);
             });
 
         var secondTop = top + h + gap;
@@ -105,9 +105,9 @@ internal static class PidPrototypePlot
             y =>
             {
                 Curve(piPoints.Where(p => p.Mv.HasValue)
-                    .Select(p => (p.Seconds, p.Mv!.Value)), y, Brushes.SteelBlue);
+                    .Select(p => (p.Seconds, p.Mv!.Value)), y, PlotColors.Signal1);
                 Curve(pidPoints.Where(p => p.Mv.HasValue)
-                    .Select(p => (p.Seconds, p.Mv!.Value)), y, Brushes.DarkOrange);
+                    .Select(p => (p.Seconds, p.Mv!.Value)), y, PlotColors.Signal2);
             });
 
         var thirdTop = secondTop + h + gap;
@@ -120,16 +120,16 @@ internal static class PidPrototypePlot
                 canvas.Children.Add(new Line
                 {
                     X1 = left, X2 = left + width, Y1 = zero, Y2 = zero,
-                    Stroke = Brushes.Gray, StrokeThickness = 1,
+                    Stroke = PlotColors.Axis, StrokeThickness = 1,
                     StrokeDashArray = new DoubleCollection { 3, 4 },
                     IsHitTestVisible = false
                 });
                 Curve(pidPoints.Where(p => p.Derivative.HasValue)
-                    .Select(p => (p.Seconds, p.Derivative!.Value)), y, Brushes.MediumVioletRed);
+                    .Select(p => (p.Seconds, p.Derivative!.Value)), y, PlotColors.Signal4);
             });
-        Label("0 s", left, thirdTop + h + 7, Brushes.DimGray);
-        Label($"{end:G6} s", left + width - 82, thirdTop + h + 7, Brushes.DimGray);
+        Label("0 s", left, thirdTop + h + 7, PlotColors.Label);
+        Label($"{end:G6} s", left + width - 82, thirdTop + h + 7, PlotColors.Label);
         Label("Temps depuis l'origine du scénario (s)", left,
-              thirdTop + h + 26, Brushes.DimGray);
+              thirdTop + h + 26, PlotColors.Label);
     }
 }

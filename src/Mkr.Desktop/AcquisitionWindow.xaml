@@ -5,12 +5,12 @@
         WindowStartupLocation="CenterOwner">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,18,24,18">
-      <TextBlock Text="MKR  /  DONNÉES  /  ACQUISITION" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MkrAccent}"/>
+      <TextBlock Text="MKR  /  DONNÉES  /  ACQUISITION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
       <TextBlock Text="Acquisition sur banc" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
-      <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}"
+      <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
                  Text="Lecture seule : MKR n’émet que des requêtes de lecture (Modbus 03/04, S7 « read var »). Aucune écriture, aucun forçage, aucune commande. Utilisez uniquement un banc autorisé."/>
 
-      <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,14,0,10">
+      <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,14,0,10">
         <StackPanel x:Name="Settings">
           <TextBlock Text="Automate" FontWeight="SemiBold" Margin="0,0,0,6"/>
           <WrapPanel>
@@ -74,12 +74,12 @@
               <Label Content="Numéro de DB" Target="{Binding ElementName=DataBlock}"/>
               <TextBox x:Name="DataBlock" Width="80" Text="1" AutomationProperties.Name="Numéro de DB"/>
             </StackPanel>
-            <TextBlock TextWrapping="Wrap" Width="820" Margin="0,8,0,0" Foreground="{StaticResource MkrMuted}"
+            <TextBlock TextWrapping="Wrap" Width="820" Margin="0,8,0,0" Foreground="{DynamicResource MkrMuted}"
                        Text="Prérequis CPU : accès PUT/GET autorisé et DB à accès non optimisé (adresses absolues). Une DB d’instance PID_Compact est optimisée : copiez SP, PV et MV dans une DB dédiée. Les valeurs S7 sont transmises en ABCD."/>
           </WrapPanel>
 
           <TextBlock Text="Signaux" FontWeight="SemiBold" Margin="0,14,0,0"/>
-          <TextBlock x:Name="AddressHelp" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,2,0,6"/>
+          <TextBlock x:Name="AddressHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,2,0,6"/>
           <Grid x:Name="SignalGrid">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="50"/>
@@ -100,7 +100,7 @@
             <TextBlock Grid.Column="5" Text="Physique bas" FontWeight="SemiBold"/>
             <TextBlock Grid.Column="6" Text="Physique haut" FontWeight="SemiBold"/>
           </Grid>
-          <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0"
+          <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"
                      Text="Mise à l’échelle linéaire : physique = bas + (brut − brut bas) × (physique haut − physique bas) / (brut haut − brut bas). Laissez 0 / 1 / 0 / 1 pour une valeur REAL déjà en unité physique."/>
 
           <CheckBox x:Name="ModeEnabled" Margin="0,10,0,0" Checked="ModeOptionChanged" Unchecked="ModeOptionChanged"
@@ -112,7 +112,7 @@
             <StackPanel Margin="0,0,12,0"><Label Content="Type du mode" Target="{Binding ElementName=ModeType}"/><ComboBox x:Name="ModeType" Width="120" AutomationProperties.Name="Type du mode"/></StackPanel>
             <StackPanel Margin="0,0,12,0"><Label Content="Valeur brute « manuel »" Target="{Binding ElementName=ManualValue}"/><TextBox x:Name="ManualValue" Width="90" AutomationProperties.Name="Valeur brute manuel"/></StackPanel>
           </WrapPanel>
-          <TextBlock x:Name="ModeHelp" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0" Visibility="Collapsed"
+          <TextBlock x:Name="ModeHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" Visibility="Collapsed"
                      Text="Le mode se lit avec SP, PV et MV : placez-le, si possible, à une adresse consécutive aux trois autres pour une seule requête par mesure. MKR ne suppose aucune convention : indiquez la valeur brute que votre programme utilise pour « manuel ». Un mode booléen doit être copié dans un mot (INT/UINT). Les mesures prises hors manuel sont comptées et signalées : un essai en boucle ouverte n’y est pas valable."/>
 
           <TextBlock Text="Plan d’acquisition" FontWeight="SemiBold" Margin="0,14,0,0"/>
@@ -132,7 +132,7 @@
             <StackPanel Margin="0,0,12,0"><Label Content="Mesures par segment" Target="{Binding ElementName=SegmentSize}"/><TextBox x:Name="SegmentSize" Text="3000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Mesures par segment"/></StackPanel>
             <StackPanel><Label Content="Recouvrement (mesures)" Target="{Binding ElementName=Overlap}"/><TextBox x:Name="Overlap" Text="300" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Recouvrement"/></StackPanel>
           </WrapPanel>
-          <TextBlock x:Name="PlanSummary" Margin="0,6,0,0" Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
+          <TextBlock x:Name="PlanSummary" Margin="0,6,0,0" Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
 
@@ -143,7 +143,7 @@
         <Button x:Name="Save" Content="_Enregistrer dans le projet" IsEnabled="False" Click="SaveCapture"/>
       </WrapPanel>
 
-      <Border Background="{StaticResource MkrSurface}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15">
+      <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15">
         <StackPanel>
           <DockPanel>
             <Ellipse x:Name="ConnectionLight" Width="12" Height="12" Fill="Gray" Margin="0,0,8,0" VerticalAlignment="Center"/>

@@ -9,7 +9,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{StaticResource MkrAccentPale}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+        <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap"
                        Text="Règle des quatre yeux : celui qui a calculé une étape ne la vérifie ni ne l'approuve, sauf auto-revue déclarée, inscrite comme telle. L'auteur de chaque décision est l'identité de la session Windows (compte, SID, poste) : il ne se saisit pas."/>

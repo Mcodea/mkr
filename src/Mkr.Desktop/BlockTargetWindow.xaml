@@ -10,7 +10,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{StaticResource MkrAccentPale}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+        <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
                        Text="Valeurs documentaires, non qualifiées, pour un régulateur PI. Aucune valeur d'installation n'est supposée : renseignez toutes les cases. Relisez et saisissez à la main, jamais par copie automatique."/>

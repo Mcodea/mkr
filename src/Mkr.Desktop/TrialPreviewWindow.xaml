@@ -11,14 +11,14 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,14">
             <TextBlock Text="DONNÉES SOURCES / INSPECTION" FontWeight="SemiBold"
-                       Foreground="{StaticResource MkrAccent}" FontSize="11"/>
+                       Foreground="{DynamicResource MkrAccent}" FontSize="11"/>
             <TextBlock Text="Courbes MV et PV brutes" FontWeight="SemiBold" FontSize="23"
                        Margin="0,7,0,5"/>
             <TextBlock x:Name="SourceInfo" TextWrapping="Wrap"
-                       Foreground="{StaticResource MkrMuted}"/>
+                       Foreground="{DynamicResource MkrMuted}"/>
         </StackPanel>
-        <Border Grid.Row="1" Background="{StaticResource MkrSurface}"
-                BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+        <Border Grid.Row="1" Background="{DynamicResource MkrSurface}"
+                BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="14">
             <Grid>
                 <Grid.RowDefinitions>
@@ -27,15 +27,15 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Text="Bleu : MV appliquée · orange : PV mesurée · échelles distinctes"
-                           Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"
                            Margin="0,0,0,12"/>
                 <Canvas x:Name="Plot" Grid.Row="1" ClipToBounds="True" MinHeight="300"
-                        Background="White" SizeChanged="PlotResize"
+                        Background="{DynamicResource MkrSurface}" SizeChanged="PlotResize"
                         MouseLeftButtonDown="StartSelection" MouseLeftButtonUp="EndSelection"
                         MouseLeave="CancelSelection"
                         AutomationProperties.Name="Courbes sources MV et PV en fonction du temps"/>
                 <TextBlock Grid.Row="2" Text="Glissez sur le graphique pour délimiter une plage. Une sélection confirmée sera prise en compte uniquement lors du prochain calcul de modèle."
-                           Foreground="{StaticResource MkrMuted}" Margin="0,8,0,0"
+                           Foreground="{DynamicResource MkrMuted}" Margin="0,8,0,0"
                            TextWrapping="Wrap"/>
             </Grid>
         </Border>
@@ -45,7 +45,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="SelectionText" TextWrapping="Wrap"
-                       Foreground="{StaticResource MkrText}" VerticalAlignment="Center"
+                       Foreground="{DynamicResource MkrText}" VerticalAlignment="Center"
                        Margin="0,0,12,0" AutomationProperties.LiveSetting="Polite"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="Effacer la sélection" Click="ClearSelection" Margin="0,0,8,0"/>

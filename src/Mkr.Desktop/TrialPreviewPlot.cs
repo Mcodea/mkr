@@ -65,12 +65,12 @@ internal static class TrialPreviewPlot
             double Y(double v) => top + (maximum - v) / (maximum - minimum) * trackHeight;
 
             Label(title, Left, top - 20, brush);
-            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, top - 7, Brushes.DimGray);
+            Label(maximum.ToString("G5", CultureInfo.InvariantCulture), 2, top - 7, PlotColors.Label);
             Label(minimum.ToString("G5", CultureInfo.InvariantCulture), 2,
-                  top + trackHeight - 14, Brushes.DimGray);
+                  top + trackHeight - 14, PlotColors.Label);
             canvas.Children.Add(new Polyline
             {
-                Stroke = Brushes.SlateGray, StrokeThickness = 1,
+                Stroke = PlotColors.Axis, StrokeThickness = 1,
                 Points = new PointCollection { new(Left, top), new(Left, top + trackHeight),
                     new(Left + width, top + trackHeight) }
             });
@@ -80,8 +80,8 @@ internal static class TrialPreviewPlot
             canvas.Children.Add(curve);
         }
 
-        Track($"MV ({mvUnit}) — échelle indépendante", p => p.Mv, mvTop, Brushes.SteelBlue);
-        Track($"PV ({pvUnit}) — échelle indépendante", p => p.Pv, pvTop, Brushes.DarkOrange);
+        Track($"MV ({mvUnit}) — échelle indépendante", p => p.Mv, mvTop, PlotColors.Signal1);
+        Track($"PV ({pvUnit}) — échelle indépendante", p => p.Pv, pvTop, PlotColors.Signal2);
 
         if (selectedStart is { } a && selectedEnd is { } b && b > a)
         {
@@ -92,7 +92,7 @@ internal static class TrialPreviewPlot
                 Width = Math.Max(0, x1 - x0),
                 Height = pvTop + trackHeight - mvTop,
                 Fill = new SolidColorBrush(Color.FromArgb(28, 40, 108, 170)),
-                Stroke = Brushes.SteelBlue,
+                Stroke = PlotColors.Signal1,
                 StrokeThickness = 1,
                 IsHitTestVisible = false
             };
@@ -101,10 +101,10 @@ internal static class TrialPreviewPlot
             canvas.Children.Add(overlay);
         }
 
-        Label($"{t0:G5} s", Left, pvTop + trackHeight + 8, Brushes.DimGray);
+        Label($"{t0:G5} s", Left, pvTop + trackHeight + 8, PlotColors.Label);
         Label($"{t1:G5} s", Math.Max(Left, Left + width - 80),
-              pvTop + trackHeight + 8, Brushes.DimGray);
+              pvTop + trackHeight + 8, PlotColors.Label);
         Label("Temps écoulé depuis le premier échantillon (s)", Left,
-              pvTop + trackHeight + 28, Brushes.DimGray);
+              pvTop + trackHeight + 28, PlotColors.Label);
     }
 }

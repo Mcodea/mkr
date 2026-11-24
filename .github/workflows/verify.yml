@@ -118,10 +118,12 @@ jobs:
       - name: Tester le réglage intégrateur et le contrôle de dérive depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/blocks.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
-      - name: Capturer les fenêtres réelles (pour relecture sans poste Windows)
+      - name: Capturer les fenêtres réelles, thèmes clair puis sombre (pour relecture sans poste Windows)
         shell: powershell
         continue-on-error: true
-        run: ./tests/windows/screenshots.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
+        run: |
+          ./tests/windows/screenshots.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture" -Theme light
+          ./tests/windows/screenshots.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture" -Theme dark
       - name: Ouvrir le catalogue depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/catalogue.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe"

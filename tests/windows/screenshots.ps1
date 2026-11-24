@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture)
+﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [string]$Theme = 'light')
 # Captures of the real windows of the packaged application (for people without a Windows PC). Never fails the build.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
@@ -84,6 +84,7 @@ function Capture($window, $label) {
         $g = [System.Drawing.Graphics]::FromImage($bmp)
         $g.CopyFromScreen($x, $y, 0, 0, (New-Object System.Drawing.Size $w, $h))
         $g.Dispose()
+        $label = "$Theme-$label"
         $file = Join-Path $out "$label.png"
         $bmp.Save($file, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
         $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file))
@@ -105,6 +106,7 @@ $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
 $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
+$start.EnvironmentVariables['MKR_THEME'] = $Theme
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement

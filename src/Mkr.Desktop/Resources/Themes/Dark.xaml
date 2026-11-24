@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- MKR design system · colour tokens · thème sombre. Semantic names only: windows never use a literal colour.
+         Every text/background pair is checked against WCAG 2.1 AA (4.5:1) by tests/test_theme_contrast.py. -->
+    <SolidColorBrush x:Key="MkrNavy" Color="#0A121D"/>
+    <SolidColorBrush x:Key="MkrNavySoft" Color="#14233A"/>
+    <SolidColorBrush x:Key="MkrNavyText" Color="#E7EDF4"/>
+    <SolidColorBrush x:Key="MkrNavyMuted" Color="#A3B3C6"/>
+    <SolidColorBrush x:Key="MkrCanvas" Color="#0E1621"/>
+    <SolidColorBrush x:Key="MkrSurface" Color="#162130"/>
+    <SolidColorBrush x:Key="MkrSurfaceAlt" Color="#1C2A3C"/>
+    <SolidColorBrush x:Key="MkrBorder" Color="#2A3A50"/>
+    <SolidColorBrush x:Key="MkrBorderStrong" Color="#6B7F99"/>
+    <SolidColorBrush x:Key="MkrText" Color="#E7EDF4"/>
+    <SolidColorBrush x:Key="MkrMuted" Color="#A3B3C6"/>
+    <SolidColorBrush x:Key="MkrAccent" Color="#3CC4D6"/>
+    <SolidColorBrush x:Key="MkrAccentPale" Color="#12333B"/>
+    <SolidColorBrush x:Key="MkrOnAccent" Color="#06141B"/>
+    <SolidColorBrush x:Key="MkrSuccess" Color="#4CC38A"/>
+    <SolidColorBrush x:Key="MkrSuccessPale" Color="#12301F"/>
+    <SolidColorBrush x:Key="MkrDanger" Color="#FF8A80"/>
+    <SolidColorBrush x:Key="MkrDangerPale" Color="#3A1816"/>
+    <SolidColorBrush x:Key="MkrWarning" Color="#F2B84B"/>
+    <SolidColorBrush x:Key="MkrWarningPale" Color="#3A2C0C"/>
+    <SolidColorBrush x:Key="MkrOnStatus" Color="#06141B"/>
+    <SolidColorBrush x:Key="MkrPlotAxis" Color="#6F8097"/>
+    <SolidColorBrush x:Key="MkrPlotLabel" Color="#A3B3C6"/>
+    <SolidColorBrush x:Key="MkrPlotGrid" Color="#243448"/>
+    <SolidColorBrush x:Key="MkrSignal1" Color="#5AA9F0"/>
+    <SolidColorBrush x:Key="MkrSignal2" Color="#F0A04B"/>
+    <SolidColorBrush x:Key="MkrSignal3" Color="#4CC38A"/>
+    <SolidColorBrush x:Key="MkrSignal4" Color="#E072B5"/>
+</ResourceDictionary>

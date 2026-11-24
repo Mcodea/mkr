@@ -10,7 +10,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{StaticResource MkrAccentPale}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+        <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap"
                        Text="Règle SIMC des procédés intégrateurs (Skogestad, 2003) : Kc = 1 / (k′ (τc + θ)), Ti = 4 (τc + θ). Valeurs théoriques d'après le modèle validé ; les marges sont celles de la boucle nominale seulement. Aucune valeur n'est qualifiée sur installation."/>
