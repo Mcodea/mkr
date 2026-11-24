@@ -110,6 +110,21 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return piEngine.ConvertToPidffAsync(coefficients.Kp, coefficients.TiSeconds, 0, null, token);
     }
 
+    /// <summary>Documentary PID_INT / PID_Compact values for a saved PI tuning (PI only); the caller supplies every scaling value.</summary>
+    public Task<BlockSettingsResult> ConvertToBlockAsync(IdentificationStudy model, PiStudy tuning, bool simc, string block,
+        IReadOnlyDictionary<string, object> installation, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT || tuning.ModelId != model.Id)
+            throw new InvalidOperationException("La conversion exige le réglage PI du modèle FOPDT sélectionné.");
+        model.RequireAcceptedForTuning();
+        var coefficients = simc ? tuning.Result.Simc : tuning.Result.Imc;
+        var parameters = new Dictionary<string, object>(installation)
+        {
+            ["kp"] = coefficients.Kp, ["tiSeconds"] = coefficients.TiSeconds, ["tdSeconds"] = 0.0
+        };
+        return piEngine.ConvertToBlockAsync(block, parameters, token);
+    }
+
     public async Task<PiStudy> CalculatePiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
     {
         if (model.Family != ModelFamily.FOPDT || model.Result.TauSeconds is not { } tau)

@@ -239,6 +239,23 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return result;
     }
 
+    public async Task<BlockSettingsResult> ConvertToBlockAsync(string block, IReadOnlyDictionary<string, object> parameters, CancellationToken token)
+    {
+        if (block is not ("PID_INT" or "PID_Compact")) throw new ArgumentException("Bloc non pris en charge par cette conversion.", nameof(block));
+        var payload = new { name = block, target = new { }, parameters };
+        var (json, _) = await CallAsync("convert_block_settings", payload, token).ConfigureAwait(false);
+        var result = new BlockSettingsResult(json.GetProperty("converted").GetBoolean(),
+            json.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String ? reason.GetString() : null,
+            json.TryGetProperty("conversion", out var conversion) && conversion.ValueKind == JsonValueKind.Object
+                ? conversion.Deserialize<BlockSettings>(JsonOptions) : null);
+        // Safety invariants: documentary only, never qualified, never ready to load.
+        if (result.Converted != (result.Settings is not null) ||
+            (result.Settings is { } c && (c.Qualification != "non_qualified" || c.ReadyToLoad || c.Block != block || c.Parameters is not { Count: > 0 } ||
+                c.Warnings is null || c.ToDetermine is null || c.Equations is null || c.Equations.Length == 0)))
+            throw new InvalidDataException("Conversion de bloc incompatible avec le contrat.");
+        return result;
+    }
+
     private static bool ValidMargins(LoopMargins? margins) => margins is null || (
         margins.Warnings is not null && double.IsFinite(margins.PeakSensitivity) && margins.PeakSensitivity >= 1 - 1e-9 &&
         (margins.GainMargin is null || margins.GainMargin > 0) && (margins.PhaseMarginDegrees is null || double.IsFinite(margins.PhaseMarginDegrees.Value)) &&

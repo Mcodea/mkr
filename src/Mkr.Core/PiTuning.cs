@@ -53,6 +53,9 @@ public interface IPiEngine
     Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
         double? filterSeconds, CancellationToken token);
 
+    /// <summary>Documentary conversion to PID_INT or PID_Compact; parameters are the adapter's, none has a default.</summary>
+    Task<BlockSettingsResult> ConvertToBlockAsync(string block, IReadOnlyDictionary<string, object> parameters, CancellationToken token);
+
     Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token);
     Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
         PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token);

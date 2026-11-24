@@ -636,6 +636,39 @@ try
         await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToPidffAsync(refused, refusedTuning, false, default));
     }
 
+    // PID_INT and PID_Compact documentary conversions (33002520 p. 141; A5E35300227-AJ p. 88/91): never qualified, never ready to load.
+    {
+        var pidInt = await engine.ConvertToBlockAsync("PID_INT", new Dictionary<string, object>
+            { ["kp"] = 2.0, ["tiSeconds"] = 12.5, ["tdSeconds"] = 0.0, ["tsSeconds"] = 0.2, ["pvSpan"] = 200.0, ["mvSpan"] = 100.0 }, default);
+        Require(pidInt.Settings is { Qualification: "non_qualified", ReadyToLoad: false, Block: "PID_INT" } &&
+            pidInt.Settings.Parameters["KP"].GetInt32() == 400 && pidInt.Settings.Parameters["TI"].GetInt32() == 125 &&
+            pidInt.Settings.Parameters["TS"].GetInt32() == 20, "PID_INT registers follow KP x100, TI in 0.1 s, TS in 0.01 s.");
+        Require(pidInt.Settings!.Describe("SIMC").Contains("NON QUALIFIÉ") && pidInt.Settings.Describe("SIMC").Contains("KP = 400"),
+            "The PID_INT values are displayed as unqualified.");
+        var derivative = await engine.ConvertToBlockAsync("PID_INT", new Dictionary<string, object>
+            { ["kp"] = 1.0, ["tiSeconds"] = 10.0, ["tdSeconds"] = 2.0, ["tsSeconds"] = 0.1, ["pvSpan"] = 100.0, ["mvSpan"] = 100.0 }, default);
+        Require(derivative is { Converted: false, Reason: "conversion_derivative_undocumented" } && derivative.RefusalText.Length > 10,
+            "PID_INT refuses a derivative action: its equation is not in the manual.");
+        var compact = await engine.ConvertToBlockAsync("PID_Compact", new Dictionary<string, object>
+            { ["version"] = "V3.0", ["kp"] = -0.5, ["tiSeconds"] = 15.0, ["tdSeconds"] = 0.0, ["outputPercentPerMvUnit"] = 2.0,
+              ["cpuFamily"] = "S7-1500", ["firmware"] = "3.1" }, default);
+        Require(compact.Settings is { Block: "PID_Compact", ReadyToLoad: false } && compact.Settings.Parameters["Gain"].GetDouble() == 1.0 &&
+            compact.Settings.Parameters["InvertControl"].GetBoolean() && compact.Settings.Parameters["DeadZone"].GetDouble() == 0.0,
+            "PID_Compact: negative Kp gives InvertControl with a positive Gain, the V3 dead zone is 0.");
+        var incompatible = await engine.ConvertToBlockAsync("PID_Compact", new Dictionary<string, object>
+            { ["version"] = "V3.0", ["kp"] = 1.0, ["tiSeconds"] = 15.0, ["tdSeconds"] = 0.0, ["outputPercentPerMvUnit"] = 1.0,
+              ["cpuFamily"] = "S7-1500", ["firmware"] = "3.0" }, default);
+        Require(incompatible is { Converted: false, Reason: "conversion_hardware_incompatible" }, "V3.0 is refused on an S7-1500 with firmware 3.0.");
+        await ThrowsAsync<ArgumentException>(() => engine.ConvertToBlockAsync("PIDFF", new Dictionary<string, object>(), default));
+        var gated = await gate.ConvertToBlockAsync(fromHistory, new PiStudy(Guid.NewGuid(), fromHistory.Id, DateTimeOffset.UtcNow, "t",
+            (await engine.CalculatePiAsync(fromHistory.Result.Gain, fromHistory.Result.TauSeconds!.Value, fromHistory.Result.DelaySeconds, 5, default)).Result), true,
+            "PID_Compact", new Dictionary<string, object> { ["version"] = "V2.4", ["outputPercentPerMvUnit"] = 1.0 }, default);
+        Require(gated.Settings!.Parameters["InvertControl"].GetBoolean(), "A negative-gain model gives InvertControl = TRUE.");
+        var refusedPi = new PiStudy(Guid.NewGuid(), refused.Id, DateTimeOffset.UtcNow, "t", (await engine.CalculatePiAsync(-2, 100, 3, 2, default)).Result);
+        await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToBlockAsync(refused, refusedPi, false,
+            "PID_Compact", new Dictionary<string, object>(), default));
+    }
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {

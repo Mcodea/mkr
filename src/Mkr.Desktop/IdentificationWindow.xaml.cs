@@ -519,6 +519,17 @@ public partial class IdentificationWindow : Window
         catch (Exception error) { ShowError(error); }
     }
 
+    private void ShowOtherBlocks(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { Family: ModelFamily.FOPDT } model || PiList.SelectedItem is not PiStudy tuning)
+        {
+            Message.Text = "Sélectionnez un réglage PI enregistré.";
+            return;
+        }
+        try { new BlockTargetWindow(_workspace, model, tuning) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { ShowError(error); }
+    }
+
     private void OpenSimulation(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy tuning)
@@ -535,7 +546,7 @@ public partial class IdentificationWindow : Window
 
     private void ShowPi(object sender, SelectionChangedEventArgs args)
     {
-        SimulateSavedPi.IsEnabled = PidffValues.IsEnabled = PiList.SelectedItem is PiStudy;
+        SimulateSavedPi.IsEnabled = PidffValues.IsEnabled = OtherBlocks.IsEnabled = PiList.SelectedItem is PiStudy;
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
         {
             PiReport.Text = "";
