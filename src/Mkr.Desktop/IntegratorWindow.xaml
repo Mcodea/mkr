@@ -1,0 +1,34 @@
+<Window x:Class="Mkr.Desktop.IntegratorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MKR — Réglage d'un procédé intégrateur"
+        Width="820" Height="700" MinWidth="560" MinHeight="460" WindowStartupLocation="CenterOwner">
+    <Grid Margin="24,18,24,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border Background="{StaticResource MkrAccentPale}" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+                CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
+            <TextBlock TextWrapping="Wrap"
+                       Text="Règle SIMC des procédés intégrateurs (Skogestad, 2003) : Kc = 1 / (k′ (τc + θ)), Ti = 4 (τc + θ). Valeurs théoriques d'après le modèle validé ; les marges sont celles de la boucle nominale seulement. Aucune valeur n'est qualifiée sur installation."/>
+        </Border>
+        <StackPanel Grid.Row="1">
+            <TextBlock x:Name="ModelLine" TextWrapping="Wrap" FontWeight="SemiBold"/>
+            <WrapPanel Margin="0,8,0,0">
+                <Label Content="Durée de réponse souhaitée τc (s)" Target="{Binding ElementName=ResponseSeconds}"/>
+                <TextBox x:Name="ResponseSeconds" Width="100" AutomationProperties.Name="Durée de réponse en secondes" TextChanged="InputChanged"/>
+                <Button x:Name="Compute" Content="Calcu_ler" IsEnabled="False" Click="Calculate" Margin="8,0,0,0"/>
+                <Button x:Name="BlockValues" Content="_Valeurs du bloc PIDFF…" IsEnabled="False" Click="ShowBlock" Margin="8,0,0,0"/>
+            </WrapPanel>
+            <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
+        </StackPanel>
+        <TextBox x:Name="Result" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,12,0,0"
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="Réglage de l'intégrateur"/>
+        <WrapPanel Grid.Row="3" Margin="0,12,0,0">
+            <Button Content="_Fermer" IsCancel="True"/>
+        </WrapPanel>
+    </Grid>
+</Window>

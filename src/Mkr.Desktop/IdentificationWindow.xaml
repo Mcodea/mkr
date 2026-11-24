@@ -137,6 +137,9 @@
                 </Border>
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <Button x:Name="IntegratorButton" Content="Régler le procédé _intégrateur…" Click="OpenIntegrator"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        ToolTip="PI par la règle SIMC des procédés intégrateurs, marges de la boucle nominale et valeurs du bloc PIDFF (non qualifiées)."/>
                 <GroupBox x:Name="TargetPanel" Header="Comportement souhaité" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
