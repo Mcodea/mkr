@@ -7,8 +7,7 @@
         <StackPanel Margin="24,18,24,18">
             <TextBlock Text="MKR  /  IDENTIFICATION  /  ESSAIS DÉTECTÉS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource MkrAccent}"/>
             <TextBlock Text="Essais exploitables de l’enregistrement" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
-            <TextBlock x:Name="Summary" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}"
-                       AutomationProperties.Name="Résumé de la recherche"/>
+            <TextBlock x:Name="Summary" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}"/>
 
             <TextBlock Text="Paires proposées (estimation + validation)" FontWeight="SemiBold" Margin="0,16,0,6"/>
             <DataGrid x:Name="Pairs" AutomationProperties.Name="Paires proposées" Height="170" SelectionChanged="PairChanged">
