@@ -214,6 +214,8 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="Préparer les essais sur _banc…" Click="OpenCatalogue" Margin="0,0,8,0"
                             ToolTip="Consulter les fiches constructeur et préparer le relevé de banc"/>
+                    <Button Content="Journal d'_audit…" Click="OpenAudit" Margin="0,0,8,0"
+                            ToolTip="Actions sensibles du projet, chaînées par empreintes"/>
                     <Button Content="_Identification…" Click="OpenIdentification"
                         Style="{StaticResource MkrPrimaryButton}"
                         ToolTip="Ouvrir les études d’identification du projet"/>

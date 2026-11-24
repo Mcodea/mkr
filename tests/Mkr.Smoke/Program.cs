@@ -748,6 +748,17 @@ try
             "PID_Compact", new Dictionary<string, object>(), default));
     }
 
+    // The workspace traces sensitive actions in the project's audit log, and the chain stays intact.
+    {
+        var actions = restored.List(project.Id).Select(e => e.Action).ToHashSet();
+        Require(actions.Contains("identification.saved") && actions.Contains("block.values.shown"),
+            "Saved identifications and displayed block values are traced: " + string.Join(", ", actions));
+        Require(restored.List(project.Id).All(e => e.Actor.Length > 0 && !e.Detail.Contains("Exception")), "Entries name an actor and carry a readable detail.");
+        Require(restored.Verify(project.Id).Intact, "The audit chain of the working project is intact.");
+        Require(restored.List(project.Id).Where(e => e.Action == "block.values.shown").All(e => e.Detail.Contains("NON QUALIFIÉES") || e.Detail.Contains("refusé")),
+            "A displayed block value is always traced as unqualified or refused.");
+    }
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {

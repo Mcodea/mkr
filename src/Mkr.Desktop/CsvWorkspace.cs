@@ -12,8 +12,21 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     private string? _delimiter;
 
     public string ProjectName => project.Name;
+
+    private void Audit(string action, string subject, string detail)
+    {
+        if (store is IAuditLog log) log.Record(project.Id, Environment.UserName, action, subject, detail);
+    }
+
+    public bool HasAuditLog => store is IAuditLog;
+    public IReadOnlyList<AuditEntry> AuditEntries() => store is IAuditLog log ? log.List(project.Id) : [];
+    public AuditVerification? VerifyAudit() => store is IAuditLog log ? log.Verify(project.Id) : null;
     public LoopBrief ReadLoopBrief() => store.ReadLoopBrief(project.Id);
-    public void SaveLoopBrief(LoopBrief brief) => store.SaveLoopBrief(project.Id, brief);
+    public void SaveLoopBrief(LoopBrief brief)
+    {
+        store.SaveLoopBrief(project.Id, brief);
+        Audit("loop.brief.saved", brief.Tag, $"grandeur « {brief.ControlledQuantity} », objectif « {brief.Objective} »");
+    }
     public IReadOnlyList<ImportSummary> List() => store.ListImports(project.Id);
     public CsvImport Open(Guid id) => store.ReadImport(project.Id, id);
 
@@ -33,8 +46,13 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
         return result;
     }
 
-    public Task<CsvImport> SaveCaptureAsync(IReadOnlyList<AcquiredSample> samples, AcquisitionOrigin origin, CancellationToken token)
-        => Mkr.Infrastructure.AcquisitionArchive.SaveAsync(project.Id, store, engine, samples, origin, token);
+    public async Task<CsvImport> SaveCaptureAsync(IReadOnlyList<AcquiredSample> samples, AcquisitionOrigin origin, CancellationToken token)
+    {
+        var import = await Mkr.Infrastructure.AcquisitionArchive.SaveAsync(project.Id, store, engine, samples, origin, token);
+        Audit(origin.Session is null ? "acquisition.saved" : "acquisition.segment.saved", import.Summary.FileName,
+            $"{import.Summary.Sha256[..12]} · {samples.Count} mesures · {origin.Describe()}");
+        return import;
+    }
 
     public async Task<CsvImport> AnalyzeAndSaveAsync(CsvMapping mapping, CancellationToken token, CsvFormat? format = null)
     {
@@ -47,6 +65,7 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
         var summary = new ImportSummary(Guid.NewGuid(), _fileName!, Convert.ToHexString(SHA256.HashData(original)), DateTimeOffset.UtcNow);
         var import = new CsvImport(summary, _delimiter!, mapping, result, version, original, Format: format);
         store.SaveImport(project.Id, import);
+        Audit("import.saved", summary.FileName, $"{summary.Sha256[..12]} · colonne {mapping.ValueColumn} ({mapping.Role}, {mapping.Unit})");
         _original = null;
         return import;
     }

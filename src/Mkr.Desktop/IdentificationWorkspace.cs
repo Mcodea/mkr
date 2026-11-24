@@ -18,7 +18,26 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         Mkr.Infrastructure.StudySheet.Export(path, project.Name, model, tuning, simulation,
             training.Summary, validation.Summary, reviews, training.Acquisition, validation.Acquisition,
             imports.ReadLoopBrief(project.Id));
+        Audit("study.sheet.exported", Short(model.Id), $"fiche PDF {Path.GetFileName(path)} ; réglage {Short(tuning.Id)} ; simulation {Short(simulation.Id)}");
     }
+
+    /// <summary>
+    /// Traces a sensitive action in the project's append-only audit log. A failure to trace is NOT swallowed: the caller must know that
+    /// an action could not be recorded. Unavailable only for stores that are not the SQLite project store (tests of other layers).
+    /// </summary>
+    private void Audit(string action, string subject, string detail)
+    {
+        if (studies is IAuditLog log) log.Record(project.Id, Environment.UserName, action, subject, detail);
+    }
+
+    private async Task<T> Traced<T>(Task<T> task, string action, string subject, Func<T, string> detail)
+    {
+        var result = await task.ConfigureAwait(false);
+        Audit(action, subject, detail(result));
+        return result;
+    }
+
+    private static string Short(Guid id) => id.ToString()[..8];
 
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
@@ -76,7 +95,9 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         }
         var step = new StepImport(recorded, columns, window);
         CheckRecordedUnit(step, mvUnit, pvUnit);
-        return engine.CheckModelDriftAsync(model.Family, model.Result, step, mvTolerance, pvTolerance, assessment.Criteria, token);
+        return Traced(engine.CheckModelDriftAsync(model.Family, model.Result, step, mvTolerance, pvTolerance, assessment.Criteria, token),
+            "model.drift.checked", Short(model.Id),
+            r => $"{model.Family} sur {trial.FileName} : {r.Verdict}" + (r.DriftedParameters.Length > 0 ? " (" + string.Join(", ", r.DriftedParameters) + ")" : ""));
     }
 
     public Task<CriteriaSuggestion> SuggestCriteriaAsync(ImportSummary training, StepColumns trainColumns,
@@ -111,6 +132,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
             mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result,
             family, trainingWindow, validationWindow, comparison, assessment);
         studies.SaveStudy(project.Id, study);
+        Audit("identification.saved", Short(study.Id),
+            $"{family} sur {training.FileName} / {validation.FileName} : " + (assessment.Accepted ? "accepté" : "REFUSÉ (" + string.Join(", ", assessment.Reasons) + ")"));
         return study;
     }
 
@@ -122,7 +145,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         if (model.Family != ModelFamily.Integrateur)
             throw new InvalidOperationException("Sélectionnez une étude d'intégrateur.");
         model.RequireAcceptedForTuning();
-        return piEngine.CalculateIntegratorPiAsync(model.Result.Gain, model.Result.DelaySeconds, responseSeconds, token);
+        return Traced(piEngine.CalculateIntegratorPiAsync(model.Result.Gain, model.Result.DelaySeconds, responseSeconds, token),
+            "integrator.pi.calculated", Short(model.Id), r => $"τc = {responseSeconds:G6} s : Kp = {r.Kp:G6}, Ti = {r.TiSeconds:G6} s (théorique)");
     }
 
     /// <summary>Documentary PIDFF values of an integrator PI (PI only, no derivative, no filter). Never qualified.</summary>
@@ -130,7 +154,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         if (model.Family != ModelFamily.Integrateur) throw new InvalidOperationException("Sélectionnez une étude d'intégrateur.");
         model.RequireAcceptedForTuning();
-        return piEngine.ConvertToPidffAsync(tuning.Kp, tuning.TiSeconds, 0, null, token);
+        return Traced(piEngine.ConvertToPidffAsync(tuning.Kp, tuning.TiSeconds, 0, null, token),
+            "block.values.shown", "PIDFF", r => $"intégrateur {Short(model.Id)} : " + (r.Converted ? "valeurs affichées, NON QUALIFIÉES" : "refusé " + r.Reason));
     }
 
     public Task<SopdtPid> CalculateSopdtPidAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
@@ -138,7 +163,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         if (model.Family != ModelFamily.SOPDT)
             throw new InvalidOperationException("Sélectionnez une étude du second ordre.");
         model.RequireAcceptedForTuning();
-        return piEngine.CalculateSopdtPidAsync(model.Result, responseSeconds, token);
+        return Traced(piEngine.CalculateSopdtPidAsync(model.Result, responseSeconds, token),
+            "sopdt.pid.calculated", Short(model.Id), r => $"τc = {responseSeconds:G6} s : Kp = {r.Ideal.Kp:G6} (théorique)");
     }
 
     /// <summary>Documentary PIDFF values for one method of a saved PI tuning; only for a model accepted at validation.</summary>
@@ -148,7 +174,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
             throw new InvalidOperationException("La conversion exige le réglage PI du modèle FOPDT sélectionné.");
         model.RequireAcceptedForTuning();
         var coefficients = simc ? tuning.Result.Simc : tuning.Result.Imc;
-        return piEngine.ConvertToPidffAsync(coefficients.Kp, coefficients.TiSeconds, 0, null, token);
+        return Traced(piEngine.ConvertToPidffAsync(coefficients.Kp, coefficients.TiSeconds, 0, null, token),
+            "block.values.shown", "PIDFF", r => $"{(simc ? "SIMC" : "IMC")} {Short(tuning.Id)} : " + (r.Converted ? "valeurs affichées, NON QUALIFIÉES" : "refusé " + r.Reason));
     }
 
     /// <summary>Documentary PID_INT / PID_Compact values for a saved PI tuning (PI only); the caller supplies every scaling value.</summary>
@@ -163,7 +190,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         {
             ["kp"] = coefficients.Kp, ["tiSeconds"] = coefficients.TiSeconds, ["tdSeconds"] = 0.0
         };
-        return piEngine.ConvertToBlockAsync(block, parameters, token);
+        return Traced(piEngine.ConvertToBlockAsync(block, parameters, token),
+            "block.values.shown", block, r => $"{(simc ? "SIMC" : "IMC")} {Short(tuning.Id)} : " + (r.Converted ? "valeurs affichées, NON QUALIFIÉES" : "refusé " + r.Reason));
     }
 
     public async Task<PiStudy> CalculatePiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
@@ -176,6 +204,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         token.ThrowIfCancellationRequested();
         var study = new PiStudy(Guid.NewGuid(), model.Id, DateTimeOffset.UtcNow, version, result);
         piStore.SavePi(project.Id, study);
+        Audit("pi.saved", Short(study.Id), $"réglage PI théorique du modèle {Short(model.Id)}, τc = {responseSeconds:G6} s");
         return study;
     }
 
@@ -191,6 +220,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         token.ThrowIfCancellationRequested();
         var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow, version, scenario, result);
         piStore.SaveSimulation(project.Id, study);
+        Audit("pi.simulation.saved", Short(study.Id), $"simulation ou analyse du réglage {Short(tuning.Id)}");
         return study;
     }
 
@@ -211,6 +241,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow,
             nominalVersion, scenario, nominal, combined);
         piStore.SaveSimulation(project.Id, study);
+        Audit("pi.simulation.saved", Short(study.Id), $"simulation ou analyse du réglage {Short(tuning.Id)}");
         return study;
     }
 
@@ -233,6 +264,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         var study = new PiSimulationStudy(Guid.NewGuid(), tuning.Id, DateTimeOffset.UtcNow,
             nominalVersion, scenario, nominal, sensitivity);
         piStore.SaveSimulation(project.Id, study);
+        Audit("pi.simulation.saved", Short(study.Id), $"simulation ou analyse du réglage {Short(tuning.Id)}");
         return study;
     }
 

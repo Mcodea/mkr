@@ -151,6 +151,12 @@ public partial class CsvWindow : Window
         catch (Exception error) { ShowError(error); }
     }
 
+    private void OpenAudit(object sender, RoutedEventArgs args)
+    {
+        try { new AuditWindow(_workspace) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { ShowError(error); }
+    }
+
     private void OpenIdentification(object sender, RoutedEventArgs args)
     {
         try { new IdentificationWindow(_identification) { Owner = this }.ShowDialog(); }

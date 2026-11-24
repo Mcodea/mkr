@@ -21,7 +21,8 @@ Principe : le noyau (identification, validation, réglage, simulation) ne conna�
 
 | Sujet | État |
 |---|---|
-| Droits des utilisateurs et journal des modifications | ABSENT |
+| Journal des modifications | PARTIEL : journal d'audit en ajout seul, chaîné par SHA-256, avec vérification et fenêtre de consultation (identifications, réglages, valeurs de blocs affichées, dérive, imports, acquisitions, fiche de boucle) |
+| Droits des utilisateurs (rôles, authentification) | ABSENT : l'acteur tracé est le nom de session Windows, non authentifié par MKR |
 | Surveillance des boucles après mise en service (dérive du modèle) | PARTIEL : contrôle d'un modèle FOPDT, SOPDT ou intégrateur accepté sur un nouvel échelon en boucle ouverte (moteur, contrat .NET, bouton de l'écran d'identification) ; pas de surveillance en fonctionnement normal |
 | Plusieurs points de fonctionnement d'un même procédé | ABSENT |
 | Couplage entre boucles (MIMO) | ABSENT |

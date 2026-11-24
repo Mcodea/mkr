@@ -143,6 +143,20 @@ try {
     } while ([DateTime]::UtcNow -lt $until)
     if ($message -like '*terminé*' -or [string]::IsNullOrWhiteSpace($message)) { throw "L'essai déjà utilisé doit être refusé. $message" }
     Write-Output "Essai déjà utilisé refusé : $message"
+
+    # ---- Audit log: the actions above are traced and the chain is intact ----
+    Close-Window $ident
+    Press $project "Journal d'audit…"
+    $audit = Find $root $name "MKR — Journal d'audit"
+    $entries = Wait-Value $audit 'Entries' '*block.values.shown*'
+    foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked')) {
+        if (!$entries.Contains($part)) { throw "Action absente du journal : $part. $entries" }
+    }
+    if (!$entries.Contains('NON QUALIFIÉES')) { throw "Une valeur de bloc affichée doit être tracée comme non qualifiée. $entries" }
+    Press $audit "Vérifier l'intégrité"
+    $null = Wait-Name $audit 'VerifyStatus' 'Chaîne intacte*'
+    Close-Window $audit
+    Write-Output "Journal d'audit : actions tracées, chaîne intacte."
 } finally {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id }
 }
