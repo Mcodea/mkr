@@ -187,6 +187,8 @@ try {
     }
     Step '11-simulation' {
         Select-Option $ident 'StudyList' "*$modelId"
+        Select-Option $ident 'ResponseProfile' 'Personnalisée'
+        Fill $ident 'ResponseTarget' '12'
         try { Press $ident 'Comparer IMC/Lambda et SIMC' } catch { }
         $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
         try { Press $ident 'Simuler le réglage enregistré…' } catch { }   # a button that opens a modal dialog may report a UIA error although it worked
