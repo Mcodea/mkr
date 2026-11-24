@@ -51,6 +51,8 @@ Dans *Identification*, choisissez l'enregistrement et ses colonnes, renseignez l
 MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, unités physiques). Les blocs Schneider (PIDFF, PIDINT) et Siemens (PID_Compact) n'ont pas tous la même structure, ni les mêmes unités ni la même normalisation.
 - **État actuel : aucune conversion n'est qualifiée.** MKR n'exporte aucun paramètre « prêt à charger ». L'écran de la fiche de bloc et le PDF le disent.
 - Pour chaque bloc, il faut d'abord relever dans la documentation officielle l'équation, la forme, les unités et la normalisation de la version utilisée, puis la qualifier sur banc avec le protocole `docs/validation/qualification-bloc-banc.md`.
+- **Signe du gain :** MKR donne un Kp signé (négatif si le gain du procédé l'est). Le PIDFF refuse un Kp négatif (statut 080, pas de sortie) et PID_Compact n'accepte pas un gain négatif : il faut |Kp| et l'inversion du sens d'action (`rev_dir`, « Invert control logic »). Sources et niveau de preuve : catalogue des blocs.
+- **Unités du temps :** PID_Compact attend Ti et Td en secondes. Pour un bloc dont le temps est un entier converti en durée IEC, vérifiez l'unité de cet entier.
 - Tant que ce n'est pas fait, la saisie dans le bloc est manuelle, sous votre responsabilité, avec des essais en manuel puis en automatique à faible amplitude.
 
 ## 7. Ce que MKR ne fait pas (aujourd'hui)

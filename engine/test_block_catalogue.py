@@ -15,7 +15,7 @@ class CatalogueTests(unittest.TestCase):
             entry, = lookup({"name": name})["entries"]
             self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
             # Only pin names transcribed from user captures: no claim about behaviour, units or equations.
-            self.assertTrue(all(f["source"].startswith("CAPTURE-") for f in entry["facts"]))
+            self.assertTrue(all(f["source"].startswith(("CAPTURE-", "SIEMENS-")) for f in entry["facts"]))
             self.assertFalse(entry["selectable"])
             self.assertFalse(convert(dict(name=name, target={}, parameters={"kp": 1}))["converted"])
 
@@ -65,3 +65,31 @@ class ObservedStructureTests(unittest.TestCase):
             self.assertIn(name, text)
         self.assertIsNone(entry["equation"])
         self.assertFalse(entry["selectable"])
+
+
+class VendorRulesTests(unittest.TestCase):
+    def sources(self):
+        return {s["id"]: s for s in lookup({})["sources"]}
+
+    def test_relayed_vendor_rules_are_flagged_as_not_read_at_the_source(self):
+        sources = self.sources()
+        relayed = [s for s in sources.values() if s["id"].startswith(("SE-FAQ-", "SIEMENS-"))]
+        self.assertEqual({s["id"] for s in relayed}, {"SE-FAQ-FA410692", "SE-FAQ-FAQ000279181", "SE-FAQ-FAQ000256113",
+                                                       "SIEMENS-PIDCOMPACT-DOC", "SIEMENS-FAQ-109481448"})
+        for source in relayed:
+            self.assertIn("moteur de recherche", source["scope"])         # evidence level stays visible
+            self.assertIn("À relire à la source", source["scope"])
+        self.assertIn("images", sources["SIEMENS-PIDCOMPACT-DOC"]["scope"])
+
+    def test_sign_conventions_that_a_conversion_must_handle_are_recorded(self):
+        pidff, = lookup({"name": "PIDFF"})["entries"]
+        text = " ".join(f["claim"] for f in pidff["facts"])
+        self.assertIn("kp négatif n’est donc pas accepté", text)
+        self.assertIn("ovs_att", text)
+        compact, = lookup({"name": "PID_Compact"})["entries"]
+        claims = " ".join(f["claim"] for f in compact["facts"])
+        self.assertIn("gain proportionnel négatif n’est pas pris en charge", claims)
+        self.assertIn("en secondes", claims)
+        for entry in (pidff, compact):
+            self.assertIsNone(entry["equation"])
+            self.assertFalse(entry["selectable"])

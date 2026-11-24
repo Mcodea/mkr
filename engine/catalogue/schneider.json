@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-24.2",
+  "catalogueVersion": "2026-11-24.3",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -65,6 +65,51 @@
       "section": "Réseau « PID compact for Alkali dosing pump », DB d’instance %DB2",
       "url": "urn:mkr:capture:pidcompact-instance-1",
       "scope": "Broches visibles seulement ; la liste est tronquée par la flèche d’extension du bloc. Version du bloc non affichée.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FA410692",
+      "document": "FAQ Schneider FA410692 — What does PIDFF status 080 indicate in Control Expert?",
+      "edition": "non précisée",
+      "section": "Statut 080 du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FA410692/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FAQ000279181",
+      "document": "FAQ Schneider FAQ000279181 — What is the purpose for the 'ovs_att' PIDFF parameter.",
+      "edition": "non précisée",
+      "section": "Paramètre ovs_att du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FAQ000279181/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FAQ000256113",
+      "document": "FAQ Schneider FAQ000256113 — Structure diagram for the PIDFF mixed mode is missing from the help.",
+      "edition": "non précisée",
+      "section": "Structure mixte du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FAQ000256113/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-DOC",
+      "document": "Siemens — PID control with PID_Compact (entrée 100746401, V2.0 et V3.0), Closed-Loop Control with PID_Compact V2.2 (entrée 79047707), SIMATIC S7-1200/S7-1500 PID control (entrée 108210036)",
+      "edition": "V2.0, V2.2, V3.0 (TIA Portal V17 pour le manuel V3.0)",
+      "section": "Principes de régulation et PID_Compact",
+      "url": "https://support.industry.siemens.com/cs/attachments/108210036/s71500_pid_control_function_manual_en-US_en-US.pdf",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision. Les équations de l’algorithme sont des images dans ces manuels : lecture humaine requise.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-FAQ-109481448",
+      "document": "Siemens FAQ 109481448 — migration PID S7-200 vers PID_Compact (S7-1200)",
+      "edition": "01/2016",
+      "section": "Différences de paramétrage",
+      "url": "https://support.industry.siemens.com/cs/attachments/109481448/109481448_S7200-S71200_PID_Compact_en.pdf",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
       "consultedOn": "2026-11-24"
     }
   ],
@@ -165,6 +210,26 @@
         {
           "source": "CAPTURE-PIDFF-2",
           "claim": "Broches d’entrée visibles : PV, SP, FF, RCPY, MAN_AUTO, PARA, TR_I, TR_S. Broches de sortie visibles : OUT, OUTD, MA_O, INFO, STATUS."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Statut 080 : si kp, dband ou gain_kp est négatif, le bloc substitue 0 à la valeur invalide et ne produit pas de sortie (OUT, OUTD, MA_O et INFO restent inchangées). Un kp négatif n’est donc pas accepté."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Si kd est inférieur à 1 alors que td est non nul, le bloc utilise 1 à la place de kd. Un ovs_att hors de [0, 1] est ramené à 0 ou à 1."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Une erreur est signalée si pv_inf et pv_sup sont identiques, ou si une entrée n’est pas de type flottant."
+        },
+        {
+          "source": "SE-FAQ-FAQ000279181",
+          "claim": "ovs_att est le coefficient d’atténuation de dépassement, compris entre 0 (aucune atténuation) et 1 (atténuation maximale), qui réduit le dépassement lors d’un changement de consigne."
+        },
+        {
+          "source": "SE-FAQ-FAQ000256113",
+          "claim": "Le support signale que le schéma de la structure mixte manque dans l’aide ; les équations détaillées sont dans l’aide en ligne de Control Expert, pas dans le texte de la FAQ."
         }
       ]
     },
@@ -235,6 +300,22 @@
         {
           "source": "CAPTURE-PIDCOMPACT-1",
           "claim": "Instance dans le DB %DB2 (« PID_Compact_2 »). Broches d’entrée visibles : Setpoint, Input, Input_PER, ManualEnable, ManualValue. Broches de sortie visibles : Output, Output_PER, Output_PWM, State, Error, ErrorBits."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "Un gain proportionnel négatif n’est pas pris en charge. Pour qu’une sortie plus forte réduise la PV, la configuration coche « Invert control logic » et le gain est la valeur absolue du gain signé."
+        },
+        {
+          "source": "SIEMENS-FAQ-109481448",
+          "claim": "Tous les paramètres de temps de PID_Compact (Ti, Td) s’expriment en secondes ; le PID du S7-200 les exprimait en minutes."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "En mode manuel, une valeur de sortie hors des limites configurées est limitée dans la CPU à ces limites."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "Les documents de référence existent par version (V2.0, V2.2, V3.0). Les équations de l’algorithme y sont des images : la définition exacte des pondérations et du filtre de dérivée reste à relever par un humain."
         }
       ]
     }

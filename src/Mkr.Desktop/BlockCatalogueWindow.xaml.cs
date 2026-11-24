@@ -88,6 +88,8 @@ public partial class BlockCatalogueWindow : Window
                 "Instance du bloc et période d’exécution :",
                 "Plage et unité de mesure :",
                 "Plage et unité de commande :",
+                "Sens d’action et signe du gain (MKR fournit un gain signé ; le bloc peut exiger sa valeur absolue et un indicateur d’inversion) :",
+                "Unité de Ti et de Td (secondes, minutes, durée IEC, entier converti : préciser la conversion) :",
                 "",
                 "Paramètres relevés sur l’instance"
             });
