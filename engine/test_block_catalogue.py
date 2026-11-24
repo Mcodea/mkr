@@ -5,19 +5,25 @@ from block_catalogue import convert, lookup
 class CatalogueTests(unittest.TestCase):
     def test_unknown_target_is_visible_but_blocked(self):
         entries = lookup({"cpu": "M580"})["entries"]
-        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT", "PIDINT", "PID_Compact"})
+        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT", "PID_INT", "PID_Compact"})
         self.assertTrue(all(not e["selectable"] and "cpu" in e["unverifiedTargetFields"] for e in entries))
         # Siemens PID_Compact and Schneider PIDINT are listed with no equation, parameter or fact: nothing is claimed
         # about them until the official documentation is read (AGENTS.md §7).
         siemens = lookup({"manufacturer": "Siemens"})["entries"]
-        self.assertEqual([e["name"] for e in siemens], ["PID_Compact"])
-        for name in ("PID_Compact", "PIDINT"):
+        self.assertEqual([e["name"] for e in siemens], ["PID_Compact"] * 3)
+        for name in ("PID_Compact", "PID_INT"):
+            entries = lookup({"name": name})["entries"]
+            for entry in entries:
+                self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
+                self.assertFalse(entry["selectable"])
+        for name in ("PID_INT",):
             entry, = lookup({"name": name})["entries"]
             self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
             # Only pin names transcribed from user captures: no claim about behaviour, units or equations.
-            self.assertTrue(all(f["source"].startswith(("CAPTURE-", "SIEMENS-")) for f in entry["facts"]))
+            self.assertTrue(all(f["source"].startswith(("CAPTURE-", "SIEMENS-", "SE-33002520")) for f in entry["facts"]))
             self.assertFalse(entry["selectable"])
             self.assertFalse(convert(dict(name=name, target={}, parameters={"kp": 1}))["converted"])
+        self.assertFalse(convert(dict(name="PID_Compact", target={"libraryVersion": "V3.x"}, parameters={"kp": 1}))["converted"])
 
     def test_conversion_refused_and_document_edition_not_used_as_software_version(self):
         pid = lookup({"name": "PIDFF", "softwareVersion": "16"})["entries"][0]
@@ -75,7 +81,8 @@ class VendorRulesTests(unittest.TestCase):
         sources = self.sources()
         relayed = [s for s in sources.values() if s["id"].startswith(("SE-FAQ-", "SIEMENS-"))]
         self.assertEqual({s["id"] for s in relayed}, {"SE-FAQ-FA410692", "SE-FAQ-FAQ000279181", "SE-FAQ-FAQ000256113",
-                                                       "SIEMENS-PIDCOMPACT-DOC", "SIEMENS-FAQ-109481448"})
+                                                       "SIEMENS-PIDCOMPACT-DOC", "SIEMENS-FAQ-109481448",
+                                                       "SIEMENS-PIDCOMPACT-V3", "SIEMENS-PIDCOMPACT-V22"})
         for source in relayed:
             self.assertIn("moteur de recherche", source["scope"])         # evidence level stays visible
             self.assertIn("À relire à la source", source["scope"])
@@ -86,10 +93,30 @@ class VendorRulesTests(unittest.TestCase):
         text = " ".join(f["claim"] for f in pidff["facts"])
         self.assertIn("kp négatif n’est donc pas accepté", text)
         self.assertIn("ovs_att", text)
-        compact, = lookup({"name": "PID_Compact"})["entries"]
+        compact = next(e for e in lookup({"name": "PID_Compact"})["entries"] if e["libraryVersion"] is None)
         claims = " ".join(f["claim"] for f in compact["facts"])
         self.assertIn("gain proportionnel négatif n’est pas pris en charge", claims)
         self.assertIn("en secondes", claims)
         for entry in (pidff, compact):
             self.assertIsNone(entry["equation"])
             self.assertFalse(entry["selectable"])
+
+
+class SiemensVersionsTests(unittest.TestCase):
+    def test_versions_are_distinct_entries_and_a_version_filter_keeps_the_unversioned_facts(self):
+        entries = lookup({"name": "PID_Compact"})["entries"]
+        self.assertEqual([e["libraryVersion"] for e in entries], [None, "V2.x", "V3.x"])
+        v3 = lookup({"name": "PID_Compact", "libraryVersion": "V3.x"})["entries"]
+        self.assertEqual([e["libraryVersion"] for e in v3], [None, "V3.x"])      # unversioned facts still apply
+        v2 = lookup({"name": "PID_Compact", "libraryVersion": "V2.x"})["entries"]
+        self.assertEqual([e["libraryVersion"] for e in v2], [None, "V2.x"])
+        # Hardware and firmware compatibility are not documented: they stay explicitly unverified for every version.
+        for entry in entries:
+            self.assertTrue({"cpu", "firmware", "softwareVersion"} <= set(entry["unverifiedTargetFields"]))
+            self.assertFalse(entry["selectable"])
+
+    def test_designated_vendor_documents_are_recorded_as_not_read(self):
+        sources = {s["id"]: s for s in lookup({})["sources"]}
+        for key in ("SE-33002536K01000", "SE-33002520K01000"):
+            self.assertEqual(sources[key]["edition"], "non lue")
+            self.assertIn("NON LU", sources[key]["scope"])

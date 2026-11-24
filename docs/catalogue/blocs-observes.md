@@ -66,12 +66,23 @@ Pour un essai en boucle ouverte, l'entrée `ManualEnable` (`%M10.3`) passe le bl
 
 Champs vus dans les affectations : `MODE.en_p`, `en_i`, `en_d` (mises à 1), `MODE.man` ; `PARA.gain`, `ti` et `td` (type TIME, après `INT_TO_TIME`), `ymin`, `ymax`.
 
-**Identité non établie.** Le nom du type de bloc, la bibliothèque et la version ne sont pas visibles, et ce n'est pas certain que ce soit « PIDINT ». Les recherches sur les sites Schneider n'ont trouvé ni « PIDINT » ni « PID_INT » dans la documentation de Control Expert. Les seuls PID à entrées entières trouvés sont dans une autre famille (Machine Expert, `FB_PID` de la bibliothèque TwidoEmulationSupport, entrées `i_iKp`, `i_iTi`, `i_iTd`), qui n'est pas confirmée comme étant ce bloc. Il n'a donc pas de fiche.
+**Identité non établie.** Le nom du type de bloc, la bibliothèque et la version ne sont pas visibles, et ce n'est pas certain que ce soit PID_INT. Les recherches sur les sites Schneider n'ont trouvé ni « PIDINT » ni « PID_INT » dans la documentation de Control Expert ; le mainteneur désigne le document 33002520K01000 pour PID_INT (non lu). Les seuls PID à entrées entières trouvés sont dans une autre famille (Machine Expert, `FB_PID` de la bibliothèque TwidoEmulationSupport, entrées `i_iKp`, `i_iTi`, `i_iTd`), qui n'est pas confirmée comme étant ce bloc. Il n'a donc pas de fiche.
 
 **Point à vérifier sur le programme :** `PID_I` est un entier converti par `INT_TO_TIME`. L'unité de cet entier (millisecondes, secondes, dixièmes de seconde) change le Ti d'un facteur 10 à 1000. MKR calcule Ti en secondes : la saisie doit être convertie explicitement.
 
 ## 4. Questions pour le mainteneur
-1. **Toujours ouverte :** quel est le nom exact, la bibliothèque et la version du bloc de la capture « EB_PID » ? Dans Control Expert, l'Explorateur de bibliothèques, ou un clic droit sur le bloc puis ses propriétés, l'indique. Est-ce le bloc que vous appelez PIDINT ?
+1. **Toujours ouverte :** quel est le nom exact, la bibliothèque et la version du bloc de la capture « EB_PID » ? Dans Control Expert, l'Explorateur de bibliothèques, ou un clic droit sur le bloc puis ses propriétés, l'indique. Le mainteneur a précisé le 24/11/2026 : bloc non identifié, à laisser tel quel ; il ne faut établir aucune correspondance non documentée.
 2. **Réduite :** l'aide PIDFF est le document 33002535 (Control Block Library). L'édition et la version de Control Expert restent à relever.
 3. **Toujours ouverte :** PID_Compact V2.x ou V3.x ? (Visible dans le projet ou les propriétés du bloc.)
 4. Le procédé « ANALOG OUT PH » est-il un pH ? La courbe de titrage est très non linéaire : un seul modèle linéaire ne vaut qu'autour d'un point de fonctionnement, et il faut identifier à plusieurs points.
+
+## 5. Documents désignés par le mainteneur (24/11/2026) et état de lecture
+
+| Bloc | Document désigné | Lu ? |
+|---|---|---|
+| PIDFF | [33002536K01000](https://www.se.com/fr/fr/download/document/33002536K01000/) | **Non** : `www.se.com` est hors de la liste réseau de la session |
+| PIDFF (schémas internes) | [FAQ000256113](https://www.se.com/be/fr/faqs/FAQ000256113/) | **Non** (seul un résumé de moteur de recherche a été vu) |
+| PID_INT | [33002520K01000](https://www.se.com/fr/fr/download/document/33002520K01000/) | **Non** |
+| PID_Compact V2.x et V3.x | [manuel de régulation S7-1200/S7-1500](https://support.industry.siemens.com/cs/attachments/108210036/s71500_pid_control_function_manual_en-US_en-US.pdf) | **Non** : `support.industry.siemens.com` est hors de la liste réseau |
+
+**Aucune équation de ces blocs n'est implémentée.** Pour continuer, il suffit d'ouvrir ces documents et de coller ici les pages utiles : l'équation de l'algorithme, la définition des paramètres (unités, bornes, valeurs par défaut) et, pour PID_Compact, les différences entre V2.x et V3.x ainsi que les CPU et firmwares pris en charge. Le catalogue sépare déjà PID_Compact en entrées V2.x et V3.x, avec la compatibilité matérielle « à vérifier ».

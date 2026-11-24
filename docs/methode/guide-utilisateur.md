@@ -48,7 +48,7 @@ Dans *Identification*, choisissez l'enregistrement et ses colonnes, renseignez l
 
 ## 6. Passer au bloc de l'automate
 
-MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, unités physiques). Les blocs Schneider (PIDFF, PIDINT) et Siemens (PID_Compact) n'ont pas tous la même structure, ni les mêmes unités ni la même normalisation.
+MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, unités physiques). Les blocs Schneider (PIDFF, PID_INT) et Siemens (PID_Compact) n'ont pas tous la même structure, ni les mêmes unités ni la même normalisation.
 - **État actuel : aucune conversion n'est qualifiée.** MKR n'exporte aucun paramètre « prêt à charger ». L'écran de la fiche de bloc et le PDF le disent.
 - Pour chaque bloc, il faut d'abord relever dans la documentation officielle l'équation, la forme, les unités et la normalisation de la version utilisée, puis la qualifier sur banc avec le protocole `docs/validation/qualification-bloc-banc.md`.
 - **Signe du gain :** MKR donne un Kp signé (négatif si le gain du procédé l'est). Le PIDFF refuse un Kp négatif (statut 080, pas de sortie) et PID_Compact n'accepte pas un gain négatif : il faut |Kp| et l'inversion du sens d'action (`rev_dir`, « Invert control logic »). Sources et niveau de preuve : catalogue des blocs.
@@ -61,4 +61,4 @@ MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, uni
 - **Lecture du mode** (manuel ou automatique) et de la consigne de l'automate pour contrôler qu'un essai est bien en boucle ouverte.
 - **Procédés intégrateurs** avec un régulateur : l'identification intégrateur existe, mais le réglage PI/PID n'est calculé que pour le premier et le second ordre.
 - **Garantie de stabilité sur le procédé réel** : MKR calcule les marges de gain, de phase, de retard et le pic de sensibilité Ms du modèle **nominal**, avec leurs avertissements, et fait varier gain, τ et θ dans l'analyse de sensibilité. Ni l'un ni l'autre ne garantit la stabilité du procédé réel.
-- **Conversion qualifiée** vers PIDFF, PIDINT et PID_Compact.
+- **Conversion qualifiée** vers PIDFF, PID_INT et PID_Compact.

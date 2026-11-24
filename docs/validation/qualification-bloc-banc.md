@@ -1,6 +1,6 @@
 # Qualification d'un bloc régulateur sur banc (sans hypothèse d'équation)
 
-Objet : établir par la mesure comment un bloc constructeur transforme ses paramètres en action de commande, afin de qualifier la conversion depuis la forme générique de MKR (AGENTS.md §7). Applicable à PIDFF et PIDINT (Schneider, Control Expert) et PID_Compact (Siemens, TIA Portal).
+Objet : établir par la mesure comment un bloc constructeur transforme ses paramètres en action de commande, afin de qualifier la conversion depuis la forme générique de MKR (AGENTS.md §7). Applicable à PIDFF et PID_INT (Schneider, Control Expert) et PID_Compact (Siemens, TIA Portal).
 
 **Ce protocole complète la documentation officielle, il ne la remplace pas.** L'équation, la forme et les unités viennent d'abord de la documentation du produit et de la version utilisés. Cette documentation n'a pas pu être consultée par MKR au 24/11/2026 : aucune équation de ces blocs n'est enregistrée dans le catalogue.
 

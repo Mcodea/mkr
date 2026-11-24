@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-24.3",
+  "catalogueVersion": "2026-11-24.4",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -110,6 +110,42 @@
       "section": "Différences de paramétrage",
       "url": "https://support.industry.siemens.com/cs/attachments/109481448/109481448_S7200-S71200_PID_Compact_en.pdf",
       "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-33002536K01000",
+      "document": "Document Schneider 33002536K01000 (désigné pour le PIDFF)",
+      "edition": "non lue",
+      "section": "PIDFF : équations et paramètres",
+      "url": "https://www.se.com/fr/fr/download/document/33002536K01000/",
+      "scope": "Document désigné par le mainteneur le 2026-11-24 comme documentation officielle. NON LU dans cette session (hôte hors de la liste réseau) : aucune équation ni règle n'en est tirée. À relire par un humain avant toute implémentation.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-33002520K01000",
+      "document": "Document Schneider 33002520K01000 (désigné pour PID_INT)",
+      "edition": "non lue",
+      "section": "PID_INT : description et paramètres",
+      "url": "https://www.se.com/fr/fr/download/document/33002520K01000/",
+      "scope": "Document désigné par le mainteneur le 2026-11-24 comme documentation officielle. NON LU dans cette session (hôte hors de la liste réseau) : aucune équation ni règle n'en est tirée. À relire par un humain avant toute implémentation.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-V3",
+      "document": "Siemens — PID control with PID_Compact SIMATIC S7-1200 / S7-1500 + TIA Portal V17 (entrée 100746401, V3.0)",
+      "edition": "V3.0",
+      "section": "Documentation de la version 3",
+      "url": "https://cache.industry.siemens.com/dl/files/401/100746401/att_1124946/v2/100746401_S71x00_PidCompact_DOC_V3.0_en.pdf",
+      "scope": "Titre et existence relayés par un moteur de recherche le 2026-11-24 ; PDF non ouvert dans cette session. À relire à la source.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-V22",
+      "document": "Siemens — Closed-Loop Control with PID_Compact V2.2 (entrée 79047707)",
+      "edition": "V2.2",
+      "section": "Documentation de la version 2.2",
+      "url": "https://cache.industry.siemens.com/dl/files/707/79047707/att_915339/v2/79047707_PidCompactV2_2_DOC_V2_0_1_en.pdf",
+      "scope": "Titre et existence relayés par un moteur de recherche le 2026-11-24 ; PDF non ouvert dans cette session. À relire à la source.",
       "consultedOn": "2026-11-24"
     }
   ],
@@ -230,6 +266,10 @@
         {
           "source": "SE-FAQ-FAQ000256113",
           "claim": "Le support signale que le schéma de la structure mixte manque dans l’aide ; les équations détaillées sont dans l’aide en ligne de Control Expert, pas dans le texte de la FAQ."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Le mainteneur désigne le document 33002536K01000 comme documentation officielle du PIDFF (équations et paramètres). Document non lu : aucune équation n'en est tirée."
         }
       ]
     },
@@ -269,7 +309,7 @@
       "facts": []
     },
     {
-      "name": "PIDINT",
+      "name": "PID_INT",
       "manufacturer": "Schneider Electric",
       "software": "Control Expert",
       "library": null,
@@ -281,7 +321,12 @@
       "parameters": [],
       "modes": [],
       "status": "to_verify",
-      "facts": []
+      "facts": [
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Le mainteneur désigne le document 33002520K01000 comme documentation officielle de PID_INT. Aucune propriété du bloc n'est établie : document non lu."
+        }
+      ]
     },
     {
       "name": "PID_Compact",
@@ -316,6 +361,50 @@
         {
           "source": "SIEMENS-PIDCOMPACT-DOC",
           "claim": "Les documents de référence existent par version (V2.0, V2.2, V3.0). Les équations de l’algorithme y sont des images : la définition exacte des pondérations et du filtre de dérivée reste à relever par un humain."
+        }
+      ]
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": "V2.x",
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SIEMENS-PIDCOMPACT-V22",
+          "claim": "Une documentation de PID_Compact V2.2 existe (« Closed-Loop Control with PID_Compact V2.2 »). Contenu non lu."
+        },
+        {
+          "source": "SIEMENS-FAQ-109481448",
+          "claim": "Ti et Td s'expriment en secondes (version 2.x)."
+        }
+      ]
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": "V3.x",
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SIEMENS-PIDCOMPACT-V3",
+          "claim": "Une documentation de PID_Compact V3.0 existe, pour SIMATIC S7-1200 / S7-1500 avec TIA Portal V17. Contenu non lu."
         }
       ]
     }
