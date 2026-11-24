@@ -5,9 +5,17 @@ from block_catalogue import convert, lookup
 class CatalogueTests(unittest.TestCase):
     def test_unknown_target_is_visible_but_blocked(self):
         entries = lookup({"cpu": "M580"})["entries"]
-        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT"})
+        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT", "PIDINT", "PID_Compact"})
         self.assertTrue(all(not e["selectable"] and "cpu" in e["unverifiedTargetFields"] for e in entries))
-        self.assertEqual(lookup({"manufacturer": "Siemens"})["entries"], [])
+        # Siemens PID_Compact and Schneider PIDINT are listed with no equation, parameter or fact: nothing is claimed
+        # about them until the official documentation is read (AGENTS.md §7).
+        siemens = lookup({"manufacturer": "Siemens"})["entries"]
+        self.assertEqual([e["name"] for e in siemens], ["PID_Compact"])
+        for name in ("PID_Compact", "PIDINT"):
+            entry, = lookup({"name": name})["entries"]
+            self.assertEqual((entry["equation"], entry["parameters"], entry["facts"], entry["status"]), (None, [], [], "to_verify"))
+            self.assertFalse(entry["selectable"])
+            self.assertFalse(convert(dict(name=name, target={}, parameters={"kp": 1}))["converted"])
 
     def test_conversion_refused_and_document_edition_not_used_as_software_version(self):
         pid = lookup({"name": "PIDFF", "softwareVersion": "16"})["entries"][0]

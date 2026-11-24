@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-21.2",
+  "catalogueVersion": "2026-11-24.1",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -141,6 +141,36 @@
       "name": "PIFINT",
       "manufacturer": "Schneider Electric",
       "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": []
+    },
+    {
+      "name": "PIDINT",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": []
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
       "library": null,
       "cpu": null,
       "firmware": null,

@@ -40,4 +40,7 @@ Sous Linux, le moteur et ses tests peuvent être exécutés avec `python3`. Avec
 - [Décisions du socle](docs/adr/0001-socle.md)
 - [Contrat du moteur](docs/communication/ipc-v1.md)
 - [Import et qualité des CSV](docs/science/qualite-csv.md)
+- [Guide de l'utilisateur : de l'essai au réglage](docs/methode/guide-utilisateur.md)
+- [Acquisition Schneider (Modbus TCP) et Siemens (S7comm)](docs/communication/acquisition.md)
+- [Qualification d'un bloc sur banc](docs/validation/qualification-bloc-banc.md)
 - [Plan de vérification](docs/testing/verification.md)
