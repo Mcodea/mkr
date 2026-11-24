@@ -137,6 +137,8 @@ try {
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
     Step '04b-courbes' {
+        Select-Option $ident 'TrainingSource' '*'
+        Start-Sleep -Milliseconds 500
         Press-Retry $ident 'Afficher les courbes brutes (estimation)…'
         $preview = Find $root $name 'MKR — Prévisualisation des signaux'
         Start-Sleep -Milliseconds 900

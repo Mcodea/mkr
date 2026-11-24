@@ -28,8 +28,8 @@ public partial class WindowView : Window
 
     private void ToggleNavigation(object sender, RoutedEventArgs args)
     {
-        var collapsed = NavColumn.Width.Value < 100;
-        NavColumn.Width = new GridLength(collapsed ? 250 : 56);
+        var collapsed = NavColumn.Width.Value < 120;
+        NavColumn.Width = new GridLength(collapsed ? 250 : 76);
         var visibility = collapsed ? Visibility.Visible : Visibility.Collapsed;
         foreach (var name in _navLabels) if (FindName(name) is UIElement label) label.Visibility = visibility;
         SpaceHeading.Visibility = visibility;
@@ -48,7 +48,7 @@ public partial class WindowView : Window
         Inspector.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         InspectorColumn.Width = new GridLength(show ? 300 : 0);
         // On a 1024 px screen the navigation folds to icons so the workspace keeps its room.
-        if (show && ActualWidth < 1200 && NavColumn.Width.Value > 100) ToggleNavigation(this, new RoutedEventArgs());
+        if (show && ActualWidth < 1200 && NavColumn.Width.Value > 120) ToggleNavigation(this, new RoutedEventArgs());
     }
 
     private static string StateGlyph(StepState state) => state switch { StepState.Done => "\uE73E", StepState.Ready => "\uE76C", _ => "\uE72E" };
@@ -58,7 +58,7 @@ public partial class WindowView : Window
     {
         StepList.Children.Clear();
         _stepLabels.Clear();
-        var collapsed = NavColumn.Width.Value < 100;
+        var collapsed = NavColumn.Width.Value < 120;
         foreach (var step in _steps)
         {
             var number = step.Number;
