@@ -219,6 +219,26 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
+    public async Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
+        double? filterSeconds, CancellationToken token)
+    {
+        var parameters = new Dictionary<string, object> { ["kp"] = kp, ["tiSeconds"] = tiSeconds, ["tdSeconds"] = tdSeconds };
+        if (filterSeconds is { } filter) parameters["filterSeconds"] = filter;
+        var payload = new { name = "PIDFF", target = new { }, parameters };
+        var (json, _) = await CallAsync("convert_block_settings", payload, token).ConfigureAwait(false);
+        var result = new BlockConversionResult(json.GetProperty("converted").GetBoolean(),
+            json.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String ? reason.GetString() : null,
+            json.TryGetProperty("conversion", out var conversion) && conversion.ValueKind == JsonValueKind.Object
+                ? conversion.Deserialize<BlockConversion>(JsonOptions) : null);
+        // Safety invariants of the contract: a conversion is documentary, never qualified and never ready to load.
+        if (result.Converted != (result.Conversion is not null) ||
+            (result.Conversion is { } c && (c.Qualification != "non_qualified" || c.ReadyToLoad || c.Block != "PIDFF" ||
+                c.Structure != "mixed" || !(c.Parameters.Kp > 0) || c.Parameters.Ti is not { Seconds: > 0 } ||
+                c.Parameters.MixPar || c.Warnings is null || c.ToDetermine is null || c.Equations is null || c.Equations.Length == 0)))
+            throw new InvalidDataException("Conversion de bloc incompatible avec le contrat.");
+        return result;
+    }
+
     private static bool ValidMargins(LoopMargins? margins) => margins is null || (
         margins.Warnings is not null && double.IsFinite(margins.PeakSensitivity) && margins.PeakSensitivity >= 1 - 1e-9 &&
         (margins.GainMargin is null || margins.GainMargin > 0) && (margins.PhaseMarginDegrees is null || double.IsFinite(margins.PhaseMarginDegrees.Value)) &&

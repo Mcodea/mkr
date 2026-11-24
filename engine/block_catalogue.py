@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 
 
+from block_adapters import pidff
+
+ADAPTERS = {"PIDFF": pidff}
 TARGET = ("manufacturer", "cpu", "firmware", "software", "softwareVersion", "library", "libraryVersion")
 
 
@@ -37,12 +40,21 @@ def lookup(payload):
 
 
 def convert(payload):
+    """Documented conversion when an adapter exists for the block; otherwise the conversion is refused."""
     if set(payload) != {"name", "target", "parameters"} or not isinstance(payload["target"], dict):
         raise ValueError("catalogue_conversion_input")
     result = lookup({**payload["target"], "name": payload["name"]})
-    return dict(catalogueVersion=result["catalogueVersion"], converted=False,
-                reason="no_verified_adapter" if result["entries"] else "no_matching_entry",
-                parameters=None)
+    refusal = dict(catalogueVersion=result["catalogueVersion"], converted=False, parameters=None,
+                   reason="no_verified_adapter" if result["entries"] else "no_matching_entry")
+    adapter = ADAPTERS.get(payload["name"])
+    if adapter is None or not result["entries"]:
+        return refusal
+    try:
+        converted = adapter(payload["parameters"])
+    except ValueError as error:
+        return {**refusal, "reason": str(error)}
+    return dict(catalogueVersion=result["catalogueVersion"], converted=True, reason=None,
+                parameters=converted["parameters"], conversion=converted)
 
 
 def recommend(payload):

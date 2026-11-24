@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-24.4",
+  "catalogueVersion": "2026-11-24.5",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -114,11 +114,11 @@
     },
     {
       "id": "SE-33002536K01000",
-      "document": "Document Schneider 33002536K01000 (désigné pour le PIDFF)",
-      "edition": "non lue",
-      "section": "PIDFF : équations et paramètres",
+      "document": "Schneider Electric — EcoStruxure Control Expert, Régulation, Bibliothèque de blocs (33002536)",
+      "edition": "09/2020 (33002536.16)",
+      "section": "Chapitre 17, PIDFF, pages 167 à 187",
       "url": "https://www.se.com/fr/fr/download/document/33002536K01000/",
-      "scope": "Document désigné par le mainteneur le 2026-11-24 comme documentation officielle. NON LU dans cette session (hôte hors de la liste réseau) : aucune équation ni règle n'en est tirée. À relire par un humain avant toute implémentation.",
+      "scope": "Lu le 2026-11-24 dans le PDF fourni par le mainteneur. Les équations des pages 173, 177, 182 et 183 sont des images : transcrites à la lecture de ces images. Seule l'édition 09/2020 est lue : la version de Control Expert, le firmware et la CPU restent à identifier.",
       "consultedOn": "2026-11-24"
     },
     {
@@ -154,12 +154,12 @@
       "name": "PIDFF",
       "manufacturer": "Schneider Electric",
       "software": "Control Expert",
-      "library": null,
+      "library": "Control",
       "cpu": null,
       "firmware": null,
       "softwareVersion": null,
       "libraryVersion": null,
-      "equation": null,
+      "equation": "Structure mixte (mix_par = 0) : OUT = kp × [1 + 1/(ti·p) + td·p / (1 + (td/kd)·p)] × IN, avec IN = PV − SP en unités physiques. Structure parallèle (mix_par = 1) : OUT = [kp + α/(ti·p) + α·td·p / (1 + (td/kd)·p)] × IN, avec α = (out_sup − out_inf) / (pv_sup − pv_inf). Document 33002536, p. 173.",
       "parameters": [
         {
           "name": "kp",
@@ -264,12 +264,44 @@
           "claim": "ovs_att est le coefficient d’atténuation de dépassement, compris entre 0 (aucune atténuation) et 1 (atténuation maximale), qui réduit le dépassement lors d’un changement de consigne."
         },
         {
-          "source": "SE-FAQ-FAQ000256113",
-          "claim": "Le support signale que le schéma de la structure mixte manque dans l’aide ; les équations détaillées sont dans l’aide en ligne de Control Expert, pas dans le texte de la FAQ."
+          "source": "SE-33002536K01000",
+          "claim": "Le mainteneur désigne le document 33002536K01000 comme documentation officielle du PIDFF (équations et paramètres). Document non lu : aucune équation n'en est tirée."
         },
         {
           "source": "SE-33002536K01000",
-          "claim": "Le mainteneur désigne le document 33002536K01000 comme documentation officielle du PIDFF (équations et paramètres). Document non lu : aucune équation n'en est tirée."
+          "claim": "Algorithme incrémental pour ti > 0 (p. 183, aw_type = 0) : OUTD = TermP + TermI + TermD + TermFF ; OUT = OUT(old) + OUTD (ou RCPY + OUTD avec en_rcpy = 1) ; TermP = sense × kp × Δ(DEV_WGH) ; TermI = sense × kp × (dt/ti) × dev ; TermD = Δ[sense × (td × TermD(old) + K × td × kd × (VAR(new) − VAR(old))) / (kd × dt + td)] ; Δ(x) = x(t) − x(t−1) ; dt est le temps écoulé depuis la dernière exécution du bloc."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Algorithme absolu pour ti = 0 (p. 182) : OUT = TermP + TermD + TermFF + outbias ; TermP = sense × kp × dev."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "dev = PV − SP (Info_PIDFF, p. 172). DEV_WGH = PV − (1 − ovs_att) × SP (p. 177) : ovs_att = 0 donne l'écart classique, ovs_att = 1 donne la mesure."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Sens d'action (p. 182) : sense = +1 pour rev_dir = 1, un écart positif (PV − SP) donnant une sortie supérieure ; sense = −1 pour rev_dir = 0, un écart positif donnant une sortie inférieure. VAR = PV si pv_dev = 0, VAR = dev si pv_dev = 1."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Incohérence de la documentation : la table des paramètres (p. 171) libelle rev_dir = 0 « action inverse » et rev_dir = 1 « action directe », alors que le tableau de la page 182 libelle rev_dir = 1 « inverse » et rev_dir = 0 « directe ». Les comportements décrits concordent (rev_dir = 1 : sortie supérieure pour PV − SP > 0). Le PI_B (p. 4805 du texte) numérote l'inverse de la table du PIDFF. À confirmer sur banc."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Structure mixte : le gain K des composantes vaut kp (p. 176). Structure parallèle : kp ne s'applique pas à I et D et K est le rapport sortie/gamme (p. 176), mais l'équation détaillée de TermI (p. 183) contient kp. Documentation non cohérente : aucune conversion parallèle n'est offerte."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Le filtre de dérivée est du premier ordre, de constante de temps td/kd (p. 173 et 178). Valeur, seuil et sortie sont en unités physiques (p. 168). Les temps ti et td sont de type TIME (p. 171)."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Limites : OUT est borné entre out_min et out_max en automatique, et entre out_inf et out_sup en manuel et en suivi (p. 179). outrate limite la pente de la sortie, en unités par seconde, avec une valeur ≥ 0 (p. 172). Si ff_sup = ff_inf, la composante d'anticipation est ignorée (p. 179)."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Modes (p. 180) : le mode Tracking (TR_S) est prioritaire sur MAN_AUTO. bump = 0 : passage en automatique sans à-coup ; bump = 1 : avec à-coup (p. 172 et 180)."
         }
       ]
     },

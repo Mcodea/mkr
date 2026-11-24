@@ -49,6 +49,10 @@ public sealed record SopdtPid(string AlgorithmVersion, string Method, string Con
 
 public interface IPiEngine
 {
+    /// <summary>Documentary PIDFF conversion of a tuning (mixed structure). Never qualified, never ready to load.</summary>
+    Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
+        double? filterSeconds, CancellationToken token);
+
     Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token);
     Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
         PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token);

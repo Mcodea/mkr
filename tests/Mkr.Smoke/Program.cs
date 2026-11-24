@@ -605,6 +605,37 @@ try
         await ThrowsAsync<CsvInputException>(() => engine.AnalyzeAsync(frenchRaw, ",", frenchMapping, default, france));
     }
 
+    // PIDFF documentary conversion (Schneider 33002536, p. 173-183): mixed structure, never qualified, never ready to load.
+    {
+        var negative = await engine.ConvertToPidffAsync(-1.5, 12.5, 2.0, 0.5, default);
+        Require(negative is { Converted: true, Conversion: { Qualification: "non_qualified", ReadyToLoad: false, Structure: "mixed" } } &&
+            negative.Conversion.Parameters is { Kp: 1.5, RevDir: true, MixPar: false, PvDev: false, Kd: 4.0 } &&
+            negative.Conversion.Parameters.Ti.Iec == "T#12500ms" && negative.Conversion.Parameters.Td.Iec == "T#2000ms",
+            "A negative Kp becomes |kp| with rev_dir = 1, and the times become IEC TIME literals.");
+        var positive = await engine.ConvertToPidffAsync(0.9, 6, 0, null, default);
+        Require(positive.Conversion is { Parameters: { Kp: 0.9, RevDir: false, Kd: null } }, "A positive Kp gives rev_dir = 0 and no derivative.");
+        var text = positive.Conversion!.Describe("SIMC", "%", "bar");
+        Require(text.Contains("NON QUALIFIÉ") && text.Contains("rev_dir = 0") && text.Contains("p. 173") && text.Contains("ovs_att = 0") &&
+            text.Contains("outrate"), "The displayed values state that they are unqualified and cite their pages.");
+        foreach (var (reason, call) in new (string, Func<Task<BlockConversionResult>>)[]
+        {
+            ("conversion_filter_required", () => engine.ConvertToPidffAsync(1, 5, 2, null, default)),
+            ("conversion_kd_below_one", () => engine.ConvertToPidffAsync(1, 5, 2, 3, default)),
+            ("conversion_parameters", () => engine.ConvertToPidffAsync(0, 5, 0, null, default))
+        })
+        {
+            var refusal = await call();
+            Require(refusal is { Converted: false, Conversion: null } && refusal.Reason == reason && refusal.RefusalText.Length > 10,
+                $"The conversion is refused with the reason {reason}.");
+        }
+        var piOnModel = await gate.ConvertToPidffAsync(fromHistory, new PiStudy(Guid.NewGuid(), fromHistory.Id, DateTimeOffset.UtcNow, "t",
+            (await engine.CalculatePiAsync(fromHistory.Result.Gain, fromHistory.Result.TauSeconds!.Value, fromHistory.Result.DelaySeconds, 5, default)).Result), true, default);
+        Require(piOnModel.Conversion!.Parameters.RevDir && piOnModel.Conversion.Parameters.Kp > 0,
+            "A negative-gain model (K = -1.5) gives a PIDFF with rev_dir = 1.");
+        var refusedTuning = new PiStudy(Guid.NewGuid(), refused.Id, DateTimeOffset.UtcNow, "t", (await engine.CalculatePiAsync(-2, 100, 3, 2, default)).Result);
+        await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToPidffAsync(refused, refusedTuning, false, default));
+    }
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {

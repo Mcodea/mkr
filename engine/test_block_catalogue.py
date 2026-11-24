@@ -69,7 +69,9 @@ class ObservedStructureTests(unittest.TestCase):
         text = " ".join(f["claim"] for f in captured)
         for name in ("ovs_att", "dband", "gain_kp", "pv_dev", "outbias", "outrate", "rev_dir", "TR_I", "MAN_AUTO"):
             self.assertIn(name, text)
-        self.assertIsNone(entry["equation"])
+        # The structure was first transcribed from captures; the equation is now read from the official document
+        # (see PidffOfficialDocumentTests). Selection stays blocked: no CPU, firmware or software version.
+        self.assertIsNotNone(entry["equation"])
         self.assertFalse(entry["selectable"])
 
 
@@ -97,8 +99,9 @@ class VendorRulesTests(unittest.TestCase):
         claims = " ".join(f["claim"] for f in compact["facts"])
         self.assertIn("gain proportionnel négatif n’est pas pris en charge", claims)
         self.assertIn("en secondes", claims)
+        self.assertIsNotNone(pidff["equation"])                         # read at the source (document 33002536)
+        self.assertIsNone(compact["equation"])                          # PID_Compact: documentation not read yet
         for entry in (pidff, compact):
-            self.assertIsNone(entry["equation"])
             self.assertFalse(entry["selectable"])
 
 
@@ -117,6 +120,27 @@ class SiemensVersionsTests(unittest.TestCase):
 
     def test_designated_vendor_documents_are_recorded_as_not_read(self):
         sources = {s["id"]: s for s in lookup({})["sources"]}
-        for key in ("SE-33002536K01000", "SE-33002520K01000"):
-            self.assertEqual(sources[key]["edition"], "non lue")
-            self.assertIn("NON LU", sources[key]["scope"])
+        # 33002536 (PIDFF) has been read since: its edition and scope say so. 33002520 (PID_INT) is still not read.
+        self.assertEqual(sources["SE-33002520K01000"]["edition"], "non lue")
+        self.assertIn("NON LU", sources["SE-33002520K01000"]["scope"])
+        self.assertEqual(sources["SE-33002536K01000"]["edition"], "09/2020 (33002536.16)")
+
+
+class PidffOfficialDocumentTests(unittest.TestCase):
+    def test_equation_and_conventions_are_read_at_the_source_with_their_limits(self):
+        result = lookup({"name": "PIDFF"})
+        sources = {x["id"]: x for x in result["sources"]}
+        entry, = result["entries"]
+        document = sources["SE-33002536K01000"]
+        self.assertEqual(document["edition"], "09/2020 (33002536.16)")
+        self.assertIn("images", document["scope"])                                   # transcribed from images: said so
+        self.assertIn("CPU restent à identifier", document["scope"])
+        self.assertIn("kp × [1 + 1/(ti·p)", entry["equation"])
+        self.assertIn("α = (out_sup − out_inf) / (pv_sup − pv_inf)", entry["equation"])
+        text = " ".join(f["claim"] for f in entry["facts"])
+        for needle in ("sense = +1 pour rev_dir = 1", "Incohérence de la documentation", "DEV_WGH = PV − (1 − ovs_att) × SP",
+                       "td/kd", "aucune conversion parallèle n'est offerte", "outrate"):
+            self.assertIn(needle, text)
+        # Read at the source, yet still not qualified and not selectable: no CPU, firmware or software version.
+        self.assertEqual((entry["status"], entry["selectable"]), ("to_verify", False))
+        self.assertEqual(entry["library"], "Control")

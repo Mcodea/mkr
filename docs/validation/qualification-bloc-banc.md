@@ -15,7 +15,7 @@ Pour chaque bloc et version : forme (série, parallèle ou mixte), place des act
 ## 2 bis. Neutraliser les fonctions annexes (essai E0)
 
 Avant toute équivalence, mettre à leur valeur **neutre documentée** toutes les fonctions qui n'existent pas dans le régulateur générique de MKR, et vérifier qu'elles le sont (mesure de la sortie, sans action P, I ni D). Valeur neutre = celle que la documentation désigne, jamais une valeur supposée. D'après la structure observée du PIDFF (`docs/catalogue/blocs-observes.md`) :
-- pondération de consigne (`ovs_att`) : valeur neutre **0**, aucune atténuation, d'après la [FAQ FAQ000279181](https://www.se.com/us/en/faqs/FAQ000279181/) ;
+- pondération de consigne (`ovs_att`) : valeur neutre **0**, qui donne l'écart classique (document 33002536, p. 177) ;
 - zone morte et gain dans la zone morte (`dband`, `gain_kp`) ;
 - choix de l'entrée de dérivée (`pv_dev`) et facteur `kd` ;
 - anticipation `FF` et ses bornes, décalage `outbias` ;
@@ -24,7 +24,7 @@ Avant toute équivalence, mettre à leur valeur **neutre documentée** toutes le
 
 Pour PID_Compact et pour le bloc « PID » : dresser la même liste depuis la documentation de la version utilisée. Tant que la liste n'est pas établie et que E0 n'est pas passé, E1 à E7 ne sont pas interprétables.
 
-**Signe du gain.** MKR fournit un gain signé. Le PIDFF refuse un `kp` négatif (statut 080) et PID_Compact n'accepte pas un gain négatif (option « Invert control logic », gain en valeur absolue), d'après les FAQ et manuels cités au catalogue (niveau de preuve : relayé par un moteur de recherche). La correspondance exacte est vérifiée à l'essai E4, sur les deux signes de gain du procédé de banc.
+**Signe du gain et sens d'action.** MKR fournit un gain signé. Pour le PIDFF, la correspondance documentée est : Kp > 0 → `rev_dir = 0`, Kp < 0 → `rev_dir = 1` avec |Kp| (document 33002536, p. 182). Les étiquettes « directe/inverse » du manuel se contredisent entre deux pages alors que les comportements concordent : l'essai E4 le tranche. Le PIDFF refuse un `kp` négatif (statut 080) et PID_Compact n'accepte pas un gain négatif (option « Invert control logic », gain en valeur absolue), d'après les FAQ et manuels cités au catalogue (niveau de preuve : relayé par un moteur de recherche). La correspondance exacte est vérifiée à l'essai E4, sur les deux signes de gain du procédé de banc.
 
 ## 3. Essais en boucle fermée sur le procédé simulé ou réel (banc)
 

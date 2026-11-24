@@ -494,6 +494,31 @@ public partial class IdentificationWindow : Window
             new OpenLoopWindow(_workspace, model) { Owner = this }.ShowDialog();
     }
 
+    private async void ShowPidffValues(object sender, RoutedEventArgs args)
+    {
+        if (_shown is not { } model || PiList.SelectedItem is not PiStudy tuning)
+        {
+            Message.Text = "Sélectionnez un réglage PI enregistré.";
+            return;
+        }
+        var token = _lifetime.Token;
+        try
+        {
+            var sections = new List<string>();
+            foreach (var (simc, label) in new[] { (false, "IMC / Lambda"), (true, "SIMC") })
+            {
+                var result = await _workspace.ConvertToPidffAsync(model, tuning, simc, token);
+                token.ThrowIfCancellationRequested();
+                sections.Add(result.Conversion is { } conversion
+                    ? conversion.Describe(label, model.MvUnit, model.PvUnit)
+                    : $"{label} : {result.RefusalText}");
+            }
+            new BlockValuesWindow("MKR — Valeurs du bloc PIDFF (non qualifiées)", string.Join("\n──────────\n\n", sections)) { Owner = this }.ShowDialog();
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+    }
+
     private void OpenSimulation(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy tuning)
@@ -510,7 +535,7 @@ public partial class IdentificationWindow : Window
 
     private void ShowPi(object sender, SelectionChangedEventArgs args)
     {
-        SimulateSavedPi.IsEnabled = PiList.SelectedItem is PiStudy;
+        SimulateSavedPi.IsEnabled = PidffValues.IsEnabled = PiList.SelectedItem is PiStudy;
         if (_shown is not { } model || PiList.SelectedItem is not PiStudy pi)
         {
             PiReport.Text = "";

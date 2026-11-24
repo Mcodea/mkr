@@ -78,11 +78,9 @@ Champs vus dans les affectations : `MODE.en_p`, `en_i`, `en_d` (mises à 1), `MO
 
 ## 5. Documents désignés par le mainteneur (24/11/2026) et état de lecture
 
-| Bloc | Document désigné | Lu ? |
+| Bloc | Document | Lu ? |
 |---|---|---|
-| PIDFF | [33002536K01000](https://www.se.com/fr/fr/download/document/33002536K01000/) | **Non** : `www.se.com` est hors de la liste réseau de la session |
-| PIDFF (schémas internes) | [FAQ000256113](https://www.se.com/be/fr/faqs/FAQ000256113/) | **Non** (seul un résumé de moteur de recherche a été vu) |
-| PID_INT | [33002520K01000](https://www.se.com/fr/fr/download/document/33002520K01000/) | **Non** |
-| PID_Compact V2.x et V3.x | [manuel de régulation S7-1200/S7-1500](https://support.industry.siemens.com/cs/attachments/108210036/s71500_pid_control_function_manual_en-US_en-US.pdf) | **Non** : `support.industry.siemens.com` est hors de la liste réseau |
-
-**Aucune équation de ces blocs n'est implémentée.** Pour continuer, il suffit d'ouvrir ces documents et de coller ici les pages utiles : l'équation de l'algorithme, la définition des paramètres (unités, bornes, valeurs par défaut) et, pour PID_Compact, les différences entre V2.x et V3.x ainsi que les CPU et firmwares pris en charge. Le catalogue sépare déjà PID_Compact en entrées V2.x et V3.x, avec la compatibilité matérielle « à vérifier ».
+| PIDFF | Schneider 33002536 (09/2020, .16), chapitre 17 | **Oui**, le 24/11/2026 (PDF fourni). Voir [pidff-conversion.md](pidff-conversion.md) |
+| PID_INT | Schneider 33002520 (09/2020, .20), chapitre 30 | PDF fourni, lecture en cours |
+| PID_Compact V2.x et V3.x | Siemens, *PID control* (S7-1200, S7-1500) | PDF fourni, lecture en cours |
+| PIDFF, schémas internes | FAQ000256113 | Non (la structure est dans le document 33002536) |
