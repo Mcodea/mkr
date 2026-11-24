@@ -17,6 +17,9 @@ public static class ThemeService
     public static ThemeChoice Choice { get; private set; } = ThemeChoice.System;
     public static bool IsDark { get; private set; }
 
+    /// <summary>Raised after the theme dictionary was swapped, so hand-drawn plots can redraw with the new colours.</summary>
+    public static event Action? Changed;
+
     /// <summary>
     /// An implicit Style for Window never reaches the application's own window classes (WindowView, CsvWindow…: WPF styles apply to the
     /// exact type only), so each window takes its background, text colour and font from the theme here, as resource references:
@@ -54,6 +57,7 @@ public static class ThemeService
         IsDark = choice == ThemeChoice.Dark || (choice == ThemeChoice.System && !SystemUsesLightTheme());
         var theme = new ResourceDictionary { Source = new Uri($"Resources/Themes/{(IsDark ? "Dark" : "Light")}.xaml", UriKind.Relative) };
         Application.Current.Resources.MergedDictionaries[0] = theme;
+        Changed?.Invoke();
         if (!remember || _file is null) return;
         try { File.WriteAllText(_file, choice.ToString()); }
         catch (IOException) { }                                     // a theme that cannot be remembered is still applied

@@ -9,7 +9,6 @@ public partial class TrialPreviewWindow : Window
     private readonly TrialPreview _data;
     private readonly string _mvUnit;
     private readonly string _pvUnit;
-    private double? _dragOrigin;
     private double? _selectedFrom;
     private double? _selectedTo;
     private StepWindow? _pendingWindow;
@@ -28,31 +27,25 @@ public partial class TrialPreviewWindow : Window
                 ? " · Affichage réduit : extrema et fortes variations prioritaires ; certains événements restent potentiellement invisibles."
                 : " · Aucun point écarté de l'affichage.");
         SelectionText.Text = "Aucune période sélectionnée. Les plages validées utilisent les indices des lignes originales.";
-    }
-
-    private void PlotResize(object sender, SizeChangedEventArgs args) => Draw();
-
-    private void Draw() => TrialPreviewPlot.Draw(Plot, _data, _mvUnit, _pvUnit, _selectedFrom, _selectedTo);
-
-    private void StartSelection(object sender, MouseButtonEventArgs args)
-    {
-        if (TrialPreviewPlot.TimeAt(args.GetPosition(Plot).X, Plot.ActualWidth, _data, out var time))
+        var seconds = data.Points.Select(p => p.Seconds).ToArray();
+        Chart.XLabel = "Temps écoulé depuis le premier échantillon (s)";
+        Chart.SelectionEnabled = true;
+        Chart.SetTracks(new[]
         {
-            _dragOrigin = time;
-            Plot.CaptureMouse();
-        }
+            new ChartTrack("Sortie de commande", mvUnit, new[] { new ChartSeries("Appliquée", "MkrSignal1", seconds, data.Points.Select(p => p.Mv).ToArray()) }),
+            new ChartTrack("Mesure", pvUnit, new[] { new ChartSeries("Mesure", "MkrSignal2", seconds, data.Points.Select(p => p.Pv).ToArray()) })
+        });
+        Chart.RangeSelected += Selected;
+        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
     }
 
-    private void EndSelection(object sender, MouseButtonEventArgs args)
+    private void Draw()
     {
-        if (_dragOrigin is not { } origin)
-            return;
-        _dragOrigin = null;
-        Plot.ReleaseMouseCapture();
-        if (!TrialPreviewPlot.TimeAt(args.GetPosition(Plot).X, Plot.ActualWidth, _data, out var time))
-            return;
-        var start = Math.Min(time, origin);
-        var end = Math.Max(time, origin);
+        Chart.SetHighlight(_selectedFrom, _selectedTo);
+    }
+
+    private void Selected(double start, double end)
+    {
         // One full pair of original display samples is the minimum inspectable interval.
         var retained = _data.Points.Where(p => p.Seconds >= start && p.Seconds <= end).ToArray();
         if (retained.Length < 2)
@@ -71,12 +64,24 @@ public partial class TrialPreviewWindow : Window
         Draw();
     }
 
-    private void CancelSelection(object sender, MouseEventArgs args)
+    private void ResetZoom(object sender, RoutedEventArgs args) => Chart.ResetView();
+
+    private void ExportImage(object sender, RoutedEventArgs args)
     {
-        if (_dragOrigin is null || args.LeftButton == MouseButtonState.Pressed)
-            return;
-        _dragOrigin = null;
-        Plot.ReleaseMouseCapture();
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "courbes-sources.png" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportPng(dialog.FileName); SelectionText.Text = "Image exportée."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { SelectionText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+    }
+
+    private void ExportData(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "courbes-sources.csv" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportCsv(dialog.FileName); SelectionText.Text = "Données affichées exportées (points d'affichage, pas les lignes sources)."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { SelectionText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
     private void ApplyWindow(object sender, RoutedEventArgs args)
@@ -89,10 +94,9 @@ public partial class TrialPreviewWindow : Window
 
     private void ClearSelection(object sender, RoutedEventArgs args)
     {
-        _selectedFrom = _selectedTo = _dragOrigin = null;
+        _selectedFrom = _selectedTo = null;
         _pendingWindow = null;
         ApplySelection.IsEnabled = false;
-        Plot.ReleaseMouseCapture();
         SelectionText.Text = "Aucune période sélectionnée. Affichage en lecture seule.";
         Draw();
     }

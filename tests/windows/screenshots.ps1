@@ -136,6 +136,13 @@ try {
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
+    Step '04b-courbes' {
+        Press-Retry $ident 'Afficher les courbes brutes (estimation)…'
+        $preview = Find $root $name 'MKR — Prévisualisation des signaux'
+        Start-Sleep -Milliseconds 900
+        Capture $preview '04b-courbes-sources'
+        Close-Window $preview
+    }
     Step '05-revue' {
         Press-Retry $ident "Revue de l'étude…"
         $review = Find $root $name "MKR — Revue de l'étude"

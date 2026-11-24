@@ -377,6 +377,26 @@ try
     new SqliteProjectStore(acquisitionDb).Add(project);
     await AcquisitionChecks.Run(acquisitionDb, project.Id, engine);
     {
+        var (ticks, step) = ChartMath.NiceTicks(0.3, 9.7, 5);
+        Require(step == 2 && ticks.SequenceEqual(new[] { 2.0, 4.0, 6.0, 8.0 }), "Ticks are round multiples of 1, 2 or 5 powers of ten.");
+        Require(ChartMath.NiceTicks(5, 5, 5).Ticks.SequenceEqual(new[] { 5.0 }) && ChartMath.NiceTicks(double.NaN, 1, 5).Ticks.Length == 0, "Degenerate and non-finite ranges give safe ticks.");
+        var xs = Enumerable.Range(0, 100_000).Select(i => i * 0.01).ToArray();
+        var ys = xs.Select(v => Math.Sin(v)).ToArray();
+        ys[54_321] = 50;                                                        // a one-sample spike
+        var picked = ChartMath.Decimate(xs, ys, 0, xs[^1], 500);
+        Require(picked.Length <= 2000 && picked.Contains(54_321), "Decimation bounds the points but never loses an extremum.");
+        Require(ChartMath.Decimate(xs, ys, 10, 10.05, 500).Length <= 8, "A narrow window keeps its samples.");
+        Require(ChartMath.NearestIndex(xs, 3.004) == 300 && ChartMath.NearestIndex(xs, -5) == 0 && ChartMath.NearestIndex(xs, 1e9) == xs.Length - 1 &&
+            ChartMath.NearestIndex(Array.Empty<double>(), 1) == -1, "Cursor lookup picks the nearest sample and survives out-of-range values.");
+        var (zlo, zhi) = ChartMath.Zoom(0, 100, 25, 0.5, 0, 100);
+        Require(Math.Abs(zlo - 12.5) < 1e-9 && Math.Abs(zhi - 62.5) < 1e-9, "Zoom keeps the point under the cursor fixed.");
+        var (plo, phi) = ChartMath.Pan(80, 100, 50, 0, 100);
+        Require(plo == 80 && phi == 100, "Pan cannot leave the data.");
+        var (flo, fhi) = ChartMath.Zoom(10, 20, 15, 100, 0, 100);
+        Require(flo == 0 && fhi == 100, "Zooming out stops at the full range.");
+    }
+
+    {
         // The journey is derived from stored facts only; tuning is closed until a model is accepted.
         var none = StudyJourney.Evaluate(null);
         Require(none.Count == 10 && none.All(s => s.State == StepState.Blocked), "Without a project every step is closed and says why.");
