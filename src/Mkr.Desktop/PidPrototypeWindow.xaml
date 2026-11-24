@@ -31,7 +31,7 @@
                             <Label Content="Tf (s)" Target="{Binding ElementName=Tf}" VerticalAlignment="Center"/>
                             <TextBox x:Name="Tf" Width="90" Text="0.1"/>
                         </WrapPanel>
-                        <TextBlock Text="P et I sur SP−PV · D uniquement sur PV · filtre discret Euler implicite · intégration conditionnelle."
+                        <TextBlock Text="P et I sur l’écart (consigne − mesure) · D uniquement sur la mesure · filtre discret Euler implicite · intégration conditionnelle."
                                    Foreground="{DynamicResource MkrMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
                         <WrapPanel>
                             <Button x:Name="RunButton" Content="_Comparer PID / PI" Click="Run"
@@ -74,7 +74,7 @@
                                    Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
                         <Canvas x:Name="Graph" Height="400" ClipToBounds="True"
                                 Background="{DynamicResource MkrSurface}" SizeChanged="ResizeGraph"
-                                AutomationProperties.Name="Comparaison temporelle SP PV PI et PID et MV appliquée"/>
+                                AutomationProperties.Name="Comparaison temporelle : consigne, mesure PI et PID, sortie de commande appliquée"/>
                         <TextBlock Text="Simulation FOPDT nominale, valeurs d'écart. L'amélioration d'un indicateur n'est pas une garantie de stabilité ni de compatibilité constructeur."
                                    Foreground="{DynamicResource MkrMuted}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,8,0,0"/>

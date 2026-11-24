@@ -16,11 +16,11 @@
                     <TextBox x:Name="StepAt" Width="75" Text="0" />
                 </WrapPanel>
                 <WrapPanel Margin="0,0,0,6">
-                    <Label Content="Échelon ΔMV" Target="{Binding ElementName=StepMv}" />
+                    <Label Content="Échelon de sortie" Target="{Binding ElementName=StepMv}" />
                     <TextBox x:Name="StepMv" Width="75" />
-                    <Label Content="ΔMV min." Target="{Binding ElementName=Lower}" />
+                    <Label Content="Sortie min. (écart)" Target="{Binding ElementName=Lower}" />
                     <TextBox x:Name="Lower" Width="75" />
-                    <Label Content="ΔMV max." Target="{Binding ElementName=Upper}" />
+                    <Label Content="Sortie max. (écart)" Target="{Binding ElementName=Upper}" />
                     <TextBox x:Name="Upper" Width="75" />
                 </WrapPanel>
                 <WrapPanel Margin="0,0,0,6">
@@ -36,7 +36,7 @@
             <TextBlock x:Name="Message" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="0,8,0,0" />
             <Canvas x:Name="Plot" Height="208" ClipToBounds="True" SizeChanged="ResizePlot"
-                    AutomationProperties.Name="Réponse PV en boucle ouverte et niveau initial" />
+                    AutomationProperties.Name="Réponse de la mesure en boucle ouverte et niveau initial" />
         </StackPanel>
     </ScrollViewer>
 </Window>

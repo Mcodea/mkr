@@ -80,7 +80,7 @@ internal static class PidPrototypePlot
             canvas.Children.Add(curve);
         }
 
-        Track($"PV / SP ({pvUnit})", top,
+        Track($"Mesure et consigne ({pvUnit})", top,
             piPoints.Select(p => p.Pv).Concat(pidPoints.Select(p => p.Pv))
                 .Append(scenario.Setpoint),
             y =>
@@ -98,7 +98,7 @@ internal static class PidPrototypePlot
             });
 
         var secondTop = top + h + gap;
-        Track($"MV appliquée ({mvUnit})", secondTop,
+        Track($"Sortie de commande appliquée ({mvUnit})", secondTop,
             piPoints.Where(p => p.Mv.HasValue).Select(p => p.Mv!.Value)
                 .Concat(pidPoints.Where(p => p.Mv.HasValue).Select(p => p.Mv!.Value))
                 .Append(scenario.MinimumMv).Append(scenario.MaximumMv),

@@ -98,7 +98,7 @@
                                         <StackPanel Margin="0,0,12,8">
                                             <Label Content="_Rôle" Target="{Binding ElementName=Role}"
                                                    Padding="0" Margin="0,0,0,4"/>
-                                            <ComboBox x:Name="Role" Width="92" MinHeight="34"/>
+                                            <ComboBox x:Name="Role" Width="190" MinHeight="34"/>
                                         </StackPanel>
                                         <StackPanel Margin="0,0,12,8">
                                             <Label Content="_Unité" Target="{Binding ElementName=Unit}"

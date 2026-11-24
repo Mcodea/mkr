@@ -93,7 +93,7 @@ internal static class IdentificationDiagnosticsPlot
                   top + TrackHeight - 16, PlotColors.Label);
         }
 
-        Track(Top, pvMin, pvMax, $"PV ({pvUnit}) — mesurée / prédite");
+        Track(Top, pvMin, pvMax, $"Mesure ({pvUnit}) — observée / prédite");
         var residualTop = Top + TrackHeight + Gap;
         Track(residualTop, residualMin, residualMax, $"Résidu ({pvUnit}) — mesurée − prédite");
 

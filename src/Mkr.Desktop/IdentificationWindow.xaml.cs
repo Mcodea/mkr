@@ -80,7 +80,7 @@ public partial class IdentificationWindow : Window
             MvUnit.Text.Trim().Length == 0 || PvUnit.Text.Trim().Length == 0 ||
             !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance))
         {
-            Message.Text = "Choisissez l’enregistrement, ses trois colonnes, les unités et les tolérances MV et PV avant la recherche.";
+            Message.Text = "Choisissez l’enregistrement, ses trois colonnes, les unités et les tolérances de la sortie de commande et de la mesure avant la recherche.";
             return;
         }
         Form.IsEnabled = false;
@@ -124,7 +124,7 @@ public partial class IdentificationWindow : Window
         if (source.SelectedItem is not ImportSummary import ||
             ReadColumns(time, mv, pv) is not { } columns)
         {
-            Message.Text = "Sélectionnez un import et trois colonnes distinctes (temps, MV, PV) pour visualiser les signaux.";
+            Message.Text = "Sélectionnez un import et trois colonnes distinctes (temps, sortie de commande, mesure) pour visualiser les signaux.";
             return;
         }
 
@@ -138,8 +138,8 @@ public partial class IdentificationWindow : Window
                 return;
             Message.Text = "Courbes chargées depuis le CSV enregistré, sans modification de l'étude.";
             var window = new TrialPreviewWindow(preview, import.FileName,
-                string.IsNullOrWhiteSpace(MvUnit.Text) ? "unité MV non renseignée" : MvUnit.Text.Trim(),
-                string.IsNullOrWhiteSpace(PvUnit.Text) ? "unité PV non renseignée" : PvUnit.Text.Trim())
+                string.IsNullOrWhiteSpace(MvUnit.Text) ? "unité de la sortie de commande non renseignée" : MvUnit.Text.Trim(),
+                string.IsNullOrWhiteSpace(PvUnit.Text) ? "unité de la mesure non renseignée" : PvUnit.Text.Trim())
                 { Owner = this };
             if (window.ShowDialog() == true && window.SelectedWindow is { } range)
             {
@@ -189,7 +189,7 @@ public partial class IdentificationWindow : Window
             Message.Text = $"Bruit mesuré sur les plateaux avant échelon : σ = {proposal.BaselineNoise:G4} {PvUnit.Text}. " +
                 (proposal.Basis == "noise"
                     ? $"RMSE maximale = {proposal.NoiseMultiple:G2} σ."
-                    : "Bruit inférieur à la résolution déclarée : RMSE maximale = moitié de la tolérance PV.") +
+                    : "Bruit inférieur à la résolution déclarée : RMSE maximale = moitié de la tolérance de la mesure.") +
                 " Ces critères sont fixés avant tout ajustement. Modifiez-les si l’étude impose une exigence.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
@@ -236,7 +236,7 @@ public partial class IdentificationWindow : Window
         // Validation criteria are mandatory for every estimate, not only for the comparison (audit NC-02).
         if (!ReadTolerance(MaximumRmse, out var rmse) || !ReadTolerance(MaximumLag, out var lag) || lag > 1)
         {
-            Message.Text = "Indiquez les critères de validation : une RMSE maximale positive en unité PV et une limite de corrélation supérieure à 0 et inférieure ou égale à 1.";
+            Message.Text = "Indiquez les critères de validation : une RMSE maximale positive (unité de la mesure) et une limite de corrélation supérieure à 0 et inférieure ou égale à 1.";
             return;
         }
         var criteria = new ComparisonCriteria(rmse, lag);
@@ -380,7 +380,7 @@ public partial class IdentificationWindow : Window
         var windows = $"Plage estimation : {FormatWindow(study.TrainingWindow)} · plage validation : {FormatWindow(study.ValidationWindow)}\n";
         var broida = result.BroidaEvidence is { } evidence
             ? $"Broïda : t28 = {evidence.Crossing28Seconds:G6} s ; t40 = {evidence.Crossing40Seconds:G6} s ; " +
-              $"PV terminale mesurée = {evidence.TerminalPv:G6} {study.PvUnit} " +
+              $"Mesure terminale observée = {evidence.TerminalPv:G6} {study.PvUnit} " +
               $"sur {evidence.TerminalSamples} échantillons.\n"
             : "";
 
@@ -484,7 +484,7 @@ public partial class IdentificationWindow : Window
         // Tight SIMC (τc = θ) on the conservative delay bound: an underestimated delay makes the loop aggressive.
         ResponseTarget.Text = model.TuningDelaySeconds.ToString("R", CultureInfo.CurrentCulture);
         TargetHelp.Text = $"SIMC, Skogestad (2003) · Pour explorer une réponse rapide, τc = retard. MKR retient la borne prudente " +
-            $"{model.TuningDelaySeconds:G5} s : l’échelon de MV a eu lieu entre deux mesures, le retard réel est compris entre " +
+            $"{model.TuningDelaySeconds:G5} s : l’échelon de la sortie de commande a eu lieu entre deux mesures, le retard réel est compris entre " +
             $"{model.DelaySeconds:G5} et {model.TuningDelaySeconds:G5} s. Vérifiez en simulation le temps obtenu et l’effort de commande.";
     }
 
@@ -651,7 +651,7 @@ public partial class IdentificationWindow : Window
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
         PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
             $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
-            "Forme idéale continue, e = SP − PV. Marges calculées sur le modèle nominal seul : elles ne remplacent pas l’analyse de sensibilité. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
+            "Forme idéale continue, écart = consigne − mesure. Marges calculées sur le modèle nominal seul : elles ne remplacent pas l’analyse de sensibilité. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
 
     private static string FormatWindow(StepWindow? window) => window is { } w
@@ -738,7 +738,7 @@ public partial class IdentificationWindow : Window
         var fit = DisplayedDiagnostics();
         var category = PlotSource.SelectedIndex == 0 ? "Estimation" : "Validation indépendante";
         PlotLegend.Text = fit is null ? "" :
-            $"{category} · PV ({_shown!.PvUnit}) · bleu : mesurée · orange : prédite · violet : résidu (mesurée − prédite)" +
+            $"{category} · mesure ({_shown!.PvUnit}) · bleu : observée · orange : prédite · violet : résidu (mesurée − prédite)" +
             (_plotFrom.HasValue && _plotTo.HasValue
                 ? $" · Zoom [{_plotFrom.Value:G5}, {_plotTo.Value:G5}] s" : "");
         IdentificationDiagnosticsPlot.Draw(Plot, fit?.Points, _shown?.PvUnit ?? "",
@@ -758,9 +758,9 @@ public partial class IdentificationWindow : Window
         Trace.TraceError("identification.study {0}", error.GetType().Name);
         Message.Text = error is CsvInputException input ? input.Code switch
         {
-            "preview_mapping" => "Sélectionnez des colonnes de temps, MV et PV distinctes.",
+            "preview_mapping" => "Sélectionnez des colonnes de temps, de sortie de commande et de mesure distinctes.",
             "preview_time" => "Les horodatages doivent être valides, sans heure locale inexistante ou ambiguë (changement d’heure), et strictement croissants.",
-            "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
+            "preview_data" => "La sortie de commande et la mesure doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
             "fit_same_source_window" => "Deux essais d’un même enregistrement exigent deux plages explicites (bouton « Rechercher les essais »).",
             "fit_same_source_overlap" => "Les deux plages d’un même enregistrement se recouvrent : choisissez deux échelons distincts.",
@@ -768,24 +768,24 @@ public partial class IdentificationWindow : Window
             "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
             "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints. Deux segments consécutifs d’un historique se recouvrent volontairement : raccourcissez la fin de la première plage pour qu’elle précède le début de la seconde.",
             "fit_step" => "Sélectionnez une plage qui montre la commande avant et après un seul changement de niveau. Si la commande est déjà au nouveau niveau à la première mesure, utilisez un enregistrement qui commence avant le changement. Vérifiez aussi la stabilité des deux plateaux dans la tolérance déclarée.",
-            "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
-            "fit_response" => "La variation de PV ne suffit pas pour estimer un modèle.",
+            "fit_baseline" => "La mesure avant l’échelon dépasse la tolérance déclarée.",
+            "fit_response" => "La variation de la mesure ne suffit pas pour estimer un modèle.",
             "fit_amplitude" => "Les amplitudes absolues des échelons doivent rester dans un rapport de 0,5 à 2.",
-            "fit_data" => "Vérifiez les valeurs numériques MV/PV : les données manquantes et non finies empêchent l’estimation.",
+            "fit_data" => "Vérifiez les valeurs numériques de la sortie de commande et de la mesure : les données manquantes et non finies empêchent l’estimation.",
             "fit_time" => "Les horodatages doivent être valides, sans heure locale inexistante ou ambiguë (changement d’heure), et strictement croissants. Pour une heure locale, le format et le fuseau sont ceux déclarés à l’import.",
             "fit_recorded_mapping" => "Le rôle ou l’unité déclaré contredit le mapping enregistré lors de l’import.",
             "fit_integrator_tail" => "L’essai d’estimation ne montre pas une dérive suffisante en fin d’échelon.",
             "pi_domain" => "Le modèle et le temps de réponse sont hors du domaine de calcul PI.",
             "pi_range" => "La combinaison demandée dépasse la plage numérique des réglages PI.",
             "fit_dependency" => "Installez les dépendances Python du fichier engine/requirements.txt avec l’interpréteur MKR.",
-            "broida_plateau" => "Broïda refusée : la fin de l’essai ne présente pas un plateau PV stable dans la tolérance.",
+            "broida_plateau" => "Broïda refusée : la fin de l’essai ne présente pas un plateau stable de la mesure dans la tolérance.",
             "broida_shape" => "Broïda refusée : réponse non monotone ou dépassement incompatibles avec l’hypothèse.",
-            "broida_response" => "Broïda refusée : variation finale PV insuffisante.",
+            "broida_response" => "Broïda refusée : variation finale de la mesure insuffisante.",
             "broida_horizon" => "Broïda refusée : horizon insuffisant pour établir une valeur finale et la dynamique.",
             "broida_crossing" => "Broïda refusée : passages 28 % / 40 % indéterminables ou incohérents.",
             "broida_domain" => "Broïda refusée : les points conduisent à un retard négatif ou à une constante non physique.",
             "fit_solver" => "L’estimateur n’a pas convergé dans les limites prévues.",
-            "fit_tolerance" => "Les tolérances MV et PV doivent être des nombres strictement positifs.",
+            "fit_tolerance" => "Les tolérances de la sortie de commande et de la mesure doivent être des nombres strictement positifs.",
             "fit_comparison_limits" => "Les critères d’acceptation du modèle (RMSE, corrélation) sont invalides.",
             "drift_mapping" or "drift_domain" => "Les paramètres du modèle enregistré ne conviennent pas au contrôle de dérive.",
             "engine_failure" => "Le moteur de calcul a échoué de façon inattendue : relancez l’opération ; si cela se reproduit, consultez le journal MKR.",

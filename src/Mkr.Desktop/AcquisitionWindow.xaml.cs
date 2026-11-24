@@ -33,14 +33,14 @@ public partial class AcquisitionWindow : Window
             TextBox Box(int column, string text, string name, string id)
             {
                 var box = new TextBox { Text = text, Margin = new Thickness(0, 4, 8, 0) };
-                System.Windows.Automation.AutomationProperties.SetName(box, $"{role} {name}");
+                System.Windows.Automation.AutomationProperties.SetName(box, $"{Terms.RoleName(role)} {name}");
                 System.Windows.Automation.AutomationProperties.SetAutomationId(box, role + id);
                 Grid.SetRow(box, row);
                 Grid.SetColumn(box, column);
                 SignalGrid.Children.Add(box);
                 return box;
             }
-            var label = new TextBlock { Text = role, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+            var label = new TextBlock { Text = Terms.RoleName(role), TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
             Grid.SetRow(label, row);
             SignalGrid.Children.Add(label);
             var offset = Box(1, ((row - 1) * 2).ToString(CultureInfo.CurrentCulture), "adresse", "Offset");
@@ -120,7 +120,7 @@ public partial class AcquisitionWindow : Window
                 : historian.Validate() ?? $"{historian.TotalSamples:N0} mesures sur {Format(historian.PlannedDuration)} en {historian.ExpectedSegments} segment(s) " +
                     $"d’environ {historian.SegmentSamples * 120 / 1024} Kio, enregistrés dès qu’ils sont complets. Le recouvrement garde entier un échelon proche d’une coupure " +
                     $"s’il dure moins de {historian.OverlapSamples * historian.PeriodMs / 1000.0:G3} s : pour un essai plus long, utilisez l’acquisition ponctuelle. " +
-                    "Réalisez les échelons de MV avec le régulateur en manuel ; MKR les retrouvera ensuite dans l’historique.";
+                    "Réalisez les échelons de la sortie de commande avec le régulateur en manuel ; MKR les retrouvera ensuite dans l’historique.";
             return;
         }
         if (int.TryParse(Count.Text, out int count) && int.TryParse(Period.Text, out int period) && count > 0 && period > 0)
@@ -224,9 +224,9 @@ public partial class AcquisitionWindow : Window
 
     private string Describe(AcquiredSample sample) =>
         $"{sample.ReceivedAt:HH:mm:ss.fff} UTC · aller-retour {sample.RoundTripMs:0.#} ms\n" +
-        $"SP {sample.Sp:G6} {ProcessUnit.Text} (brut {sample.RawSp:G9})\n" +
-        $"PV {sample.Pv:G6} {ProcessUnit.Text} (brut {sample.RawPv:G9})\n" +
-        $"MV {sample.Mv:G6} {CommandUnit.Text} (brut {sample.RawMv:G9})" +
+        $"Consigne {sample.Sp:G6} {ProcessUnit.Text} (brut {sample.RawSp:G9})\n" +
+        $"Mesure {sample.Pv:G6} {ProcessUnit.Text} (brut {sample.RawPv:G9})\n" +
+        $"Sortie de commande {sample.Mv:G6} {CommandUnit.Text} (brut {sample.RawMv:G9})" +
         (sample.RawMode is { } rawMode ? $"\nMode brut {rawMode:G9} → {(sample.InManual == true ? "manuel" : "PAS en manuel")}" : "");
 
     private async void ProbeReading(object sender, RoutedEventArgs args)

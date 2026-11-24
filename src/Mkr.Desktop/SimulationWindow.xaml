@@ -19,15 +19,15 @@
                         <TextBox x:Name="Sample" Width="75" />
                         <Label Content="Durée (s)" Target="{Binding ElementName=Duration}" />
                         <TextBox x:Name="Duration" Width="75" />
-                        <Label Content="Consigne ΔSP" Target="{Binding ElementName=Setpoint}" />
+                        <Label Content="Variation de consigne" Target="{Binding ElementName=Setpoint}" />
                         <TextBox x:Name="Setpoint" Width="75" />
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,6">
-                        <Label Content="ΔMV min." Target="{Binding ElementName=Lower}" />
+                        <Label Content="Sortie min. (écart)" Target="{Binding ElementName=Lower}" />
                         <TextBox x:Name="Lower" Width="75" />
-                        <Label Content="ΔMV max." Target="{Binding ElementName=Upper}" />
+                        <Label Content="Sortie max. (écart)" Target="{Binding ElementName=Upper}" />
                         <TextBox x:Name="Upper" Width="75" />
-                        <Label Content="Perturbation ΔMV" Target="{Binding ElementName=Disturbance}" />
+                        <Label Content="Perturbation (écart de sortie)" Target="{Binding ElementName=Disturbance}" />
                         <TextBox x:Name="Disturbance" Width="75" Text="0" />
                         <Label Content="Instant (s)" Target="{Binding ElementName=DisturbanceAt}" />
                         <TextBox x:Name="DisturbanceAt" Width="75" Text="0" />
@@ -38,7 +38,7 @@
                     </WrapPanel>
                     <GroupBox Header="Passage manuel → automatique · essai hors ligne" Margin="0,4,0,8">
                         <WrapPanel Margin="5">
-                            <Label Content="ΔMV manuelle" Target="{Binding ElementName=ManualMv}"/>
+                            <Label Content="Sortie manuelle (écart)" Target="{Binding ElementName=ManualMv}"/>
                             <TextBox x:Name="ManualMv" Width="68"/>
                             <Label Content="Bascule (s)" Target="{Binding ElementName=SwitchTime}"/>
                             <TextBox x:Name="SwitchTime" Width="68"/>
@@ -128,8 +128,8 @@
                                 Background="{DynamicResource MkrSurface}"
                                 MouseLeftButtonDown="StartPlotSelection"
                                 MouseLeftButtonUp="EndPlotSelection"
-                                AutomationProperties.Name="Réponses SP et PV, commandes calculées et MV appliquées IMC et SIMC"/>
-                        <TextBlock Text="Glissez horizontalement pour zoomer ; cliquez pour inspecter un échantillon. ΔCV est la commande calculée avant limitation ; ΔMV est celle appliquée dans le modèle. Le zoom n'altère ni la simulation ni son export."
+                                AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC"/>
+                        <TextBlock Text="Glissez horizontalement pour zoomer ; cliquez pour inspecter un échantillon. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
                                    Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"
                                    TextWrapping="Wrap"/>
                     </StackPanel>

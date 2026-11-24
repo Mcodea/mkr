@@ -43,7 +43,7 @@ public partial class StepSearchWindow : Window
         }).ToList();
         Rejected.ItemsSource = search.Rejected.Select(r => new { Row = r.StepRow, Reason = RejectionText(r.Reason) }).ToList();
         PairHelp.Text = search.Pairs.Length == 0
-            ? "Aucune paire exploitable. Il faut deux échelons de MV propres, séparés par un plateau, d’amplitudes comparables " +
+            ? "Aucune paire exploitable. Il faut deux échelons propres de la sortie de commande, séparés par un plateau, d’amplitudes comparables " +
               "(rapport entre 0,5 et 2). Refaites un essai en boucle ouverte si besoin."
             : "Les paires sont classées : sens opposés et réponses stabilisées d’abord, puis amplitudes proches. " +
               "Un essai aller-retour partage un plateau : MKR le coupe pour que les deux plages ne partagent aucune ligne.";
@@ -59,13 +59,13 @@ public partial class StepSearchWindow : Window
 
     private static string RejectionText(string reason) => reason switch
     {
-        "ramp_or_multi_sample_change" => "Rampe ou changement de MV sur plusieurs mesures : pas un échelon.",
-        "baseline_too_short_or_unstable" => "Moins de 4 mesures stables avant l’échelon (PV en mouvement, trou de données ou échelon précédent).",
-        "response_window_too_short" => "Moins de 12 mesures avant le prochain changement de MV ou de données manquantes.",
+        "ramp_or_multi_sample_change" => "Rampe ou changement de la sortie de commande sur plusieurs mesures : pas un échelon.",
+        "baseline_too_short_or_unstable" => "Moins de 4 mesures stables avant l’échelon (mesure en mouvement, trou de données ou échelon précédent).",
+        "response_window_too_short" => "Moins de 12 mesures avant le prochain changement de la sortie de commande ou de données manquantes.",
         "search_limit" => "Limite de recherche atteinte : réduisez la période de l’enregistrement.",
-        "fit_step" => "MV non constante de part et d’autre de l’échelon, ou amplitude trop faible devant la tolérance MV.",
-        "fit_baseline" => "PV non stable avant l’échelon dans la tolérance PV.",
-        "fit_response" => "Réponse de PV trop faible devant la tolérance PV.",
+        "fit_step" => "Sortie de commande non constante de part et d’autre de l’échelon, ou amplitude trop faible devant sa tolérance.",
+        "fit_baseline" => "Mesure non stable avant l’échelon dans sa tolérance.",
+        "fit_response" => "Réponse de la mesure trop faible devant sa tolérance.",
         _ => reason
     };
 

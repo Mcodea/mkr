@@ -55,7 +55,7 @@ public static class StudySheet
         })
         {
             Line($"{label} · {source.FileName}");
-            Line($"Temps : {columns.TimeColumn} · commande MV : {columns.MvColumn} · mesure PV : {columns.PvColumn}");
+            Line($"Temps : {columns.TimeColumn} · sortie de commande : {columns.MvColumn} · mesure : {columns.PvColumn}");
             var range = window is null ? "fichier complet"
                 : $"indices {window.RowStart} à {window.RowEnd} inclus (première donnée = 0, en-tête exclu)";
             Line($"Plage utilisée : {range} · {fit.Samples} échantillons");
@@ -130,7 +130,7 @@ public static class StudySheet
             var high = validationPoints.Max(p => Math.Max(p.Observed, p.Predicted));
             var first = validationPoints[0].Seconds;
             var last = validationPoints[^1].Seconds;
-            graph.DrawString($"PV ({model.PvUnit}) · min {N(low)} · max {N(high)}", font, XBrushes.Black, 44, 134);
+            graph.DrawString($"Mesure ({model.PvUnit}) · min {N(low)} · max {N(high)}", font, XBrushes.Black, 44, 134);
             graph.DrawRectangle(XPens.Gray, 44, 148, 490, 250);
             XPoint Position(double seconds, double value) => new(
                 44 + 490 * ((seconds - first) / (last - first)),
@@ -164,8 +164,8 @@ public static class StudySheet
                 }
                 g.DrawString($"Temps : 0 à {N(scenario.DurationSeconds)} s", font, XBrushes.Black, 44, top+210);
             }
-            Plot($"Mesure PV ({model.PvUnit})", p => p.Pv, 100);
-            Plot($"Commande appliquée MV ({model.MvUnit})", p => p.Mv, 390);
+            Plot($"Mesure ({model.PvUnit})", p => p.Pv, 100);
+            Plot($"Sortie de commande appliquée ({model.MvUnit})", p => p.Mv, 390);
         }
         var tmp = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, $".{Guid.NewGuid():N}.tmp");
         try { pdf.Save(tmp); File.Move(tmp, path, overwrite: true); }

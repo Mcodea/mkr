@@ -27,6 +27,9 @@ public partial class CsvWindow : Window
         TimeFormat.SelectedIndex = 0;
         TimeFormat.SelectionChanged += (_, _) => TimeZone.IsEnabled = !string.IsNullOrEmpty((string?)TimeFormat.SelectedValue);
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
+        var roleText = new FrameworkElementFactory(typeof(TextBlock));
+        roleText.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding { Converter = new RoleNameConverter() });
+        Role.ItemTemplate = new DataTemplate { VisualTree = roleText };
         var brief = workspace.ReadLoopBrief();
         LoopTag.Text = brief.Tag;
         LoopControlledQuantity.Text = brief.ControlledQuantity;
@@ -212,10 +215,10 @@ public partial class CsvWindow : Window
         if (!(import.Format ?? CsvFormat.Default).IsDefault)
             Report.Text += $"  |  Lecture : {import.Format!.Describe()}.";
         if (import.Acquisition is { } origin)
-            Report.Text += $"  |  {origin.Describe()} · unités PV {origin.ProcessUnit}, MV {origin.CommandUnit}.";
+            Report.Text += $"  |  {origin.Describe()} · unité de la mesure {origin.ProcessUnit}, de la sortie de commande {origin.CommandUnit}.";
         var quality = import.Result.Quality!;
         Report.Text += $"  |  {import.Summary.FileName}  |  SHA-256 : {import.Summary.Sha256}\n" +
-            $"{import.Mapping.Role} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +
+            $"{Terms.RoleName(import.Mapping.Role)} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +
             $"manquantes : {quality.MissingValues}, invalides : {quality.InvalidValues}. " +
             $"Min./max. : {Format(quality.Minimum)} / {Format(quality.Maximum)}.\n" +
             $"Horodatages invalides : {quality.InvalidTimestamps}, doublons : {quality.DuplicateTimestamps}, " +
@@ -242,4 +245,13 @@ public partial class CsvWindow : Window
             _ => "Requête CSV invalide."
         } : "Opération impossible. Vérifiez le stockage local, le fichier et la disponibilité de Python.";
     }
+}
+
+/// <summary>Shows the plain name of a signal role in selection lists while the stored value stays the role code.</summary>
+internal sealed class RoleNameConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        value is string code ? Terms.RoleLabel(code) : value ?? "";
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
 }

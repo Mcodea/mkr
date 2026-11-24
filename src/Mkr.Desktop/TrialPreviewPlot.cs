@@ -80,8 +80,8 @@ internal static class TrialPreviewPlot
             canvas.Children.Add(curve);
         }
 
-        Track($"MV ({mvUnit}) — échelle indépendante", p => p.Mv, mvTop, PlotColors.Signal1);
-        Track($"PV ({pvUnit}) — échelle indépendante", p => p.Pv, pvTop, PlotColors.Signal2);
+        Track($"Sortie de commande ({mvUnit}) — échelle indépendante", p => p.Mv, mvTop, PlotColors.Signal1);
+        Track($"Mesure ({pvUnit}) — échelle indépendante", p => p.Pv, pvTop, PlotColors.Signal2);
 
         if (selectedStart is { } a && selectedEnd is { } b && b > a)
         {

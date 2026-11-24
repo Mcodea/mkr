@@ -24,9 +24,9 @@
                 </ComboBox>
             </WrapPanel>
             <WrapPanel x:Name="IntPanel" Margin="0,8,0,0" Visibility="Collapsed">
-                <Label Content="Étendue de la _mesure (unité PV)" Target="{Binding ElementName=PvSpan}"/>
+                <Label Content="Étendue de la _mesure" Target="{Binding ElementName=PvSpan}"/>
                 <TextBox x:Name="PvSpan" Width="90" AutomationProperties.Name="Étendue de la mesure"/>
-                <Label Content="Étendue de la _sortie (unité MV)" Target="{Binding ElementName=MvSpan}" Margin="12,0,0,0"/>
+                <Label Content="Étendue de la _sortie de commande" Target="{Binding ElementName=MvSpan}" Margin="12,0,0,0"/>
                 <TextBox x:Name="MvSpan" Width="90" AutomationProperties.Name="Étendue de la sortie"/>
                 <Label Content="Période TS (_s)" Target="{Binding ElementName=Ts}" Margin="12,0,0,0"/>
                 <TextBox x:Name="Ts" Width="70" AutomationProperties.Name="Période d'échantillonnage en secondes"/>
@@ -34,7 +34,7 @@
             <WrapPanel x:Name="CompactPanel" Margin="0,8,0,0" Visibility="Collapsed">
                 <Label Content="_Version" Target="{Binding ElementName=Version}"/>
                 <ComboBox x:Name="Version" Width="90" AutomationProperties.Name="Version de PID_Compact"/>
-                <Label Content="% de sortie par unité de _MV" Target="{Binding ElementName=PercentPerUnit}" Margin="12,0,0,0"/>
+                <Label Content="% de sortie par unité de _sortie de commande" Target="{Binding ElementName=PercentPerUnit}" Margin="12,0,0,0"/>
                 <TextBox x:Name="PercentPerUnit" Width="70" AutomationProperties.Name="Pour cent de sortie par unité de MV"/>
                 <Label Content="_CPU (facultatif)" Target="{Binding ElementName=Cpu}" Margin="12,0,0,0"/>
                 <ComboBox x:Name="Cpu" Width="110" AutomationProperties.Name="Famille de CPU">

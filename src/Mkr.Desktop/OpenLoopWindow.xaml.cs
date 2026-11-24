@@ -21,9 +21,9 @@ public partial class OpenLoopWindow : Window
         _workspace = workspace;
         _model = model;
         InitializeComponent();
-        RateLabel.Content = $"Vitesse max. ΔMV ({model.MvUnit}/s, facultative)";
+        RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
         Units.Text = $"Étude FOPDT {model.Label}\n" +
-            $"Écarts autour du point initial. ΔMV en {model.MvUnit}, ΔPV en {model.PvUnit}.";
+            $"Écarts autour du point initial. Écarts de la sortie de commande en {model.MvUnit}, de la mesure en {model.PvUnit}.";
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
@@ -45,7 +45,7 @@ public partial class OpenLoopWindow : Window
         {
             if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
             {
-                Message.Text = "La vitesse maximale de MV doit être strictement positive.";
+                Message.Text = "La vitesse maximale de la sortie de commande doit être strictement positive.";
                 return;
             }
             rate = maximumRate;
@@ -64,10 +64,10 @@ public partial class OpenLoopWindow : Window
                 ? "Le retard repousse le début de la réponse jusqu’à la fin du scénario ou au-delà."
                 : "";
             Report.Text = $"Simulation exploratoire · méthode {result.AlgorithmVersion} · moteur {version}\n" +
-                $"ΔPV finale {result.Points[^1].Pv:G5} {_model.PvUnit} · " +
-                $"ΔPV asymptotique {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s · " +
+                $"Écart final de la mesure {result.Points[^1].Pv:G5} {_model.PvUnit} · " +
+                $"Écart asymptotique de la mesure {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s · " +
                 $"vitesse limitée {result.RateLimitedSeconds:G5} s\n" +
-                $"ΔPV ({_model.PvUnit}) · bleu : simulée · orange : niveau initial";
+                $"Écart de mesure ({_model.PvUnit}) · bleu : simulée · orange : niveau initial";
             ExportButton.IsEnabled = true;
             DrawPlot();
         }
@@ -78,7 +78,7 @@ public partial class OpenLoopWindow : Window
             Message.Text = error is CsvInputException input ? input.Code switch
             {
                 "sim_grid" => "Utilisez une durée et un instant d’échelon multiples du pas, avec 2 à 5 000 intervalles.",
-                "sim_domain" => "Vérifiez que le pas est positif, l’échelon non nul et antérieur à la fin, et les limites de ΔMV de part et d’autre de zéro.",
+                "sim_domain" => "Vérifiez que le pas est positif, l’échelon non nul et antérieur à la fin, et les limites de la sortie de commande de part et d’autre de zéro.",
                 _ => "Vérifiez les valeurs et les unités du scénario."
             } : "Simulation indisponible. Consultez le journal MKR.";
         }

@@ -28,9 +28,9 @@ public partial class SimulationWindow : Window
         _model = model;
         _tuning = tuning;
         InitializeComponent();
-        RateLabel.Content = $"Vitesse max. ΔMV ({model.MvUnit}/s, facultative)";
+        RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
         Units.Text = $"Cible PI : {tuning.Result.ResponseSeconds:G5} s. Déviations autour du point initial : " +
-            $"consigne et PV en {model.PvUnit}, saturation et perturbation en {model.MvUnit}.";
+            $"consigne et mesure en {model.PvUnit}, saturation et perturbation en {model.MvUnit}.";
         Saved.ItemsSource = _workspace.Simulations(_tuning.Id);
         if (Saved.Items.Count > 0)
             Saved.SelectedIndex = 0;
@@ -53,7 +53,7 @@ public partial class SimulationWindow : Window
         {
             if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
             {
-                Message.Text = "La vitesse maximale de MV doit être strictement positive.";
+                Message.Text = "La vitesse maximale de la sortie de commande doit être strictement positive.";
                 return false;
             }
             rate = maximumRate;
@@ -84,9 +84,9 @@ public partial class SimulationWindow : Window
             var after = transfer.Points[first];
             string method = simc ? "SIMC" : "IMC / Lambda";
             string warnings = string.Join(", ", transfer.Warnings);
-            Message.Text = $"Essai hors ligne {method} à {after.Seconds:G6} s · ΔMV manuelle demandée {manual:G6} {_model.MvUnit}\n" +
-                $"ΔMV appliquée avant → après : {before.Mv:G6} → {after.Mv:G6} {_model.MvUnit} · saut de commande : {transfer.TransferBumpMv:G6} {_model.MvUnit}\n" +
-                $"ΔPV à la bascule : {after.Pv:G6} {_model.PvUnit} · saturation : {transfer.SaturationSeconds:G6} s · limitation de vitesse : {transfer.RateLimitedSeconds:G6} s\n" +
+            Message.Text = $"Essai hors ligne {method} à {after.Seconds:G6} s · sortie manuelle demandée (écart) {manual:G6} {_model.MvUnit}\n" +
+                $"Sortie de commande appliquée avant → après : {before.Mv:G6} → {after.Mv:G6} {_model.MvUnit} · saut de commande : {transfer.TransferBumpMv:G6} {_model.MvUnit}\n" +
+                $"Écart de mesure à la bascule : {after.Pv:G6} {_model.PvUnit} · saturation : {transfer.SaturationSeconds:G6} s · limitation de vitesse : {transfer.RateLimitedSeconds:G6} s\n" +
                 $"Avertissements moteur : {warnings}";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
@@ -174,7 +174,7 @@ public partial class SimulationWindow : Window
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
-            Message.Text = "Matrice combinée enregistrée avec l'enveloppe PV et sa simulation nominale.";
+            Message.Text = "Matrice combinée enregistrée avec l'enveloppe de la mesure et sa simulation nominale.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -226,7 +226,7 @@ public partial class SimulationWindow : Window
                 $"{mode}, ±{sensitivity.VariationPercent:G5} %, coefficients PI fixes. " +
                 $"IAE maximale parmi les {sensitivity.Cases.Length} cas : " +
                 $"IMC {worstImc:G5} {_model.PvUnit}·s ; SIMC {worstSimc:G5} {_model.PvUnit}·s. " +
-                (isCombined ? "Les enveloppes PV indiquent seulement les extrema simulés, pas un intervalle de confiance. " : "") +
+                (isCombined ? "Les enveloppes de la mesure indiquent seulement les extrema simulés, pas un intervalle de confiance. " : "") +
                 $"Méthode {sensitivity.AlgorithmVersion} · modèle nominal conservé.";
         }
         else
@@ -257,16 +257,16 @@ public partial class SimulationWindow : Window
             _ => "Simulation exploratoire sur modèle nominal."
         });
         Report.Text = $"Simulation enregistrée {simulation.Id.ToString()[..8]} · durée {input.DurationSeconds:G6} s · " +
-            $"ΔSP {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
+            $"Variation de consigne {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
             $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
             $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
             $"{string.Join(" ", warnings)}";
-        Legend.Text = $"PV/SP ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
-            $"Commandes ({_model.MvUnit}) : pointillés = CV calculée, vert = MV appliquée, gris = limites ; violet = instant de perturbation.";
+        Legend.Text = $"Mesure et consigne ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
+            $"Commandes ({_model.MvUnit}) : pointillés = commande calculée, vert = commande appliquée, gris = limites ; violet = instant de perturbation.";
         if (simulation.Robustness?.Envelope is not null)
-            Legend.Text += " Sur la piste PV, zones translucides = enveloppes min/max de 27 simulations, sans garantie de stabilité.";
+            Legend.Text += " Sur la piste de la mesure, zones translucides = enveloppes min/max de 27 simulations, sans garantie de stabilité.";
         DrawPlot();
     }
 
@@ -340,10 +340,10 @@ public partial class SimulationWindow : Window
                 var index = Array.FindIndex(points, p => p.Seconds == selected.Seconds);
                 var other = study.Result.Simc.Points[index];
                 string Value(double? value) => value is { } v ? v.ToString("G6", CultureInfo.CurrentCulture) : "—";
-                CursorReadout.Text = $"t = {selected.Seconds:G6} s · ΔSP = {study.Scenario.Setpoint:G6} {_model.PvUnit} · " +
-                    $"PV IMC = {selected.Pv:G6} {_model.PvUnit}, SIMC = {other.Pv:G6} {_model.PvUnit} · " +
-                    $"CV IMC = {Value(selected.Cv)}, MV IMC = {Value(selected.Mv)} · " +
-                    $"CV SIMC = {Value(other.Cv)}, MV SIMC = {Value(other.Mv)} {_model.MvUnit}";
+                CursorReadout.Text = $"t = {selected.Seconds:G6} s · Variation de consigne = {study.Scenario.Setpoint:G6} {_model.PvUnit} · " +
+                    $"Mesure IMC = {selected.Pv:G6} {_model.PvUnit}, SIMC = {other.Pv:G6} {_model.PvUnit} · " +
+                    $"Commande calculée IMC = {Value(selected.Cv)}, appliquée IMC = {Value(selected.Mv)} · " +
+                    $"calculée SIMC = {Value(other.Cv)}, appliquée SIMC = {Value(other.Mv)} {_model.MvUnit}";
                 DrawPlot();
             }
             return;
@@ -422,7 +422,7 @@ public partial class SimulationWindow : Window
         Message.Text = error is CsvInputException input ? input.Code switch
         {
             "sim_grid" => "Utilisez une durée et un instant de perturbation multiples du pas, pour 2 à 5 000 intervalles.",
-            "sim_domain" => "Vérifiez le modèle, le pas positif, les limites de MV autour de zéro et l’instant de perturbation.",
+            "sim_domain" => "Vérifiez le modèle, le pas positif, les limites de la sortie de commande autour de zéro et l’instant de perturbation.",
             "sim_range" => "La dynamique calculée dépasse la plage numérique. Vérifiez le pas et le réglage.",
             "robust_domain" => "Variation de sensibilité invalide : indiquez 0–50 %, avec un modèle FOPDT valide.",
             "robust_input" => "Les paramètres de l'analyse de robustesse sont incomplets ou incompatibles.",

@@ -102,7 +102,7 @@ try {
     Press $window 'Tester la lecture'
     $null = Wait-Text $window 'Status' "Lecture d’essai réussie*"
     $latest = (Find $window $id 'Latest').Current.Name
-    foreach ($part in @('SP 52.5 bar', 'PV 48.25 bar', 'MV -12.75 %')) {
+    foreach ($part in @('Consigne 52.5 bar', 'Mesure 48.25 bar', 'Sortie de commande -12.75 %')) {
         if (!$latest.Contains($part)) { throw "Valeur S7 absente : $part. Affichage : $latest" }
     }
     Fill $window 'Period' '200'
@@ -134,7 +134,7 @@ try {
     Press $window 'Tester la lecture'
     $null = Wait-Text $window 'Status' "Lecture d’essai réussie*"
     $latest = (Find $window $id 'Latest').Current.Name
-    foreach ($part in @('SP 45.25 bar', 'PV -3.5 bar', 'MV 61.875 %')) {
+    foreach ($part in @('Consigne 45.25 bar', 'Mesure -3.5 bar', 'Sortie de commande 61.875 %')) {
         if (!$latest.Contains($part)) { throw "Valeur Modbus absente : $part. Affichage : $latest" }
     }
     # Controller mode: address and "manual" value are entered by the user; nothing is assumed.

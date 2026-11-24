@@ -10,7 +10,7 @@
             <StackPanel>
                 <TextBlock FontSize="22" FontWeight="SemiBold" Text="Identification par échelons" />
                 <TextBlock Margin="0,5,0,12" TextWrapping="Wrap"
-                           Text="Deux essais distincts du même procédé, avec un échelon de MV propre chacun : deux CSV, ou deux plages d’un même historique (bouton « Rechercher les essais »). La validation utilise le deuxième essai." />
+                           Text="Deux essais distincts du même procédé, avec un échelon propre de la sortie de commande pour chacun : deux CSV, ou deux plages d’un même historique (bouton « Rechercher les essais »). La validation utilise le deuxième essai." />
                 <StackPanel x:Name="Form">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
                         <StackPanel>
@@ -25,18 +25,18 @@
                             </ComboBox>
                             <Label Content="Temps" Target="{Binding ElementName=TrainingTime}" />
                             <ComboBox x:Name="TrainingTime" Width="95" />
-                            <Label Content="MV" Target="{Binding ElementName=TrainingMv}" />
+                            <Label Content="Sortie de commande" Target="{Binding ElementName=TrainingMv}" />
                             <ComboBox x:Name="TrainingMv" Width="95" />
-                            <Label Content="PV" Target="{Binding ElementName=TrainingPv}" />
+                            <Label Content="Mesure" Target="{Binding ElementName=TrainingPv}" />
                             <ComboBox x:Name="TrainingPv" Width="95" />
                         </WrapPanel>
-                        <Button Content="Afficher les _courbes brutes MV/PV (estimation)…"
+                        <Button Content="Afficher les _courbes brutes (estimation)…"
                                 Click="PreviewTraining" HorizontalAlignment="Left"
                                 Margin="12,0,12,8"
                                 ToolTip="Sélectionner une plage du CSV original pour le prochain calcul"/>
                         <Button x:Name="FindTrials" Content="_Rechercher les essais exploitables dans cet enregistrement…"
                                 Click="FindTrialsInRecording" HorizontalAlignment="Left" Margin="12,0,12,8"
-                                ToolTip="Pour un historique long : repère les échelons de MV propres et propose deux plages indépendantes"/>
+                                ToolTip="Pour un historique long : repère les échelons propres de la sortie de commande et propose deux plages indépendantes"/>
                         <TextBlock x:Name="TrainingRangeInfo" Text="Estimation : fichier complet" Margin="12,0,8,8"
                                    Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
                         </StackPanel>
@@ -54,12 +54,12 @@
                             </ComboBox>
                             <Label Content="Temps" Target="{Binding ElementName=ValidationTime}" />
                             <ComboBox x:Name="ValidationTime" Width="95" />
-                            <Label Content="MV" Target="{Binding ElementName=ValidationMv}" />
+                            <Label Content="Sortie de commande" Target="{Binding ElementName=ValidationMv}" />
                             <ComboBox x:Name="ValidationMv" Width="95" />
-                            <Label Content="PV" Target="{Binding ElementName=ValidationPv}" />
+                            <Label Content="Mesure" Target="{Binding ElementName=ValidationPv}" />
                             <ComboBox x:Name="ValidationPv" Width="95" />
                         </WrapPanel>
-                        <Button Content="Afficher les courbes brutes MV/PV (_validation)…"
+                        <Button Content="Afficher les courbes brutes (_validation)…"
                                 Click="PreviewValidation" HorizontalAlignment="Left"
                                 Margin="12,0,12,8"
                                 ToolTip="Sélectionner une plage indépendante pour la validation"/>
@@ -68,17 +68,17 @@
                         </StackPanel>
                     </GroupBox>
                     <WrapPanel Margin="0,0,0,8">
-                        <Label Content="Unité MV" Target="{Binding ElementName=MvUnit}" />
+                        <Label Content="Unité de la sortie de commande" Target="{Binding ElementName=MvUnit}" />
                         <TextBox x:Name="MvUnit" Width="65" MaxLength="40" />
-                        <Label Content="Tolérance des plateaux MV" Target="{Binding ElementName=MvTolerance}" />
+                        <Label Content="Tolérance de la sortie de commande (plateaux)" Target="{Binding ElementName=MvTolerance}" />
                         <TextBox x:Name="MvTolerance" Width="82" />
-                        <Label Content="Unité PV" Target="{Binding ElementName=PvUnit}" />
+                        <Label Content="Unité de la mesure" Target="{Binding ElementName=PvUnit}" />
                         <TextBox x:Name="PvUnit" Width="65" MaxLength="40" />
-                        <Label Content="Tolérance PV avant échelon" Target="{Binding ElementName=PvTolerance}" />
+                        <Label Content="Tolérance de la mesure avant échelon" Target="{Binding ElementName=PvTolerance}" />
                         <TextBox x:Name="PvTolerance" Width="82" />
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,8">
-                        <Label Content="RMSE maximale (unité PV)" Target="{Binding ElementName=MaximumRmse}"/>
+                        <Label Content="Erreur quadratique max. (RMSE, unité de la mesure)" Target="{Binding ElementName=MaximumRmse}"/>
                         <TextBox x:Name="MaximumRmse" Width="76"/>
                         <Label Content="Corrélation résiduelle maximale |r₁|" Target="{Binding ElementName=MaximumLag}"/>
                         <TextBox x:Name="MaximumLag" Width="76"/>
@@ -144,7 +144,7 @@
                                 MouseLeftButtonDown="PlotStartSelection"
                                 MouseLeftButtonUp="PlotEndSelection"
                                 MouseLeave="PlotCancelSelection"
-                                AutomationProperties.Name="PV mesurée, PV prédite et résidus de l’essai sélectionné"/>
+                                AutomationProperties.Name="Mesure observée, mesure prédite et résidus de l’essai sélectionné"/>
                         <TextBlock Text="Pour zoomer, faites glisser horizontalement sur le graphique. Le zoom modifie seulement l’affichage, jamais les données ou les paramètres de l’étude."
                                    Foreground="{DynamicResource MkrMuted}" FontSize="11"
                                    TextWrapping="Wrap" Margin="0,6,0,0"/>

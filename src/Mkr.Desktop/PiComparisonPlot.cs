@@ -119,7 +119,7 @@ internal static class PiComparisonPlot
                 plotEnvelope.Simc.MinPv[i], plotEnvelope.Simc.MaxPv[i]
             }));
         }
-        Track($"ΔPV et ΔSP ({pvUnit})", Top, pvValues, y =>
+        Track($"Écart de mesure et de consigne ({pvUnit})", Top, pvValues, y =>
         {
             var reference = y(study.Scenario.Setpoint);
             canvas.Children.Add(new Line
@@ -171,7 +171,7 @@ internal static class PiComparisonPlot
         {
             var all = points.SelectMany(p => new[] { p.Cv!.Value, p.Mv!.Value })
                 .Concat(new[] { study.Scenario.MinimumMv, study.Scenario.MaximumMv });
-            Track($"{title} · ΔCV calculée / ΔMV appliquée ({mvUnit})", top, all, y =>
+            Track($"{title} · commande calculée / appliquée, écart ({mvUnit})", top, all, y =>
             {
                 Curve(points.Select(p => (p.Seconds, p.Cv!.Value)), y, command, dashed: true);
                 Curve(points.Select(p => (p.Seconds, p.Mv!.Value)), y, PlotColors.Signal3);

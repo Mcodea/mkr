@@ -300,7 +300,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $null = Find $sim $name 'Simulation enregistrée.'
     Fill $sim 'Setpoint' '3'
     $report = (Find $sim $id 'Report').Current.Name
-    if (!$report.Contains('ΔSP 1 bar') -or !$report.Contains('durée 10 s')) { throw "Scénario enregistré ambigu. $report" }
+    if (!$report.Contains('Variation de consigne 1 bar') -or !$report.Contains('durée 10 s')) { throw "Scénario enregistré ambigu. $report" }
     Press $sim 'Exporter les séries enregistrées…'
     $dialog = Find $root $name 'Exporter les séries enregistrées'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue export hors du processus MKR.' }

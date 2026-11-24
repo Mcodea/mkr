@@ -96,8 +96,8 @@ public partial class PidPrototypeWindow : Window
                 "Résultats calculés sur le même procédé et le même scénario ; " +
                 "aucun réglage n'est sauvegardé ni transféré.";
             Legend.Text =
-                $"Bleu : PI IMC de référence ; orange : PID manuel ; vert pointillé : SP. " +
-                $"Piste 1 : PV ({_model.PvUnit}) · piste 2 : MV appliquée ({_model.MvUnit}) · " +
+                $"Bleu : PI IMC de référence ; orange : PID manuel ; vert pointillé : consigne. " +
+                $"Piste 1 : mesure ({_model.PvUnit}) · piste 2 : sortie de commande appliquée ({_model.MvUnit}) · " +
                 $"piste 3 : dérivée filtrée PID ({_model.MvUnit}).";
             ResultsPanel.Visibility = PlotPanel.Visibility = Visibility.Visible;
             Draw();

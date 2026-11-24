@@ -75,7 +75,7 @@
               <TextBox x:Name="DataBlock" Width="80" Text="1" AutomationProperties.Name="Numéro de DB"/>
             </StackPanel>
             <TextBlock TextWrapping="Wrap" Width="820" Margin="0,8,0,0" Foreground="{DynamicResource MkrMuted}"
-                       Text="Prérequis CPU : accès PUT/GET autorisé et DB à accès non optimisé (adresses absolues). Une DB d’instance PID_Compact est optimisée : copiez SP, PV et MV dans une DB dédiée. Les valeurs S7 sont transmises en ABCD."/>
+                       Text="Prérequis CPU : accès PUT/GET autorisé et DB à accès non optimisé (adresses absolues). Une DB d’instance PID_Compact est optimisée : copiez la consigne, la mesure et la sortie de commande dans une DB dédiée. Les valeurs S7 sont transmises en ABCD."/>
           </WrapPanel>
 
           <TextBlock Text="Signaux" FontWeight="SemiBold" Margin="0,14,0,0"/>
@@ -113,12 +113,12 @@
             <StackPanel Margin="0,0,12,0"><Label Content="Valeur brute « manuel »" Target="{Binding ElementName=ManualValue}"/><TextBox x:Name="ManualValue" Width="90" AutomationProperties.Name="Valeur brute manuel"/></StackPanel>
           </WrapPanel>
           <TextBlock x:Name="ModeHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" Visibility="Collapsed"
-                     Text="Le mode se lit avec SP, PV et MV : placez-le, si possible, à une adresse consécutive aux trois autres pour une seule requête par mesure. MKR ne suppose aucune convention : indiquez la valeur brute que votre programme utilise pour « manuel ». Un mode booléen doit être copié dans un mot (INT/UINT). Les mesures prises hors manuel sont comptées et signalées : un essai en boucle ouverte n’y est pas valable."/>
+                     Text="Le mode se lit avec la consigne, la mesure et la sortie de commande : placez-le, si possible, à une adresse consécutive aux trois autres pour une seule requête par mesure. MKR ne suppose aucune convention : indiquez la valeur brute que votre programme utilise pour « manuel ». Un mode booléen doit être copié dans un mot (INT/UINT). Les mesures prises hors manuel sont comptées et signalées : un essai en boucle ouverte n’y est pas valable."/>
 
           <TextBlock Text="Plan d’acquisition" FontWeight="SemiBold" Margin="0,14,0,0"/>
           <WrapPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Unité SP et PV" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="Unité SP et PV"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Unité MV" Target="{Binding ElementName=CommandUnit}"/><TextBox x:Name="CommandUnit" Width="100" AutomationProperties.Name="Unité MV"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="Unité de la consigne et de la mesure" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="Unité de la consigne et de la mesure"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="Unité de la sortie de commande" Target="{Binding ElementName=CommandUnit}"/><TextBox x:Name="CommandUnit" Width="100" AutomationProperties.Name="Unité de la sortie de commande"/></StackPanel>
             <StackPanel Margin="0,0,12,0"><Label Content="Période (ms)" Target="{Binding ElementName=Period}"/><TextBox x:Name="Period" Text="1000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Période"/></StackPanel>
             <StackPanel x:Name="CountPanel" Margin="0,0,12,0"><Label Content="Nombre de mesures" Target="{Binding ElementName=Count}"/><TextBox x:Name="Count" Text="600" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Nombre de mesures"/></StackPanel>
             <StackPanel><Label Content="Coupure tolérée (s)" Target="{Binding ElementName=Outage}"/><TextBox x:Name="Outage" Text="10" Width="90" AutomationProperties.Name="Coupure tolérée"/></StackPanel>

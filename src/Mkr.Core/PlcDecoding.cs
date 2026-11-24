@@ -90,7 +90,7 @@ public static class PlcDecoding
         if (string.IsNullOrWhiteSpace(target.Host)) return "Indiquez l’adresse du banc.";
         if (target.Port is < 1 or > 65535) return "Port TCP invalide.";
         if (string.IsNullOrWhiteSpace(target.ProcessUnit) || string.IsNullOrWhiteSpace(target.CommandUnit))
-            return "Indiquez les unités de SP/PV et de MV.";
+            return "Indiquez l’unité de la consigne et de la mesure, et celle de la sortie de commande.";
         if (plan.Samples < 1 || plan.Samples > maximumSamples) return $"Le nombre de mesures doit être compris entre 1 et {maximumSamples:N0}.";
         if (plan.PeriodMs is < 100 or > 60000) return "La période doit être comprise entre 100 ms et 60 s.";
         if (!double.IsFinite(plan.MaximumOutageSeconds) || plan.MaximumOutageSeconds is < 0 or > 600)

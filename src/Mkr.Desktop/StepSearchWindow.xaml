@@ -31,7 +31,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="N°" Binding="{Binding Id}" Width="40"/>
                     <DataGridTextColumn Header="Début (UTC)" Binding="{Binding Start}" Width="160"/>
-                    <DataGridTextColumn Header="MV" Binding="{Binding Mv}" Width="150"/>
+                    <DataGridTextColumn Header="Sortie de commande" Binding="{Binding Mv}" Width="150"/>
                     <DataGridTextColumn Header="Lignes" Binding="{Binding Rows}" Width="120"/>
                     <DataGridTextColumn Header="Avant / après" Binding="{Binding Samples}" Width="110"/>
                     <DataGridTextColumn Header="Durée" Binding="{Binding Horizon}" Width="80"/>

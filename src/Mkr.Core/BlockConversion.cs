@@ -39,8 +39,8 @@ public sealed record BlockConversion(string Block, string Structure, string Qual
         text.AppendLine(p.Td.Seconds > 0 ? $"td = {p.Td.Iec}  ({Text(p.Td.Seconds)} s) · kd = {Text(p.Kd!.Value)}"
                                          : "td = T#0ms (pas d'action dérivée)");
         text.AppendLine($"rev_dir = {(p.RevDir ? "1" : "0")}  " + (p.RevDir
-            ? "(un écart positif PV − SP donne une sortie supérieure : gain du procédé négatif)"
-            : "(un écart positif PV − SP donne une sortie inférieure : gain du procédé positif)"));
+            ? "(un écart positif mesure − consigne donne une sortie supérieure : gain du procédé négatif)"
+            : "(un écart positif mesure − consigne donne une sortie inférieure : gain du procédé positif)"));
         text.AppendLine($"mix_par = 0 · pv_dev = {(p.PvDev ? "1" : "0")} (dérivée sur la mesure)");
         text.AppendLine();
         text.AppendLine("À mettre à leur valeur neutre : ovs_att = 0, dband = 0, ff_sup = ff_inf, outbias = 0, en_rcpy = 0.");

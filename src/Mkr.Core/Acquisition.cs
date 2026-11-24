@@ -76,8 +76,8 @@ public sealed record AcquisitionTarget(
         var head = Protocol == PlcProtocol.ModbusTcp
             ? $"Modbus TCP {Host}:{Port} · unité {UnitId} · {(Table == ModbusTable.HoldingRegisters ? "FC03" : "FC04")} · ordre {Order}"
             : $"S7 {Host}:{Port} · rack {Rack} · emplacement {Slot}";
-        return $"{head} · SP {Location(Sp)} · PV {Location(Pv)} · MV {Location(Mv)}" +
-            (Mode is null ? "" : $" · MODE {Location(Mode)} (manuel = {ManualModeValue:G9})");
+        return $"{head} · consigne {Location(Sp)} · mesure {Location(Pv)} · sortie de commande {Location(Mv)}" +
+            (Mode is null ? "" : $" · mode {Location(Mode)} (manuel = {ManualModeValue:G9})");
     }
 
     private static string S7Suffix(SignalAddress address) => address.ByteLength == 2 ? "DBW" : "DBD";

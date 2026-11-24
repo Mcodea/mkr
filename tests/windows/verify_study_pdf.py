@@ -24,7 +24,7 @@ for label, filename in (("Estimation", "essai-1.csv"), ("Validation", "essai-2.c
     end = body.index("SHA-256", start)
     trial = body[start:end]
     for expected in (
-        "Temps : timestamp · commande MV : mv · mesure PV : pv",
+        "Temps : timestamp · sortie de commande : mv · mesure : pv",
         "Plage utilisée : fichier complet",
         "échantillons",
         "RMSE :",
@@ -34,7 +34,7 @@ for label, filename in (("Estimation", "essai-1.csv"), ("Validation", "essai-2.c
             raise ValueError(f"Missing {expected!r} in {label}: {trial!r}")
 validation_plot = pages[-2]
 plot_text = validation_plot.extract_text()
-for expected in ("Validation indépendante du modèle", "Mesure observée", "prédiction", "PV (bar)", "RMSE"):
+for expected in ("Validation indépendante du modèle", "Mesure observée", "prédiction", "Mesure (bar)", "RMSE"):
     if expected not in plot_text:
         raise ValueError(f"Missing {expected!r} on the validation plot")
 operators = [operator for _, operator in validation_plot.get_contents().operations]

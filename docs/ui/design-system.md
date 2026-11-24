@@ -29,3 +29,17 @@ Correspondance des signaux (jamais la couleur seule : styles de ligne et légend
 ## Limites actuelles
 
 Pas encore d'icônes ni de composants de navigation, de notification et de graphique. Les 14 fenêtres existantes utilisent les styles implicites mais n'ont pas été reconstruites sur ces composants. Le thème sombre n'a pas été inspecté sur chaque fenêtre.
+
+## Vocabulaire affiché
+
+Les abréviations d'ingénierie (SP, PV, MV, CV) restent dans les données, les en-têtes CSV et le code, mais l'interface utilise des noms compris sans lexique (`Mkr.Core.Terms`) :
+
+| Affiché | Abréviation | Sens |
+|---|---|---|
+| Consigne | SP | valeur visée |
+| Mesure | PV | valeur lue sur le procédé |
+| Sortie de commande | MV | commande appliquée au procédé |
+| Commande calculée | CV | commande demandée avant limitation |
+| Perturbation | d | entrée non commandée |
+
+Les listes de sélection montrent le nom suivi de l'abréviation entre parenthèses (« Mesure (PV) »). Les identifiants d'automatisation (`TrainingMv`, `MvUnit`…) et les rôles stockés ne changent pas. Limite : relecture linguistique par un automaticien francophone à faire ; les messages du moteur Python et certains rapports peuvent encore contenir des abréviations.
