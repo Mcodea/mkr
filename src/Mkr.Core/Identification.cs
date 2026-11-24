@@ -131,7 +131,7 @@ public static class ModelDriftText
             text.AppendLine($"  {Name(name)} : {change.Previous:G5} → {change.Current:G5} ({change.RelativeChange:+0.0%;-0.0%}" +
                             (change.StandardError is { } e ? $", erreur-type {e:G3}" : ", erreur-type indisponible") + (change.Flagged ? ") ⚠" : ")"));
         if (report.Reasons.Length > 0) text.AppendLine("Motifs de la porte de validation : " + string.Join(", ", report.Reasons));
-        text.AppendLine("Un paramètre n'est signalé que s'il change de plus de trois erreurs-types et au-delà de 10 % (gain), 15 % (constante de temps), 30 % (seconde constante de temps) ou 25 % (retard) ; hors FOPDT, les erreurs-types ne sont pas disponibles et seul le seuil relatif s'applique. Contrôle validé sur simulations seulement ; il ne modifie pas le modèle enregistré.");
+        text.AppendLine("Un paramètre n'est signalé que s'il change de plus de trois erreurs-types et au-delà de 10 % (gain), 15 % (constante de temps), 30 % (seconde constante de temps) ou 25 % (retard) . Contrôle validé sur simulations seulement ; il ne modifie pas le modèle enregistré.");
         return text.ToString();
     }
 

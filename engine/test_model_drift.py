@@ -113,7 +113,8 @@ class OtherFamilies(unittest.TestCase):
                 result = check(family_request("SOPDT", self.SECOND, trial_from(response)))
                 self.assertEqual(result["verdict"], "drift")
                 self.assertEqual(result["driftedParameters"], [expected])
-                self.assertIn("standard_errors_unavailable", result["warnings"])    # only the relative threshold applies
+                self.assertNotIn("standard_errors_unavailable", result["warnings"])
+                self.assertTrue(all(c["standardError"] and c["standardError"] > 0 for c in result["changes"].values()))
 
     def test_integrator_drift_is_located(self):
         self.assertEqual(check(family_request("Integrateur", self.TANK, trial_from(integrating(0.05, 3), post=120)))["verdict"], "consistent")
@@ -136,6 +137,35 @@ class OtherFamilies(unittest.TestCase):
                 check(family_request(family, model, source))
         with self.assertRaisesRegex(ValueError, "drift_domain"):
             check(family_request("SOPDT", dict(self.SECOND, secondTauSeconds=50.0), source))        # the fast pole cannot exceed the slow one
+
+
+class StandardErrorCalibration(unittest.TestCase):
+    """Monte Carlo: the published standard errors must be of the same order as the real spread of the estimates."""
+
+    def calibrate(self, family, response, post, seeds=12):
+        from fopdt import read_step
+        from model_drift import _refit
+        estimates, errors = [], []
+        for seed in range(seeds):
+            step = read_step(trial_from(response, sigma=0.03, seed=seed, post=post), 0.01, 0.18)
+            fitted, standard, _ = _refit(family, step)
+            self.assertIsNotNone(standard)
+            estimates.append(fitted)
+            errors.append(standard)
+        return {k: float(np.mean([e[k] for e in errors]) / np.std([f[k] for f in estimates], ddof=1)) for k in estimates[0]}
+
+    def test_second_order_errors_are_of_the_right_order(self):
+        for name, ratio in self.calibrate("SOPDT", second_order(2, 30, 6, 2), 250).items():
+            with self.subTest(parameter=name):
+                # The gain error is conditional on the measured initial plateau (as for FOPDT): about half the real spread is expected.
+                self.assertGreater(ratio, 0.3)
+                self.assertLess(ratio, 1.5)
+
+    def test_integrator_errors_are_of_the_right_order(self):
+        for name, ratio in self.calibrate("Integrateur", integrating(0.05, 3), 120).items():
+            with self.subTest(parameter=name):
+                self.assertGreater(ratio, 0.3)
+                self.assertLess(ratio, 1.5)
 
 
 if __name__ == "__main__":

@@ -50,6 +50,44 @@ def _predict(family, step, model):
     return np.maximum(step.times - model["delaySeconds"], 0)
 
 
+def numerical_errors(step, names, values, response):
+    """Local standard errors of a least-squares fit from the numerical Jacobian: sqrt(diag(s^2 (J'J)^-1)), s^2 = RSS / (n - p).
+
+    `response(values)` is the unit-amplitude response at the step times; the prediction is baseline + gain * amplitude * response.
+    Conditional on the measured baseline and input, like the FOPDT estimate. Returns None when the problem is ill-conditioned or
+    the residuals leave no degree of freedom: no number is published rather than a meaningless one.
+    """
+    values = np.array([float(values[n]) for n in names])
+    cadence = float(np.median(np.diff(step.times)))
+
+    def predicted(v):
+        return step.baseline + v[0] * step.amplitude * response(v)
+
+    residual = step.observations - predicted(values)
+    n, p = len(residual), len(values)
+    if n <= p:
+        return None
+    columns = []
+    for i, name in enumerate(names):
+        h = 0.05 * cadence if name == "delaySeconds" else 1e-4 * max(abs(values[i]), 1e-12)
+        up, down = values.copy(), values.copy()
+        up[i] += h
+        down[i] = max(down[i] - h, 0.0) if name == "delaySeconds" else down[i] - h
+        columns.append((predicted(up) - predicted(down)) / (up[i] - down[i]))
+    jacobian = np.column_stack(columns)
+    if not np.all(np.isfinite(jacobian)):
+        return None
+    scales = np.linalg.norm(jacobian, axis=0)
+    if np.any(scales == 0):
+        return None
+    _, singular, right = np.linalg.svd(jacobian / scales, full_matrices=False)
+    if singular[-1] <= 1e-6 * singular[0]:
+        return None
+    sigma = math.sqrt(float(np.dot(residual, residual)) / (n - p))
+    covariance_scaled = (right.T / singular ** 2) @ right
+    return {name: float(sigma * math.sqrt(covariance_scaled[i, i]) / scales[i]) for i, name in enumerate(names)}
+
+
 def _refit(family, step):
     """Re-estimation of the new trial alone: (parameters, standard errors or None, warnings)."""
     if family == "FOPDT":
@@ -61,10 +99,16 @@ def _refit(family, step):
     if family == "SOPDT":
         from sopdt import estimate as fit_second
         gain, slow, fast, delay, *_ = fit_second(step)
-        return dict(gain=gain, tauSeconds=slow, secondTauSeconds=fast, delaySeconds=delay), None, list(delay_warnings(delay, step))
+        from sopdt import basis as second
+        fitted = dict(gain=gain, tauSeconds=slow, secondTauSeconds=fast, delaySeconds=delay)
+        names = ("gain", "tauSeconds", "secondTauSeconds", "delaySeconds")
+        errors = numerical_errors(step, names, fitted, lambda v: second(step.times, v[1], v[2], v[3]))
+        return fitted, errors, list(delay_warnings(delay, step))
     from integrator import estimate as fit_integrator
     gain, delay, _ = fit_integrator(step)
-    return dict(gain=gain, delaySeconds=delay), None, list(delay_warnings(delay, step))
+    fitted = dict(gain=gain, delaySeconds=delay)
+    errors = numerical_errors(step, ("gain", "delaySeconds"), fitted, lambda v: np.maximum(step.times - v[1], 0))
+    return fitted, errors, list(delay_warnings(delay, step))
 
 
 def check(payload):
