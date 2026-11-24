@@ -215,8 +215,9 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $ident 'Calculer le PID SIMC'
     $null = Find $ident $name 'Réglage PID théorique affiché.'
     $fit = (Find $ident $id 'FitReport').Current.Name
-    $delayLabel = 'θ = ' + $initial.ToString('G5') + ' s'
-    if (!$fit.Contains($delayLabel)) { throw "La cible SIMC diffère du retard identifié. $fit" }
+    # NC-03: the guided SIMC target is the conservative upper bound of the published delay interval.
+    $upperBound = ' – ' + $initial.ToString('G5') + ' s)'
+    if (!$fit.Contains('(intervalle ') -or !$fit.Contains($upperBound)) { throw "La cible SIMC doit être la borne haute de l intervalle du retard. $fit" }
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
     foreach ($invalid in @('', '0', '-1', 'abc')) {
         Fill $ident 'ResponseTarget' $invalid
