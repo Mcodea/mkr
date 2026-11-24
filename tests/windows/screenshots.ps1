@@ -117,8 +117,8 @@ try {
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
-    Press $ident 'Revue de l’étude…'
-    $review = Find $root $name 'MKR — Revue de l’étude'
+    Press $ident "Revue de l'étude…"
+    $review = Find $root $name "MKR — Revue de l'étude"
     Fill $review 'Reason' 'Identification terminée'
     Fill $review 'Evidence' 'essai-7 / essai-8'
     Press $review 'Marquer comme calculé'
