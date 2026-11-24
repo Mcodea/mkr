@@ -238,6 +238,11 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("", "Fiche d'étude PDF", inIdentification, OpenIdentification, open));
                 break;
         }
+        // chart commands are always at hand, whichever step is shown
+        RibbonCommands.Children.Add(new Border { Width = 1, Margin = new Thickness(8, 6, 8, 6), Background = (Brush)FindResource("MkrBorder") });
+        RibbonCommands.Children.Add(Command("\uE71E", "Vue complète", "Revenir à l'horizon complet du graphique (double-clic ou Origine)", () => Chart.ResetView()));
+        RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
+        RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
     }
 

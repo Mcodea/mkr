@@ -214,7 +214,7 @@
         <Grid x:Name="StudyView" Grid.Row="2" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="170"/>
+                <RowDefinition Height="128"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
@@ -244,9 +244,6 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
                         <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
-                        <Button Content="_Réinitialiser le zoom" Click="ResetZoom" Margin="0,0,8,0" AutomationProperties.Name="Réinitialiser le zoom"/>
-                        <Button Content="Exporter l'_image…" Click="ExportImage" Margin="0,0,8,0"/>
-                        <Button Content="Exporter les _données…" Click="ExportData"/>
                     </StackPanel>
                     <local:SignalChart x:Name="Chart" Grid.Row="1" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
                         AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
@@ -257,7 +254,7 @@
                 <Grid Margin="10,6,10,6">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <TextBlock Text="ÉTUDES D'IDENTIFICATION" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <DataGrid x:Name="StudyGrid" Grid.Row="1" RowHeight="30" ColumnHeaderHeight="30" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
+                    <DataGrid x:Name="StudyGrid" Grid.Row="1" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Famille" Binding="{Binding Family}" Width="90"/>
                             <DataGridTextColumn Header="Gain K" Binding="{Binding Gain}" Width="*"/>
