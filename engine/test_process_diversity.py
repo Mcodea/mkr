@@ -1,0 +1,107 @@
+"""Universality checks: MKR must not be tuned to one bench.
+
+Synthetic processes of very different time scales, delay ratios, gain signs and structures are identified
+through the same public path as the application (suggest_criteria -> assess_model). Acceptance criteria are fixed by the
+principle, not by the outcome: the right structure is accepted and recovered, a wrong structure is refused.
+Noise is seeded, so the results are reproducible.
+"""
+import base64
+import itertools
+import math
+import unittest
+from datetime import datetime, timedelta, timezone
+
+import numpy as np
+
+from validation_gate import assess, suggest
+
+
+def source(day, response, amplitude, cadence, sigma, rng, pre=10, post=120, base=50.0):
+    start = datetime(2026, 3, day, tzinfo=timezone.utc)
+    lines = ["timestamp,mv,pv"]
+    for i in range(pre + post):
+        t = (i - pre) * cadence
+        value = base + amplitude * response(t) + rng.normal(0, sigma)
+        lines.append(f"{(start + timedelta(seconds=i * cadence)).isoformat()},{amplitude if t >= 0 else 0},{value}")
+    return dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=",",
+                timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+
+
+def first_order(gain, tau, delay):
+    return lambda t: gain * (1 - math.exp(-max(t - delay, 0) / tau))
+
+
+def integrator(gain, delay):
+    return lambda t: gain * max(t - delay, 0)
+
+
+def second_order(gain, slow, fast, delay):
+    return lambda t: gain * (1 - (slow * math.exp(-(t - delay) / slow) - fast * math.exp(-(t - delay) / fast)) / (slow - fast)) if t > delay else 0.0
+
+
+def judge(family, response, cadence, sigma, post=120, tolerance=None):
+    rng = np.random.default_rng(3)
+    trials = dict(training=source(1, response, 2.0, cadence, sigma, rng, post=post),
+                  validation=source(2, response, -1.5, cadence, sigma, rng, post=post),
+                  mvTolerance=0.01, pvTolerance=tolerance or 6 * sigma)
+    criteria = suggest(trials)
+    return assess(dict(family=family, trials=trials, maximumRmse=criteria["maximumRmse"],
+                       maximumResidualLagOne=criteria["maximumResidualLagOne"]))
+
+
+class FirstOrderAcrossScales(unittest.TestCase):
+    def test_parameters_are_recovered_from_seconds_to_hours_and_for_both_gain_signs(self):
+        for tau, ratio, gain in itertools.product((2.0, 60.0, 3600.0), (0.05, 0.5, 2.0), (0.8, -3.0)):
+            delay = ratio * tau
+            cadence = (delay + 6 * tau) / 110          # the same relative sampling, whatever the time scale
+            sigma = 0.01 * abs(gain * 2.0)
+            with self.subTest(tau=tau, delay_ratio=ratio, gain=gain):
+                result = judge("FOPDT", first_order(gain, tau, delay), cadence, sigma)
+                report = result["report"]
+                self.assertTrue(result["assessment"]["accepted"], result["assessment"]["reasons"])
+                self.assertAlmostEqual(report["gain"] / gain, 1, delta=0.02)
+                self.assertAlmostEqual(report["tauSeconds"] / tau, 1, delta=0.05)
+                self.assertLessEqual(abs(report["delaySeconds"] - delay), max(0.15 * delay, 2 * cadence))
+
+    def test_delay_dominant_and_coarsely_sampled_processes_are_still_accepted_with_their_warning(self):
+        dominant = judge("FOPDT", first_order(1.5, 5, 40), 1.0, 0.02)
+        self.assertTrue(dominant["assessment"]["accepted"])
+        coarse = judge("FOPDT", first_order(1.5, 20, 4), 20.0, 0.015)             # one sample per time constant
+        self.assertTrue(coarse["assessment"]["accepted"])
+        self.assertIn("delay_resolution", coarse["report"]["warnings"])           # the loss of resolution is announced
+
+
+class StructuresAreTold(unittest.TestCase):
+    def test_a_level_process_is_refused_as_first_order_and_accepted_as_integrator(self):
+        level = integrator(0.05, 3)
+        self.assertFalse(judge("FOPDT", level, 1.0, 0.02)["assessment"]["accepted"])
+        accepted = judge("Integrateur", level, 1.0, 0.02)
+        self.assertTrue(accepted["assessment"]["accepted"])
+        self.assertAlmostEqual(accepted["report"]["gain"], 0.05, delta=0.002)
+
+    def test_a_first_order_process_is_not_accepted_as_integrator_nor_as_second_order(self):
+        response = first_order(1.5, 20, 4)
+        with self.assertRaisesRegex(ValueError, "fit_integrator_tail"):
+            judge("Integrateur", response, 1.0, 0.015)
+        self.assertFalse(judge("SOPDT", response, 1.0, 0.015)["assessment"]["accepted"])   # a second pole is not supported by the data
+
+    def test_a_second_order_process_is_refused_as_first_order_once_the_data_can_tell_the_difference(self):
+        response = second_order(2, 30, 6, 2)
+        # With enough resolution the first-order holdout prediction fails and the second-order model is accepted.
+        for sigma in (0.005, 0.001):
+            with self.subTest(sigma=sigma):
+                refused = judge("FOPDT", response, 1.0, sigma, post=250)
+                self.assertFalse(refused["assessment"]["accepted"])
+                self.assertIn("validation_residuals", refused["assessment"]["reasons"])
+                self.assertTrue(judge("SOPDT", response, 1.0, sigma, post=250)["assessment"]["accepted"])
+        # Under heavier noise (0.5 % of the response) a first-order model predicts the validation trial as well as the
+        # noise allows: the gate judges predictive adequacy, not the true structure, and says nothing more than the data support.
+        self.assertTrue(judge("FOPDT", response, 1.0, 0.02, post=250)["assessment"]["accepted"])
+
+    def test_noise_that_hides_the_response_is_refused_not_fitted(self):
+        with self.assertRaisesRegex(ValueError, "fit_response"):
+            judge("FOPDT", first_order(1.5, 20, 4), 1.0, 0.45)
+
+
+if __name__ == "__main__":
+    unittest.main()
