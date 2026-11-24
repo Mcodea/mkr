@@ -121,3 +121,86 @@ def pid_int(parameters):
             dict(page=141, name="TI = 0", text="OUT = KP e / 100 + 5000"),
             dict(page=140, name="units", text="KP x100, TI in 0.1 s, TS in 0.01 s")],
         warnings=warnings)
+
+
+PID_COMPACT_SOURCE = dict(document="Siemens, PID control, Function Manual, A5E35300227-AJ", edition="11/2025", block="PID_Compact")
+# Compatibility of PID_Compact V2.x / V3.x with CPU and firmware (A5E35300227-AJ, 11.1.2). (family, first firmware, last firmware or None, versions)
+PID_COMPACT_COMPATIBILITY = (
+    ("S7-1200", (4, 2), None, ("V2.2", "V2.3")),
+    ("S7-1200", (4, 0), (4, 1), ("V2.2",)),
+    ("S7-1200 G2", (1, 0), None, ("V3.0",)),
+    ("S7-1500", (3, 1), None, ("V2.4", "V3.0")),
+    ("S7-1500", (3, 0), (3, 0), ("V2.4",)),
+    ("S7-1500", (2, 5), (2, 9), ("V2.0", "V2.1", "V2.2", "V2.3", "V2.4")),
+    ("S7-1500", (2, 0), (2, 1), ("V2.0", "V2.1", "V2.2", "V2.3")),
+    ("S7-1500", (1, 5), (1, 8), ("V2.0", "V2.1", "V2.2")),
+    ("S7-1500", (1, 1), (1, 1), ("V2.0", "V2.1")),
+    ("S7-1500", (1, 0), (1, 0), ("V2.0",)),
+)
+
+
+def _firmware(text):
+    parts = text.removeprefix("V").split(".") if isinstance(text, str) else []
+    if len(parts) not in (2, 3) or not all(p.isdigit() for p in parts):
+        raise ValueError("conversion_parameters")
+    return int(parts[0]), int(parts[1])
+
+
+def pid_compact_versions(family, firmware):
+    """Versions V2.x/V3.x the manual lists for this CPU family and firmware; empty when none."""
+    version = _firmware(firmware)
+    found = []
+    for name, first, last, versions in PID_COMPACT_COMPATIBILITY:
+        if name == family and version >= first and (last is None or version <= last):
+            found += [v for v in versions if v not in found]
+    return found
+
+
+def pid_compact(parameters):
+    """MKR ideal PID -> PID_Compact V2.x or V3.x (same transfer function; V3 adds a dead zone, set to 0 here).
+
+    A5E35300227-AJ p. 88 / 91: y = Kp [ (b w - x) + 1/(Ti s) (w - x) + Td s / (a Td s + 1) (c w - x) ]. With b = 1 and c = 0 it is
+    MKR's u = Kp (e + 1/Ti int e + Td de/dt) with the derivative on the measurement and filter Tf = a x Td. The block refuses a
+    negative Gain: a negative MKR Kp sets Config.InvertControl (p. 92, 270). The output is in percent: Kp must be given in percent
+    of output per measurement unit (outputPercentPerMvUnit says how many percent one MV unit is).
+    """
+    required = {"version", "kp", "tiSeconds", "tdSeconds", "outputPercentPerMvUnit"}
+    optional = {"filterSeconds", "cpuFamily", "firmware"}
+    if not isinstance(parameters, dict) or not required <= parameters.keys() <= required | optional:
+        raise ValueError("conversion_parameters")
+    version = parameters["version"]
+    if version not in ("V2.0", "V2.1", "V2.2", "V2.3", "V2.4", "V3.0"):
+        raise ValueError("conversion_version")
+    if ("cpuFamily" in parameters) != ("firmware" in parameters):
+        raise ValueError("conversion_parameters")
+    if "cpuFamily" in parameters and version not in pid_compact_versions(parameters["cpuFamily"], parameters["firmware"]):
+        raise ValueError("conversion_hardware_incompatible")
+    kp = _number(parameters["kp"])
+    ti, td = _number(parameters["tiSeconds"], 0), _number(parameters["tdSeconds"], 0)
+    scale = _number(parameters["outputPercentPerMvUnit"], 0)
+    if kp == 0 or ti <= 0 or scale <= 0 or ti > 100000 or td > 100000:
+        raise ValueError("conversion_parameters")
+    ratio = 0.0
+    if td > 0:
+        tf = parameters.get("filterSeconds")
+        if tf is None:
+            raise ValueError("conversion_filter_required")           # a = 0 would make the derivative act one cycle only (p. 93)
+        tf = _number(tf, 0)
+        if tf == 0:
+            raise ValueError("conversion_filter_required")
+        ratio = tf / td
+    warnings = ["sampled_behaviour_unqualified", "limits_and_antiwindup_unqualified", "output_in_percent"]
+    if version.startswith("V3"):
+        warnings.append("dead_zone_set_to_zero")
+    return dict(
+        block="PID_Compact", structure="PIDT1", qualification=QUALIFICATION, readyToLoad=False,
+        source=dict(PID_COMPACT_SOURCE, libraryVersion=version),
+        parameters=dict(Gain=abs(kp) * scale, Ti=ti, Td=td, TdFiltRatio=ratio, PWeighting=1.0, DWeighting=0.0,
+                        InvertControl=kp < 0, **({"DeadZone": 0.0} if version.startswith("V3") else {})),
+        neutral=dict(PWeighting=1.0, DWeighting=0.0),
+        toDetermine=["Cycle (sampling time, multiple of CycleTime)", "Config.OutputUpperLimit", "Config.OutputLowerLimit",
+                     "process value scaling", "integral reset mode and error behaviour"],
+        equations=[dict(page=88 if version.startswith("V2") else 91, name="transfer function",
+                        text="y = Kp [ (b w - x) + 1/(Ti s) (w - x) + Td s/(a Td s + 1) (c w - x) ]"),
+                   dict(page=270, name="direction", text="negative gain not accepted: Config.InvertControl = TRUE inverts the logic")],
+        warnings=warnings)

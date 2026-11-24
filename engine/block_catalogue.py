@@ -3,9 +3,9 @@ import json
 from pathlib import Path
 
 
-from block_adapters import pid_int, pidff
+from block_adapters import pid_compact, pid_int, pidff
 
-ADAPTERS = {"PIDFF": pidff, "PID_INT": pid_int}
+ADAPTERS = {"PIDFF": pidff, "PID_INT": pid_int, "PID_Compact": pid_compact}
 TARGET = ("manufacturer", "cpu", "firmware", "software", "softwareVersion", "library", "libraryVersion")
 
 

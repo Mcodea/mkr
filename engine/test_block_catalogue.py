@@ -11,11 +11,14 @@ class CatalogueTests(unittest.TestCase):
         # about them until the official documentation is read (AGENTS.md §7).
         siemens = lookup({"manufacturer": "Siemens"})["entries"]
         self.assertEqual([e["name"] for e in siemens], ["PID_Compact"] * 3)
-        for name in ("PID_Compact",):
-            entries = lookup({"name": name})["entries"]
-            for entry in entries:
+        # The unversioned Siemens entry keeps no equation or parameter; V2.x and V3.x carry the equation read in A5E35300227-AJ.
+        for entry in lookup({"name": "PID_Compact"})["entries"]:
+            if entry["libraryVersion"] is None:
                 self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
-                self.assertFalse(entry["selectable"])
+            else:
+                self.assertIn("PIDT1", entry["equation"])
+            self.assertEqual(entry["status"], "to_verify")
+            self.assertFalse(entry["selectable"])
         self.assertFalse(convert(dict(name="PID_Compact", target={"libraryVersion": "V3.x"}, parameters={"kp": 1}))["converted"])
 
     def test_conversion_refused_and_document_edition_not_used_as_software_version(self):
@@ -74,7 +77,7 @@ class VendorRulesTests(unittest.TestCase):
 
     def test_relayed_vendor_rules_are_flagged_as_not_read_at_the_source(self):
         sources = self.sources()
-        relayed = [s for s in sources.values() if s["id"].startswith(("SE-FAQ-", "SIEMENS-"))]
+        relayed = [s for s in sources.values() if s["id"].startswith(("SE-FAQ-", "SIEMENS-")) and s["id"] != "SIEMENS-FM-A5E35300227-AJ"]   # that one was read
         self.assertEqual({s["id"] for s in relayed}, {"SE-FAQ-FA410692", "SE-FAQ-FAQ000279181", "SE-FAQ-FAQ000256113",
                                                        "SIEMENS-PIDCOMPACT-DOC", "SIEMENS-FAQ-109481448",
                                                        "SIEMENS-PIDCOMPACT-V3", "SIEMENS-PIDCOMPACT-V22"})

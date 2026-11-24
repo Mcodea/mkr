@@ -118,7 +118,7 @@ class DocumentedRules(unittest.TestCase):
             self.assertFalse(convert(dict(name="PIDFF", target={}, parameters=bad))["converted"])
 
     def test_other_blocks_stay_refused_until_their_documentation_is_read(self):
-        for name in ("PID_Compact", "PI_B", "PIFINT"):
+        for name in ("PI_B", "PIFINT"):
             result = convert(dict(name=name, target={}, parameters=dict(kp=1, tiSeconds=5, tdSeconds=0)))
             self.assertEqual((result["converted"], result["parameters"]), (False, None), name)
 

@@ -82,5 +82,5 @@ Champs vus dans les affectations : `MODE.en_p`, `en_i`, `en_d` (mises à 1), `MO
 |---|---|---|
 | PIDFF | Schneider 33002536 (09/2020, .16), chapitre 17 | **Oui**, le 24/11/2026 (PDF fourni). Voir [pidff-conversion.md](pidff-conversion.md) |
 | PID_INT | Schneider 33002520 (09/2020, .20), chapitre 30 | **Oui**, le 24/11/2026. Voir [pidint-conversion.md](pidint-conversion.md) (PI seulement ; dérivée sans équation) |
-| PID_Compact V2.x et V3.x | Siemens, *PID control* (S7-1200, S7-1500) | PDF fourni, lecture en cours |
+| PID_Compact V2.x et V3.x | Siemens, *PID control*, A5E35300227-AJ (11/2025) | **Oui**, le 24/11/2026. Voir [pidcompact-conversion.md](pidcompact-conversion.md) |
 | PIDFF, schémas internes | FAQ000256113 | Non (la structure est dans le document 33002536) |

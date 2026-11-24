@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-24.6",
+  "catalogueVersion": "2026-11-24.7",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -146,6 +146,15 @@
       "section": "Documentation de la version 2.2",
       "url": "https://cache.industry.siemens.com/dl/files/707/79047707/att_915339/v2/79047707_PidCompactV2_2_DOC_V2_0_1_en.pdf",
       "scope": "Titre et existence relayés par un moteur de recherche le 2026-11-24 ; PDF non ouvert dans cette session. À relire à la source.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-FM-A5E35300227-AJ",
+      "document": "Siemens, PID control, Function Manual (SIMATIC S7-1200 / S7-1500, PID_Compact V1 à V3), A5E35300227-AJ",
+      "edition": "11/2025 (A5E35300227-AJ)",
+      "section": "Chapitre 6.2 (pages 88 à 93) et 11.1 (pages 245 à 271)",
+      "url": "https://support.industry.siemens.com/",
+      "scope": "Lu le 2026-11-24 dans le PDF fourni par le mainteneur. Les équations des pages 88 et 91 sont des images, lues sur ces images. Les versions de TIA Portal compatibles ne sont pas lues ici.",
       "consultedOn": "2026-11-24"
     }
   ],
@@ -473,8 +482,65 @@
       "firmware": null,
       "softwareVersion": null,
       "libraryVersion": "V2.x",
-      "equation": null,
-      "parameters": [],
+      "equation": "y = Kp · [ (b·w − x) + 1/(Ti·s)·(w − x) + Td·s/(a·Td·s + 1)·(c·w − x) ] ; b = PWeighting, c = DWeighting, a = TdFiltRatio (retard dérivé T1 = a·Td). Contrôleur PIDT1 avec anti-windup. Document A5E35300227-AJ, p. 88 (V2) et p. 91 (V3, zone morte désactivée).",
+      "parameters": [
+        {
+          "name": "Gain",
+          "iecType": "REAL",
+          "label": "gain proportionnel",
+          "unit": "≥ 0, sortie en % par unité de mesure (Retain.CtrlParams.Gain)",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Ti",
+          "iecType": "REAL",
+          "label": "temps intégral",
+          "unit": "secondes, 0 à 100000 ; 0 désactive l'intégrale",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Td",
+          "iecType": "REAL",
+          "label": "temps dérivé",
+          "unit": "secondes, 0 à 100000 ; 0 désactive la dérivée",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "TdFiltRatio",
+          "iecType": "REAL",
+          "label": "coefficient de retard de dérivée a",
+          "unit": "≥ 0 ; retard T1 = a × Td ; défaut 0,2",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "PWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action proportionnelle b",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action dérivée c",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Cycle",
+          "iecType": "REAL",
+          "label": "période d'échantillonnage de l'algorithme",
+          "unit": "secondes, > 0 ; multiple entier de CycleTime",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "InvertControl",
+          "iecType": "BOOL",
+          "label": "inversion du sens (Config.InvertControl)",
+          "unit": "TRUE : un écart croissant réduit la sortie",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        }
+      ],
       "modes": [],
       "status": "to_verify",
       "facts": [
@@ -485,6 +551,34 @@
         {
           "source": "SIEMENS-FAQ-109481448",
           "claim": "Ti et Td s'expriment en secondes (version 2.x)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "PID_Compact ne fonctionne pas avec un gain proportionnel négatif : le sens inverse passe par Config.InvertControl (p. 92, 270)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Sortie de l'algorithme en pourcentage (−100 à 100 %), limites Config.OutputLowerLimit / OutputUpperLimit (p. 245 ss, 12655)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Défauts : Gain 1,0 ; Ti 20,0 s ; Td 0,0 s ; TdFiltRatio 0,2 ; PWeighting 1,0 ; DWeighting 1,0 (p. 270-271)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Avec c = 0 la dérivée n'agit que sur la mesure x : c'est la forme de MKR."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "S7-1500 (micrologiciel 1.0 et plus) : V2.0 à V2.4 selon le micrologiciel ; S7-1200 à partir du micrologiciel 4.0 : V2.2, puis V2.3 à partir de 4.2 (p. 246-247)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V2.2 : première version utilisable sur S7-1200 (micrologiciel 4.0 et plus). V2.3 : IntegralResetMode = 4 par défaut. V2.4 : signe de la sortie modifié avec OverwriteInitialOutputValue et commande inversée."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "La fonction de transfert de V2 ne contient pas de zone morte."
         }
       ]
     },
@@ -497,14 +591,106 @@
       "firmware": null,
       "softwareVersion": null,
       "libraryVersion": "V3.x",
-      "equation": null,
-      "parameters": [],
+      "equation": "y = Kp · [ (b·w − x) + 1/(Ti·s)·(w − x) + Td·s/(a·Td·s + 1)·(c·w − x) ] ; b = PWeighting, c = DWeighting, a = TdFiltRatio (retard dérivé T1 = a·Td). Contrôleur PIDT1 avec anti-windup. Document A5E35300227-AJ, p. 88 (V2) et p. 91 (V3, zone morte désactivée).",
+      "parameters": [
+        {
+          "name": "Gain",
+          "iecType": "REAL",
+          "label": "gain proportionnel",
+          "unit": "≥ 0, sortie en % par unité de mesure (Retain.CtrlParams.Gain)",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Ti",
+          "iecType": "REAL",
+          "label": "temps intégral",
+          "unit": "secondes, 0 à 100000 ; 0 désactive l'intégrale",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Td",
+          "iecType": "REAL",
+          "label": "temps dérivé",
+          "unit": "secondes, 0 à 100000 ; 0 désactive la dérivée",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "TdFiltRatio",
+          "iecType": "REAL",
+          "label": "coefficient de retard de dérivée a",
+          "unit": "≥ 0 ; retard T1 = a × Td ; défaut 0,2",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "PWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action proportionnelle b",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action dérivée c",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Cycle",
+          "iecType": "REAL",
+          "label": "période d'échantillonnage de l'algorithme",
+          "unit": "secondes, > 0 ; multiple entier de CycleTime",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "InvertControl",
+          "iecType": "BOOL",
+          "label": "inversion du sens (Config.InvertControl)",
+          "unit": "TRUE : un écart croissant réduit la sortie",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DeadZone",
+          "iecType": "REAL",
+          "label": "largeur de zone morte (V3)",
+          "unit": "à régler manuellement, jamais calculée par le réglage",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        }
+      ],
       "modes": [],
       "status": "to_verify",
       "facts": [
         {
           "source": "SIEMENS-PIDCOMPACT-V3",
           "claim": "Une documentation de PID_Compact V3.0 existe, pour SIMATIC S7-1200 / S7-1500 avec TIA Portal V17. Contenu non lu."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "PID_Compact ne fonctionne pas avec un gain proportionnel négatif : le sens inverse passe par Config.InvertControl (p. 92, 270)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Sortie de l'algorithme en pourcentage (−100 à 100 %), limites Config.OutputLowerLimit / OutputUpperLimit (p. 245 ss, 12655)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Défauts : Gain 1,0 ; Ti 20,0 s ; Td 0,0 s ; TdFiltRatio 0,2 ; PWeighting 1,0 ; DWeighting 1,0 (p. 270-271)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Avec c = 0 la dérivée n'agit que sur la mesure x : c'est la forme de MKR."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V3.0 : S7-1500 à partir du micrologiciel 3.1 et S7-1200 G2 (toutes versions) ; les versions antérieures ne sont pas prises en charge sur S7-1200 G2 (p. 245-247)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V3.0 ajoute une zone morte (Retain.CtrlParams.DeadZone) et une limitation active de l'action intégrale ; l'équation indiquée vaut zone morte désactivée."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Le transfert d'un programme S7-1200 vers S7-1200 G2 passe PID_Compact à V3.0 à la compilation suivante : à revoir selon les changements de comportement."
         }
       ]
     }
