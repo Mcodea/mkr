@@ -163,8 +163,25 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $window "Démarrer l’enregistrement continu"
     $dialog = Find $root $name 'MKR — Enregistrement continu terminé'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
-    $ok = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
-    if ($ok -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'Bouton OK inaccessible.' }
+    # A native message box: try the Win32 button first, then UI Automation; on failure list what the dialog contains.
+    $dismissed = $false
+    $until = [DateTime]::UtcNow.AddSeconds(15)
+    while (!$dismissed -and [DateTime]::UtcNow -lt $until) {
+        $handle = [IntPtr]$dialog.Current.NativeWindowHandle
+        $ok = [MkrUiTest.NativeDialog]::GetDlgItem($handle, 1)
+        if ($ok -ne [IntPtr]::Zero -and [MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { $dismissed = $true; break }
+        $buttons = $dialog.FindAll($scope, [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Button))
+        foreach ($button in $buttons) {
+            if ($button.Current.Name -in @("OK", "Ok", "D’accord")) {
+                $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); $dismissed = $true; break
+            }
+        }
+        Start-Sleep -Milliseconds 300
+    }
+    if (!$dismissed) {
+        $content = @($dialog.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { "$($_.Current.ControlType.ProgrammaticName):$($_.Current.Name)" })
+        throw "Bouton OK inaccessible. Handle $($dialog.Current.NativeWindowHandle). Contenu : $($content -join ' | ')"
+    }
     $combo = Find $project $id 'Imports'
     $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
     $labels = @(); $item = $null
