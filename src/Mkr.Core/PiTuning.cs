@@ -47,8 +47,17 @@ public sealed record IdealPid(double Kp, double TiSeconds, double TdSeconds);
 public sealed record SopdtPid(string AlgorithmVersion, string Method, string ControllerForm, string TimeUnit,
     SeriesPid Series, IdealPid Ideal, string[] Warnings, LoopMargins? Margins = null);
 
+/// <summary>Nominal-loop margins of an integrating process with a PI (gain and phase margins can be absent if no crossing exists).</summary>
+public sealed record IntegratorMargins(double? GainMargin, double? PhaseMarginDegrees, double PeakSensitivity);
+
+/// <summary>PI for an integrating process (SIMC rule, Skogestad 2003). Kp has the sign of the process slope.</summary>
+public sealed record IntegratorPi(string AlgorithmVersion, string Rule, double ResponseSeconds, string[] Warnings,
+    double Kp, double TiSeconds, double ParallelKi, IntegratorMargins Margins);
+
 public interface IPiEngine
 {
+    Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token);
+
     /// <summary>Documentary PIDFF conversion of a tuning (mixed structure). Never qualified, never ready to load.</summary>
     Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
         double? filterSeconds, CancellationToken token);

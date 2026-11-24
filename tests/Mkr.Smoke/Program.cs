@@ -636,6 +636,20 @@ try
         await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToPidffAsync(refused, refusedTuning, false, default));
     }
 
+    // PI for an integrating process (SIMC rule, Skogestad 2003): Kc = 1 / (k' (tau_c + theta)), Ti = 4 (tau_c + theta).
+    {
+        var level = await engine.CalculateIntegratorPiAsync(-0.3, 2.5, 5, default);
+        Require(level.Rule == "SIMC_integrating" && Math.Abs(level.Kp - 1 / (-0.3 * 7.5)) < 1e-12 && Math.Abs(level.TiSeconds - 30) < 1e-12 &&
+            level.Margins.PhaseMarginDegrees is > 30 && !level.Warnings.Contains("tight_response"),
+            "The integrator PI follows the SIMC rule with the sign of the slope.");
+        var tight = await engine.CalculateIntegratorPiAsync(0.05, 10, 2, default);
+        Require(tight.Warnings.Contains("tight_response") && tight.Warnings.Contains("high_sensitivity"), "A response faster than the delay is announced.");
+        var block = await engine.ConvertToPidffAsync(level.Kp, level.TiSeconds, 0, null, default);
+        Require(block.Conversion is { Parameters: { RevDir: true, Kd: null } } && Math.Abs(block.Conversion.Parameters.Kp - 0.4444444) < 1e-6,
+            "A negative-slope integrator gives a PIDFF with rev_dir = 1 and |kp|.");
+        await ThrowsAsync<InvalidOperationException>(() => gate.CalculateIntegratorPiAsync(refused, 2, default));
+    }
+
     // PID_INT and PID_Compact documentary conversions (33002520 p. 141; A5E35300227-AJ p. 88/91): never qualified, never ready to load.
     {
         var pidInt = await engine.ConvertToBlockAsync("PID_INT", new Dictionary<string, object>

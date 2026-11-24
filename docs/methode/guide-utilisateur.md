@@ -64,3 +64,7 @@ MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, uni
 - **Procédés intégrateurs** avec un régulateur : l'identification intégrateur existe, mais le réglage PI/PID n'est calculé que pour le premier et le second ordre.
 - **Garantie de stabilité sur le procédé réel** : MKR calcule les marges de gain, de phase, de retard et le pic de sensibilité Ms du modèle **nominal**, avec leurs avertissements, et fait varier gain, τ et θ dans l'analyse de sensibilité. Ni l'un ni l'autre ne garantit la stabilité du procédé réel.
 - **Conversion qualifiée** vers PIDFF, PID_INT et PID_Compact.
+
+## Procédés intégrateurs (cuve, position)
+
+Pour un modèle **intégrateur** accepté à la validation, MKR calcule un PI par la règle SIMC des procédés intégrateurs (Skogestad, *Journal of Process Control* 13, 2003) : Kc = 1 / (k′ (τc + θ)), Ti = 4 (τc + θ), où k′ est la pente (unité PV par seconde et par unité MV), θ le retard et τc la durée de réponse choisie. Le signe de Kp est celui de la pente. Les marges de gain et de phase et la sensibilité maximale de la **boucle nominale** sont affichées ; une réponse plus rapide que le retard (τc < θ) est signalée (`tight_response`) car le dépassement croît nettement (vérifié en simulation : environ 28 % à τc = θ, 69 % à τc = θ/5). Les valeurs du bloc PIDFF s'obtiennent ensuite avec le même bouton que pour les autres modèles ; elles restent documentaires et non qualifiées. L'écran dédié n'existe pas encore : le calcul est disponible dans le moteur et l'atelier de validation.

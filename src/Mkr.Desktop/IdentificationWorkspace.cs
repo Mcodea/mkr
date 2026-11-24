@@ -92,6 +92,23 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
 
     public IReadOnlyList<PiStudy> PiStudies(Guid modelId) => piStore.ListPi(project.Id, modelId);
 
+    /// <summary>PI for an accepted integrator model: the model gain is the slope in PV units per second per MV unit.</summary>
+    public Task<IntegratorPi> CalculateIntegratorPiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.Integrateur)
+            throw new InvalidOperationException("Sélectionnez une étude d'intégrateur.");
+        model.RequireAcceptedForTuning();
+        return piEngine.CalculateIntegratorPiAsync(model.Result.Gain, model.Result.DelaySeconds, responseSeconds, token);
+    }
+
+    /// <summary>Documentary PIDFF values of an integrator PI (PI only, no derivative, no filter). Never qualified.</summary>
+    public Task<BlockConversionResult> ConvertIntegratorToPidffAsync(IdentificationStudy model, IntegratorPi tuning, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.Integrateur) throw new InvalidOperationException("Sélectionnez une étude d'intégrateur.");
+        model.RequireAcceptedForTuning();
+        return piEngine.ConvertToPidffAsync(tuning.Kp, tuning.TiSeconds, 0, null, token);
+    }
+
     public Task<SopdtPid> CalculateSopdtPidAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
     {
         if (model.Family != ModelFamily.SOPDT)

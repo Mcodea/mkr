@@ -219,6 +219,18 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
+    public async Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token)
+    {
+        var payload = new { gain = slope, delaySeconds, responseSeconds };
+        var (json, _) = await CallAsync("calculate_integrator_pi", payload, token).ConfigureAwait(false);
+        var pi = json.Deserialize<IntegratorPi>(JsonOptions);
+        if (pi is not { Rule: "SIMC_integrating", TiSeconds: > 0, Warnings: not null, Margins: not null } ||
+            !double.IsFinite(pi.Kp) || pi.Kp == 0 || Math.Sign(pi.Kp) != Math.Sign(slope) || pi.ResponseSeconds != responseSeconds ||
+            !double.IsFinite(pi.Margins.PeakSensitivity) || pi.Margins.PeakSensitivity < 1 - 1e-9 || string.IsNullOrEmpty(pi.AlgorithmVersion))
+            throw new InvalidDataException("Réglage PI d'intégrateur incompatible avec le contrat.");
+        return pi;
+    }
+
     public async Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
         double? filterSeconds, CancellationToken token)
     {

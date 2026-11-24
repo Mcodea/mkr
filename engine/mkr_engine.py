@@ -63,6 +63,12 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "calculate_integrator_pi":
+        from pi_tuning_integrator import calculate
+        try:
+            return {**response, "result": calculate(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] in ("calculate_pi", "calculate_simc_pid", "simulate_pi", "simulate_open_loop", "simulate_pi_transition"):
         if request["operation"] == "calculate_pi":
             from pi_tuning import calculate
