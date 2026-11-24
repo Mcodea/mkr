@@ -26,3 +26,13 @@ Indépendance vis-à-vis du constructeur (Schneider, Siemens), validation obliga
 
 ## Limite
 Cette comparaison repose sur des synthèses, non sur l'usage du logiciel. Elle ne prouve ni équivalence ni supériorité.
+
+## Logiciels du marché à étudier (liste fournie par l'utilisateur, 24/11/2026)
+| Éditeur | Logiciel | Étudié ? |
+|---|---|---|
+| Control Station | LOOP-PRO Tuner | Partiellement (synthèse et captures fournies, guide V2.8 via recherche) |
+| Valmet | ExperTune PID Loop Optimizer | Non |
+| DotX Control Solutions | PID Tuner | Non |
+| XLN Control | Advanced PID Loop Simulator | Non |
+
+Ajoutés aux références à étudier (sources publiques seulement, aucun produit essayé) : MATLAB PID Tuner et System Identification Toolbox. Pour chacun, ne retenir que des principes de parcours et de méthode ; aucune interface ni code propriétaire. L'existence d'un marché ne prouve pas que MKR soit comparable : cela se démontre par des essais sur données réelles, pas encore faits.
