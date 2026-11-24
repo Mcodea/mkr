@@ -354,7 +354,7 @@ await Check("mode: validation requires address AND declared manual value, intege
     Assert(PlcDecoding.Validate(Modbus(502) with { ManualModeValue = 1 }, plan) is not null, "valeur manuel sans adresse acceptée");
     Assert(PlcDecoding.Validate(withMode with { Mode = new(6, PlcDataType.Real32) }, plan) is not null, "mode REAL accepté");
     Assert(PlcDecoding.Validate(withMode with { ManualModeValue = 0.5 }, plan) is not null, "valeur manuel non entière acceptée");
-    Assert(withMode.Describe().Contains("MODE %MW6") && withMode.Describe().Contains("manuel = 0"), withMode.Describe());
+    Assert(withMode.Describe().Contains("mode %MW6") && withMode.Describe().Contains("manuel = 0"), withMode.Describe());
     return Task.CompletedTask;
 });
 
