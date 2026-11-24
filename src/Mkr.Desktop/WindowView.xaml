@@ -214,20 +214,22 @@
         <Grid x:Name="StudyView" Grid.Row="2" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="128"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="228"/>
+                    <ColumnDefinition x:Name="ValuesColumn" Width="218"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
+                <Border x:Name="ValuesPanel" Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="14,12,12,10">
                             <TextBlock Text="VALEURS DU MODÈLE" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold"/>
                             <Border x:Name="Verdict" CornerRadius="4" Padding="8,3" Margin="0,8,0,10" HorizontalAlignment="Left" Background="{DynamicResource MkrBorderStrong}">
                                 <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource MkrOnStatus}"/>
                             </Border>
+                            <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
+                            <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" Margin="0,0,0,10" AutomationProperties.Name="Étude affichée"/>
                             <TextBlock x:Name="ValuesText" TextWrapping="Wrap" FontFamily="{DynamicResource MkrMono}" LineHeight="22"/>
                             <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"/>
                             <TextBlock Text="PROJET" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,18,0,6"/>
@@ -245,7 +247,7 @@
                         <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
                         <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <local:SignalChart x:Name="Chart" Grid.Row="1" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
+                    <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
                         AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
                     <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                 </Grid>
@@ -253,8 +255,9 @@
             <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
                 <Grid Margin="10,6,10,6">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <TextBlock Text="ÉTUDES D'IDENTIFICATION" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <DataGrid x:Name="StudyGrid" Grid.Row="1" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
+                    <Button x:Name="TableToggle" Content="▸ Tableau des études d'identification" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"
+                            AutomationProperties.Name="Afficher ou masquer le tableau des études"/>
+                    <DataGrid x:Name="StudyGrid" Grid.Row="1" Height="130" Visibility="Collapsed" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Famille" Binding="{Binding Family}" Width="90"/>
                             <DataGridTextColumn Header="Gain K" Binding="{Binding Gain}" Width="*"/>

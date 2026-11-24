@@ -35,7 +35,7 @@ internal sealed class ChartTrack(string title, string unit, IEnumerable<ChartSer
 /// </summary>
 internal sealed class SignalChart : FrameworkElement
 {
-    private const double LeftMargin = 70, RightMargin = 16, TopMargin = 8, BottomMargin = 40, TrackGap = 34, LegendHeight = 20;
+    private const double LeftMargin = 74, RightMargin = 14, TopMargin = 6, BottomMargin = 40, TrackGap = 30, LegendHeight = 22;
     private static readonly DashStyle[] Dashes = { DashStyles.Solid, new DashStyle(new double[] { 6, 3 }, 0), new DashStyle(new double[] { 1.5, 3 }, 0), new DashStyle(new double[] { 6, 3, 1.5, 3 }, 0) };
 
     private IReadOnlyList<ChartTrack> _tracks = Array.Empty<ChartTrack>();
@@ -141,14 +141,14 @@ internal sealed class SignalChart : FrameworkElement
 
             // legend: swatch with the curve's dash pattern + name; click toggles the curve
             var legendX = LeftMargin;
-            var title = Text($"{track.Title}{(track.Unit.Length > 0 ? $" ({track.Unit})" : "")}", 12, Theme("MkrText"), true);
+            var title = Text($"{track.Title}{(track.Unit.Length > 0 ? $" ({track.Unit})" : "")}", 13, Theme("MkrText"), true);
             dc.DrawText(title, new Point(legendX, top - LegendHeight));
             legendX += title.Width + 18;
             for (var si = 0; si < track.Series.Count; si++)
             {
                 var series = track.Series[si];
                 var color = Theme(series.ColorKey);
-                var label = Text(series.Name, 12, series.Visible ? Theme("MkrText") : Theme("MkrPlotLabel"));
+                var label = Text(series.Name, 13, series.Visible ? Theme("MkrText") : Theme("MkrPlotLabel"));
                 var box = new Rect(legendX - 4, top - LegendHeight - 1, 44 + label.Width, LegendHeight);
                 dc.DrawRectangle(Brushes.Transparent, null, box);
                 dc.DrawLine(new Pen(series.Visible ? color : Faded(color, 0.35), 2) { DashStyle = Dashes[si % Dashes.Length] }, new Point(legendX, top - LegendHeight / 2 - 1), new Point(legendX + 30, top - LegendHeight / 2 - 1));
@@ -164,7 +164,7 @@ internal sealed class SignalChart : FrameworkElement
             {
                 var py = Y(v);
                 dc.DrawLine(grid, new Point(LeftMargin, py), new Point(LeftMargin + PlotWidth, py));
-                var l = Text(v.ToString("G5", CultureInfo.CurrentCulture), 11, labelBrush);
+                var l = Text(v.ToString("G5", CultureInfo.CurrentCulture), 12, labelBrush);
                 dc.DrawText(l, new Point(LeftMargin - 6 - l.Width, py - l.Height / 2));
             }
             foreach (var v in xTicks)
@@ -185,7 +185,7 @@ internal sealed class SignalChart : FrameworkElement
             {
                 var series = track.Series[si];
                 if (!series.Visible) continue;
-                var pen = new Pen(Theme(series.ColorKey), 2) { DashStyle = Dashes[si % Dashes.Length], LineJoin = PenLineJoin.Round };
+                var pen = new Pen(Theme(series.ColorKey), 2.4) { DashStyle = Dashes[si % Dashes.Length], LineJoin = PenLineJoin.Round };
                 var geometry = new StreamGeometry();
                 using (var context = geometry.Open())
                 {
@@ -207,10 +207,10 @@ internal sealed class SignalChart : FrameworkElement
         var bottom = TrackTop(_tracks.Count - 1) + TrackHeight;
         foreach (var v in xTicks)
         {
-            var l = Text(v.ToString("G6", CultureInfo.CurrentCulture), 11, labelBrush);
+            var l = Text(v.ToString("G6", CultureInfo.CurrentCulture), 12, labelBrush);
             dc.DrawText(l, new Point(XToPixel(v) - l.Width / 2, bottom + 4));
         }
-        var xl = Text(XLabel, 11, labelBrush);
+        var xl = Text(XLabel, 12, labelBrush);
         dc.DrawText(xl, new Point(LeftMargin + PlotWidth / 2 - xl.Width / 2, bottom + 22));
 
         // range being selected

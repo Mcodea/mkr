@@ -18,6 +18,7 @@ public sealed class StudyRow
     public string Error { get; init; } = "";
     public string Decision { get; init; } = "";
     public string When { get; init; } = "";
+    public string Label => $"{Family} · {When} · {Decision}";
 }
 
 public partial class WindowView : Window
@@ -130,6 +131,7 @@ public partial class WindowView : Window
             InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}";
             var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
             StudyGrid.ItemsSource = rows;
+            StudyPicker.ItemsSource = rows;
             BuildTabs();
             if (rows.Count > 0) StudyGrid.SelectedIndex = 0; else ShowStudy(null);
         }
@@ -240,6 +242,7 @@ public partial class WindowView : Window
         }
         // chart commands are always at hand, whichever step is shown
         RibbonCommands.Children.Add(new Border { Width = 1, Margin = new Thickness(8, 6, 8, 6), Background = (Brush)FindResource("MkrBorder") });
+        RibbonCommands.Children.Add(Command("\uE740", _focusChart ? "Réduire" : "Agrandir", "Donner tout l'espace au graphique (masque le panneau de valeurs et le tableau)", () => { ToggleChartFocus(); BuildRibbon(); }));
         RibbonCommands.Children.Add(Command("\uE71E", "Vue complète", "Revenir à l'horizon complet du graphique (double-clic ou Origine)", () => Chart.ResetView()));
         RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
         RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
@@ -273,7 +276,36 @@ public partial class WindowView : Window
     }
 
     // ---------- values panel and chart ----------
-    private void StudySelected(object sender, SelectionChangedEventArgs args) => ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study);
+    private void StudySelected(object sender, SelectionChangedEventArgs args)
+    {
+        if (!ReferenceEquals(StudyPicker.SelectedItem, StudyGrid.SelectedItem)) StudyPicker.SelectedItem = StudyGrid.SelectedItem;
+        ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study);
+    }
+
+    private void PickerChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (StudyPicker.SelectedItem is not null && !ReferenceEquals(StudyPicker.SelectedItem, StudyGrid.SelectedItem)) StudyGrid.SelectedItem = StudyPicker.SelectedItem;
+    }
+
+    private void ToggleTable(object sender, RoutedEventArgs args)
+    {
+        var show = StudyGrid.Visibility != Visibility.Visible;
+        StudyGrid.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        TableToggle.Content = (show ? "▾ " : "▸ ") + "Tableau des études d'identification";
+    }
+
+    private bool _focusChart;
+
+    /// <summary>Gives the whole workspace to the chart: values panel and study table are hidden until toggled back.</summary>
+    private void ToggleChartFocus()
+    {
+        _focusChart = !_focusChart;
+        ValuesColumn.Width = new GridLength(_focusChart ? 0 : 218);
+        ValuesPanel.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
+        TableToggle.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
+        if (_focusChart) StudyGrid.Visibility = Visibility.Collapsed;
+        CursorText.Text = _focusChart ? "Graphique agrandi. Cliquez de nouveau sur « Agrandir » pour retrouver les valeurs et le tableau." : CursorText.Text;
+    }
     private void TrialChanged(object sender, RoutedEventArgs args) { if (IsLoaded) ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study); }
 
     private void UpdateVerdictColour()

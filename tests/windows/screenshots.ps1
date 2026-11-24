@@ -204,6 +204,9 @@ try {
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 500
         Capture $main '10b-onglet-identification'
+        Press-Retry $main 'Agrandir'
+        Start-Sleep -Milliseconds 700
+        Capture $main '10c-graphique-agrandi'
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
