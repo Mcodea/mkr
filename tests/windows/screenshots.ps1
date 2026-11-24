@@ -138,11 +138,12 @@ try {
         Close-Window $preview
     }
     Step '05-revue' {
-        Press-Retry $ident "Revue de l'étude…"
+        try { Press $ident "Revue de l'étude…" } catch { }
         $review = Find $root $name "MKR — Revue de l'étude"
         Fill $review 'Reason' 'Identification terminée'
         Fill $review 'Evidence' 'essai-7 / essai-8'
-        Press-Retry $review 'Marquer comme calculé'
+        # the click is applied even when UI Automation reports 'Unrecognized error' (the window is busy); the state line is the proof
+        try { Press $review 'Marquer comme calculé' } catch { }
         $null = Wait-Name $review 'StateLine' '*Calculé*'
         Capture $review '05-revue'
         Close-Window $review

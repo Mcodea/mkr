@@ -87,6 +87,7 @@ public static class StudySheet
                 : "AUCUN CRITÈRE DE VALIDATION N’A ÉTÉ APPLIQUÉ À CE MODÈLE. Les réglages ci-dessous ne sont pas utilisables.");
         Heading("Réglages PI génériques");
         Line($"Erreur = consigne − mesure. Cible de réponse {N(pi.Result.ResponseSeconds)} s.");
+        Line("Les indicateurs ci-dessous sont SIMULÉS sur le modèle identifié ; ils ne sont pas des performances mesurées sur le procédé.");
         foreach (var (label, coefficients, result) in new[] {
             ("IMC / Lambda", pi.Result.Imc, sim.Result.Imc), ("SIMC", pi.Result.Simc, sim.Result.Simc) })
         {
@@ -94,7 +95,7 @@ public static class StudySheet
             Line(coefficients.Margins is { } margins
                 ? "Marges nominales : " + margins.Describe()
                 : "Marges nominales non calculées (réglage antérieur à leur introduction).");
-            Line($"IAE {N(result.Iae)} {model.PvUnit}·s · saturation {N(result.SaturationSeconds)} s · erreur finale {N(result.FinalError)} {model.PvUnit}");
+            Line($"IAE {N(result.Iae)} {model.PvUnit}·s · ISE {N(result.Ise)} {model.PvUnit}²·s · saturation {N(result.SaturationSeconds)} s · erreur finale {N(result.FinalError)} {model.PvUnit}");
         }
         Heading("Conditions de simulation");
         var scenario = sim.Scenario;
