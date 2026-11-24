@@ -103,5 +103,66 @@ class StructuresAreTold(unittest.TestCase):
             judge("FOPDT", first_order(1.5, 20, 4), 1.0, 0.45)
 
 
+def field_source(day, amplitude, sigma, rng, drift=0.0, quantum=0.0, disturbance=None, mv_after=None, pre=10, post=120):
+    """First-order process (K 1.5, tau 20 s, delay 4 s) with a field defect."""
+    start = datetime(2026, 3, day, tzinfo=timezone.utc)
+    response = first_order(1.5, 20, 4)
+    lines = ["timestamp,mv,pv"]
+    for i in range(pre + post):
+        t = float(i - pre)
+        value = 50 + amplitude * response(t) + rng.normal(0, sigma) + drift * t
+        if disturbance and t >= disturbance[0]:
+            value += disturbance[1]
+        if quantum:
+            value = round(value / quantum) * quantum
+        mv = amplitude if t >= 0 else 0
+        if mv_after and t >= mv_after[0]:
+            mv = mv_after[1](mv, t)
+        lines.append(f"{(start + timedelta(seconds=i)).isoformat()},{mv},{value}")
+    return dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=",",
+                timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+
+
+def field_judge(tolerance=0.09, **defect):
+    rng = np.random.default_rng(3)
+    trials = dict(training=field_source(1, 2.0, 0.015, rng, **defect), validation=field_source(2, -1.5, 0.015, rng, **defect),
+                  mvTolerance=0.01, pvTolerance=tolerance)
+    criteria = suggest(trials)
+    return assess(dict(family="FOPDT", trials=trials, maximumRmse=criteria["maximumRmse"],
+                       maximumResidualLagOne=criteria["maximumResidualLagOne"]))
+
+
+class FieldDefectsAreNotFittedInSilence(unittest.TestCase):
+    def test_the_clean_reference_is_accepted(self):
+        self.assertTrue(field_judge()["assessment"]["accepted"])
+
+    def test_a_slow_drift_a_load_disturbance_or_a_late_step_in_the_process_are_refused(self):
+        for name, defect in (("drift 0.002/s", dict(drift=0.002)),
+                             ("disturbance +0.3 during the response", dict(disturbance=(40, 0.3))),
+                             ("disturbance +1.0 during the response", dict(disturbance=(25, 1.0)))):
+            with self.subTest(defect=name):
+                result = field_judge(**defect)
+                self.assertFalse(result["assessment"]["accepted"])
+                self.assertIn("validation_residuals", result["assessment"]["reasons"])
+                self.assertIn("correlated_residuals", result["report"]["warnings"])    # the cause is announced, not hidden
+
+    def test_a_drift_larger_than_the_response_is_refused_as_not_a_step_response(self):
+        with self.assertRaisesRegex(ValueError, "fit_response"):
+            field_judge(tolerance=0.5, drift=0.01)
+
+    def test_a_fine_sensor_resolution_is_harmless_and_a_coarse_one_is_refused(self):
+        self.assertTrue(field_judge(quantum=0.05)["assessment"]["accepted"])
+        with self.assertRaisesRegex(ValueError, "fit_response"):
+            field_judge(tolerance=1.0, quantum=0.5)
+
+    def test_an_output_that_saturates_or_drifts_after_the_step_is_not_an_identification_trial(self):
+        # MV leaves its plateau (saturation, a manual correction, a controller back in automatic): the step is not clean.
+        for name, change in (("saturation 30 s after the step", (30, lambda mv, t: 0.8 * mv)),
+                             ("slow output drift", (20, lambda mv, t: mv + 0.01 * (t - 20)))):
+            with self.subTest(defect=name):
+                with self.assertRaisesRegex(ValueError, "fit_step"):
+                    field_judge(mv_after=change)
+
+
 if __name__ == "__main__":
     unittest.main()
