@@ -197,8 +197,8 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $items = $combo.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
     $labels = @(); $item = $null
     while ($item = $items.FindItemByProperty($item, $null, $null)) { $labels += $item.Current.Name }
-    $segments = @($labels | Where-Object { $_ -like 'historique-*' })
-    if ($segments.Count -lt 4) { throw "Segments d’historique attendus dans le projet : $($labels -join ' | ')" }
+    $segments = @($labels | Where-Object { $_ -like '*FileName = historique-*' })
+    if ($segments.Count -ne 5) { throw "Segments d’historique attendus dans le projet : $($labels -join ' | ')" }
     Write-Output "Enregistrement continu vérifié : $($segments.Count) segments archivés."
     Write-Output "Acquisition S7 et Modbus vérifiée : lecture d’essai, progression, enregistrement et refus d’adresse."
 } finally {
