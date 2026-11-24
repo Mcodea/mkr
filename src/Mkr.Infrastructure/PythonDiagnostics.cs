@@ -9,7 +9,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<string> GetVersionAsync(CancellationToken cancellationToken)
+    public Task<string> GetVersionAsync(CancellationToken cancellationToken) =>
+        Guard(() => GetVersionAsyncCore(cancellationToken));
+
+    private async Task<string> GetVersionAsyncCore(CancellationToken cancellationToken)
     {
         var (result, version) = await CallAsync("ping", new { }, cancellationToken).ConfigureAwait(false);
         if (result.EnumerateObject().Count() != 1 || !result.TryGetProperty("status", out var status) ||
@@ -18,14 +21,21 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return version;
     }
 
-    public async Task<CsvResult> InspectAsync(byte[] original, string delimiter, CancellationToken token)
+    public Task<CsvResult> InspectAsync(byte[] original, string delimiter, CancellationToken token) =>
+        Guard(() => InspectAsyncCore(original, delimiter, token));
+
+    private async Task<CsvResult> InspectAsyncCore(byte[] original, string delimiter, CancellationToken token)
     {
         var (result, _) = await CallAsync("inspect_csv", new { raw = original, delimiter }, token).ConfigureAwait(false);
         return ReadCsvResult(result, expectQuality: false);
     }
 
-    public async Task<(CsvResult Result, string EngineVersion)> AnalyzeAsync(byte[] original,
-        string delimiter, CsvMapping mapping, CancellationToken token, CsvFormat? format = null)
+    public Task<(CsvResult Result, string EngineVersion)> AnalyzeAsync(byte[] original,
+        string delimiter, CsvMapping mapping, CancellationToken token, CsvFormat? format = null) =>
+        Guard(() => AnalyzeAsyncCore(original, delimiter, mapping, token, format));
+
+    private async Task<(CsvResult Result, string EngineVersion)> AnalyzeAsyncCore(byte[] original,
+        string delimiter, CsvMapping mapping, CancellationToken token, CsvFormat? format)
     {
         var payload = new Dictionary<string, object>
         {
@@ -59,7 +69,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return fields;
     }
 
-    public async Task<ModelComparison> CompareAsync(StepImport training, StepImport validation,
+    public Task<ModelComparison> CompareAsync(StepImport training, StepImport validation,
+        double mvTolerance, double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token) =>
+        Guard(() => CompareAsyncCore(training, validation, mvTolerance, pvTolerance, maximumRmse, maximumResidualLagOne, token));
+
+    private async Task<ModelComparison> CompareAsyncCore(StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token)
     {
         var trials = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
@@ -80,7 +94,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return report;
     }
 
-    public async Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token)
+    public Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token) =>
+        Guard(() => FindStepsAsyncCore(recording, mvTolerance, pvTolerance, token));
+
+    private async Task<StepSearch> FindStepsAsyncCore(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token)
     {
         if (recording.Window is not null)
             throw new CsvInputException("fit_window");
@@ -102,7 +119,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return search;
     }
 
-    public async Task<ModelDriftReport> CheckModelDriftAsync(ModelFamily family, IdentificationResult model, StepImport trial, double mvTolerance,
+    public Task<ModelDriftReport> CheckModelDriftAsync(ModelFamily family, IdentificationResult model, StepImport trial, double mvTolerance,
+        double pvTolerance, ComparisonCriteria criteria, CancellationToken token) =>
+        Guard(() => CheckModelDriftAsyncCore(family, model, trial, mvTolerance, pvTolerance, criteria, token));
+
+    private async Task<ModelDriftReport> CheckModelDriftAsyncCore(ModelFamily family, IdentificationResult model, StepImport trial, double mvTolerance,
         double pvTolerance, ComparisonCriteria criteria, CancellationToken token)
     {
         if (trial.Window is { } window && !window.IsValid) throw new CsvInputException("fit_window");
@@ -134,7 +155,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return report;
     }
 
-    public async Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation,
+    public Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation,
+        double mvTolerance, double pvTolerance, CancellationToken token) =>
+        Guard(() => SuggestCriteriaAsyncCore(training, validation, mvTolerance, pvTolerance, token));
+
+    private async Task<CriteriaSuggestion> SuggestCriteriaAsyncCore(StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token)
     {
         var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
@@ -148,7 +173,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return suggestion;
     }
 
-    public async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
+    public Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training,
+        StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token) =>
+        Guard(() => IdentifyAsyncCore(family, training, validation, mvTolerance, pvTolerance, token));
+
+    private async Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsyncCore(ModelFamily family, StepImport training,
         StepImport validation, double mvTolerance, double pvTolerance, CancellationToken token)
     {
         var payload = new { training = Source(training), validation = Source(validation), mvTolerance, pvTolerance };
@@ -164,7 +193,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (CheckFit(family, result.Deserialize<IdentificationResult>(JsonOptions)), version);
     }
 
-    public async Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsync(
+    public Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsync(ModelFamily family, StepImport training, StepImport validation, double mvTolerance, double pvTolerance,
+        ComparisonCriteria criteria, CancellationToken token) =>
+        Guard(() => AssessAsyncCore(family, training, validation, mvTolerance, pvTolerance, criteria, token));
+
+    private async Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsyncCore(
         ModelFamily family, StepImport training, StepImport validation, double mvTolerance, double pvTolerance,
         ComparisonCriteria criteria, CancellationToken token)
     {
@@ -209,7 +242,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return fit;
     }
 
-    public async Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token)
+    public Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token) =>
+        Guard(() => PreviewTrialAsyncCore(trial, token));
+
+    private async Task<TrialPreview> PreviewTrialAsyncCore(StepImport trial, CancellationToken token)
     {
         var payload = new Dictionary<string, object>
         {
@@ -237,7 +273,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return preview;
     }
 
-    public async Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token)
+    public Task<SopdtPid> CalculateSopdtPidAsync(IdentificationResult model, double responseSeconds, CancellationToken token) =>
+        Guard(() => CalculateSopdtPidAsyncCore(model, responseSeconds, token));
+
+    private async Task<SopdtPid> CalculateSopdtPidAsyncCore(IdentificationResult model, double responseSeconds, CancellationToken token)
     {
         var payload = new { model.Gain, model.TauSeconds, model.DelaySeconds, model.SecondTauSeconds, responseSeconds };
         var (json, _) = await CallAsync("calculate_simc_pid", payload, token).ConfigureAwait(false);
@@ -251,7 +290,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
-    public async Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token)
+    public Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token) =>
+        Guard(() => CalculateIntegratorPiAsyncCore(slope, delaySeconds, responseSeconds, token));
+
+    private async Task<IntegratorPi> CalculateIntegratorPiAsyncCore(double slope, double delaySeconds, double responseSeconds, CancellationToken token)
     {
         var payload = new { gain = slope, delaySeconds, responseSeconds };
         var (json, _) = await CallAsync("calculate_integrator_pi", payload, token).ConfigureAwait(false);
@@ -263,7 +305,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pi;
     }
 
-    public async Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
+    public Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
+        double? filterSeconds, CancellationToken token) =>
+        Guard(() => ConvertToPidffAsyncCore(kp, tiSeconds, tdSeconds, filterSeconds, token));
+
+    private async Task<BlockConversionResult> ConvertToPidffAsyncCore(double kp, double tiSeconds, double tdSeconds,
         double? filterSeconds, CancellationToken token)
     {
         var parameters = new Dictionary<string, object> { ["kp"] = kp, ["tiSeconds"] = tiSeconds, ["tdSeconds"] = tdSeconds };
@@ -283,7 +329,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return result;
     }
 
-    public async Task<BlockSettingsResult> ConvertToBlockAsync(string block, IReadOnlyDictionary<string, object> parameters, CancellationToken token)
+    public Task<BlockSettingsResult> ConvertToBlockAsync(string block, IReadOnlyDictionary<string, object> parameters, CancellationToken token) =>
+        Guard(() => ConvertToBlockAsyncCore(block, parameters, token));
+
+    private async Task<BlockSettingsResult> ConvertToBlockAsyncCore(string block, IReadOnlyDictionary<string, object> parameters, CancellationToken token)
     {
         if (block is not ("PID_INT" or "PID_Compact")) throw new ArgumentException("Bloc non pris en charge par cette conversion.", nameof(block));
         var payload = new { name = block, target = new { }, parameters };
@@ -306,7 +355,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         // A nominal-unstable loop must say so: no margin may be positive while the warning is absent.
         (margins.Warnings.Contains("nominal_unstable") || (margins.GainMargin ?? 2) >= 1 && (margins.PhaseMarginDegrees ?? 1) >= 0));
 
-    public async Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(
+    public Task<(PiComparison Result, string EngineVersion)> CalculatePiAsync(double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token) =>
+        Guard(() => CalculatePiAsyncCore(gain, tauSeconds, delaySeconds, responseSeconds, token));
+
+    private async Task<(PiComparison Result, string EngineVersion)> CalculatePiAsyncCore(
         double gain, double tauSeconds, double delaySeconds, double responseSeconds, CancellationToken token)
     {
         var payload = new { gain, tauSeconds, delaySeconds, responseSeconds };
@@ -321,7 +373,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         static bool Valid(PiCoefficients? pi) => pi is { TiSeconds: > 0 } && pi.Kp != 0 && pi.ParallelKi != 0 && ValidMargins(pi.Margins);
     }
 
-    public async Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
+    public Task<PiTransferResult> SimulateTransferAsync(IdentificationResult model, PiCoefficients coefficients,
+        PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token) =>
+        Guard(() => SimulateTransferAsyncCore(model, coefficients, scenario, manualMv, automaticAtSeconds, token));
+
+    private async Task<PiTransferResult> SimulateTransferAsyncCore(IdentificationResult model, PiCoefficients coefficients,
         PiScenario scenario, double manualMv, double automaticAtSeconds, CancellationToken token)
     {
         if (scenario.Disturbance != 0)
@@ -347,7 +403,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return result;
     }
 
-    public async Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(
+    public Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsync(IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token) =>
+        Guard(() => SimulatePiAsyncCore(model, tuning, scenario, token));
+
+    private async Task<(PiSimulationResult Result, string EngineVersion)> SimulatePiAsyncCore(
         IdentificationResult model, PiComparison tuning, PiScenario scenario, CancellationToken token)
     {
         var payload = new
@@ -370,9 +429,13 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return (simulation, version);
     }
 
-    public async Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(
+    public Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsync(IdentificationResult model, PidPrototypeCoefficients coefficients,
+        PiScenario scenario, CancellationToken token, double[]? measurementNoise = null) =>
+        Guard(() => SimulatePidPrototypeAsyncCore(model, coefficients, scenario, token, measurementNoise));
+
+    private async Task<(PidPrototypeResult Result, string EngineVersion)> SimulatePidPrototypeAsyncCore(
         IdentificationResult model, PidPrototypeCoefficients coefficients,
-        PiScenario scenario, CancellationToken token, double[]? measurementNoise = null)
+        PiScenario scenario, CancellationToken token, double[]? measurementNoise)
     {
         if (model.TauSeconds is not > 0)
             throw new InvalidDataException("Le prototype PID requiert un modèle FOPDT.");
@@ -464,7 +527,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return true;
     }
 
-    public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsync(
+    public Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsync(IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token) =>
+        Guard(() => AnalyzeCombinedAsyncCore(model, tuning, scenario, variationPercent, token));
+
+    private async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeCombinedAsyncCore(
         IdentificationResult model, PiComparison tuning, PiScenario scenario,
         double variationPercent, CancellationToken token)
     {
@@ -520,7 +587,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             (m.SettlingSeconds is null || double.IsFinite(m.SettlingSeconds.Value));
     }
 
-    public async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsync(
+    public Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsync(IdentificationResult model, PiComparison tuning, PiScenario scenario,
+        double variationPercent, CancellationToken token) =>
+        Guard(() => AnalyzeRobustnessAsyncCore(model, tuning, scenario, variationPercent, token));
+
+    private async Task<(PiRobustnessResult Result, string EngineVersion)> AnalyzeRobustnessAsyncCore(
         IdentificationResult model, PiComparison tuning, PiScenario scenario,
         double variationPercent, CancellationToken token)
     {
@@ -562,7 +633,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             (m.SettlingSeconds is null || double.IsFinite(m.SettlingSeconds.Value));
     }
 
-    public async Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(
+    public Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsync(IdentificationResult model, OpenLoopScenario scenario, CancellationToken token) =>
+        Guard(() => SimulateOpenLoopAsyncCore(model, scenario, token));
+
+    private async Task<(OpenLoopResult Result, string EngineVersion)> SimulateOpenLoopAsyncCore(
         IdentificationResult model, OpenLoopScenario scenario, CancellationToken token)
     {
         var payload = new
@@ -590,6 +664,22 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             (csv.SuggestedFormat is { } suggestion && suggestion.Decimal is not ("." or ",")))
             throw new InvalidDataException("Résultat CSV incompatible avec le contrat.");
         return csv;
+    }
+
+    /// <summary>
+    /// Contract guard: whatever the engine returns, a malformed reply (missing field, wrong type or shape, absurd value) surfaces as
+    /// InvalidDataException. Exceptions raised by System.Text.Json or by null access are translated; exceptions of our own validation
+    /// (InvalidDataException, CsvInputException, InvalidOperationException from MKR code, cancellation, timeout) pass through unchanged.
+    /// </summary>
+    private static async Task<T> Guard<T>(Func<Task<T>> operation)
+    {
+        try { return await operation().ConfigureAwait(false); }
+        catch (Exception error) when (error is JsonException or KeyNotFoundException or NullReferenceException or InvalidCastException or
+            FormatException or OverflowException ||
+            (error is InvalidOperationException && error.Source == "System.Text.Json"))
+        {
+            throw new InvalidDataException("Réponse du moteur incompatible avec le contrat.", error);
+        }
     }
 
     private async Task<(JsonElement Result, string Version)> CallAsync(

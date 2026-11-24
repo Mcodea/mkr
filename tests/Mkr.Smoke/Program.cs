@@ -726,6 +726,60 @@ try
         await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToPidffAsync(refused, refusedTuning, false, default));
     }
 
+    // Contract hardening: the real engine's reply with one value corrupted (missing, null, wrong type or shape, absurd number).
+    // Every violation must surface as InvalidDataException or a coded CsvInputException, never as another exception type.
+    {
+        var fakes = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "fakes", "mutating_engine.py"));
+        if (!File.Exists(fakes)) fakes = Environment.GetEnvironmentVariable("MKR_FAKE_SCRIPT") ?? fakes;
+        Require(File.Exists(fakes) || Environment.GetEnvironmentVariable("CI") != "true", "In CI the mutating fake engine must be found.");
+        if (File.Exists(fakes))
+        {
+            Environment.SetEnvironmentVariable("MKR_FAKE_ENGINE_DIR", Path.Combine(AppContext.BaseDirectory, "engine"));
+            var mutated = new PythonDiagnostics(interpreter, fakes);
+            var csvBytes = Encoding.UTF8.GetBytes("timestamp;value\n2026-01-01T00:00:00Z;1\n2026-01-01T00:00:01Z;2\n2026-01-01T00:00:02Z;3\n");
+            var calls = new (string Name, Func<Task> Call)[]
+            {
+                ("GetVersion", () => mutated.GetVersionAsync(default)),
+                ("Inspect", () => mutated.InspectAsync(csvBytes, ";", default)),
+                ("Analyze", () => mutated.AnalyzeAsync(csvBytes, ";", new CsvMapping("timestamp", "value", "PV", "bar"), default)),
+                ("Compare", () => mutated.CompareAsync(new(training, columns), new(validation, columns), 0.01, 0.01, 1, 1, default)),
+                ("FindSteps", () => mutated.FindStepsAsync(new(training, columns), 0.01, 0.01, default)),
+                ("CheckDrift", () => mutated.CheckModelDriftAsync(ModelFamily.FOPDT, fit, new(training, columns), 0.01, 0.01, new ComparisonCriteria(1, 1), default)),
+                ("SuggestCriteria", () => mutated.SuggestCriteriaAsync(new(training, columns), new(validation, columns), 0.01, 0.01, default)),
+                ("Identify", () => mutated.IdentifyAsync(ModelFamily.FOPDT, new(training, columns), new(validation, columns), 0.01, 0.01, default)),
+                ("Assess", () => mutated.AssessAsync(ModelFamily.FOPDT, new(training, columns), new(validation, columns), 0.01, 0.01, new ComparisonCriteria(1, 1), default)),
+                ("PreviewTrial", () => mutated.PreviewTrialAsync(new(training, columns), default)),
+                ("SopdtPid", () => mutated.CalculateSopdtPidAsync(second, 2, default)),
+                ("IntegratorPi", () => mutated.CalculateIntegratorPiAsync(-0.3, 2.5, 5, default)),
+                ("Pidff", () => mutated.ConvertToPidffAsync(-1.5, 12.5, 2.0, 0.5, default)),
+                ("Block", () => mutated.ConvertToBlockAsync("PID_INT", new Dictionary<string, object>
+                    { ["kp"] = 2.0, ["tiSeconds"] = 12.5, ["tdSeconds"] = 0.0, ["tsSeconds"] = 0.2, ["pvSpan"] = 200.0, ["mvSpan"] = 100.0 }, default)),
+                ("CalculatePi", () => mutated.CalculatePiAsync(-2, 100, 3, 2, default)),
+                ("Transfer", () => mutated.SimulateTransferAsync(fit, linkedPi.Simc, scenario with { Disturbance = 0 }, 2, 1, default)),
+                ("SimulatePi", () => mutated.SimulatePiAsync(fit, linkedPi, scenario, default)),
+                ("Robustness", () => mutated.AnalyzeRobustnessAsync(fit, linkedPi, scenario, 20, default)),
+                ("Combined", () => mutated.AnalyzeCombinedAsync(fit, linkedPi, scenario, 20, default)),
+                ("PidPrototype", () => mutated.SimulatePidPrototypeAsync(fit, prototypePi, scenario, default)),
+                ("OpenLoop", () => mutated.SimulateOpenLoopAsync(persisted.Result, new OpenLoopScenario(1, 8, 4, 1, -2, 2, 1), default)),
+            };
+            var surprises = new SortedDictionary<string, string>();
+            int violations = 0, harmless = 0;
+            foreach (var (name, call) in calls)
+                for (var seed = 1; seed <= int.Parse(Environment.GetEnvironmentVariable("MKR_FAKE_SEEDS") ?? "8"); seed++)
+                {
+                    Environment.SetEnvironmentVariable("MKR_FAKE_SEED", seed.ToString());
+                    try { await call(); harmless++; }
+                    catch (InvalidDataException) { violations++; }
+                    catch (CsvInputException) { violations++; }
+                    catch (Exception error) { surprises.TryAdd($"{name}", $"{error.GetType().Name} (graine {seed}): {error.Message.Split('\n')[0]}"); }
+                }
+            Environment.SetEnvironmentVariable("MKR_FAKE_SEED", null);
+            Require(surprises.Count == 0, "Contract violations must end as InvalidDataException or CsvInputException. Surprises: " +
+                string.Join(" | ", surprises.Select(kv => kv.Key + " -> " + kv.Value)));
+            Require(violations > calls.Length, $"The corruption is actually exercised ({violations} refused, {harmless} harmless).");
+        }
+    }
+
     // Loop monitoring: a validated FOPDT model against a new open-loop step.
     {
         var criteria = new ComparisonCriteria(0.05, 0.5);
