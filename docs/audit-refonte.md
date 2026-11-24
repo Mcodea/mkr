@@ -63,9 +63,9 @@ Légende : ✔ satisfait (preuve en CI) · ◐ partiel · ✘ absent.
 |---|---|
 | Système graphique commun, thèmes clair/sombre, contraste mesuré | ✔ |
 | Coque : barre supérieure, menu repliable, barre d'état, aide | ✔ (captures CI) |
-| Arborescence projets/études | ✘ |
-| Panneau de propriétés contextuel | ✘ |
-| Graphiques synchronisés, zoom, curseurs, export | ◐ (simulation : zoom, curseur, export ; pas de pistes synchronisées communes) |
+| Arborescence projets/études | ✘ (tableau et sélecteur d'études, pas d'arbre) |
+| Panneau de propriétés contextuel | ◐ (panneau « Valeurs du modèle » et état des étapes ; pas de propriétés éditables) |
+| Graphiques synchronisés, zoom, curseurs, export | ✔ (composant commun `SignalChart` sur tous les écrans ; rendu vu sur 3 écrans, les autres en attente de capture) |
 | Navigation par étapes avec prérequis | ◐ (texte d'accueil seulement) |
 | Aucun chevauchement à 1024×768 | ◐ (captures inspectées partiellement) |
 | DPI / 4K / clavier / lecteur d'écran | ✘ non testé |
@@ -73,8 +73,8 @@ Légende : ✔ satisfait (preuve en CI) · ◐ partiel · ✘ absent.
 ## 3. Références industrielles
 Étudiées par sources publiques seulement : LOOP-PRO TUNER (synthèse fournie, guide V2.8, pages produit — `docs/ui/reference-parcours-industriel.md`). **Non étudiés à ce jour** : Valmet PID Loop Optimizer, MATLAB PID Tuner, System Identification Toolbox, TIA Portal, Control Expert (hors documents de blocs déjà lus). Ce sera fait avant chaque lot concerné, en ne gardant que des principes, jamais d'interface ni de code.
 
-## 4. Avancement calculé
-Comptage sur les 40 lignes des tableaux ci-dessus : ✔ = 17, ◐ = 15, ✘ = 8 → **17/40 exigences pleinement satisfaites (42,5 %)** ; en comptant chaque ◐ pour moitié : **24,5/40 (61 %)**. Ce n'est pas un pourcentage de « qualité industrielle » : aucune exigence n'est qualifiée sur matériel réel (voir maturité).
+## 4. Avancement calculé (mis à jour le 24/11/2026, 23h)
+Comptage sur les 40 lignes : ✔ = 18, ◐ = 15, ✘ = 7 → **18/40 exigences pleinement satisfaites (45 %)** ; en comptant chaque ◐ pour moitié : **25,5/40 (64 %)**. « Satisfaite » signifie implémentée et prouvée par la CI (serveurs de référence, simulations, tests UI) ; la qualification sur automate, bloc ou procédé réels est **exclue** de ce décompte, elle sera faite par l'utilisateur. Ce n'est pas un pourcentage de qualité industrielle.
 
 ## 5. Plan par lots (un lot = spécification → implémentation → tests CI → captures → documentation → commit)
 1. **Lot A — Navigation par étapes réelle** : les 10 étapes dans le menu, avec prérequis calculés à partir de l'état du projet (importés ? modèle validé ?) et message expliquant pourquoi une étape est fermée ; panneau de propriétés contextuel (projet, étude, boucle).
