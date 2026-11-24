@@ -219,6 +219,10 @@
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="IsReadOnly" Value="True"/>
         </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
         <Style TargetType="DataGridRow">
             <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
             <Style.Triggers>
