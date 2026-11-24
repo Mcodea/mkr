@@ -23,6 +23,8 @@ class Step:
     last_time: datetime
     # Sample standard deviation of PV on the pre-step plateau: measured noise, independent of any fit.
     baseline_noise: float = 0.0
+    # Number of pre-step samples that produced `baseline` (its mean has standard error baseline_noise / sqrt(baseline_samples)).
+    baseline_samples: int = 0
 
 
 def number(cell, fmt=None):
@@ -88,7 +90,7 @@ def read_step(source, input_tolerance, output_tolerance):
     if np.any(np.diff(relative) <= 0):
         raise ValueError("fit_time")
     return Step(relative, outputs[i:], baseline, delta, onset - float(times[i - 1]), dates[0], dates[-1],
-                float(np.std(outputs[:i], ddof=1)))
+                float(np.std(outputs[:i], ddof=1)), i)
 
 
 # A residual RMSE below this fraction of the PV magnitude is floating-point round-off of an exact fit,

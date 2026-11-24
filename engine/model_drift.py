@@ -12,7 +12,7 @@ import math
 
 import numpy as np
 
-from fopdt import basis, conditional_errors, diagnostics, delay_warnings, estimate, read_step
+from fopdt import basis, diagnostics, delay_warnings, estimate, read_step
 from validation_gate import reasons
 
 VERSION = "0.2.0"
@@ -50,7 +50,7 @@ def _predict(family, step, model):
     return np.maximum(step.times - model["delaySeconds"], 0)
 
 
-def numerical_errors(step, names, values, response):
+def numerical_errors(step, names, values, response, include_baseline=True):
     """Local standard errors of a least-squares fit from the numerical Jacobian: sqrt(diag(s^2 (J'J)^-1)), s^2 = RSS / (n - p).
 
     `response(values)` is the unit-amplitude response at the step times; the prediction is baseline + gain * amplitude * response.
@@ -84,8 +84,14 @@ def numerical_errors(step, names, values, response):
     if singular[-1] <= 1e-6 * singular[0]:
         return None
     sigma = math.sqrt(float(np.dot(residual, residual)) / (n - p))
-    covariance_scaled = (right.T / singular ** 2) @ right
-    return {name: float(sigma * math.sqrt(covariance_scaled[i, i]) / scales[i]) for i, name in enumerate(names)}
+    gram_inverse = (right.T / singular ** 2) @ right                    # (J'J)^-1 in the scaled parameterisation
+    covariance = sigma ** 2 * gram_inverse
+    if include_baseline and step.baseline_samples > 1:
+        # The baseline is itself a mean of noisy samples: an offset delta ~ N(0, s_b^2) on every observation moves the estimates by
+        # (J'J)^-1 J' 1 delta. Ignoring it understates the error of the gain, which is mostly set by the plateau level.
+        shift = gram_inverse @ ((jacobian / scales).T @ np.ones(n))
+        covariance = covariance + (step.baseline_noise ** 2 / step.baseline_samples) * np.outer(shift, shift)
+    return {name: float(math.sqrt(covariance[i, i]) / scales[i]) for i, name in enumerate(names)}
 
 
 def _refit(family, step):
@@ -93,9 +99,12 @@ def _refit(family, step):
     if family == "FOPDT":
         gain, tau, delay, *_ = estimate(step)
         warnings = list(delay_warnings(delay, step))
-        fit = diagnostics(step, gain, basis(step.times, tau, delay))
-        errors = conditional_errors(step, gain, tau, delay, fit, warnings)
-        return dict(gain=gain, tauSeconds=tau, delaySeconds=delay), errors, warnings
+        fitted = dict(gain=gain, tauSeconds=tau, delaySeconds=delay)
+        lag = diagnostics(step, gain, basis(step.times, tau, delay))["residualLagOne"]
+        if lag is not None and abs(lag) > 0.3:
+            warnings.append("correlated_residuals")
+        errors = numerical_errors(step, ("gain", "tauSeconds", "delaySeconds"), fitted, lambda v: basis(step.times, v[1], v[2]))
+        return fitted, errors, warnings
     if family == "SOPDT":
         from sopdt import estimate as fit_second
         gain, slow, fast, delay, *_ = fit_second(step)

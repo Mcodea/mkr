@@ -154,18 +154,24 @@ class StandardErrorCalibration(unittest.TestCase):
             errors.append(standard)
         return {k: float(np.mean([e[k] for e in errors]) / np.std([f[k] for f in estimates], ddof=1)) for k in estimates[0]}
 
+    def test_first_order_errors_are_of_the_right_order(self):
+        first = lambda t: 2 * (1 - math.exp(-max(t - 5, 0) / 30))
+        for name, ratio in self.calibrate("FOPDT", first, 200).items():
+            with self.subTest(parameter=name):
+                self.assertGreater(ratio, 0.6)          # measured 1.0 to 1.3: slightly conservative, never optimistic by half
+                self.assertLess(ratio, 2.0)
+
     def test_second_order_errors_are_of_the_right_order(self):
         for name, ratio in self.calibrate("SOPDT", second_order(2, 30, 6, 2), 250).items():
             with self.subTest(parameter=name):
-                # The gain error is conditional on the measured initial plateau (as for FOPDT): about half the real spread is expected.
-                self.assertGreater(ratio, 0.3)
-                self.assertLess(ratio, 1.5)
+                self.assertGreater(ratio, 0.6)          # measured 0.87 to 1.41 once the baseline uncertainty is included (gain: 0.44 before)
+                self.assertLess(ratio, 2.0)
 
     def test_integrator_errors_are_of_the_right_order(self):
         for name, ratio in self.calibrate("Integrateur", integrating(0.05, 3), 120).items():
             with self.subTest(parameter=name):
-                self.assertGreater(ratio, 0.3)
-                self.assertLess(ratio, 1.5)
+                self.assertGreater(ratio, 0.6)
+                self.assertLess(ratio, 2.0)
 
 
 if __name__ == "__main__":
