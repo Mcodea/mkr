@@ -224,20 +224,23 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("", "Contrôle de dérive", inIdentification, OpenIdentification, open));
                 break;
             case 5:
-                RibbonCommands.Children.Add(Command("", "Choisir IMC ou SIMC", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE9F5", "Choisir IMC ou SIMC", inIdentification, OpenIdentification, open));
                 break;
             case 6:
-                RibbonCommands.Children.Add(Command("", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
-                RibbonCommands.Children.Add(Command("", "Valeurs du bloc", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE8F1", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("\uE8C8", "Valeurs du bloc", "Valeurs documentaires du bloc choisi, toujours non qualifiées. Demande un réglage PI enregistré.", () => OpenWithTuning(tuning => new BlockTargetWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 break;
             case 7:
-                RibbonCommands.Children.Add(Command("", "Calculer les réglages", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE8EF", "Calculer les réglages", inIdentification, OpenIdentification, open));
+                if (selected is { Family: ModelFamily.Integrateur })
+                    RibbonCommands.Children.Add(Command("\uE9D2", "Réglage intégrateur", "Règle SIMC des procédés intégrateurs", () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
                 break;
             case 8:
-                RibbonCommands.Children.Add(Command("", "Simuler", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE768", "Simuler le réglage", "Simulation en boucle fermée du dernier réglage PI enregistré de l'étude affichée", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
+                RibbonCommands.Children.Add(Command("\uE916", "Boucle ouverte", "Réponse du modèle à un échelon, sans régulateur", () => OpenWindow(() => new OpenLoopWindow(_workspace!, selected!)), open && selected is not null));
                 break;
             case 9:
-                RibbonCommands.Children.Add(Command("", "Fiche d'étude PDF", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE749", "Fiche d'étude PDF", "Depuis la fenêtre de simulation : « Fiche de mise au point (PDF) »", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 break;
         }
         // chart commands are always at hand, whichever step is shown
@@ -247,6 +250,31 @@ public partial class WindowView : Window
         RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
         RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+    }
+
+    private void OpenWindow(Func<Window> create)
+    {
+        if (_workspace is null) return;
+        try { create().ShowDialogOwned(this); }
+        catch (Exception error)
+        {
+            Trace.TraceError("window.open {0}", error.GetType().Name);
+            MessageBox.Show(this, "Impossible d’ouvrir cette fenêtre. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        LoadStudy();
+    }
+
+    /// <summary>Opens a window that needs the last saved PI tuning of the displayed study, or says what to do first.</summary>
+    private void OpenWithTuning(Func<PiStudy, Window> create)
+    {
+        if (_workspace is null || (StudyGrid.SelectedItem as StudyRow)?.Study is not { } study) return;
+        var tuning = _workspace.PiStudies(study.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
+        if (tuning is null)
+        {
+            RibbonNote.Text = "Aucun réglage PI enregistré pour cette étude. Calculez-en un à l'étape 8 (Calculer les réglages).";
+            return;
+        }
+        OpenWindow(() => create(tuning));
     }
 
     private void OpenAudit()
@@ -379,5 +407,15 @@ public partial class WindowView : Window
         try { Chart.ExportCsv(dialog.FileName); CursorText.Text = "Données exportées."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { CursorText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+    }
+}
+
+internal static class WindowExtensions
+{
+    /// <summary>Shows a window as a modal dialog of <paramref name="owner"/>.</summary>
+    public static void ShowDialogOwned(this Window window, Window owner)
+    {
+        window.Owner = owner;
+        window.ShowDialog();
     }
 }
