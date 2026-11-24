@@ -99,16 +99,18 @@ function Press-Retry($parent, $caption) {
     }
     Press $parent $caption
 }
-function Close-Others($rootElement) {
+function Close-Others($rootElement, $mainWindow) {
     # Closes every MKR window except the main one (dialogs left open by an earlier step), innermost first, several passes.
+    # Owned dialogs appear under their owner in the UI Automation tree, not under the desktop: look in both places.
     $windowType = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Window)
-    for ($pass = 0; $pass -lt 5; $pass++) {
-        $others = @($rootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $windowType) | Where-Object {
-            $_.Current.Name -like 'MKR — *' -and $_.Current.Name -ne 'MKR — Espace projets' })
+    for ($pass = 0; $pass -lt 6; $pass++) {
+        $found = @($rootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $windowType)) +
+                 @($mainWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants, $windowType))
+        $others = @($found | Where-Object { $_.Current.Name -like 'MKR — *' -and $_.Current.Name -ne 'MKR — Espace projets' })
         if ($others.Count -eq 0) { return }
         foreach ($other in $others) {
             try { $other.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch { }
-            Start-Sleep -Milliseconds 500
+            Start-Sleep -Milliseconds 600
         }
     }
 }
@@ -193,7 +195,7 @@ try {
     }
     Step '10-espace-etude' {
         # a dialog left open by an earlier step (the review window) must not hide the main window
-        Close-Others $root
+        Close-Others $root $main
         Press-Retry $main "Ouvrir l'espace d'étude"
         $null = Find $main $id 'StudyGrid'
         Start-Sleep -Milliseconds 1200
