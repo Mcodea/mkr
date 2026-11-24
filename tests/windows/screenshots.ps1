@@ -152,11 +152,17 @@ try {
         Close-Window $values
         Close-Window $tuning
     }
+    Step '09-acquisition' {
+        Press-Retry $project 'Acquisition automate…'
+        $acq = Find $root $name 'MKR — Acquisition en lecture seule'
+        Capture $acq '09-acquisition'
+        Close-Window $acq
+    }
     Step '08-audit' {
         Close-Window $ident
         Press-Retry $project "Journal d'audit…"
         $audit = Find $root $name "MKR — Journal d'audit"
-        $null = Wait-Value $audit 'Entries' '*review.recorded*'
+        Start-Sleep -Milliseconds 800
         Capture $audit '08-journal-audit'
         Close-Window $audit
     }

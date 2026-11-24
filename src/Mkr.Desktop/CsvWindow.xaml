@@ -33,14 +33,9 @@
         <TabControl Grid.Row="1" Background="{StaticResource MkrSurface}"
                     BorderBrush="{StaticResource MkrBorder}" Padding="2">
             <TabItem Header="_Données CSV">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled" MaxHeight="310">
+                <!-- One scrolling column: nothing can overlap, whatever the window height (the former fixed rows overlapped at 768 px). -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="14">
+                    <StackPanel>
                         <StackPanel x:Name="Controls">
                             <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
                                     Background="{StaticResource MkrCanvas}" CornerRadius="6"
@@ -134,8 +129,7 @@
                                 </StackPanel>
                             </Border>
                         </StackPanel>
-                    </ScrollViewer>
-                    <Border Grid.Row="1" BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
+                    <Border BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
                             CornerRadius="6" Background="{StaticResource MkrSurface}" Padding="12">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -148,25 +142,23 @@
                                            Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
-                            <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True"
+                            <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" Height="260"
                                       CanUserAddRows="False" AutoGenerateColumns="False"
                                       AutomationProperties.Name="Aperçu des données CSV"/>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="2" Margin="0,12,0,0" Padding="12"
+                    <Border Margin="0,12,0,0" Padding="12"
                             BorderBrush="{StaticResource MkrBorder}" BorderThickness="1"
-                            Background="{StaticResource MkrAccentPale}" CornerRadius="6"
-                            MaxHeight="130">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock Text="Qualité et provenance" FontSize="13"
-                                           FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                <TextBlock x:Name="Report" TextWrapping="Wrap"
-                                           Foreground="{StaticResource MkrText}"/>
-                            </StackPanel>
-                        </ScrollViewer>
+                            Background="{StaticResource MkrAccentPale}" CornerRadius="6">
+                        <StackPanel>
+                            <TextBlock Text="Qualité et provenance" FontSize="13"
+                                       FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock x:Name="Report" TextWrapping="Wrap"
+                                       Foreground="{StaticResource MkrText}"/>
+                        </StackPanel>
                     </Border>
-                </Grid>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem Header="_Procédé">
                 <Grid Margin="18">

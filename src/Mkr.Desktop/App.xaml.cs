@@ -7,9 +7,27 @@ namespace Mkr.Desktop;
 
 public partial class App : Application
 {
+    private static void FitToScreen(object sender, RoutedEventArgs args)
+    {
+        if (sender is not Window window || window.WindowState != WindowState.Normal || !window.IsLoaded) return;
+        var area = SystemParameters.WorkArea;
+        window.MinWidth = Math.Min(window.MinWidth, area.Width);
+        window.MinHeight = Math.Min(window.MinHeight, area.Height);
+        window.MaxWidth = area.Width;
+        window.MaxHeight = area.Height;
+        if (window.Width > area.Width) window.Width = area.Width;
+        if (window.Height > area.Height) window.Height = area.Height;
+        var width = Math.Min(window.ActualWidth, area.Width);
+        var height = Math.Min(window.ActualHeight, area.Height);
+        if (!double.IsNaN(window.Left)) window.Left = Math.Max(area.Left, Math.Min(window.Left, area.Right - width));
+        if (!double.IsNaN(window.Top)) window.Top = Math.Max(area.Top, Math.Min(window.Top, area.Bottom - height));
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // Every window fits the usable screen area (1024x768 laptops, docked taskbars) and stays fully on screen.
+        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(FitToScreen));
         try
         {
             var directory = Environment.GetEnvironmentVariable("MKR_DATA_DIRECTORY") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MKR");

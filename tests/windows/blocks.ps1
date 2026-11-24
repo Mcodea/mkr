@@ -65,6 +65,13 @@ function Texts($window) {
     # A native message box exposes its text under a control type that varies with the Windows build: read every descendant name.
     return (@($window.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join "`n")
 }
+function Audit-Rows($window, $filter) {
+    # The audit grid is virtualised: filter first, then read the (few) remaining rows as text.
+    Fill $window 'Filter' $filter
+    Start-Sleep -Milliseconds 500
+    $grid = Find $window $id 'Entries'
+    return (@($grid.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join "`n")
+}
 function Close-Window($window) { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
 
 $start = New-Object System.Diagnostics.ProcessStartInfo
@@ -171,11 +178,13 @@ try {
     Close-Window $ident
     Press $project "Journal d'audit…"
     $audit = Find $root $name "MKR — Journal d'audit"
-    $entries = Wait-Value $audit 'Entries' '*block.values.shown*'
     foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked', 'review.recorded')) {
-        if (!$entries.Contains($part)) { throw "Action absente du journal : $part. $entries" }
+        $rows = Audit-Rows $audit $part
+        if (!$rows.Contains($part)) { throw "Action absente du journal : $part. $rows" }
     }
-    if (!$entries.Contains('NON QUALIFIÉES')) { throw "Une valeur de bloc affichée doit être tracée comme non qualifiée. $entries" }
+    $rows = Audit-Rows $audit 'block.values.shown'
+    if (!$rows.Contains('NON QUALIFIÉES')) { throw "Une valeur de bloc affichée doit être tracée comme non qualifiée. $rows" }
+    $null = Audit-Rows $audit ''
     Press $audit "Vérifier l'intégrité"
     $null = Wait-Name $audit 'VerifyStatus' 'Chaîne intacte*'
     Close-Window $audit

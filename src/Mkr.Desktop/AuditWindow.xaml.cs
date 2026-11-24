@@ -1,5 +1,6 @@
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Mkr.Desktop;
 
@@ -15,13 +16,37 @@ public partial class AuditWindow : Window
         Load();
     }
 
+    /// <summary>One displayed row. ToString carries every field so that assistive technology (and UI tests) can read a whole row.</summary>
+    private sealed record Row(long Sequence, string At, string Actor, string Action, string Subject, string Detail)
+    {
+        public bool Matches(string needle) =>
+            Actor.Contains(needle, StringComparison.OrdinalIgnoreCase) || Action.Contains(needle, StringComparison.OrdinalIgnoreCase) ||
+            Subject.Contains(needle, StringComparison.OrdinalIgnoreCase) || Detail.Contains(needle, StringComparison.OrdinalIgnoreCase);
+
+        public override string ToString() => $"{Sequence} {At} {Actor} {Action} {Subject} {Detail}";
+    }
+
+    private List<Row> _rows = [];
+
     private void Load()
     {
-        var text = new StringBuilder();
-        foreach (var entry in _workspace.AuditEntries())
-            text.AppendLine($"{entry.Sequence,5}  {entry.At.UtcDateTime:yyyy-MM-dd HH:mm:ss}Z  {entry.Actor}  {entry.Action}  {entry.Subject}  {entry.Detail}");
-        Entries.Text = text.Length == 0 ? "Aucune entrée pour ce projet." : text.ToString();
+        _rows = _workspace.AuditEntries()
+            .Select(e => new Row(e.Sequence, e.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) + "Z",
+                e.Actor, e.Action, e.Subject, e.Detail))
+            .ToList();
+        ApplyFilter();
     }
+
+    private void ApplyFilter()
+    {
+        var needle = Filter.Text.Trim();
+        var shown = needle.Length == 0 ? _rows : _rows.Where(r => r.Matches(needle)).ToList();
+        Entries.ItemsSource = shown;
+        Count.Text = _rows.Count == 0 ? "Aucune entrée pour ce projet."
+            : needle.Length == 0 ? $"{_rows.Count} entrée(s)" : $"{shown.Count} entrée(s) sur {_rows.Count}";
+    }
+
+    private void FilterChanged(object sender, TextChangedEventArgs args) => ApplyFilter();
 
     private void Export(object sender, RoutedEventArgs args)
     {

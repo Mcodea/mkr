@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Mkr.Core;
 
 namespace Mkr.Desktop;
@@ -343,6 +344,7 @@ public partial class IdentificationWindow : Window
         if (_shown is not { } study)
         {
             FitReport.Text = PlotLegend.Text = "";
+            VerdictCard.Visibility = Visibility.Collapsed;
             Plot.Children.Clear();
             return;
         }
@@ -399,7 +401,50 @@ public partial class IdentificationWindow : Window
                 $"Seuils : RMSE ≤ {saved.Criteria.MaximumRmse:G5} {study.PvUnit} · |r₁| ≤ {saved.Criteria.MaximumResidualLagOne:G5}\n" +
                 string.Join(Environment.NewLine, CandidateLines(saved, study.PvUnit));
         }
+        UpdateVerdict(study, gainUnit);
         DrawPlot();
+    }
+
+    private static SolidColorBrush Tone(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
+
+    private static Border Tile(string label, string value)
+    {
+        var tile = new Border
+        {
+            Background = Brushes.White, BorderBrush = Tone("#D8E0EA"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12, 7, 12, 7), Margin = new Thickness(0, 0, 8, 6), MinWidth = 96
+        };
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = label, FontSize = 11, Foreground = Tone("#546579") });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 16, FontWeight = FontWeights.SemiBold });
+        tile.Child = stack;
+        return tile;
+    }
+
+    /// <summary>At-a-glance verdict: the decision of the validation gate in words AND colour (never colour alone), with the model's key figures.</summary>
+    private void UpdateVerdict(IdentificationStudy study, string gainUnit)
+    {
+        var result = study.Result;
+        (string title, string detail, string badge, string fill, string line) = study.Assessment switch
+        {
+            { Accepted: true } => ("MODÈLE ACCEPTÉ", "Validé sur l’essai indépendant : le réglage et la simulation sont disponibles.", "#1B7F4B", "#EAF6EF", "#9FD3B5"),
+            { } refused => ("MODÈLE REFUSÉ", "Motifs : " + string.Join(", ", refused.Reasons.Select(ReasonText)) + ". Aucun réglage n’est proposé.", "#B3261E", "#FCEDEB", "#E5A9A4"),
+            _ => ("NON DÉCIDÉ", "Aucune décision de validation enregistrée : refaites l’estimation avec des critères.", "#8A5A00", "#FFF4DB", "#E8CB86")
+        };
+        VerdictCard.Background = Tone(fill);
+        VerdictCard.BorderBrush = Tone(line);
+        VerdictBadge.Background = Tone(badge);
+        VerdictTitle.Text = title;
+        VerdictDetail.Text = detail;
+        System.Windows.Automation.AutomationProperties.SetName(VerdictCard, title + ". " + detail);
+        VerdictMetrics.Children.Clear();
+        VerdictMetrics.Children.Add(Tile(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain K", $"{result.Gain:G4} {gainUnit}"));
+        if (result.TauSeconds is { } tau) VerdictMetrics.Children.Add(Tile(result.SecondTauSeconds is null ? "Constante τ" : "Constante lente τ₁", $"{tau:G4} s"));
+        if (result.SecondTauSeconds is { } fast) VerdictMetrics.Children.Add(Tile("Constante rapide τ₂", $"{fast:G4} s"));
+        VerdictMetrics.Children.Add(Tile("Retard θ", $"{result.DelaySeconds:G4} s"));
+        if (study.Assessment is { } decision && result.Validation is { } validation)
+            VerdictMetrics.Children.Add(Tile("Erreur de validation", $"{validation.Rmse:G3} / {decision.Criteria.MaximumRmse:G3} {study.PvUnit}"));
+        VerdictCard.Visibility = Visibility.Visible;
     }
 
     private void ChangeResponseProfile(object sender, SelectionChangedEventArgs args) => UpdateResponseTarget();
