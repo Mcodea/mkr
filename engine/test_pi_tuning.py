@@ -7,9 +7,25 @@ from pi_tuning import calculate
 class PiTuningTests(unittest.TestCase):
     def test_signed_gain_and_simc_integral_limit(self):
         report = calculate(dict(gain=-2, tauSeconds=100, delaySeconds=3, responseSeconds=2))
-        self.assertEqual(report["imc"], dict(kp=-10, tiSeconds=100, parallelKi=-0.1))
-        self.assertEqual(report["simc"], dict(kp=-10, tiSeconds=20, parallelKi=-0.5))
+        coefficients = lambda entry: {key: entry[key] for key in ("kp", "tiSeconds", "parallelKi")}
+        self.assertEqual(coefficients(report["imc"]), dict(kp=-10, tiSeconds=100, parallelKi=-0.1))
+        self.assertEqual(coefficients(report["simc"]), dict(kp=-10, tiSeconds=20, parallelKi=-0.5))
         self.assertIn("tight_response", report["warnings"])
+        # The sign of K does not change the loop: |Kp K| and the margins are those of the positive-gain case.
+        positive = calculate(dict(gain=2, tauSeconds=100, delaySeconds=3, responseSeconds=2))
+        self.assertEqual(report["simc"]["margins"], positive["simc"]["margins"])
+
+    def test_every_tuning_carries_its_nominal_margins(self):
+        result = calculate(dict(gain=1.0, tauSeconds=5.0, delaySeconds=1.0, responseSeconds=1.0))
+        for method in ("imc", "simc"):
+            margins = result[method]["margins"]
+            self.assertGreater(margins["phaseMarginDegrees"], 30)
+            self.assertGreater(margins["gainMargin"], 1.5)
+            self.assertGreater(margins["peakSensitivity"], 1.0)
+            self.assertEqual(margins["warnings"], [])
+        # A tight target on a long delay is flagged, never hidden (Skogestad: tau_c < theta is aggressive).
+        tight = calculate(dict(gain=1.0, tauSeconds=5.0, delaySeconds=2.0, responseSeconds=0.2))["simc"]["margins"]
+        self.assertTrue({"low_phase_margin", "low_gain_margin", "high_sensitivity"} & set(tight["warnings"]))
 
     def test_slow_target_matches_imc_and_ideal_no_delay_dynamics(self):
         result = calculate(dict(gain=2, tauSeconds=5, delaySeconds=0, responseSeconds=7))

@@ -1,6 +1,35 @@
 namespace Mkr.Core;
 
-public sealed record PiCoefficients(double Kp, double TiSeconds, double ParallelKi);
+/// <summary>
+/// Margins of the NOMINAL loop closed by a tuning on the identified model (audit NC-17). They bound the
+/// effect of model error only if read with the sensitivity analysis; they guarantee nothing for the real process.
+/// </summary>
+public sealed record LoopMargins(string AlgorithmVersion, double? GainCrossoverRadPerSecond, double? PhaseMarginDegrees,
+    double? DelayMarginSeconds, double? PhaseCrossoverRadPerSecond, double? GainMargin, double? GainMarginDb,
+    double PeakSensitivity, double PeakSensitivityRadPerSecond, string[] Warnings)
+{
+    public string Describe()
+    {
+        string Number(double? value, string unit, string format = "G4") =>
+            value is { } v ? v.ToString(format, System.Globalization.CultureInfo.CurrentCulture) + unit : "—";
+        var text = $"marge de phase {Number(PhaseMarginDegrees, "°", "F1")} · marge de gain " +
+            (GainMargin is null ? "infinie" : $"{Number(GainMargin, "")} ({Number(GainMarginDb, " dB", "F1")})") +
+            $" · marge de retard {Number(DelayMarginSeconds, " s")} · pic de sensibilité Ms {PeakSensitivity:G3}";
+        var notes = Warnings.Select(code => code switch
+        {
+            "nominal_unstable" => "BOUCLE NOMINALE INSTABLE",
+            "low_phase_margin" => "marge de phase faible (< 30°)",
+            "low_gain_margin" => "marge de gain faible (< 2)",
+            "high_sensitivity" => "sensibilité élevée (Ms > 2)",
+            "multiple_gain_crossovers" => "plusieurs passages à 0 dB : lire la marge minimale",
+            "no_gain_crossover" => "pas de passage à 0 dB : boucle très peu active",
+            _ => code
+        }).ToArray();
+        return notes.Length == 0 ? text : text + " · " + string.Join(", ", notes);
+    }
+}
+
+public sealed record PiCoefficients(double Kp, double TiSeconds, double ParallelKi, LoopMargins? Margins = null);
 public sealed record PiComparison(string AlgorithmVersion, double ResponseSeconds, string[] Warnings,
     PiCoefficients Imc, PiCoefficients Simc);
 
@@ -16,7 +45,7 @@ public sealed record PiTransferResult(string AlgorithmVersion, string[] Warnings
 public sealed record SeriesPid(double Kc, double TiSeconds, double TdSeconds);
 public sealed record IdealPid(double Kp, double TiSeconds, double TdSeconds);
 public sealed record SopdtPid(string AlgorithmVersion, string Method, string ControllerForm, string TimeUnit,
-    SeriesPid Series, IdealPid Ideal, string[] Warnings);
+    SeriesPid Series, IdealPid Ideal, string[] Warnings, LoopMargins? Margins = null);
 
 public interface IPiEngine
 {

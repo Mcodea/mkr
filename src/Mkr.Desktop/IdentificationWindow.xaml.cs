@@ -455,6 +455,7 @@ public partial class IdentificationWindow : Window
             SopdtReport.Text = $"Cible {seconds:G5} s · étude {model.Id.ToString()[..8]} · algorithme {pid.AlgorithmVersion}\n" +
                 $"Forme série : Kc {pid.Series.Kc:G6} {unit}, Ti {pid.Series.TiSeconds:G6} s, Td {pid.Series.TdSeconds:G6} s\n" +
                 $"Forme idéale : Kp {pid.Ideal.Kp:G6} {unit}, Ti {pid.Ideal.TiSeconds:G6} s, Td {pid.Ideal.TdSeconds:G6} s\n" +
+                (pid.Margins is { } margins ? $"Marges nominales : {margins.Describe()}\n" : "Marges nominales non calculées.\n") +
                 "Calcul continu exploratoire. Filtre dérivé à définir, limites de l’actionneur et équivalence constructeur à vérifier.";
             if (pid.Warnings.Contains("tight_response"))
                 SopdtReport.Text += "\nLa cible demandée est plus courte que le retard du procédé.";
@@ -518,12 +519,13 @@ public partial class IdentificationWindow : Window
         var result = pi.Result;
         var ratio = $"{model.MvUnit}/{model.PvUnit}";
         string Format(PiCoefficients settings) =>
-            $"Kp = {settings.Kp:G5} {ratio}, Ti = {settings.TiSeconds:G5} s, Ki parallèle = {settings.ParallelKi:G5} {ratio}/s";
+            $"Kp = {settings.Kp:G5} {ratio}, Ti = {settings.TiSeconds:G5} s, Ki parallèle = {settings.ParallelKi:G5} {ratio}/s\n    " +
+            (settings.Margins is { } margins ? "Marges nominales : " + margins.Describe() : "Marges nominales non calculées (réglage enregistré avant leur introduction).");
         var tight = result.Warnings.Contains("tight_response")
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
         PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
             $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
-            "Forme idéale continue, e = SP − PV. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
+            "Forme idéale continue, e = SP − PV. Marges calculées sur le modèle nominal seul : elles ne remplacent pas l’analyse de sensibilité. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
 
     private static string FormatWindow(StepWindow? window) => window is { } w

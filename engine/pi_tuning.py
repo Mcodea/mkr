@@ -1,6 +1,8 @@
 """Theoretical PI settings for FOPDT models, per MKR-SPEC-001 §8."""
 import math
 
+from stability_margins import analyze
+
 
 def calculate(payload):
     if payload.keys() != {"gain", "tauSeconds", "delaySeconds", "responseSeconds"}:
@@ -20,6 +22,14 @@ def calculate(payload):
     warnings = ["exploratory_model", "actuator_limits_unassessed"]
     if response < delay:
         warnings.append("tight_response")
-    return dict(algorithmVersion="1.0.0", responseSeconds=response, warnings=warnings,
-                imc=dict(kp=kp, tiSeconds=tau, parallelKi=kp / tau),
-                simc=dict(kp=kp, tiSeconds=ti_simc, parallelKi=kp / ti_simc))
+
+    def with_margins(ti):
+        # Nominal-model margins of the loop this tuning closes on the identified FOPDT (audit NC-17).
+        try:
+            return analyze(gain, [tau], delay, kp, ti, 0.0)
+        except ValueError:
+            return None
+
+    return dict(algorithmVersion="1.1.0", responseSeconds=response, warnings=warnings,
+                imc=dict(kp=kp, tiSeconds=tau, parallelKi=kp / tau, margins=with_margins(tau)),
+                simc=dict(kp=kp, tiSeconds=ti_simc, parallelKi=kp / ti_simc, margins=with_margins(ti_simc)))

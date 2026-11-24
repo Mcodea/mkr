@@ -42,6 +42,7 @@ Dans *Identification*, choisissez l'enregistrement et ses colonnes, renseignez l
 ## 5. Régler et simuler
 
 - **Réglages PI** (Lambda et SIMC) sur FOPDT, **PID SIMC** sur SOPDT. La cible rapide proposée (τc = retard) utilise la borne prudente du retard. Choisissez une cible plus lente si l'effort de commande ou la robustesse l'exige.
+- **Lisez les marges** affichées avec chaque réglage : marge de phase, marge de gain, marge de retard et Ms. Les avertissements apparaissent en dessous de 30° de phase, de 2 de gain, ou au-dessus de 2 de Ms. Une cible plus rapide que le retard les dégrade vite. Ce sont des repères, pas des seuils d'acceptation.
 - **Simulez avant tout** : saturation, vitesse de MV, perturbation, bruit de mesure, passage manuel → automatique, sensibilité aux erreurs de modèle (±gain, ±τ, ±θ).
 - Un meilleur indicateur en simulation n'est **pas** une garantie de stabilité ni de compatibilité avec le bloc de l'automate.
 
@@ -57,5 +58,5 @@ MKR calcule des coefficients **génériques** (forme idéale, e = SP − PV, uni
 - **Identification en boucle fermée** et à partir de données d'exploitation « sales » : un régulateur actif masque le procédé.
 - **Lecture du mode** (manuel ou automatique) et de la consigne de l'automate pour contrôler qu'un essai est bien en boucle ouverte.
 - **Procédés intégrateurs** avec un régulateur : l'identification intégrateur existe, mais le réglage PI/PID n'est calculé que pour le premier et le second ordre.
-- **Marges de stabilité** calculées (marges de gain et de phase, pic de sensibilité) : la robustesse actuelle est un balayage de paramètres, sans garantie de stabilité.
+- **Garantie de stabilité sur le procédé réel** : MKR calcule les marges de gain, de phase, de retard et le pic de sensibilité Ms du modèle **nominal**, avec leurs avertissements, et fait varier gain, τ et θ dans l'analyse de sensibilité. Ni l'un ni l'autre ne garantit la stabilité du procédé réel.
 - **Conversion qualifiée** vers PIDFF, PIDINT et PID_Compact.

@@ -32,3 +32,32 @@ Une cible plus longue peut être justifiée par des contraintes de robustesse ou
 Les archives 2 et 4 du pilote d’osmose inverse comprennent des acquisitions en boucle ouverte. Dans l’archive 2, le protocole prévoit des commandes sinusoïdales sur une ou deux pompes ou une commande constante. Dans l’archive 4, les neuf essais en boucle ouverte excitent simultanément les deux pompes. Le dossier « Set Point Step Change Experiment » contient bien des échelons, mais les régulateurs de débit restent actifs et les changements portent sur les consignes. Ces protocoles ne fournissent pas la paire d’échelons de commande en boucle ouverte requise pour valider ici le modèle pompe–procédé. Les mesures ne constituent donc pas une preuve de précision du réglage PI proposé par MKR. [Villez et al., DOI 10.7481/1963162](https://doi.org/10.7481/1963162)
 
 La vérification « Inventaire des essais NAWI » contrôle les empreintes SHA-256 des archives et affiche leurs notices expérimentales. Ce contrôle documentaire ne calcule aucun paramètre. [Inventaire des fichiers et protocoles](https://github.com/Mcodea/mkr/actions/runs/45059205381)
+
+## Marges de stabilité du modèle nominal (audit NC-17)
+
+Chaque réglage (IMC/Lambda, SIMC, et le PID SIMC du second ordre) est livré avec les marges de la boucle ouverte nominale L(s) = C(s) G(s), erreur vers PV, où G est le modèle identifié (retard exact, sans approximation de Padé) et C la forme idéale. Le calcul est dans `engine/stability_margins.py`.
+
+| Grandeur | Définition |
+|---|---|
+| Marge de phase | 180° + phase de L à la pulsation où \|L\| = 1 (la plus faible si elle est multiple) |
+| Marge de gain | 1 / \|L\| à la pulsation où la phase vaut −180° (la plus faible si elle est multiple) |
+| Marge de retard | marge de phase en radians divisée par la pulsation de passage à 0 dB |
+| Pic de sensibilité Ms | maximum de \|1 / (1 + L)\| sur toutes les fréquences |
+
+**Avertissements.** Ils suivent l'usage courant (Åström et Murray, *Feedback Systems*, ch. 12 ; Skogestad et Postlethwaite, *Multivariable Feedback Control*, ch. 2) et ne sont jamais des critères d'acceptation :
+- marge de phase inférieure à 30° ;
+- marge de gain inférieure à 2 ;
+- Ms supérieur à 2 ;
+- boucle nominale instable ;
+- passages à 0 dB multiples ;
+- absence de passage à 0 dB.
+
+**Limites.**
+- Les marges décrivent le **modèle nominal seul**. Elles ne bornent pas l'écart entre le modèle et le procédé réel : lisez-les avec l'analyse de sensibilité, qui fait varier gain, constante de temps et retard.
+- Ni saturation, ni limitation de vitesse, ni filtre de dérivée du bloc réel ne sont modélisés.
+- Les critères « phase > 0 et gain > 1 » supposent une boucle de type usuel ; un cas à plusieurs passages est signalé.
+
+**Vérification.**
+- *Formes fermées :* P sur premier ordre avec retard (ωc = √(k²−1)/τ, marge de phase π − ωcθ − arctan(ωcτ), marge de gain par bissection indépendante) ; PI avec Ti = τ ramené à L = k e^(−sθ)/s (ωc = k, marge de phase 90° − kθ, marge de gain π/(2kθ)) ; Lambda sans retard (90°, Ms = 1) ; PID série annulant les deux pôles d'un SOPDT.
+- *Recoupement entre deux chemins de calcul :* les marges du PID SIMC sur SOPDT sont égales à celles du PI SIMC sur le premier ordre dont le pôle rapide est annulé.
+- *Oracle dans le domaine temporel, indépendant :* en multipliant le gain du procédé par 0,9 fois la marge de gain, la boucle échantillonnée converge. Par 1,1 fois la marge, elle diverge.

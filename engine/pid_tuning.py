@@ -2,6 +2,7 @@
 import math
 
 from pi_tuning import calculate as calculate_pi
+from stability_margins import analyze
 
 
 def calculate(payload):
@@ -20,7 +21,12 @@ def calculate(payload):
     td = fast * (integral / ti)
     if not all(math.isfinite(v) and v != 0 for v in (kp, ti, td)):
         raise ValueError("pid_range")
-    return dict(algorithmVersion="1.0.0", method="SIMC_SOPDT", timeUnit="s",
+    try:
+        # Unfiltered ideal PID on the identified SOPDT: the nominal loop this tuning would close.
+        margins = analyze(parameters["gain"], [parameters["tauSeconds"], fast], parameters["delaySeconds"], kp, ti, td, 0.0)
+    except ValueError:
+        margins = None
+    return dict(algorithmVersion="1.1.0", method="SIMC_SOPDT", timeUnit="s", margins=margins,
                 controllerForm="continuous_ideal_unfiltered_error",
                 series=dict(kc=kc, tiSeconds=integral, tdSeconds=fast),
                 ideal=dict(kp=kp, tiSeconds=ti, tdSeconds=td),

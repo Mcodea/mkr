@@ -279,8 +279,18 @@ try
         Math.Abs(theoreticalPid.Ideal.TiSeconds - theoreticalPid.Series.TiSeconds - theoreticalPid.Series.TdSeconds) < 1e-10,
         "SOPDT PID retains the fitted fast pole and the series-to-ideal integral time.");
     var (pi, _) = await engine.CalculatePiAsync(-2, 100, 3, 2, default);
-    Require(pi.Imc == new PiCoefficients(-10, 100, -0.1) && pi.Simc == new PiCoefficients(-10, 20, -0.5) &&
+    Require((pi.Imc with { Margins = null }) == new PiCoefficients(-10, 100, -0.1) &&
+        (pi.Simc with { Margins = null }) == new PiCoefficients(-10, 20, -0.5) &&
         pi.Warnings.Contains("tight_response"), "PI settings match the signed analytical case.");
+    // NC-17: the margins of the nominal loop travel with each tuning and with the SOPDT PID.
+    Require(pi.Simc.Margins is { PhaseMarginDegrees: > 0, GainMargin: > 1, PeakSensitivity: >= 1 } simcMargins &&
+        pi.Imc.Margins is { PhaseMarginDegrees: > 0 } && simcMargins.Describe().Contains("marge de phase"),
+        "Nominal margins are reported for both PI tunings.");
+    Require(theoreticalPid.Margins is { PhaseMarginDegrees: > 0, GainMargin: > 1 }, "Nominal margins are reported for the SOPDT PID.");
+    var (aggressive, _) = await engine.CalculatePiAsync(1, 5, 2, 0.2, default);
+    // Phase margin 37.9° passes the 30° guidance, but the gain margin 1.73 and Ms 2.68 do not.
+    Require(aggressive.Simc.Margins!.Warnings.SequenceEqual(new[] { "low_gain_margin", "high_sensitivity" }) &&
+        aggressive.Simc.Margins.Describe().Contains("sensibilité élevée"), "A tight target on a long delay is flagged, not hidden.");
     var (linkedPi, piVersion) = await engine.CalculatePiAsync(fit.Gain, fit.TauSeconds!.Value, fit.DelaySeconds, 2, default);
     var piStudy = new PiStudy(Guid.NewGuid(), study.Id, DateTimeOffset.UtcNow, piVersion, linkedPi);
     restored.SavePi(project.Id, piStudy);

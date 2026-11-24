@@ -91,6 +91,9 @@ public static class StudySheet
             ("IMC / Lambda", pi.Result.Imc, sim.Result.Imc), ("SIMC", pi.Result.Simc, sim.Result.Simc) })
         {
             Line($"{label} · Kp {N(coefficients.Kp)} {model.MvUnit}/{model.PvUnit} · Ti {N(coefficients.TiSeconds)} s");
+            Line(coefficients.Margins is { } margins
+                ? "Marges nominales : " + margins.Describe()
+                : "Marges nominales non calculées (réglage antérieur à leur introduction).");
             Line($"IAE {N(result.Iae)} {model.PvUnit}·s · saturation {N(result.SaturationSeconds)} s · erreur finale {N(result.FinalError)} {model.PvUnit}");
         }
         Heading("Conditions de simulation");

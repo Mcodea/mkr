@@ -47,3 +47,9 @@ Le moteur 0.10 ajoute `find_steps` (essais d'un enregistrement long, voir l'ADR 
 - **`pairs` :** chaque couple porte `firstWindow` et `secondWindow`, deux fenêtres sans ligne commune (`rowStart`, `rowEnd`), ainsi que les drapeaux `oppositeDirection`, `firstSettled`, `secondSettled` et `notes`.
 - **Erreurs :** `fit_mapping`, `fit_time` et `fit_tolerance` sont inchangées.
 - **Limites :** 200 échelons examinés au plus et 20 couples renvoyés.
+
+Le moteur 0.10 enrichit aussi `calculate_pi` (1.1.0) et `calculate_simc_pid` (1.1.0) avec les marges de la boucle nominale (audit NC-17).
+- **`calculate_pi` :** chaque méthode (`imc`, `simc`) porte un champ `margins`.
+- **`calculate_simc_pid` :** le résultat porte un champ `margins`.
+- **Contenu de `margins` :** `gainCrossoverRadPerSecond`, `phaseMarginDegrees`, `delayMarginSeconds`, `phaseCrossoverRadPerSecond`, `gainMargin`, `gainMarginDb` (null signifie infini ou indéfini), `peakSensitivity`, `peakSensitivityRadPerSecond` et `warnings`.
+- **Compatibilité :** le champ est facultatif côté client, donc les réglages enregistrés avant ce lot restent lisibles, sans marges.
