@@ -19,9 +19,16 @@ function Find($parent, $property, $value) {
     throw "Élément introuvable : $value"
 }
 function Press($parent, $caption) {
+    # The button may appear a moment after a window closes or opens: look for it for up to 10 s before giving up.
     $captionCondition = [System.Windows.Automation.PropertyCondition]::new($name, $caption)
     $buttonType = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Button)
-    $button = $parent.FindFirst($scope, [System.Windows.Automation.AndCondition]::new($captionCondition, $buttonType))
+    $condition = [System.Windows.Automation.AndCondition]::new($captionCondition, $buttonType)
+    $until = [DateTime]::UtcNow.AddSeconds(10)
+    do {
+        $button = $parent.FindFirst($scope, $condition)
+        if ($button) { break }
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $until)
     if (!$button) { throw "Bouton introuvable : $caption" }
     $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
 }
