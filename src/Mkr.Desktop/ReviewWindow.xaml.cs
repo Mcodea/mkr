@@ -23,7 +23,7 @@ public partial class ReviewWindow : Window
         Stage.SelectedItem = ReviewStage.Model;
     }
 
-    private static string Name(ReviewState state) => state switch
+    private static string StateName(ReviewState state) => state switch
     {
         ReviewState.Calculated => "Calculé", ReviewState.Verified => "Vérifié", ReviewState.Approved => "Approuvé",
         ReviewState.Rejected => "Rejeté", _ => "Non applicable"
@@ -36,14 +36,14 @@ public partial class ReviewWindow : Window
         if (Stage.SelectedItem is not ReviewStage stage) return;
         var history = _workspace.ReviewHistory(_runId).Where(e => e.Stage == stage).ToArray();
         _current = history.Length > 0 ? history[^1].State : null;
-        StateLine.Text = _current is { } state ? $"État actuel de l'étape : {Name(state)}" : "Aucune revue enregistrée pour cette étape.";
+        StateLine.Text = _current is { } state ? $"État actuel de l'étape : {StateName(state)}" : "Aucune revue enregistrée pour cette étape.";
         Calculated.IsEnabled = _current is null;
         Verify.IsEnabled = _current is ReviewState.Calculated;
         Approve.IsEnabled = _current is ReviewState.Verified;
         Reject.IsEnabled = _current is ReviewState.Calculated or ReviewState.Verified or ReviewState.Approved;
         var text = new StringBuilder();
         foreach (var e in history)
-            text.AppendLine($"{e.RecordedAt.UtcDateTime:yyyy-MM-dd HH:mm:ss}Z  {Name(e.State),-10} {e.Reviewer}\n    motif : {e.Reason} · preuve : {e.Evidence}");
+            text.AppendLine($"{e.RecordedAt.UtcDateTime:yyyy-MM-dd HH:mm:ss}Z  {StateName(e.State),-10} {e.Reviewer}\n    motif : {e.Reason} · preuve : {e.Evidence}");
         History.Text = text.Length == 0 ? "" : text.ToString();
     }
 
@@ -60,7 +60,7 @@ public partial class ReviewWindow : Window
         try
         {
             _workspace.RecordReview(_runId, stage, _current, next, Reason.Text.Trim(), Evidence.Text.Trim(), SelfReview.IsChecked == true);
-            Status.Text = $"Décision enregistrée : {Name(next)}.";
+            Status.Text = $"Décision enregistrée : {StateName(next)}.";
             SelfReview.IsChecked = false;
             Reason.Text = "";
             Refresh();
