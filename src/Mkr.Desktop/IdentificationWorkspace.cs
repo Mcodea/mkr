@@ -39,11 +39,20 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     {
         var train = new StepImport(imports.ReadImport(project.Id, training.Id), trainColumns, trainingWindow);
         var check = new StepImport(imports.ReadImport(project.Id, validation.Id), valColumns, validationWindow);
-        if (train.Import.Summary.Sha256 == check.Import.Summary.Sha256)
-            throw new CsvInputException("fit_duplicate_source");
+        if (TrialIndependence.Check(train.Import.Summary, trainingWindow, check.Import.Summary, validationWindow) is { } refusal)
+            throw new CsvInputException(refusal);
         CheckRecordedUnit(train, mvUnit, pvUnit);
         CheckRecordedUnit(check, mvUnit, pvUnit);
         return (train, check);
+    }
+
+    /// <summary>Lists the open-loop steps of one stored recording that the estimators would accept.</summary>
+    public Task<StepSearch> FindStepsAsync(ImportSummary source, StepColumns columns, string mvUnit, string pvUnit,
+        double mvTolerance, double pvTolerance, CancellationToken token)
+    {
+        var recording = new StepImport(imports.ReadImport(project.Id, source.Id), columns);
+        CheckRecordedUnit(recording, mvUnit, pvUnit);
+        return engine.FindStepsAsync(recording, mvTolerance, pvTolerance, token);
     }
 
     public Task<CriteriaSuggestion> SuggestCriteriaAsync(ImportSummary training, StepColumns trainColumns,

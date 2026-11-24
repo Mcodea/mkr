@@ -73,6 +73,28 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return report;
     }
 
+    public async Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token)
+    {
+        if (recording.Window is not null)
+            throw new CsvInputException("fit_window");
+        var payload = new { source = Source(recording), mvTolerance, pvTolerance };
+        var (json, _) = await CallAsync("find_steps", payload, token).ConfigureAwait(false);
+        var search = json.Deserialize<StepSearch>(JsonOptions);
+        if (search?.Candidates is null || search.Rejected is null || search.Pairs is null ||
+            string.IsNullOrWhiteSpace(search.AlgorithmVersion) || search.SourceRows < 2)
+            throw new InvalidDataException("Recherche d’essais incompatible avec le contrat.");
+        var ids = search.Candidates.Select(c => c.Id).ToHashSet();
+        if (ids.Count != search.Candidates.Length ||
+            search.Candidates.Any(c => c.RowStart < 0 || c.RowEnd <= c.RowStart || c.RowEnd >= search.SourceRows ||
+                c.StepRow <= c.RowStart || c.StepRow > c.RowEnd || !double.IsFinite(c.Amplitude) || c.Amplitude == 0 ||
+                c.Warnings is null) ||
+            search.Pairs.Any(p => !ids.Contains(p.FirstId) || !ids.Contains(p.SecondId) || p.FirstId == p.SecondId ||
+                p.FirstWindow is not { IsValid: true } || p.SecondWindow is not { IsValid: true } ||
+                p.FirstWindow.RowEnd >= p.SecondWindow.RowStart || p.SecondWindow.RowEnd >= search.SourceRows || p.Notes is null))
+            throw new InvalidDataException("Essais détectés incohérents avec l’enregistrement.");
+        return search;
+    }
+
     public async Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token)
     {
@@ -478,7 +500,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ||
-            operation is "assess_model" or "compare_models" or "suggest_criteria" ? 30 : 10));
+            operation is "assess_model" or "compare_models" or "suggest_criteria" or "find_steps" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

@@ -81,7 +81,7 @@ def respond(raw):
         else:
             return {**response, "result": result}
     elif request["operation"] in ("identify_fopdt", "identify_sopdt", "identify_integrator", "identify_broida",
-                                  "compare_models", "assess_model", "suggest_criteria"):
+                                  "compare_models", "assess_model", "suggest_criteria", "find_steps"):
         try:
             if request["operation"] == "compare_models":
                 from model_comparison import compare as identify
@@ -89,6 +89,8 @@ def respond(raw):
                 from validation_gate import assess as identify
             elif request["operation"] == "suggest_criteria":
                 from validation_gate import suggest as identify
+            elif request["operation"] == "find_steps":
+                from step_finder import find as identify
             elif request["operation"] == "identify_fopdt":
                 from fopdt import identify
             elif request["operation"] == "identify_sopdt":

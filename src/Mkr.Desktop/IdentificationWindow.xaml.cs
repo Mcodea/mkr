@@ -72,6 +72,44 @@ public partial class IdentificationWindow : Window
         catch (Exception error) { ShowError(error); }
     }
 
+    private async void FindTrialsInRecording(object sender, RoutedEventArgs args)
+    {
+        var columns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
+        if (TrainingSource.SelectedItem is not ImportSummary import || columns is null ||
+            MvUnit.Text.Trim().Length == 0 || PvUnit.Text.Trim().Length == 0 ||
+            !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance))
+        {
+            Message.Text = "Choisissez l’enregistrement, ses trois colonnes, les unités et les tolérances MV et PV avant la recherche.";
+            return;
+        }
+        Form.IsEnabled = false;
+        Message.Text = "Recherche des échelons exploitables…";
+        var token = _lifetime.Token;
+        try
+        {
+            var search = await _workspace.FindStepsAsync(import, columns, MvUnit.Text.Trim(), PvUnit.Text.Trim(),
+                mvTolerance, pvTolerance, token);
+            token.ThrowIfCancellationRequested();
+            Message.Text = $"{search.Candidates.Length} échelon(s) exploitable(s), {search.Rejected.Length} écarté(s).";
+            var window = new StepSearchWindow(search, import.FileName, MvUnit.Text.Trim(), PvUnit.Text.Trim()) { Owner = this };
+            if (window.ShowDialog() != true || window.SelectedPair is not { } pair) return;
+            // Both trials come from this recording: select it for validation too, then set the two explicit ranges.
+            ValidationSource.SelectedItem = import;
+            ValidationTime.SelectedItem = columns.TimeColumn;
+            ValidationMv.SelectedItem = columns.MvColumn;
+            ValidationPv.SelectedItem = columns.PvColumn;
+            _trainingSelection = new WindowChoice(import.Id, columns, pair.FirstWindow);
+            _validationSelection = new WindowChoice(import.Id, columns, pair.SecondWindow);
+            TrainingRangeInfo.Text = $"Estimation : indices source {pair.FirstWindow.RowStart}..{pair.FirstWindow.RowEnd} (inclus), échelon n°{pair.FirstId}";
+            ValidationRangeInfo.Text = $"Validation : indices source {pair.SecondWindow.RowStart}..{pair.SecondWindow.RowEnd} (inclus), échelon n°{pair.SecondId}";
+            Confirmed.IsChecked = false;
+            Message.Text = "Deux plages indépendantes retenues dans le même enregistrement. Vérifiez les conditions d’essai (boucle ouverte, sans saturation) puis confirmez-les.";
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = true; }
+    }
+
     private async void PreviewTraining(object sender, RoutedEventArgs args) =>
         await PreviewSourceAsync(TrainingSource, TrainingTime, TrainingMv, TrainingPv, true);
 
@@ -172,9 +210,12 @@ public partial class IdentificationWindow : Window
             return;
         }
 
-        if (training.Id == validation.Id)
+        if (training.Id == validation.Id &&
+            TrialIndependence.Check(training, _trainingSelection?.Window, validation, _validationSelection?.Window) is { } same)
         {
-            Message.Text = "Le même import est sélectionné deux fois. Sélectionnez un autre essai pour la validation.";
+            Message.Text = same == "fit_same_source_overlap"
+                ? "Les deux plages se recouvrent. Choisissez deux échelons distincts, sans ligne commune."
+                : "Le même import est sélectionné deux fois. Choisissez un autre essai, ou deux plages distinctes du même enregistrement (bouton « Rechercher les essais »).";
             return;
         }
 
@@ -593,6 +634,8 @@ public partial class IdentificationWindow : Window
             "preview_time" => "Les horodatages doivent être valides, UTC explicites et strictement croissants.",
             "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
+            "fit_same_source_window" => "Deux essais d’un même enregistrement exigent deux plages explicites (bouton « Rechercher les essais »).",
+            "fit_same_source_overlap" => "Les deux plages d’un même enregistrement se recouvrent : choisissez deux échelons distincts.",
             "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
             "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
             "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints.",

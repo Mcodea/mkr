@@ -7,6 +7,8 @@ import math
 
 from scipy.stats import f as fisher
 
+from fopdt import is_round_off
+
 VERSION = "1.1.0"
 # Default acceptance criteria are derived from the measured pre-step noise only (never from a fit),
 # so that thresholds are fixed before the model is seen.
@@ -40,7 +42,7 @@ def reasons(report, criteria):
         found.append("validation_rmse")
     # Residual correlation at floating-point precision is uninterpretable.
     scale = max(abs(point["observed"]) for point in validation["points"])
-    if rmse > 32 * math.ulp(scale) and (lag is None or abs(lag) > criteria["maximumResidualLagOne"]):
+    if not is_round_off(rmse, scale) and (lag is None or abs(lag) > criteria["maximumResidualLagOne"]):
         found.append("validation_residuals")
     found.extend(w for w in report["warnings"] if w in BLOCKING_WARNINGS)
     return found
@@ -94,7 +96,7 @@ def significantly_better(first, second):
     """
     a, b = first["validation"], second["validation"]
     scale = max(abs(point["observed"]) for point in a["points"])
-    if a["rmse"] <= 32 * math.ulp(scale) or b["rmse"] <= 0:
+    if is_round_off(a["rmse"], scale) or b["rmse"] <= 0:
         return False, None
     ratio = (a["rmse"] / b["rmse"]) ** 2
     critical = float(fisher.ppf(SIGNIFICANCE, a["samples"], b["samples"]))

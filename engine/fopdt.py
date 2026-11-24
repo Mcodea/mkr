@@ -89,6 +89,15 @@ def read_step(source, input_tolerance, output_tolerance):
                 float(np.std(outputs[:i], ddof=1)))
 
 
+# A residual RMSE below this fraction of the PV magnitude is floating-point round-off of an exact fit,
+# eight orders of magnitude below any sensor resolution: its autocorrelation carries no information.
+ROUND_OFF_RELATIVE = 1e-9
+
+
+def is_round_off(rmse, scale):
+    return rmse <= ROUND_OFF_RELATIVE * scale
+
+
 # Above this ratio of onset uncertainty to delay, the delay is reported as an interval (audit NC-03).
 ONSET_UNCERTAINTY_RATIO = 0.1
 
@@ -158,7 +167,7 @@ def diagnostics(step, gain, response):
     ratio = sse / total if total else math.inf
     # Residuals at floating-point round-off carry no information about model structure:
     # their correlation is reported as undetermined instead of raising a false warning (audit NC-10).
-    round_off = rmse <= 32 * math.ulp(float(np.max(np.abs(step.observations))))
+    round_off = is_round_off(rmse, float(np.max(np.abs(step.observations))))
     indices = np.unique(np.linspace(0, len(predicted) - 1, min(500, len(predicted)), dtype=int))
     return dict(
         samples=len(predicted), inputStep=step.amplitude, baseline=step.baseline, baselineNoise=step.baseline_noise,

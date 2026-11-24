@@ -77,8 +77,41 @@ public sealed record HoldoutTest(double MseRatio, double Critical, double Level)
 public sealed record CriteriaSuggestion(string AlgorithmVersion, double BaselineNoise, double MaximumRmse,
     double MaximumResidualLagOne, string Basis, double NoiseMultiple);
 
+/// <summary>One open-loop MV step located in a recording; the window is accepted by the estimators.</summary>
+public sealed record StepCandidate(int Id, int RowStart, int RowEnd, int StepRow, DateTimeOffset StartUtc, DateTimeOffset EndUtc,
+    double MvBefore, double MvAfter, double Amplitude, double PvBaseline, double PvResponse, int PreSamples, int PostSamples,
+    double HorizonSeconds, double OnsetIntervalSeconds, bool Settled, double BaselineNoise, string[] Warnings);
+
+public sealed record StepRejection(int StepRow, string Reason);
+
+/// <summary>Two row-disjoint windows (possibly trimmed from the candidates) usable as estimation and validation.</summary>
+public sealed record StepPair(int FirstId, int SecondId, double AmplitudeRatio, bool OppositeDirection,
+    StepWindow FirstWindow, StepWindow SecondWindow, bool FirstSettled, bool SecondSettled, string[] Notes);
+
+public sealed record StepSearch(string AlgorithmVersion, int SourceRows, StepCandidate[] Candidates,
+    StepRejection[] Rejected, StepPair[] Pairs);
+
+/// <summary>
+/// Independence of the estimation and validation trials (AGENTS.md §6.3). Two imports with the same bytes are one trial.
+/// Two trials of one import are accepted only when both ranges are explicit and share no row.
+/// </summary>
+public static class TrialIndependence
+{
+    public static string? Check(ImportSummary training, StepWindow? trainingWindow, ImportSummary validation, StepWindow? validationWindow)
+    {
+        if (training.Id != validation.Id)
+            return training.Sha256 == validation.Sha256 ? "fit_duplicate_source" : null;
+        if (trainingWindow is not { IsValid: true } a || validationWindow is not { IsValid: true } b)
+            return "fit_same_source_window";
+        return a.RowEnd < b.RowStart || b.RowEnd < a.RowStart ? null : "fit_same_source_overlap";
+    }
+}
+
 public interface IIdentificationEngine
 {
+    /// <summary>Lists the identifiable open-loop steps of a long recording (no window on the source).</summary>
+    Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token);
+
     Task<ModelComparison> CompareAsync(StepImport training, StepImport validation, double mvTolerance,
         double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token);
 

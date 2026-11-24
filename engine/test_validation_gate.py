@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 from model_comparison import compare
+from step_finder import find
 from validation_gate import assess, suggest
 
 
@@ -45,6 +46,27 @@ class ValidationGateTests(unittest.TestCase):
         slow = assess(payload("FOPDT", first_order(1, tau=40), first_order(2, tau=40), rmse=10, lag=1))
         self.assertFalse(slow["assessment"]["accepted"])
         self.assertTrue({"short_horizon", "parameter_bound"} & set(slow["assessment"]["reasons"]))
+
+    def test_fit_error_at_round_off_level_is_not_judged_on_residual_correlation(self):
+        # Two windows of one exact recording (up then down, gain -1.5, tau 40 s, delay 10 s): the fit leaves
+        # ~1e-13 of numerical error on a PV of about 8. That is round-off, far below any sensor resolution,
+        # so the model must not be refused on the autocorrelation of that error.
+        start = datetime(2026, 2, 1, tzinfo=timezone.utc)
+        lines = ["timestamp;mv;pv"]
+        for i in range(600):
+            t = 5.0 * i
+            level = (2 * (1 - math.exp(-(t - 310) / 40)) if t >= 310 else 0.0)
+            level -= (2 * (1 - math.exp(-(t - 1510) / 40)) if t >= 1510 else 0.0)
+            lines.append(f"{(start + timedelta(seconds=t)).isoformat()};{2 if 300 <= t < 1500 else 0};{8 - 1.5 * level!r}")
+        source = dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=";",
+                      timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+        pair = find(dict(source=source, mvTolerance=0.01, pvTolerance=0.01))["pairs"][0]
+        trials = dict(training=dict(source, **pair["firstWindow"]), validation=dict(source, **pair["secondWindow"]),
+                      mvTolerance=0.01, pvTolerance=0.01)
+        result = assess(dict(family="FOPDT", trials=trials, maximumRmse=0.01, maximumResidualLagOne=0.5))
+        self.assertGreater(result["report"]["validation"]["rmse"], 32 * math.ulp(8.0))   # above the old guard
+        self.assertLess(result["report"]["validation"]["rmse"], 1e-9)
+        self.assertTrue(result["assessment"]["accepted"], result["assessment"]["reasons"])
 
     def test_criteria_and_mapping_are_checked(self):
         base = payload("FOPDT", first_order(1), first_order(2))

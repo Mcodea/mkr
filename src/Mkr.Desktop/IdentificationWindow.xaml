@@ -10,7 +10,7 @@
             <StackPanel>
                 <TextBlock FontSize="22" FontWeight="SemiBold" Text="Identification par échelons" />
                 <TextBlock Margin="0,5,0,12" TextWrapping="Wrap"
-                           Text="Deux essais distincts du même procédé, avec un seul échelon de MV par CSV. La validation utilise le deuxième essai." />
+                           Text="Deux essais distincts du même procédé, avec un échelon de MV propre chacun : deux CSV, ou deux plages d’un même historique (bouton « Rechercher les essais »). La validation utilise le deuxième essai." />
                 <StackPanel x:Name="Form">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
                         <StackPanel>
@@ -34,6 +34,9 @@
                                 Click="PreviewTraining" HorizontalAlignment="Left"
                                 Margin="12,0,12,8"
                                 ToolTip="Sélectionner une plage du CSV original pour le prochain calcul"/>
+                        <Button x:Name="FindTrials" Content="_Rechercher les essais exploitables dans cet enregistrement…"
+                                Click="FindTrialsInRecording" HorizontalAlignment="Left" Margin="12,0,12,8"
+                                ToolTip="Pour un historique long : repère les échelons de MV propres et propose deux plages indépendantes"/>
                         <TextBlock x:Name="TrainingRangeInfo" Text="Estimation : fichier complet" Margin="12,0,8,8"
                                    Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
                         </StackPanel>

@@ -39,3 +39,11 @@ Le moteur 0.10 ajoute aussi `suggest_criteria`, appelée avec les mêmes champs 
 - **Réponse :** `algorithmVersion`, `baselineNoise`, `maximumRmse`, `maximumResidualLagOne`, `basis` (`noise` ou `pv_tolerance`), `noiseMultiple`, `trainingNoise` et `validationNoise`.
 - **Évolution de `compare_models` (version 1.1.0) :** le champ `decision` peut valoir `significantly_better_higher_order`, avec `holdoutTest` (`mseRatio`, `critical`, `level`). Ce champ vaut null quand le test n'est pas applicable.
 - **Diagnostics :** chaque diagnostic d'ajustement ajoute `baselineNoise`.
+
+Le moteur 0.10 ajoute `find_steps` (essais d'un enregistrement long, voir l'ADR 0004).
+- **Requête :** `source` (`raw` en Base64, `delimiter`, `timeColumn`, `mvColumn`, `pvColumn`, **sans** fenêtre), `mvTolerance` et `pvTolerance`.
+- **Réponse :** `candidates` (échelons exploitables), `rejected` (échelons écartés avec leur motif) et `pairs` (couples d'essais).
+- **`candidates` :** chaque entrée porte `id`, `rowStart`, `rowEnd`, `stepRow`, `startUtc`, `endUtc`, `mvBefore`, `mvAfter`, `amplitude`, `pvBaseline`, `pvResponse`, `preSamples`, `postSamples`, `horizonSeconds`, `onsetIntervalSeconds`, `settled`, `baselineNoise` et `warnings`.
+- **`pairs` :** chaque couple porte `firstWindow` et `secondWindow`, deux fenêtres sans ligne commune (`rowStart`, `rowEnd`), ainsi que les drapeaux `oppositeDirection`, `firstSettled`, `secondSettled` et `notes`.
+- **Erreurs :** `fit_mapping`, `fit_time` et `fit_tolerance` sont inchangées.
+- **Limites :** 200 échelons examinés au plus et 20 couples renvoyés.

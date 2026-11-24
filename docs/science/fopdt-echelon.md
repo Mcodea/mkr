@@ -36,6 +36,10 @@ d’acceptation de l’étude. Chaque ajustement expose aussi `rangeNormalizedRm
 la RMSE divisée par l’étendue observée de PV sur l’essai concerné. Une étendue
 nulle donne une valeur indéterminée.
 
+### Essais d'un enregistrement long (ADR 0004)
+
+L'opération `find_steps` localise les échelons de MV isolés d'un historique et propose des couples de fenêtres sans ligne commune, que l'estimation et la validation acceptent. Voir `docs/adr/0004-essais-dun-meme-enregistrement.md`.
+
 ### Critères proposés et test sur l'essai de validation (audit NC-04)
 
 **Opération `suggest_criteria`.**
@@ -50,3 +54,7 @@ nulle donne une valeur indéterminée.
 **Vérification.**
 - **Cas de l'audit :** SOPDT vrai (20 s, 12 s), σ = 0,02, seuils laxistes 0,2 / 0,9. Le SOPDT est maintenant retenu, alors que le FOPDT l'était auparavant.
 - **Cas inverse :** FOPDT vrai, σ = 0,02, critères proposés. Le FOPDT est retenu dans 100 tirages sur 100 (10 sont dans les tests automatiques).
+
+### Résidus au niveau de l'arrondi (audit NC-10)
+
+Un RMSE de résidus inférieur à 10⁻⁹ de l'amplitude de la PV est un résidu d'arrondi numérique. Il est très inférieur à la résolution de tout capteur. Son autocorrélation n'est pas interprétée, ni dans les diagnostics d'estimation (`residualLagOne` vaut alors null), ni dans la décision de validation, ni dans le test sur l'essai de validation.

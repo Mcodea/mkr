@@ -487,6 +487,63 @@ try
         Assessment = acceptedSecond.Assessment! with { Accepted = false, Reasons = ["validation_rmse"] }
     }, 2, default));
 
+    // History mode: two steps of ONE long recording (up at 300 s, down at 1500 s) are located, paired and identified.
+    {
+        var longCsv = new StringBuilder("timestamp;mv;pv\n");
+        var longStart = new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero);
+        for (var i = 0; i < 600; i++)
+        {
+            double t = 5.0 * i, mv = t >= 300 && t < 1500 ? 2 : 0, level = 0;
+            if (t >= 310) level += 2 * (1 - Math.Exp(-(t - 310) / 40));
+            if (t >= 1510) level -= 2 * (1 - Math.Exp(-(t - 1510) / 40));
+            longCsv.Append(FormattableString.Invariant($"{longStart.AddSeconds(t):yyyy-MM-ddTHH:mm:ss}Z;{mv};{8 - 1.5 * level:G17}\n"));
+        }
+        var longRaw = Encoding.UTF8.GetBytes(longCsv.ToString());
+        var longMapping = new CsvMapping("timestamp", "pv", "PV", "bar");
+        var (longResult, longVersion) = await engine.AnalyzeAsync(longRaw, ";", longMapping, default);
+        var longSummary = new ImportSummary(Guid.NewGuid(), "historique-long.csv", Convert.ToHexString(SHA256.HashData(longRaw)), DateTimeOffset.UtcNow);
+        restored.SaveImport(project.Id, new CsvImport(longSummary, ";", longMapping, longResult, longVersion, longRaw));
+
+        var search = await gate.FindStepsAsync(longSummary, columns, "%", "bar", 0.01, 0.01, default);
+        Require(search.Candidates.Select(c => c.StepRow).SequenceEqual(new[] { 60, 300 }) && search.Rejected.Length == 0,
+            "Both steps of the recording are located.");
+        var pair = search.Pairs[0];
+        Require(pair.OppositeDirection && pair.FirstSettled && pair.SecondSettled && pair.FirstWindow.RowEnd < pair.SecondWindow.RowStart,
+            "The proposed pair has opposite directions and row-disjoint windows.");
+        var fromHistory = await gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns, "%", "bar",
+            0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default, pair.FirstWindow, pair.SecondWindow);
+        Require(fromHistory.IsAcceptedForTuning && Math.Abs(fromHistory.Result.Gain + 1.5) < 1e-3 &&
+            fromHistory.Result.TauSeconds is { } historyTau && Math.Abs(historyTau - 40) < 0.1 &&
+            fromHistory.TrainingId == fromHistory.ValidationId,
+            $"Two windows of one recording identify and validate the model. accepted={fromHistory.IsAcceptedForTuning} " +
+            $"reasons={string.Join(',', fromHistory.Assessment?.Reasons ?? [])} gain={fromHistory.Result.Gain} tau={fromHistory.Result.TauSeconds}");
+        Require(fromHistory.TrainingWindow == pair.FirstWindow && fromHistory.ValidationWindow == pair.SecondWindow,
+            "The study keeps the exact source ranges.");
+        using (var verify = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false, ForeignKeys = true }.ToString()))
+        {
+            verify.Open();
+            using var query = verify.CreateCommand();
+            query.CommandText = "PRAGMA user_version";
+            Require((long)query.ExecuteScalar()! == 9, "The study table was migrated to version 9.");
+            query.CommandText = "PRAGMA foreign_key_check";
+            using var violations = query.ExecuteReader();
+            Require(!violations.Read(), "The migrated database has no orphan reference.");
+        }
+        // Defense in depth: even bypassing the application rule, the database refuses one source with identical or missing ranges.
+        Throws<SqliteException>(() => restored.SaveStudy(project.Id, fromHistory with { Id = Guid.NewGuid(), ValidationWindow = fromHistory.TrainingWindow }));
+        Throws<SqliteException>(() => restored.SaveStudy(project.Id, fromHistory with { Id = Guid.NewGuid(), TrainingWindow = null }));
+        Throws<CsvInputException>(() => gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns, "%", "bar",
+            0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default).GetAwaiter().GetResult());
+        var overlapping = pair.FirstWindow with { RowEnd = pair.SecondWindow.RowStart + 3 };
+        Require(TrialIndependence.Check(longSummary, pair.FirstWindow, longSummary, pair.SecondWindow) is null &&
+            TrialIndependence.Check(longSummary, null, longSummary, pair.SecondWindow) == "fit_same_source_window" &&
+            TrialIndependence.Check(longSummary, overlapping, longSummary, pair.SecondWindow) == "fit_same_source_overlap" &&
+            TrialIndependence.Check(longSummary, pair.FirstWindow, longSummary with { Id = Guid.NewGuid() }, pair.SecondWindow) == "fit_duplicate_source",
+            "Same-source trials need explicit, non-overlapping ranges; identical bytes under another import stay refused.");
+        await ThrowsAsync<CsvInputException>(() => gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns,
+            "%", "bar", 0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default, pair.FirstWindow, overlapping));
+    }
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {

@@ -125,11 +125,60 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                 command.ExecuteNonQuery();
                 break;
             case 8:
+            case 9:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
         }
 
+        transaction.Commit();
+        MigrateToVersion9(path);
+    }
+
+    /// <summary>
+    /// Migration 9 (ADR 0004): two trials of one recording may be estimation and validation of a study,
+    /// provided both source ranges are recorded and differ. The table is rebuilt with the official SQLite
+    /// procedure (foreign keys off, copy, drop, rename, foreign_key_check) because a CHECK cannot be altered.
+    /// Studies and every child table are preserved row for row. Rollback: restore the project database backup;
+    /// an older MKR refuses user_version 9 instead of misreading it.
+    /// </summary>
+    private static void MigrateToVersion9(string path)
+    {
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = false }.ToString();
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version";
+        if ((long)command.ExecuteScalar()! != 8)
+            return;
+        command.CommandText = """
+            CREATE TABLE identification_studies_v9 (
+                id TEXT PRIMARY KEY NOT NULL,
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                training_id TEXT NOT NULL REFERENCES csv_imports(id),
+                validation_id TEXT NOT NULL REFERENCES csv_imports(id),
+                created_at TEXT NOT NULL,
+                metadata TEXT NOT NULL,
+                CHECK(training_id <> validation_id OR (
+                    json_extract(metadata, '$.TrainingWindow') IS NOT NULL
+                    AND json_extract(metadata, '$.ValidationWindow') IS NOT NULL
+                    AND json_extract(metadata, '$.TrainingWindow') <> json_extract(metadata, '$.ValidationWindow')))
+            );
+            INSERT INTO identification_studies_v9 (id, project_id, training_id, validation_id, created_at, metadata)
+                SELECT id, project_id, training_id, validation_id, created_at, metadata FROM identification_studies;
+            DROP TABLE identification_studies;
+            ALTER TABLE identification_studies_v9 RENAME TO identification_studies;
+            CREATE INDEX identification_studies_project ON identification_studies(project_id, created_at, id);
+            """;
+        command.ExecuteNonQuery();
+        command.CommandText = "PRAGMA foreign_key_check";
+        using (var violations = command.ExecuteReader())
+            if (violations.Read())
+                throw new InvalidDataException("La migration SQLite 9 a révélé une référence orpheline : migration annulée.");
+        command.CommandText = "PRAGMA user_version = 9";
+        command.ExecuteNonQuery();
         transaction.Commit();
     }
 
