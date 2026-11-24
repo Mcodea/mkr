@@ -82,7 +82,7 @@
           <TextBlock x:Name="AddressHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,2,0,6"/>
           <Grid x:Name="SignalGrid">
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="50"/>
+              <ColumnDefinition Width="150"/>
               <ColumnDefinition Width="100"/>
               <ColumnDefinition Width="120"/>
               <ColumnDefinition Width="100"/>
