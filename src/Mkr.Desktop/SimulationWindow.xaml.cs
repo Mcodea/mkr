@@ -17,10 +17,6 @@ public partial class SimulationWindow : Window
     private readonly PiStudy _tuning;
     private readonly CancellationTokenSource _lifetime = new();
     private PiSimulationStudy? _shown;
-    private double? _zoomStart;
-    private double? _zoomEnd;
-    private double? _cursorTime;
-    private double? _dragX;
 
     internal SimulationWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
@@ -28,6 +24,8 @@ public partial class SimulationWindow : Window
         _model = model;
         _tuning = tuning;
         InitializeComponent();
+        Chart.CursorTextChanged += text => CursorReadout.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
+        Chart.ViewChanged += () => ZoomStatus.Text = $"Vue [{Chart.View.From:G6} ; {Chart.View.To:G6}] s";
         RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
         Units.Text = $"Cible PI : {tuning.Result.ResponseSeconds:G5} s. Déviations autour du point initial : " +
             $"consigne et mesure en {model.PvUnit}, saturation et perturbation en {model.MvUnit}.";
@@ -184,10 +182,8 @@ public partial class SimulationWindow : Window
     private void ShowSaved(object sender, SelectionChangedEventArgs args)
     {
         _shown = Saved.SelectedItem as PiSimulationStudy;
-        _zoomStart = _zoomEnd = _cursorTime = _dragX = null;
-        ResetZoomButton.IsEnabled = false;
         ZoomStatus.Text = "Horizon complet";
-        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
+        CursorReadout.Text = "Survolez le graphique pour lire les valeurs au curseur.";
         SheetButton.IsEnabled = _shown is not null;
         ExportButton.IsEnabled = _shown is not null;
         RobustnessPanel.Visibility = _shown?.Robustness is null
@@ -286,93 +282,56 @@ public partial class SimulationWindow : Window
         ? ""
         : $"Fenêtre de réponse à la consigne [0, {response.WindowEndSeconds:G5}] s · — : valeur indisponible.\n";
 
-    private void ResizePlot(object sender, SizeChangedEventArgs args) => DrawPlot();
-
     private void DrawPlot()
     {
-        if (Plot is null)
+        if (Chart is null)
             return;
-        PiComparisonPlot.Draw(Plot, _shown, _model.PvUnit, _model.MvUnit,
-                              _zoomStart, _zoomEnd, _cursorTime);
-    }
-
-    private (double Start, double End)? VisibleWindow()
-    {
-        if (_shown?.Result.Imc.Points is not { Length: >= 3 } points)
-            return null;
-        return (_zoomStart ?? points[0].Seconds, _zoomEnd ?? points[^1].Seconds);
-    }
-
-    private void StartPlotSelection(object sender, MouseButtonEventArgs args)
-    {
-        if (VisibleWindow() is not { } range)
-            return;
-        var x = args.GetPosition(Plot).X;
-        if (!PiComparisonPlot.TryTimeAt(x, Plot.ActualWidth, range.Start, range.End, out _))
-            return;
-        _dragX = x;
-        Plot.CaptureMouse();
-    }
-
-    private void EndPlotSelection(object sender, MouseButtonEventArgs args)
-    {
-        if (_dragX is not { } x0)
-            return;
-        _dragX = null;
-        Plot.ReleaseMouseCapture();
-        if (VisibleWindow() is not { } range || _shown is not { } study)
-            return;
-        var x1 = args.GetPosition(Plot).X;
-        if (!PiComparisonPlot.TryTimeAt(x0, Plot.ActualWidth, range.Start, range.End, out var a) ||
-            !PiComparisonPlot.TryTimeAt(x1, Plot.ActualWidth, range.Start, range.End, out var b))
-            return;
-
-        var points = study.Result.Imc.Points;
-        if (Math.Abs(x1 - x0) < 10)
+        if (_shown is not { } study || study.Result.Imc.Points.Length < 3 || study.Result.Simc.Points.Length != study.Result.Imc.Points.Length)
         {
-            var selected = points
-                .Where(p => p.Seconds >= range.Start && p.Seconds <= range.End)
-                .OrderBy(p => Math.Abs(p.Seconds - b))
-                .FirstOrDefault();
-            if (selected is not null)
+            Chart.SetTracks(Array.Empty<ChartTrack>());
+            return;
+        }
+        var imc = study.Result.Imc.Points;
+        var simc = study.Result.Simc.Points;
+        var seconds = imc.Select(p => p.Seconds).ToArray();
+        var setpoint = study.Scenario.Setpoint;
+        var pvTrack = new ChartTrack("Variation de consigne et mesure", _model.PvUnit, new[]
+        {
+            new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
+            new ChartSeries("Mesure IMC / Lambda", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
+            new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
+        });
+        if (study.Robustness?.Envelope is { } envelope && envelope.Seconds.Length == seconds.Length &&
+            envelope.Imc.MinPv.Length == seconds.Length && envelope.Imc.MaxPv.Length == seconds.Length &&
+            envelope.Simc.MinPv.Length == seconds.Length && envelope.Simc.MaxPv.Length == seconds.Length)
+        {
+            pvTrack.Bands.Add(new ChartBand("Enveloppe IMC", "MkrSignal1", envelope.Seconds, envelope.Imc.MinPv, envelope.Imc.MaxPv));
+            pvTrack.Bands.Add(new ChartBand("Enveloppe SIMC", "MkrSignal2", envelope.Seconds, envelope.Simc.MinPv, envelope.Simc.MaxPv));
+        }
+
+        ChartTrack Commands(string title, string colorKey, SimulationPoint[] points)
+        {
+            var withCommand = points.Where(p => p.Cv.HasValue && p.Mv.HasValue).ToArray();
+            var t = withCommand.Select(p => p.Seconds).ToArray();
+            var limits = new[] { study.Scenario.MinimumMv, study.Scenario.MaximumMv };
+            return new ChartTrack($"{title} · sortie de commande (écart)", _model.MvUnit, new[]
             {
-                _cursorTime = selected.Seconds;
-                var index = Array.FindIndex(points, p => p.Seconds == selected.Seconds);
-                var other = study.Result.Simc.Points[index];
-                string Value(double? value) => value is { } v ? v.ToString("G6", CultureInfo.CurrentCulture) : "—";
-                CursorReadout.Text = $"t = {selected.Seconds:G6} s · Variation de consigne = {study.Scenario.Setpoint:G6} {_model.PvUnit} · " +
-                    $"Mesure IMC = {selected.Pv:G6} {_model.PvUnit}, SIMC = {other.Pv:G6} {_model.PvUnit} · " +
-                    $"Commande calculée IMC = {Value(selected.Cv)}, appliquée IMC = {Value(selected.Mv)} · " +
-                    $"calculée SIMC = {Value(other.Cv)}, appliquée SIMC = {Value(other.Mv)} {_model.MvUnit}";
-                DrawPlot();
-            }
-            return;
+                new ChartSeries("Appliquée", "MkrSignal3", t, withCommand.Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries("Calculée", colorKey, t, withCommand.Select(p => p.Cv!.Value).ToArray()),
+                new ChartSeries("Limite basse", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[0], limits[0] }),
+                new ChartSeries("Limite haute", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[1], limits[1] })
+            });
         }
-        var lower = Math.Min(a, b);
-        var upper = Math.Max(a, b);
-        var selectedPoints = points.Where(p => p.Seconds >= lower && p.Seconds <= upper).ToArray();
-        if (selectedPoints.Length < 3)
-        {
-            Message.Text = "Zoom refusé : sélectionnez au moins trois points simulés.";
-            return;
-        }
-        _zoomStart = selectedPoints[0].Seconds;
-        _zoomEnd = selectedPoints[^1].Seconds;
-        _cursorTime = null;
-        ResetZoomButton.IsEnabled = true;
-        ZoomStatus.Text = $"Zoom [{_zoomStart:G6} ; {_zoomEnd:G6}] s · {selectedPoints.Length} points";
-        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un point simulé du zoom.";
-        DrawPlot();
+
+        Chart.XLabel = "Temps depuis le début du scénario (s)";
+        Chart.SetTracks(new[] { pvTrack, Commands("IMC / Lambda", "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
+        Chart.SetEvents(study.Scenario.Disturbance != 0 ? new[] { (study.Scenario.DisturbanceAtSeconds, "Perturbation") } : Array.Empty<(double, string)>());
     }
 
     private void ResetZoom(object sender, RoutedEventArgs args)
     {
-        _zoomStart = _zoomEnd = _cursorTime = _dragX = null;
-        Plot.ReleaseMouseCapture();
-        ResetZoomButton.IsEnabled = false;
+        Chart.ResetView();
         ZoomStatus.Text = "Horizon complet";
-        CursorReadout.Text = "Cliquez sur le graphique pour inspecter un échantillon enregistré.";
-        DrawPlot();
     }
 
     private void ExportSheet(object sender, RoutedEventArgs args)

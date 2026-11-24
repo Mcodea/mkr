@@ -19,12 +19,23 @@ internal sealed class ChartSeries(string name, string colorKey, double[] x, doub
     public bool Visible { get; set; } = true;
 }
 
+/// <summary>A shaded min/max envelope between two curves sharing the same x (for example the sensitivity envelope of a simulation).</summary>
+internal sealed class ChartBand(string name, string colorKey, double[] x, double[] low, double[] high)
+{
+    public string Name { get; } = name;
+    public string ColorKey { get; } = colorKey;
+    public double[] X { get; } = x;
+    public double[] Low { get; } = low;
+    public double[] High { get; } = high;
+}
+
 /// <summary>A band with its own vertical axis. All tracks of a chart share one time axis, zoom and cursor.</summary>
 internal sealed class ChartTrack(string title, string unit, IEnumerable<ChartSeries> series)
 {
     public string Title { get; } = title;
     public string Unit { get; } = unit;
     public List<ChartSeries> Series { get; } = series.ToList();
+    public List<ChartBand> Bands { get; } = new();
 }
 
 /// <summary>
@@ -44,6 +55,7 @@ internal sealed class SignalChart : FrameworkElement
     private Point? _panOrigin; private (double Lo, double Hi) _panView;
     private double? _selectOrigin, _selectCurrent;
     private readonly List<(Rect Box, ChartSeries Series)> _legend = new();
+    private IReadOnlyList<(double X, string Label)> _events = Array.Empty<(double, string)>();
 
     public SignalChart()
     {
@@ -76,6 +88,9 @@ internal sealed class SignalChart : FrameworkElement
         InvalidateVisual();
     }
 
+    /// <summary>Vertical markers on every track (for example the instant a disturbance is applied).</summary>
+    public void SetEvents(IEnumerable<(double X, string Label)> events) { _events = events.ToList(); InvalidateVisual(); }
+
     public void SetHighlight(double? from, double? to) { _highlightFrom = from; _highlightTo = to; InvalidateVisual(); }
 
     public void ResetView() { _lo = _fullLo; _hi = _fullHi; InvalidateVisual(); ViewChanged?.Invoke(); }
@@ -96,6 +111,16 @@ internal sealed class SignalChart : FrameworkElement
             var to = Math.Min(s.X.Length - 1, ChartMath.LowerBound(s.X, _hi));
             for (var i = from; i <= to; i++)
                 if (double.IsFinite(s.Y[i])) { min = Math.Min(min, s.Y[i]); max = Math.Max(max, s.Y[i]); }
+        }
+        foreach (var band in track.Bands)
+        {
+            var from = Math.Max(0, ChartMath.LowerBound(band.X, _lo) - 1);
+            var to = Math.Min(band.X.Length - 1, ChartMath.LowerBound(band.X, _hi));
+            for (var i = from; i <= to; i++)
+            {
+                if (double.IsFinite(band.Low[i])) min = Math.Min(min, band.Low[i]);
+                if (double.IsFinite(band.High[i])) max = Math.Max(max, band.High[i]);
+            }
         }
         if (!double.IsFinite(min)) return (0, 1);
         var pad = max > min ? (max - min) * 0.08 : Math.Max(0.1, Math.Abs(min) * 0.1);
@@ -181,6 +206,21 @@ internal sealed class SignalChart : FrameworkElement
 
             // curves (clipped, decimated)
             dc.PushClip(new RectangleGeometry(new Rect(LeftMargin, top, PlotWidth, height)));
+            foreach (var band in track.Bands)
+            {
+                var from = Math.Max(0, ChartMath.LowerBound(band.X, _lo) - 1);
+                var to = Math.Min(band.X.Length - 1, ChartMath.LowerBound(band.X, _hi));
+                if (to - from < 1) continue;
+                var shape = new StreamGeometry();
+                using (var context = shape.Open())
+                {
+                    context.BeginFigure(new Point(XToPixel(band.X[from]), Y(band.High[from])), true, true);
+                    for (var i = from + 1; i <= to; i++) context.LineTo(new Point(XToPixel(band.X[i]), Y(band.High[i])), true, false);
+                    for (var i = to; i >= from; i--) context.LineTo(new Point(XToPixel(band.X[i]), Y(band.Low[i])), true, false);
+                }
+                shape.Freeze();
+                dc.DrawGeometry(Faded(Theme(band.ColorKey), 0.16), null, shape);
+            }
             for (var si = 0; si < track.Series.Count; si++)
             {
                 var series = track.Series[si];
@@ -205,6 +245,14 @@ internal sealed class SignalChart : FrameworkElement
 
         // shared time axis
         var bottom = TrackTop(_tracks.Count - 1) + TrackHeight;
+        foreach (var (ex, label) in _events)
+        {
+            if (ex < _lo || ex > _hi) continue;
+            var px = XToPixel(ex);
+            dc.DrawLine(new Pen(Theme("MkrSignal4"), 1.4) { DashStyle = new DashStyle(new double[] { 1.5, 3 }, 0) }, new Point(px, TrackTop(0)), new Point(px, bottom));
+            var text = Text(label, 12, Theme("MkrSignal4"), true);
+            dc.DrawText(text, new Point(Math.Min(px + 4, LeftMargin + PlotWidth - text.Width), TrackTop(0) + 3));
+        }
         foreach (var v in xTicks)
         {
             var l = Text(v.ToString("G6", CultureInfo.CurrentCulture), 12, labelBrush);
