@@ -187,16 +187,16 @@ try {
     }
     Step '11-simulation' {
         Select-Option $ident 'StudyList' "*$modelId"
-        Press-Retry $ident 'Comparer IMC/Lambda et SIMC'
+        try { Press $ident 'Comparer IMC/Lambda et SIMC' } catch { }
         $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
-        Press-Retry $ident 'Simuler le réglage enregistré…'
+        try { Press $ident 'Simuler le réglage enregistré…' } catch { }   # a button that opens a modal dialog may report a UIA error although it worked
         $sim = Find $root $name 'MKR — Simulation PI'
         Press-Retry $sim 'Simuler et enregistrer'
         $null = Find $sim $name 'Simulation enregistrée.'
         Start-Sleep -Milliseconds 1000
         Capture $sim '11-simulation'
         Step '12-prototype-pid' {
-            Press-Retry $sim 'Essai PID manuel…'
+            try { Press $sim 'Essai PID manuel…' } catch { }
             $proto = Find $root $name 'MKR — Laboratoire PID hors ligne'
             Press-Retry $proto 'Comparer PID / PI'
             Start-Sleep -Milliseconds 2500

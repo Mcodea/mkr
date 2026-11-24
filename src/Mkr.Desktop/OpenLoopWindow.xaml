@@ -36,7 +36,7 @@
             </StackPanel>
             <TextBlock x:Name="Message" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="0,8,0,0" />
-            <local:SignalChart x:Name="Chart" Height="420" Margin="0,8,0,0"
+            <local:SignalChart x:Name="Chart" Height="360" Margin="0,8,0,0"
                     AutomationProperties.Name="Réponse de la mesure en boucle ouverte et niveau initial, en fonction du temps"
                     AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète."/>
         </StackPanel>
