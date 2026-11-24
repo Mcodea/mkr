@@ -26,7 +26,7 @@ public sealed class ModbusTcpReader : IPlcReader
         _target = target;
         var signals = target.Signals.Select(s => (Start: s.Address.Offset, End: s.Address.Offset + s.Address.ByteLength / 2 - 1)).ToArray();
         int first = signals.Min(s => s.Start), last = signals.Max(s => s.End);
-        // One request when possible so the three values are sampled by the same PLC scan read.
+        // One request when possible so all the values are sampled by the same PLC scan read.
         _requests = last - first + 1 <= MaximumRegistersPerRequest
             ? [((ushort)first, (ushort)(last - first + 1))]
             : signals.Select(s => ((ushort)s.Start, (ushort)(s.End - s.Start + 1))).ToArray();
@@ -42,7 +42,7 @@ public sealed class ModbusTcpReader : IPlcReader
         _stream = _client.GetStream();
     }
 
-    public async Task<(double Sp, double Pv, double Mv)> ReadAsync(CancellationToken token)
+    public async Task<PlcReading> ReadAsync(CancellationToken token)
     {
         var stream = _stream ?? throw new PlcReadException("not_connected", "Session Modbus non ouverte.", true);
         var registers = new Dictionary<int, byte[]>();
@@ -57,7 +57,8 @@ public sealed class ModbusTcpReader : IPlcReader
             for (int i = 0; i < address.ByteLength / 2; i++) registers[address.Offset + i].CopyTo(wire, 2 * i);
             return PlcReaders.Checked(PlcDecoding.Decode(wire, address.Type, _target.Order), role);
         }
-        return (Value("SP", _target.Sp), Value("PV", _target.Pv), Value("MV", _target.Mv));
+        return new PlcReading(Value("SP", _target.Sp), Value("PV", _target.Pv), Value("MV", _target.Mv),
+            _target.Mode is { } mode ? Value("MODE", mode) : null);
     }
 
     private async Task<byte[]> ReadRegistersAsync(NetworkStream stream, ushort start, ushort count, CancellationToken token)

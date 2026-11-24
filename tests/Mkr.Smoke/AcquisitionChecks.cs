@@ -60,6 +60,14 @@ internal static class AcquisitionChecks
                 reopened.Acquisition?.Target != target || reopened.Result.Quality?.ValidValues != 3 ||
                 reopened.Result.Quality.InvalidTimestamps != 0 || !saved.Original.SequenceEqual(reopened.Original))
                 throw new Exception("Capture did not survive the study archive round trip.");
+            // The raw controller mode and its declared manual flag are archived next to the signals.
+            var modeTarget = target with { Mode = new SignalAddress(12, PlcDataType.UInt16), ManualModeValue = 3 };
+            var modeSamples = samples.Select((s, i) => s with { RawMode = i == 2 ? 1 : 3, InManual = i != 2 }).ToList();
+            var modeSaved = await AcquisitionArchive.SaveAsync(project, store, engine, modeSamples,
+                origin with { Target = modeTarget }, limit.Token);
+            var text = System.Text.Encoding.UTF8.GetString(modeSaved.Original).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            if (!text[0].EndsWith(",MODE_raw,MANUAL") || !text[1].EndsWith(",3,1") || !text[3].EndsWith(",1,0"))
+                throw new Exception("The raw mode and the manual flag must be archived: " + string.Join(" | ", text));
         }
     }
 
@@ -151,13 +159,13 @@ internal static class AcquisitionChecks
     {
         public Task ConnectAsync(CancellationToken token) => Task.CompletedTask;
 
-        public Task<(double Sp, double Pv, double Mv)> ReadAsync(CancellationToken token)
+        public Task<PlcReading> ReadAsync(CancellationToken token)
         {
             int n = ++counter[0];
             double mv = n >= 30 && n < 90 ? 2 : 0, level = 0;
             if (n >= 32) level += 2 * (1 - Math.Exp(-(n - 32) / 8.0));
             if (n >= 92) level -= 2 * (1 - Math.Exp(-(n - 92) / 8.0));
-            return Task.FromResult((8.0, 8 - 1.5 * level, mv));
+            return Task.FromResult(new PlcReading(8.0, 8 - 1.5 * level, mv));
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

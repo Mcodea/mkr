@@ -13,14 +13,17 @@ public static class AcquisitionArchive
     {
         if (samples.Count == 0) throw new InvalidOperationException("Aucun échantillon reçu.");
         bool detailed = origin.Target is not null;
+        bool withMode = detailed && origin.Target?.Mode is not null;
         var csv = new System.Text.StringBuilder(detailed
-            ? "timestamp,SP,PV,MV,rtt_ms,SP_raw,PV_raw,MV_raw\n"
+            ? "timestamp,SP,PV,MV,rtt_ms,SP_raw,PV_raw,MV_raw" + (withMode ? ",MODE_raw,MANUAL\n" : "\n")
             : "timestamp,SP,PV,MV\n");
         foreach (var point in samples)
         {
             csv.Append(FormattableString.Invariant($"{point.ReceivedAt.UtcDateTime:yyyy-MM-ddTHH:mm:ss.ffffffZ},{point.Sp:R},{point.Pv:R},{point.Mv:R}"));
             if (detailed)
                 csv.Append(FormattableString.Invariant($",{point.RoundTripMs:0.###},{point.RawSp:R},{point.RawPv:R},{point.RawMv:R}"));
+            if (withMode)
+                csv.Append(FormattableString.Invariant($",{point.RawMode:R},{(point.InManual == true ? 1 : 0)}"));
             csv.Append('\n');
         }
         var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());

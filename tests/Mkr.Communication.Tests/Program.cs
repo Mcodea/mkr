@@ -263,6 +263,62 @@ await Check("progress reports state, counts and remaining time", async () =>
     Assert(reading.All(r => r.LastRoundTripMs is >= 0), "latence");
 });
 
+// ---------- Controller mode (address entered by the user, no convention assumed) ----------
+await Check("mode: validation requires address AND declared manual value, integer types only", () =>
+{
+    var plan = new AcquisitionPlan(5, 100);
+    var withMode = Modbus(502) with { Mode = new(6, PlcDataType.UInt16), ManualModeValue = 0 };
+    Assert(PlcDecoding.Validate(withMode, plan) is null, "mode valide refusé");
+    Assert(PlcDecoding.Validate(withMode with { ManualModeValue = null }, plan) is not null, "mode sans valeur manuel accepté");
+    Assert(PlcDecoding.Validate(Modbus(502) with { ManualModeValue = 1 }, plan) is not null, "valeur manuel sans adresse acceptée");
+    Assert(PlcDecoding.Validate(withMode with { Mode = new(6, PlcDataType.Real32) }, plan) is not null, "mode REAL accepté");
+    Assert(PlcDecoding.Validate(withMode with { ManualModeValue = 0.5 }, plan) is not null, "valeur manuel non entière acceptée");
+    Assert(withMode.Describe().Contains("MODE %MW6") && withMode.Describe().Contains("manuel = 0"), withMode.Describe());
+    return Task.CompletedTask;
+});
+
+await Check("modbus mode: consecutive addresses stay one FC03 request, manual/auto counted", async () =>
+{
+    await using var stub = new ModbusStub();
+    stub.Place(0, 45.25, PlcDataType.Real32, ByteOrder.CDAB);
+    stub.Place(2, -3.5, PlcDataType.Real32, ByteOrder.CDAB);
+    stub.Place(4, 61.875, PlcDataType.Real32, ByteOrder.CDAB);
+    stub.Place(6, 7, PlcDataType.UInt16, ByteOrder.CDAB);              // 7 = manual, as declared by the user for this test
+    var target = Modbus(stub.Port) with { Mode = new(6, PlcDataType.UInt16), ManualModeValue = 7 };
+    Assert(new ModbusTcpReader(target).RequestsPerReading == 1, "adresses consécutives : une requête");
+    var (_, samples) = await Capture(target, 3);
+    Assert(samples.All(s => s is { RawMode: 7, InManual: true }), "mode manuel");
+    Assert(stub.Frames.ToArray().All(f => f[7] == 3 && f[11] == 7), "une requête de 7 registres");
+    stub.Place(6, 2, PlcDataType.UInt16, ByteOrder.CDAB);              // 2 = something else
+    var (result, others) = await Capture(target, 2);
+    Assert(others.All(s => s is { RawMode: 2, InManual: false }) && result.Statistics.SamplesNotInManual == 2, "hors manuel compté");
+    var (_, plain) = await Capture(Modbus(stub.Port), 1);
+    Assert(plain.Single() is { RawMode: null, InManual: null }, "sans adresse de mode : aucune hypothèse");
+    AssertReadOnlyModbus(stub);
+});
+
+await Check("modbus mode: far-apart addresses need more requests (the user is told)", () =>
+{
+    var far = Modbus(502) with { Mode = new(400, PlcDataType.UInt16), ManualModeValue = 0 };
+    Assert(new ModbusTcpReader(far).RequestsPerReading > 1, "adresses éloignées : plusieurs requêtes");
+    return Task.CompletedTask;
+});
+
+await Check("s7 mode: read in the same job as SP, PV and MV", async () =>
+{
+    await using var stub = new S7Stub();
+    var db = new byte[16];
+    BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(0), 52.5f);
+    BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(4), 48.25f);
+    BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(8), -12.75f);
+    BinaryPrimitives.WriteInt16BigEndian(db.AsSpan(12), 3);
+    stub.Memory[(0x84, 10)] = db;
+    var target = S7(stub.Port) with { Mode = new(12, PlcDataType.Int16), ManualModeValue = 3 };
+    var (_, samples) = await Capture(target, 3);
+    Assert(samples.All(s => s is { Sp: 52.5, Pv: 48.25, Mv: -12.75, RawMode: 3, InManual: true }), $"{samples[0]}");
+    Assert(stub.Functions.Count(f => f == 0x04) == 3, "une lecture S7 par mesure");
+});
+
 // ---------- S7comm (stub for refusals and frame audit) ----------
 await Check("s7 nominal: only setup (F0) and read (04), TSAP 0x0101, REAL ABCD", async () =>
 {

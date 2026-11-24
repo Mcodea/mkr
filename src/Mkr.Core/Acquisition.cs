@@ -56,10 +56,15 @@ public sealed record AcquisitionTarget(
     string ProcessUnit, string CommandUnit,
     ByteOrder Order = ByteOrder.ABCD,
     byte UnitId = 1, ModbusTable Table = ModbusTable.HoldingRegisters,
-    int Rack = 0, int Slot = 1, S7Area Area = S7Area.DataBlock, int DataBlock = 1)
+    int Rack = 0, int Slot = 1, S7Area Area = S7Area.DataBlock, int DataBlock = 1,
+    SignalAddress? Mode = null, double? ManualModeValue = null)
 {
+    /// <summary>
+    /// SP, PV, MV and, when the user supplied its address, the controller mode (read raw, never scaled).
+    /// <see cref="ManualModeValue"/> is the raw value that the user declares to mean "manual": MKR assumes no convention.
+    /// </summary>
     [JsonIgnore] public IEnumerable<(string Role, SignalAddress Address)> Signals =>
-        [("SP", Sp), ("PV", Pv), ("MV", Mv)];
+        Mode is null ? [("SP", Sp), ("PV", Pv), ("MV", Mv)] : [("SP", Sp), ("PV", Pv), ("MV", Mv), ("MODE", Mode)];
 
     public string Describe()
     {
@@ -71,7 +76,8 @@ public sealed record AcquisitionTarget(
         var head = Protocol == PlcProtocol.ModbusTcp
             ? $"Modbus TCP {Host}:{Port} · unité {UnitId} · {(Table == ModbusTable.HoldingRegisters ? "FC03" : "FC04")} · ordre {Order}"
             : $"S7 {Host}:{Port} · rack {Rack} · emplacement {Slot}";
-        return $"{head} · SP {Location(Sp)} · PV {Location(Pv)} · MV {Location(Mv)}";
+        return $"{head} · SP {Location(Sp)} · PV {Location(Pv)} · MV {Location(Mv)}" +
+            (Mode is null ? "" : $" · MODE {Location(Mode)} (manuel = {ManualModeValue:G9})");
     }
 
     private static string S7Suffix(SignalAddress address) => address.ByteLength == 2 ? "DBW" : "DBD";
@@ -88,13 +94,15 @@ public sealed record AcquisitionPlan(int Samples, int PeriodMs, double MaximumOu
 /// Raw values are the decoded numbers before scaling, kept to check the mapping.
 /// </summary>
 public sealed record AcquiredSample(DateTimeOffset ReceivedAt, double Sp, double Pv, double Mv,
-    double RoundTripMs = double.NaN, double RawSp = double.NaN, double RawPv = double.NaN, double RawMv = double.NaN);
+    double RoundTripMs = double.NaN, double RawSp = double.NaN, double RawPv = double.NaN, double RawMv = double.NaN,
+    double? RawMode = null, bool? InManual = null);
 
 /// <summary>Interval without valid data. Gaps are recorded, never filled.</summary>
 public sealed record AcquisitionGap(DateTimeOffset From, DateTimeOffset To, string Reason, int MissedSamples);
 
 public sealed record AcquisitionStatistics(int Requested, int Received, int MissedSamples, int Reconnections,
-    double MeanRoundTripMs, double MaximumRoundTripMs, double MaximumLatenessMs, AcquisitionGap[] Gaps);
+    double MeanRoundTripMs, double MaximumRoundTripMs, double MaximumLatenessMs, AcquisitionGap[] Gaps,
+    int SamplesNotInManual = 0);
 
 [JsonConverter(typeof(JsonStringEnumConverter<AcquisitionState>))]
 public enum AcquisitionState { Connecting, Connected, Reading, Reconnecting, Stopped }

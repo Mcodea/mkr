@@ -25,7 +25,7 @@ public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory 
         var period = TimeSpan.FromMilliseconds(plan.PeriodMs);
         var gaps = new List<AcquisitionGap>();
         var roundTrips = new List<double>();
-        int receivedCount = 0, missed = 0, reconnections = 0;
+        int receivedCount = 0, missed = 0, reconnections = 0, notManual = 0;
         double maximumLateness = 0;
         (DateTimeOffset From, string Reason, int Count, TimeSpan Since)? gap = null;
         bool everConnected = false;
@@ -88,15 +88,17 @@ public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory 
                     }
                     var sentUtc = DateTimeOffset.UtcNow;
                     var sent = clock.Elapsed;
-                    var (sp, pv, mv) = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                    var reading = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var roundTrip = clock.Elapsed - sent;
                     CloseGap();
                     lastRoundTrip = roundTrip.TotalMilliseconds;
                     roundTrips.Add(lastRoundTrip.Value);
                     receivedCount++;
+                    bool? inManual = reading.Mode is { } rawMode ? rawMode == target.ManualModeValue : null;
+                    if (inManual == false) notManual++;
                     received(new AcquiredSample(sentUtc + roundTrip / 2,
-                        PlcDecoding.Scale(sp, target.Sp), PlcDecoding.Scale(pv, target.Pv), PlcDecoding.Scale(mv, target.Mv),
-                        lastRoundTrip.Value, sp, pv, mv));
+                        PlcDecoding.Scale(reading.Sp, target.Sp), PlcDecoding.Scale(reading.Pv, target.Pv), PlcDecoding.Scale(reading.Mv, target.Mv),
+                        lastRoundTrip.Value, reading.Sp, reading.Pv, reading.Mv, reading.Mode, inManual));
                     lastError = null;
                     Report(AcquisitionState.Reading, index + 1);
                 }
@@ -140,7 +142,7 @@ public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory 
         CloseGap();
         var statistics = new AcquisitionStatistics(plan.Samples, receivedCount, missed, reconnections,
             roundTrips.Count > 0 ? roundTrips.Average() : 0, roundTrips.Count > 0 ? roundTrips.Max() : 0,
-            maximumLateness, gaps.ToArray());
+            maximumLateness, gaps.ToArray(), notManual);
         progress?.Report(new(AcquisitionState.Stopped, receivedCount, plan.Samples, missed, clock.Elapsed,
             TimeSpan.Zero, lastRoundTrip, lastError));
         return new AcquisitionResult(reason, statistics, lastError);

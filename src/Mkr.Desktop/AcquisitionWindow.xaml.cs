@@ -54,9 +54,18 @@ public partial class AcquisitionWindow : Window
                 Box(5, "0", "physique bas", "EngineeringLow"), Box(6, "1", "physique haut", "EngineeringHigh")));
             row++;
         }
+        ModeType.ItemsSource = Types.Where(t => t != PlcDataType.Real32).ToArray();
+        ModeType.SelectedItem = PlcDataType.UInt16;
         Protocol.SelectedIndex = 0;
         Closed += (_, _) => _lifetime.Cancel();
         UpdatePlan();
+    }
+
+    private void ModeOptionChanged(object sender, RoutedEventArgs args)
+    {
+        if (ModePanel is null) return;
+        var visibility = ModeEnabled.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        ModePanel.Visibility = ModeHelp.Visibility = visibility;
     }
 
     private bool IsS7 => Protocol.SelectedIndex == 1;
@@ -151,6 +160,19 @@ public partial class AcquisitionWindow : Window
             Status.Text = "Port, période, nombre de mesures ou coupure tolérée invalide.";
             return null;
         }
+        SignalAddress? mode = null;
+        double? manualValue = null;
+        if (ModeEnabled.IsChecked == true)
+        {
+            if (!int.TryParse(ModeOffset.Text, out int modeOffset) || ModeType.SelectedItem is not PlcDataType modeType ||
+                !Number(ManualValue, out var manual))
+            {
+                Status.Text = "Adresse, type du mode ou valeur brute « manuel » invalide : aucune convention n’est supposée.";
+                return null;
+            }
+            mode = new SignalAddress(modeOffset, modeType);
+            manualValue = manual;
+        }
         AcquisitionTarget target;
         if (IsS7)
         {
@@ -162,7 +184,8 @@ public partial class AcquisitionWindow : Window
             }
             target = new AcquisitionTarget(PlcProtocol.S7, Host.Text.Trim(), port, addresses[0], addresses[1], addresses[2],
                 ProcessUnit.Text.Trim(), CommandUnit.Text.Trim(), ByteOrder.ABCD,
-                Rack: rack, Slot: slot, Area: Area.SelectedIndex == 1 ? S7Area.Merker : S7Area.DataBlock, DataBlock: db);
+                Rack: rack, Slot: slot, Area: Area.SelectedIndex == 1 ? S7Area.Merker : S7Area.DataBlock, DataBlock: db,
+                Mode: mode, ManualModeValue: manualValue);
         }
         else
         {
@@ -173,7 +196,8 @@ public partial class AcquisitionWindow : Window
             }
             target = new AcquisitionTarget(PlcProtocol.ModbusTcp, Host.Text.Trim(), port, addresses[0], addresses[1], addresses[2],
                 ProcessUnit.Text.Trim(), CommandUnit.Text.Trim(), (ByteOrder)Order.SelectedIndex, unit,
-                Table.SelectedIndex == 1 ? ModbusTable.InputRegisters : ModbusTable.HoldingRegisters);
+                Table.SelectedIndex == 1 ? ModbusTable.InputRegisters : ModbusTable.HoldingRegisters,
+                Mode: mode, ManualModeValue: manualValue);
         }
         var plan = new AcquisitionPlan(count, period, outage);
         if (PlcDecoding.Validate(target, plan) is { } problem)
@@ -181,6 +205,8 @@ public partial class AcquisitionWindow : Window
             Status.Text = problem;
             return null;
         }
+        if (target is { Protocol: PlcProtocol.ModbusTcp } && new ModbusTcpReader(target).RequestsPerReading > 1)
+            Status.Text = "Adresses éloignées (plus de 125 registres) : une requête par signal, lues à des instants légèrement différents. Rapprochez-les pour une lecture groupée.";
         return (target, plan);
     }
 
@@ -200,7 +226,8 @@ public partial class AcquisitionWindow : Window
         $"{sample.ReceivedAt:HH:mm:ss.fff} UTC · aller-retour {sample.RoundTripMs:0.#} ms\n" +
         $"SP {sample.Sp:G6} {ProcessUnit.Text} (brut {sample.RawSp:G9})\n" +
         $"PV {sample.Pv:G6} {ProcessUnit.Text} (brut {sample.RawPv:G9})\n" +
-        $"MV {sample.Mv:G6} {CommandUnit.Text} (brut {sample.RawMv:G9})";
+        $"MV {sample.Mv:G6} {CommandUnit.Text} (brut {sample.RawMv:G9})" +
+        (sample.RawMode is { } rawMode ? $"\nMode brut {rawMode:G9} → {(sample.InManual == true ? "manuel" : "PAS en manuel")}" : "");
 
     private async void ProbeReading(object sender, RoutedEventArgs args)
     {
@@ -353,6 +380,8 @@ public partial class AcquisitionWindow : Window
             _ => $"Acquisition interrompue : {result.Message}"
         } + (result.Statistics.MissedSamples > 0
             ? $" {result.Statistics.MissedSamples} mesure(s) manquée(s) sont enregistrées comme lacunes, sans interpolation."
+            : "") + (result.Statistics.SamplesNotInManual > 0
+            ? $" ATTENTION : {result.Statistics.SamplesNotInManual} mesure(s) prise(s) hors du mode manuel déclaré : un essai en boucle ouverte n’y est pas valable (colonne MANUAL de l’archive)."
             : "");
         Save.IsEnabled = count > 0;
         Settings.IsEnabled = Probe.IsEnabled = Start.IsEnabled = count == 0;

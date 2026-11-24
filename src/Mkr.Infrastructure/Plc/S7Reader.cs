@@ -66,7 +66,7 @@ public sealed class S7Reader : IPlcReader
         }, token).ConfigureAwait(false);
     }
 
-    public async Task<(double Sp, double Pv, double Mv)> ReadAsync(CancellationToken token)
+    public async Task<PlcReading> ReadAsync(CancellationToken token)
     {
         var stream = _stream ?? throw new PlcReadException("not_connected", "Session S7 non ouverte.", true);
         var signals = _target.Signals.ToArray();
@@ -111,7 +111,7 @@ public sealed class S7Reader : IPlcReader
             values[i] = PlcReaders.Checked(PlcDecoding.Decode(wire, address.Type, ByteOrder.ABCD), role);
             position += 4 + length + (length % 2 == 1 && i < signals.Length - 1 ? 1 : 0);
         }
-        return (values[0], values[1], values[2]);
+        return new PlcReading(values[0], values[1], values[2], signals.Length > 3 ? values[3] : null);
     }
 
     private int DbNumber => _target.Area == S7Area.DataBlock ? _target.DataBlock : 0;

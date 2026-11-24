@@ -29,6 +29,13 @@ ordre d’octets produit des valeurs plausibles mais fausses : seule cette compa
 
 **Exemple Siemens, mémoire de marqueurs.** Un programme dont la mesure, la sortie et la consigne sont des marqueurs (par exemple `%MD200` en REAL, `%MD228` en REAL et `%MW222` en INT) se lit avec la zone « Mémentos » : offset 200, 228 et 222, types REAL32, REAL32 et INT16 (échelle à renseigner). Ce schéma évite la DB d'instance de PID_Compact, qui est optimisée. Voir `docs/catalogue/blocs-observes.md`.
 
+### Mode du régulateur (manuel / automatique)
+
+Case « Lire aussi le mode du régulateur » : l'utilisateur saisit **l'adresse**, le **type entier** (INT, UINT, DINT, UDINT) et la **valeur brute qui signifie « manuel »** dans son programme. MKR ne suppose aucune convention : sans ces trois informations, le mode n'est pas lu. Un mode booléen se copie d'abord dans un mot.
+- **Adresses consécutives (recommandé).** Le mode est lu avec SP, PV et MV : une seule requête par mesure (Modbus : jusqu'à 125 registres ; S7 : un seul job). Au-delà, Modbus émet une requête par signal et l'écran le signale, car les valeurs ne sont plus prises au même instant.
+- **Archivage.** Le CSV reçoit `MODE_raw` (valeur brute) et `MANUAL` (1 si égale à la valeur déclarée).
+- **Contrôle.** Les mesures hors manuel sont comptées (`SamplesNotInManual`) et signalées à l'arrêt : un essai en boucle ouverte n'y est pas valable. MKR n'écarte rien automatiquement ; le tri reste à l'utilisateur.
+
 ### Prérequis Siemens
 
 - *Protection & Security* de la CPU : cocher **Autoriser l’accès PUT/GET par un partenaire distant**.

@@ -60,7 +60,8 @@ public sealed class HistorianRecorder(Func<AcquisitionTarget, IPlcReader>? facto
             var missed = gaps.Sum(g => g.MissedSamples);
             var trips = samples.Skip(carried).Select(s => s.RoundTripMs).Where(double.IsFinite).ToArray();
             var statistics = new AcquisitionStatistics(samples.Length - carried + missed, samples.Length - carried, missed,
-                gaps.Count(g => g.Reason != "overrun"), trips.Length > 0 ? trips.Average() : 0, trips.Length > 0 ? trips.Max() : 0, 0, gaps);
+                gaps.Count(g => g.Reason != "overrun"), trips.Length > 0 ? trips.Average() : 0, trips.Length > 0 ? trips.Max() : 0, 0, gaps,
+                samples.Skip(carried).Count(s => s.InManual == false));
             var segmentPlan = new AcquisitionPlan(samples.Length, plan.PeriodMs, plan.MaximumOutageSeconds);
             return new HistorianSegment(samples, new AcquisitionOrigin(null, stopReason, "receiver_utc_midpoint", target,
                 segmentPlan, statistics, new HistorianSession(session, index, index == 1 ? 0 : carried)));

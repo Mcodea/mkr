@@ -95,6 +95,11 @@ public static class PlcDecoding
         if (plan.PeriodMs is < 100 or > 60000) return "La période doit être comprise entre 100 ms et 60 s.";
         if (!double.IsFinite(plan.MaximumOutageSeconds) || plan.MaximumOutageSeconds is < 0 or > 600)
             return "La coupure tolérée doit être comprise entre 0 et 600 s.";
+        if ((target.Mode is null) != (target.ManualModeValue is null))
+            return "Le mode du régulateur exige son adresse et la valeur brute qui signifie « manuel » (aucune convention n’est supposée).";
+        if (target.Mode is { } mode && (mode.Type == PlcDataType.Real32 || !double.IsFinite(target.ManualModeValue!.Value) ||
+                target.ManualModeValue.Value != Math.Round(target.ManualModeValue.Value)))
+            return "Le mode se lit comme un entier (INT, UINT, DINT ou UDINT) ; la valeur « manuel » doit être un entier.";
         foreach (var (role, address) in target.Signals)
         {
             if (!double.IsFinite(address.RawLow) || !double.IsFinite(address.RawHigh) ||

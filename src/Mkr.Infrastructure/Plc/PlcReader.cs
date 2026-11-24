@@ -16,11 +16,14 @@ public sealed class PlcReadException(string code, string message, bool recoverab
     public bool QualityOnly { get; } = qualityOnly;
 }
 
-/// <summary>Read-only PLC session returning the raw decoded SP, PV and MV values of one coherent reading.</summary>
+/// <summary>One coherent reading: raw decoded SP, PV, MV and, when configured, the raw controller mode.</summary>
+public sealed record PlcReading(double Sp, double Pv, double Mv, double? Mode = null);
+
+/// <summary>Read-only PLC session returning the raw decoded values of one coherent reading.</summary>
 public interface IPlcReader : IAsyncDisposable
 {
     Task ConnectAsync(CancellationToken token);
-    Task<(double Sp, double Pv, double Mv)> ReadAsync(CancellationToken token);
+    Task<PlcReading> ReadAsync(CancellationToken token);
 }
 
 public static class PlcReaders

@@ -103,6 +103,18 @@
           <TextBlock TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0"
                      Text="Mise à l’échelle linéaire : physique = bas + (brut − brut bas) × (physique haut − physique bas) / (brut haut − brut bas). Laissez 0 / 1 / 0 / 1 pour une valeur REAL déjà en unité physique."/>
 
+          <CheckBox x:Name="ModeEnabled" Margin="0,10,0,0" Checked="ModeOptionChanged" Unchecked="ModeOptionChanged"
+                    AutomationProperties.Name="Lire aussi le mode du régulateur">
+            <TextBlock Text="Lire aussi le mode du régulateur (manuel / automatique)"/>
+          </CheckBox>
+          <WrapPanel x:Name="ModePanel" Visibility="Collapsed" Margin="0,4,0,0">
+            <StackPanel Margin="0,0,12,0"><Label Content="Adresse du mode" Target="{Binding ElementName=ModeOffset}"/><TextBox x:Name="ModeOffset" Width="90" AutomationProperties.Name="Adresse du mode"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="Type du mode" Target="{Binding ElementName=ModeType}"/><ComboBox x:Name="ModeType" Width="120" AutomationProperties.Name="Type du mode"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="Valeur brute « manuel »" Target="{Binding ElementName=ManualValue}"/><TextBox x:Name="ManualValue" Width="90" AutomationProperties.Name="Valeur brute manuel"/></StackPanel>
+          </WrapPanel>
+          <TextBlock x:Name="ModeHelp" TextWrapping="Wrap" Foreground="{StaticResource MkrMuted}" Margin="0,4,0,0" Visibility="Collapsed"
+                     Text="Le mode se lit avec SP, PV et MV : placez-le, si possible, à une adresse consécutive aux trois autres pour une seule requête par mesure. MKR ne suppose aucune convention : indiquez la valeur brute que votre programme utilise pour « manuel ». Un mode booléen doit être copié dans un mot (INT/UINT). Les mesures prises hors manuel sont comptées et signalées : un essai en boucle ouverte n’y est pas valable."/>
+
           <TextBlock Text="Plan d’acquisition" FontWeight="SemiBold" Margin="0,14,0,0"/>
           <WrapPanel>
             <StackPanel Margin="0,0,12,0"><Label Content="Unité SP et PV" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="Unité SP et PV"/></StackPanel>
