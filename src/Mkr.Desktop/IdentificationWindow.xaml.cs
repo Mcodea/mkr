@@ -445,6 +445,7 @@ public partial class IdentificationWindow : Window
         if (study.Assessment is { } decision && result.Validation is { } validation)
             VerdictMetrics.Children.Add(Tile("Erreur de validation", $"{validation.Rmse:G3} / {decision.Criteria.MaximumRmse:G3} {study.PvUnit}"));
         VerdictCard.Visibility = Visibility.Visible;
+        VerdictCard.BringIntoView();                      // the decision is the first thing to read after choosing a study
     }
 
     private void ChangeResponseProfile(object sender, SelectionChangedEventArgs args) => UpdateResponseTarget();
