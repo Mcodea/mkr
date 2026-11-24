@@ -714,6 +714,18 @@ try
         restored.SaveStudy(project.Id, rapidStudy);
         Directory.CreateDirectory(fixture);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
+        // Fixtures for the block, integrator and drift windows (tests/windows/blocks.ps1).
+        var integratorCriteria = new ComparisonCriteria(0.001, 1);
+        var (integratorFit, integratorVersion) = await engine.IdentifyAsync(ModelFamily.Integrateur, new StepImport(trainingThird, columns),
+            new StepImport(validationThird, columns), 0.01, 0.01, default);
+        var (_, integratorAssessment, _) = await engine.AssessAsync(ModelFamily.Integrateur, new StepImport(trainingThird, columns),
+            new StepImport(validationThird, columns), 0.01, 0.01, integratorCriteria, default);
+        Require(integratorAssessment.Accepted, "The integrator fixture passes its independent validation.");
+        var integratorStudy = new IdentificationStudy(Guid.NewGuid(), trainingThird.Summary.Id, validationThird.Summary.Id, columns, columns,
+            "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, integratorVersion, integratorFit, ModelFamily.Integrateur, Assessment: integratorAssessment);
+        restored.SaveStudy(project.Id, integratorStudy);
+        File.WriteAllText(Path.Combine(fixture, "integrator-study.txt"), integratorStudy.Id.ToString()[..8]);
+        await SaveStepAsync(11, 1.8, delaySeconds: 0.5);      // a NEW step of the short-delay process: essai-11.csv
         const double transportDelay = 34 * 60;
         const int samplePeriod = 90;
         var transportTraining = await SaveStepAsync(9, 2, delaySeconds: transportDelay, secondsPerSample: samplePeriod);

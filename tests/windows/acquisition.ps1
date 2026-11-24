@@ -130,6 +130,19 @@ try {
     foreach ($part in @('SP 45.25 bar', 'PV -3.5 bar', 'MV 61.875 %')) {
         if (!$latest.Contains($part)) { throw "Valeur Modbus absente : $part. Affichage : $latest" }
     }
+    # Controller mode: address and "manual" value are entered by the user; nothing is assumed.
+    $toggle = (Find $window $id 'ModeEnabled').GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    $toggle.Toggle()
+    Press $window 'Tester la lecture'
+    $null = Wait-Text $window 'Status' '*aucune convention n’est supposée*'
+    Fill $window 'ModeOffset' '106'
+    Fill $window 'ManualValue' '0'
+    Press $window 'Tester la lecture'
+    $null = Wait-Text $window 'Latest' '*Mode brut 0 → manuel*'
+    Fill $window 'ManualValue' '5'
+    Press $window 'Tester la lecture'
+    $null = Wait-Text $window 'Latest' '*Mode brut 0 → PAS en manuel*'
+    $toggle.Toggle()
     # An address outside the server table is refused explicitly (exception 02).
     Fill $window 'MVOffset' '5000'
     Press $window 'Tester la lecture'
