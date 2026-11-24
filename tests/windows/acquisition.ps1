@@ -134,7 +134,7 @@ try {
     $toggle = (Find $window $id 'ModeEnabled').GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
     $toggle.Toggle()
     Press $window 'Tester la lecture'
-    $null = Wait-Text $window 'Status' '*aucune convention n’est supposée*'
+    $null = Wait-Text $window 'Status' "*aucune convention n’est supposée*"
     Fill $window 'ModeOffset' '106'
     Fill $window 'ManualValue' '0'
     Press $window 'Tester la lecture'
