@@ -27,6 +27,8 @@ Laisser 0 / 1 / 0 / 1 pour un REAL déjà en unité physique.
 à comparer aux tables d’animation de Control Expert ou de TIA Portal. Un mauvais offset ou un mauvais
 ordre d’octets produit des valeurs plausibles mais fausses : seule cette comparaison le détecte.
 
+**Exemple Siemens, mémoire de marqueurs.** Un programme dont la mesure, la sortie et la consigne sont des marqueurs (par exemple `%MD200` en REAL, `%MD228` en REAL et `%MW222` en INT) se lit avec la zone « Mémentos » : offset 200, 228 et 222, types REAL32, REAL32 et INT16 (échelle à renseigner). Ce schéma évite la DB d'instance de PID_Compact, qui est optimisée. Voir `docs/catalogue/blocs-observes.md`.
+
 ### Prérequis Siemens
 
 - *Protection & Security* de la CPU : cocher **Autoriser l’accès PUT/GET par un partenaire distant**.

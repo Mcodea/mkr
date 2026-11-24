@@ -12,6 +12,18 @@ CPU, firmware, version du logiciel (Control Expert ou TIA Portal), version de la
 
 Pour chaque bloc et version : forme (série, parallèle ou mixte), place des actions P, I et D, filtre de dérivée et pondération de consigne, unités de Ti et de Td (secondes, minutes, durée IEC), normalisation de la mesure et de la sortie (unité physique ou pourcentage), sens d'action, anti-windup, comportement en manuel et au retour en automatique. Chaque information cite la page, l'édition et la version.
 
+## 2 bis. Neutraliser les fonctions annexes (essai E0)
+
+Avant toute équivalence, mettre à leur valeur **neutre documentée** toutes les fonctions qui n'existent pas dans le régulateur générique de MKR, et vérifier qu'elles le sont (mesure de la sortie, sans action P, I ni D). Valeur neutre = celle que la documentation désigne, jamais une valeur supposée. D'après la structure observée du PIDFF (`docs/catalogue/blocs-observes.md`) :
+- pondération de consigne (`ovs_att`) ;
+- zone morte et gain dans la zone morte (`dband`, `gain_kp`) ;
+- choix de l'entrée de dérivée (`pv_dev`) et facteur `kd` ;
+- anticipation `FF` et ses bornes, décalage `outbias` ;
+- limiteur de variation (`outrate`) et limiteurs de sortie ;
+- suivi (`TR_I`, `TR_S`) et retour de position (`RCPY`, `en_rcpy`).
+
+Pour PID_Compact et pour le bloc « PID » : dresser la même liste depuis la documentation de la version utilisée. Tant que la liste n'est pas établie et que E0 n'est pas passé, E1 à E7 ne sont pas interprétables.
+
 ## 3. Essais en boucle fermée sur le procédé simulé ou réel (banc)
 
 Procédé de banc ou modèle simulé dans l'automate, avec un modèle connu : par exemple un premier ordre avec retard dont K, τ et θ sont mesurés.

@@ -13,7 +13,9 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual([e["name"] for e in siemens], ["PID_Compact"])
         for name in ("PID_Compact", "PIDINT"):
             entry, = lookup({"name": name})["entries"]
-            self.assertEqual((entry["equation"], entry["parameters"], entry["facts"], entry["status"]), (None, [], [], "to_verify"))
+            self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
+            # Only pin names transcribed from user captures: no claim about behaviour, units or equations.
+            self.assertTrue(all(f["source"].startswith("CAPTURE-") for f in entry["facts"]))
             self.assertFalse(entry["selectable"])
             self.assertFalse(convert(dict(name=name, target={}, parameters={"kp": 1}))["converted"])
 
@@ -43,4 +45,23 @@ class CatalogueTests(unittest.TestCase):
         })
         references = {s["id"] for s in result["sources"]}
         self.assertTrue(all(p["source"] in references for p in params.values()))
+        self.assertFalse(entry["selectable"])
+
+
+class ObservedStructureTests(unittest.TestCase):
+    def test_captured_structure_is_traceable_and_claims_no_equation(self):
+        result = lookup({"name": "PIDFF"})
+        sources = {s["id"]: s for s in result["sources"]}
+        entry, = result["entries"]
+        captured = [f for f in entry["facts"] if f["source"].startswith("CAPTURE-")]
+        self.assertEqual(len(captured), 6)
+        for fact in captured:
+            source = sources[fact["source"]]
+            self.assertEqual(source["edition"], "non identifiée")        # provenance gap stays visible
+            self.assertIn("Aucune équation" if fact["source"] == "CAPTURE-PIDFF-1" else "non établis", source["scope"])
+        # The structure names the functions a conversion must neutralise before any equivalence test.
+        text = " ".join(f["claim"] for f in captured)
+        for name in ("ovs_att", "dband", "gain_kp", "pv_dev", "outbias", "outrate", "rev_dir", "TR_I", "MAN_AUTO"):
+            self.assertIn(name, text)
+        self.assertIsNone(entry["equation"])
         self.assertFalse(entry["selectable"])

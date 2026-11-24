@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogueVersion": "2026-11-24.1",
+  "catalogueVersion": "2026-11-24.2",
   "sources": [
     {
       "id": "SE-33002535-16",
@@ -39,6 +39,33 @@
       "url": "https://www.se.com/us/en/download/document/33002535K01000/",
       "scope": "Types et rôle des paramètres de la bibliothèque Control. Le comportement sur une cible particulière reste à qualifier.",
       "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "CAPTURE-PIDFF-1",
+      "document": "Capture d’écran de l’aide du bloc PIDFF, fournie par le mainteneur",
+      "edition": "non identifiée",
+      "section": "Structure diagram — Parallel structure of the PIDFF controller",
+      "url": "urn:mkr:capture:pidff-structure-1",
+      "scope": "Transcription limitée aux noms et à l’ordre des blocs visibles. Aucune équation. Document d’origine, édition et version de bibliothèque à confirmer. L’image n’est pas redistribuée.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "CAPTURE-PIDFF-2",
+      "document": "Capture d’écran d’une instance PIDFF dans un programme du mainteneur",
+      "edition": "non identifiée",
+      "section": "Broches du bloc PIDFF",
+      "url": "urn:mkr:capture:pidff-pins-1",
+      "scope": "Noms des broches visibles seulement. Types, unités et comportement non établis.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "CAPTURE-PIDCOMPACT-1",
+      "document": "Capture d’écran d’une instance PID_Compact dans un programme du mainteneur",
+      "edition": "non identifiée",
+      "section": "Réseau « PID compact for Alkali dosing pump », DB d’instance %DB2",
+      "url": "urn:mkr:capture:pidcompact-instance-1",
+      "scope": "Broches visibles seulement ; la liste est tronquée par la flèche d’extension du bloc. Version du bloc non affichée.",
+      "consultedOn": "2026-11-24"
     }
   ],
   "blocks": [
@@ -114,6 +141,30 @@
         {
           "source": "SE-PIDFF-167",
           "claim": "Un temps intégral nul désactive l’action intégrale. Avec un temps intégral positif, le bloc calcule d’abord un incrément de sortie."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Structure parallèle : les actions proportionnelle (kp), intégrale (ti, K) et dérivée (td, kd, K) sont additionnées avant le sens d’action (rev_dir)."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "L’action proportionnelle reçoit un écart pondéré DEV_WGH issu d’une atténuation de dépassement (ovs_att) appliquée à la consigne ; l’action intégrale reçoit l’écart dev ; un sélecteur pv_dev précède l’action dérivée."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Un bloc à zone morte (dband, gain_kp) précède les actions proportionnelle et intégrale. Les plages pv_sup et pv_inf figurent sur les entrées SP et PV."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Après la somme des actions : sens direct/inverse (rev_dir), addition de l’anticipation FF (bornes ff_sup, ff_inf, otff_sup, otff_inf ; out_ff) et d’un décalage outbias, limiteur de variation (outrate), limiteur out_min/out_max."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "La sortie OUT résulte d’une commutation MAN_AUTO et d’un suivi (TR_I, TR_S) avec un limiteur out_sup/out_inf."
+        },
+        {
+          "source": "CAPTURE-PIDFF-2",
+          "claim": "Broches d’entrée visibles : PV, SP, FF, RCPY, MAN_AUTO, PARA, TR_I, TR_S. Broches de sortie visibles : OUT, OUTD, MA_O, INFO, STATUS."
         }
       ]
     },
@@ -180,7 +231,12 @@
       "parameters": [],
       "modes": [],
       "status": "to_verify",
-      "facts": []
+      "facts": [
+        {
+          "source": "CAPTURE-PIDCOMPACT-1",
+          "claim": "Instance dans le DB %DB2 (« PID_Compact_2 »). Broches d’entrée visibles : Setpoint, Input, Input_PER, ManualEnable, ManualValue. Broches de sortie visibles : Output, Output_PER, Output_PWM, State, Error, ErrorBits."
+        }
+      ]
     }
   ]
 }
