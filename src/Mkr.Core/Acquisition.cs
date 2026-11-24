@@ -106,16 +106,50 @@ public sealed record AcquisitionResult(string StopReason, AcquisitionStatistics 
 
 public interface IReadOnlyAcquisition
 {
-    /// <summary>Reads only. Never issues write, force, control or program operations.</summary>
+    /// <summary>
+    /// Reads only. Never issues write, force, control or program operations.
+    /// <paramref name="gapClosed"/> is called, when set, just before the first reading that follows a gap.
+    /// </summary>
     Task<AcquisitionResult> CaptureAsync(AcquisitionTarget target, AcquisitionPlan plan,
-        Action<AcquiredSample> received, IProgress<AcquisitionProgress>? progress, CancellationToken cancellationToken);
+        Action<AcquiredSample> received, IProgress<AcquisitionProgress>? progress, CancellationToken cancellationToken,
+        Action<AcquisitionGap>? gapClosed = null);
 }
+
+/// <summary>
+/// Long recording cut into segments saved as they complete (crash-safe). Each segment starts with the
+/// last <see cref="OverlapSamples"/> readings of the previous one so a step near a cut stays whole in one segment.
+/// A step test longer than the overlap can still be cut: plan a one-shot acquisition for it.
+/// </summary>
+public sealed record HistorianPlan(int PeriodMs, long TotalSamples, int SegmentSamples = 3000,
+    int OverlapSamples = 300, double MaximumOutageSeconds = 30)
+{
+    public const long MaximumTotalSamples = 2_000_000;
+    public const int MinimumSegmentSamples = 10;
+    public const int MaximumSegmentSamples = 5000;
+
+    [JsonIgnore] public TimeSpan PlannedDuration => TimeSpan.FromMilliseconds((double)Math.Max(0, TotalSamples - 1) * PeriodMs);
+    [JsonIgnore] public int NewSamplesPerSegment => SegmentSamples - OverlapSamples;
+    [JsonIgnore] public long ExpectedSegments => (TotalSamples + NewSamplesPerSegment - 1 - OverlapSamples) / NewSamplesPerSegment;
+
+    public string? Validate() =>
+        PeriodMs is < 100 or > 60000 ? "La période doit être comprise entre 100 ms et 60 s."
+        : TotalSamples is < 1 or > MaximumTotalSamples ? $"La durée doit représenter entre 1 et {MaximumTotalSamples:N0} mesures."
+        : SegmentSamples is < MinimumSegmentSamples or > MaximumSegmentSamples
+            ? $"Un segment contient entre {MinimumSegmentSamples} et {MaximumSegmentSamples} mesures."
+        : OverlapSamples < 0 || OverlapSamples > SegmentSamples / 2 ? "Le recouvrement ne peut dépasser la moitié d’un segment."
+        : !double.IsFinite(MaximumOutageSeconds) || MaximumOutageSeconds is < 0 or > 3600 ? "La coupure tolérée doit être comprise entre 0 et 3600 s."
+        : null;
+}
+
+/// <summary>Position of one stored segment inside a long recording.</summary>
+public sealed record HistorianSession(Guid SessionId, int SegmentIndex, int OverlapSamples);
 
 /// <summary>
 /// Provenance of a capture. Source is set only on legacy records; new captures set Target, Plan and Statistics.
 /// </summary>
 public sealed record AcquisitionOrigin(RegisterSource? Source, string StopReason, string TimestampOrigin,
-    AcquisitionTarget? Target = null, AcquisitionPlan? Plan = null, AcquisitionStatistics? Statistics = null)
+    AcquisitionTarget? Target = null, AcquisitionPlan? Plan = null, AcquisitionStatistics? Statistics = null,
+    HistorianSession? Session = null)
 {
     [JsonIgnore] public string ProcessUnit => Target?.ProcessUnit ?? Source?.ProcessUnit ?? "";
     [JsonIgnore] public string CommandUnit => Target?.CommandUnit ?? Source?.CommandUnit ?? "";
@@ -128,6 +162,9 @@ public sealed record AcquisitionOrigin(RegisterSource? Source, string StopReason
             if (Statistics is { } s)
                 text += $" · {s.Received}/{s.Requested} mesures, {s.MissedSamples} manquées, {s.Reconnections} reconnexion(s)," +
                         $" aller-retour moyen {s.MeanRoundTripMs:G3} ms, max {s.MaximumRoundTripMs:G3} ms";
+            if (Session is { } session)
+                text += $" · historique {session.SessionId.ToString()[..8]} segment {session.SegmentIndex}" +
+                        (session.OverlapSamples > 0 ? $" (recouvre les {session.OverlapSamples} mesures précédentes)" : "");
             return text;
         }
         return Source is { } legacy

@@ -77,9 +77,43 @@ public partial class AcquisitionWindow : Window
 
     private void PlanChanged(object sender, TextChangedEventArgs args) => UpdatePlan();
 
+    private bool IsHistorian => Continuous.IsChecked == true;
+
+    private void ModeChanged(object sender, RoutedEventArgs args)
+    {
+        if (HistorianPanel is null) return;
+        HistorianPanel.Visibility = IsHistorian ? Visibility.Visible : Visibility.Collapsed;
+        CountPanel.Visibility = IsHistorian ? Visibility.Collapsed : Visibility.Visible;
+        Probe.Visibility = Save.Visibility = IsHistorian ? Visibility.Collapsed : Visibility.Visible;
+        Start.Content = IsHistorian ? "_Démarrer l’enregistrement continu" : "_Démarrer l’acquisition";
+        UpdatePlan();
+    }
+
+    private HistorianPlan? ReadHistorian()
+    {
+        if (!double.TryParse(Hours.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var hours) &&
+            !double.TryParse(Hours.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out hours) ||
+            !int.TryParse(Period.Text, out int period) || period <= 0 || !double.IsFinite(hours) || hours <= 0 ||
+            !int.TryParse(SegmentSize.Text, out int segment) || !int.TryParse(Overlap.Text, out int overlap) ||
+            !Number(Outage, out var outage))
+            return null;
+        var total = (long)Math.Round(hours * 3600_000 / period) + 1;
+        return new HistorianPlan(period, total, segment, overlap, outage);
+    }
+
     private void UpdatePlan()
     {
         if (PlanSummary is null) return;
+        if (IsHistorian)
+        {
+            var historian = ReadHistorian();
+            PlanSummary.Text = historian is null ? "Indiquez une durée, une période, une taille de segment et un recouvrement."
+                : historian.Validate() ?? $"{historian.TotalSamples:N0} mesures sur {Format(historian.PlannedDuration)} en {historian.ExpectedSegments} segment(s) " +
+                    $"d’environ {historian.SegmentSamples * 120 / 1024} Kio, enregistrés dès qu’ils sont complets. Le recouvrement garde entier un échelon proche d’une coupure " +
+                    $"s’il dure moins de {historian.OverlapSamples * historian.PeriodMs / 1000.0:G3} s : pour un essai plus long, utilisez l’acquisition ponctuelle. " +
+                    "Réalisez les échelons de MV avec le régulateur en manuel ; MKR les retrouvera ensuite dans l’historique.";
+            return;
+        }
         if (int.TryParse(Count.Text, out int count) && int.TryParse(Period.Text, out int period) && count > 0 && period > 0)
         {
             var plan = new AcquisitionPlan(count, period);
@@ -193,10 +227,83 @@ public partial class AcquisitionWindow : Window
         }
     }
 
+    private async Task StartHistorian(AcquisitionTarget target)
+    {
+        var requested = ReadHistorian();
+        if (requested is null || requested.Validate() is { } problem)
+        {
+            Status.Text = requested is null ? "Durée, période, segment ou recouvrement invalide." : requested.Validate();
+            return;
+        }
+        var plan = requested;
+        using var reading = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        _reading = reading;
+        Settings.IsEnabled = Start.IsEnabled = false;
+        Stop.IsEnabled = true;
+        Progress.Maximum = plan.TotalSamples;
+        Progress.Value = 0;
+        int segments = 0;
+        Status.Text = "Enregistrement continu en cours. Chaque segment est enregistré dans le projet dès qu’il est complet : fermer cette fenêtre n’en perd aucun.";
+        var progress = new Progress<AcquisitionProgress>(update =>
+        {
+            if (_lifetime.IsCancellationRequested) return;
+            ShowState(update.State, update.LastRoundTripMs is { } rtt ? $"dernier aller-retour {rtt:0.#} ms" : null);
+            Progress.Value = Math.Min(plan.TotalSamples, update.Received + update.MissedSamples);
+            ProgressText.Text = $"{update.Received:N0} / {update.Requested:N0} mesures · {update.MissedSamples} manquée(s) · {segments} segment(s) enregistré(s) · " +
+                $"écoulé {Format(update.Elapsed)} · restant estimé {Format(update.Remaining)}" +
+                (update.LastError is { } error ? $"\nDernier incident : {error}" : "");
+        });
+        HistorianResult? result = null;
+        try
+        {
+            result = await new HistorianRecorder().RunAsync(target, plan, async segment =>
+            {
+                // Saved even after a stop: the open segment must not be lost.
+                SavedImport = await _workspace.SaveCaptureAsync(segment.Samples.ToList(), segment.Origin, CancellationToken.None);
+                segments++;
+            }, progress, reading.Token);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
+        catch (Exception e) when (e is ArgumentException or System.IO.IOException or System.IO.InvalidDataException)
+        {
+            Status.Text = $"Enregistrement continu impossible. {e.Message}";
+            return;
+        }
+        finally
+        {
+            _reading = null;
+            Stop.IsEnabled = false;
+            Settings.IsEnabled = Start.IsEnabled = true;
+        }
+        var summary = result.StopReason switch
+        {
+            "sample_limit" => "Durée prévue atteinte.",
+            "operator_stop" => "Enregistrement arrêté par l’opérateur.",
+            "connection_failed" => $"Connexion impossible : {result.Message}",
+            "connection_lost" => $"Liaison perdue au-delà de la coupure tolérée : {result.Message}",
+            "storage_error" => result.Message ?? "Enregistrement d’un segment impossible.",
+            _ => $"Enregistrement interrompu : {result.Message}"
+        };
+        summary += $" {result.SegmentsSaved} segment(s) enregistré(s), {result.Statistics.Received:N0} mesures, " +
+            $"{result.Statistics.MissedSamples} manquée(s) en {result.Statistics.Gaps.Length} lacune(s), aucune interpolée.";
+        Status.Text = summary;
+        if (result.SegmentsSaved > 0 && !_lifetime.IsCancellationRequested)
+        {
+            MessageBox.Show(this, summary + "\n\nRetrouvez les essais dans « Identification » avec « Rechercher les essais exploitables ».",
+                "Enregistrement continu", MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogResult = true;
+        }
+    }
+
     private async void StartReading(object sender, RoutedEventArgs args)
     {
         if (ReadSettings() is not { } settings) return;
         var (target, plan) = settings;
+        if (IsHistorian)
+        {
+            await StartHistorian(target);
+            return;
+        }
         using var reading = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         _reading = reading;
         Settings.IsEnabled = Probe.IsEnabled = Start.IsEnabled = Save.IsEnabled = false;

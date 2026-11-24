@@ -28,7 +28,10 @@ public static class AcquisitionArchive
         var mapping = new CsvMapping("timestamp", "PV", "PV", origin.ProcessUnit);
         var (result, version) = await engine.AnalyzeAsync(bytes, ",", mapping, token);
         token.ThrowIfCancellationRequested();
-        var summary = new ImportSummary(Guid.NewGuid(), $"acquisition-{samples[0].ReceivedAt:yyyyMMdd-HHmmss}.csv",
+        var name = origin.Session is { } session
+            ? $"historique-{session.SessionId.ToString()[..8]}-{session.SegmentIndex:D3}.csv"
+            : $"acquisition-{samples[0].ReceivedAt:yyyyMMdd-HHmmss}.csv";
+        var summary = new ImportSummary(Guid.NewGuid(), name,
             Convert.ToHexString(SHA256.HashData(bytes)), DateTimeOffset.UtcNow);
         var import = new CsvImport(summary, ",", mapping, result, version, bytes, origin);
         store.SaveImport(projectId, import);

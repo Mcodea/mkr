@@ -317,6 +317,85 @@ await Check("s7 optimized block (0x03) is refused, not retried", async () =>
     Assert(stub.Functions.Count(f => f == 0x04) == 1, "une seule tentative");
 });
 
+// ---------- Historian: long recording in segments ----------
+static async Task<(HistorianResult Result, List<HistorianSegment> Segments)> Record(AcquisitionTarget target, HistorianPlan plan,
+    Func<HistorianSegment, Task>? failing = null, CancellationToken token = default)
+{
+    var segments = new List<HistorianSegment>();
+    var result = await new HistorianRecorder().RunAsync(target, plan, failing ?? (segment => { segments.Add(segment); return Task.CompletedTask; }),
+        null, token);
+    return (result, segments);
+}
+
+await Check("historian cuts a long recording into overlapping segments without losing a reading", async () =>
+{
+    await using var stub = new ModbusStub();
+    stub.Place(0, 1.5, PlcDataType.Real32, ByteOrder.CDAB);
+    var plan = new HistorianPlan(100, 35, SegmentSamples: 10, OverlapSamples: 2);
+    Assert(plan.ExpectedSegments == 5, $"segments attendus {plan.ExpectedSegments}");
+    var (result, segments) = await Record(Modbus(stub.Port), plan);
+    Assert(result.StopReason == "sample_limit" && result.SegmentsSaved == 5 && segments.Count == 5, $"{result.StopReason} {segments.Count}");
+    Assert(segments.Select(s => s.Samples.Count).SequenceEqual(new[] { 10, 10, 10, 10, 3 }), "tailles des segments");
+    Assert(segments.Select(s => s.Origin.Session!.SegmentIndex).SequenceEqual(new[] { 1, 2, 3, 4, 5 }) &&
+           segments.Select(s => s.Origin.Session!.SessionId).Distinct().Count() == 1, "session et ordre");
+    Assert(segments.Select(s => s.Origin.Session!.OverlapSamples).SequenceEqual(new[] { 0, 2, 2, 2, 2 }), "recouvrement");
+    Assert(segments.Take(4).All(s => s.Origin.StopReason == "segment_boundary") && segments[4].Origin.StopReason == "sample_limit", "motifs");
+    // The overlap repeats the previous tail exactly; removing it gives the complete, ordered, gap-free timeline.
+    for (int i = 1; i < segments.Count; i++)
+        Assert(segments[i].Samples.Take(2).SequenceEqual(segments[i - 1].Samples.TakeLast(2)), $"recouvrement du segment {i + 1}");
+    var timeline = segments[0].Samples.Concat(segments.Skip(1).SelectMany(s => s.Samples.Skip(2))).ToList();
+    Assert(timeline.Count == 35 && timeline.Zip(timeline.Skip(1)).All(p => p.Second.ReceivedAt > p.First.ReceivedAt), "chronologie complète");
+    Assert(segments.All(s => s.Samples.All(x => x.Sp == 1.5)) && segments.All(s => s.Origin.Target == Modbus(stub.Port)), "valeurs et cible");
+    AssertReadOnlyModbus(stub);
+});
+
+await Check("historian attaches a gap to the segment that follows it, never interpolated", async () =>
+{
+    await using var stub = new ModbusStub();
+    stub.Behaviour = (n, request) => Task.FromResult<byte[]?>(n == 14 ? [] : stub.Normal(request));
+    var (result, segments) = await Record(Modbus(stub.Port), new HistorianPlan(100, 30, SegmentSamples: 10, OverlapSamples: 2));
+    Assert(result.StopReason == "sample_limit" && result.Statistics.MissedSamples == 1, $"{result.StopReason} {result.Statistics.MissedSamples}");
+    var holders = segments.Where(s => s.Origin.Statistics!.Gaps.Length > 0).ToArray();
+    Assert(holders.Length == 1 && holders[0].Origin.Statistics!.MissedSamples == 1 &&
+           holders[0].Origin.Statistics!.Gaps[0].Reason == "connection_closed", "une seule lacune, dans un seul segment");
+    var inside = holders[0].Samples.Skip(holders[0].Origin.Session!.OverlapSamples).ToArray();
+    var largest = inside.Zip(inside.Skip(1), (a, b) => (b.ReceivedAt - a.ReceivedAt).TotalMilliseconds).Max();
+    Assert(largest > 150, $"la lacune est visible dans les horodatages ({largest:0} ms)");
+    Assert(segments.Where(s => s != holders[0]).All(s => s.Origin.Statistics!.MissedSamples == 0), "les autres segments sont sans lacune");
+});
+
+await Check("historian stops on a storage failure and keeps what was saved", async () =>
+{
+    await using var stub = new ModbusStub();
+    int calls = 0;
+    var (result, _) = await Record(Modbus(stub.Port), new HistorianPlan(100, 200, SegmentSamples: 10, OverlapSamples: 2),
+        _ => ++calls == 2 ? throw new IOException("disque plein") : Task.CompletedTask);
+    Assert(result.StopReason == "storage_error" && result.Message!.Contains("disque plein") && result.SegmentsSaved == 1, $"{result.StopReason} {result.SegmentsSaved}");
+    Assert(stub.Frames.Count < 60, $"l'acquisition s'arrête ({stub.Frames.Count} requêtes sur 200 prévues)");
+});
+
+await Check("historian operator stop saves the open segment", async () =>
+{
+    await using var stub = new ModbusStub();
+    using var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(520));
+    var (result, segments) = await Record(Modbus(stub.Port), new HistorianPlan(100, 1000, SegmentSamples: 50, OverlapSamples: 5), token: stop.Token);
+    Assert(result.StopReason == "operator_stop" && segments.Count == 1 && segments[0].Origin.StopReason == "operator_stop", $"{result.StopReason} {segments.Count}");
+    Assert(segments[0].Samples.Count is >= 4 and <= 7, $"{segments[0].Samples.Count} mesures conservées");
+});
+
+await Check("historian plan is validated", () =>
+{
+    foreach (var bad in new[]
+    {
+        new HistorianPlan(50, 100), new HistorianPlan(1000, 0), new HistorianPlan(1000, HistorianPlan.MaximumTotalSamples + 1),
+        new HistorianPlan(1000, 100, SegmentSamples: 5), new HistorianPlan(1000, 100, SegmentSamples: 6000),
+        new HistorianPlan(1000, 100, SegmentSamples: 100, OverlapSamples: 60), new HistorianPlan(1000, 100, MaximumOutageSeconds: -1)
+    })
+        Assert(bad.Validate() is not null, $"plan accepté : {bad}");
+    Assert(new HistorianPlan(1000, 86400).Validate() is null && new HistorianPlan(1000, 86400).ExpectedSegments == 32, "plan d'un jour à 1 s");
+    return Task.CompletedTask;
+});
+
 // ---------- Persistence ----------
 await Check("origin JSON round trip and legacy record compatibility", () =>
 {

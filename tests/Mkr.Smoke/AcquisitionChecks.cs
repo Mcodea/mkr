@@ -11,6 +11,7 @@ internal static class AcquisitionChecks
     internal static async Task Run(string db, Guid project, PythonDiagnostics engine)
     {
         await CheckInterruptedSession();
+        await CheckHistorian(db, project, engine);
         await CheckIdentification(db, project, engine);
         foreach (bool swapped in new[] { false, true })
         {
@@ -143,6 +144,76 @@ internal static class AcquisitionChecks
         var (offlineSettings, _) = await engine.CalculatePiAsync(offline.Gain, offlineTau, offline.DelaySeconds, 1, limit.Token);
         if (offlineSettings.Simc != settings.Simc || offlineSettings.Imc != settings.Imc)
             throw new Exception("Identical timestamped signals must produce identical PI coefficients.");
+    }
+
+    /// <summary>Process simulated per reading count: MV +2 at reading 30, back to 0 at 90; first order tau 8 readings, delay 2.</summary>
+    private sealed class SimulatedProcessReader(int[] counter) : IPlcReader
+    {
+        public Task ConnectAsync(CancellationToken token) => Task.CompletedTask;
+
+        public Task<(double Sp, double Pv, double Mv)> ReadAsync(CancellationToken token)
+        {
+            int n = ++counter[0];
+            double mv = n >= 30 && n < 90 ? 2 : 0, level = 0;
+            if (n >= 32) level += 2 * (1 - Math.Exp(-(n - 32) / 8.0));
+            if (n >= 92) level -= 2 * (1 - Math.Exp(-(n - 92) / 8.0));
+            return Task.FromResult((8.0, 8 - 1.5 * level, mv));
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>History mode end to end: recorder → archive in segments → reopen → find steps → identify across segments.</summary>
+    private static async Task CheckHistorian(string db, Guid project, PythonDiagnostics engine)
+    {
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        var target = Target(1, 1, 0, false);
+        var store = new SqliteProjectStore(db);
+        var archived = new List<CsvImport>();
+        var recorder = new HistorianRecorder(_ => new SimulatedProcessReader(new int[1]));
+        var result = await recorder.RunAsync(target, new HistorianPlan(100, 140, SegmentSamples: 100, OverlapSamples: 20),
+            async segment => archived.Add(await AcquisitionArchive.SaveAsync(project, store, engine, segment.Samples.ToList(), segment.Origin, limit.Token)),
+            null, limit.Token);
+        if (result.StopReason != "sample_limit" || archived.Count != 2 || result.SegmentsSaved != 2)
+            throw new Exception($"History recording incomplete: {result.StopReason} {archived.Count}");
+        var first = new SqliteProjectStore(db).ReadImport(project, archived[0].Summary.Id);
+        var second = new SqliteProjectStore(db).ReadImport(project, archived[1].Summary.Id);
+        if (!first.Summary.FileName.StartsWith("historique-") || !first.Summary.FileName.EndsWith("-001.csv") ||
+            !second.Summary.FileName.EndsWith("-002.csv") || first.Acquisition?.Session is not { SegmentIndex: 1, OverlapSamples: 0 } ||
+            second.Acquisition?.Session is not { SegmentIndex: 2, OverlapSamples: 20 } ||
+            first.Acquisition.Session.SessionId != second.Acquisition.Session.SessionId ||
+            first.Result.RowCount != 100 || second.Result.RowCount != 60)
+            throw new Exception("History segments lost their session, overlap or size after reopening.");
+        var firstLines = System.Text.Encoding.UTF8.GetString(first.Original).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var secondLines = System.Text.Encoding.UTF8.GetString(second.Original).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (!firstLines.TakeLast(20).SequenceEqual(secondLines.Skip(1).Take(20)))
+            throw new Exception("The overlap must repeat the previous segment's last 20 readings exactly.");
+
+        var columns = new StepColumns("timestamp", "MV", "PV");
+        var upSearch = await engine.FindStepsAsync(new(first, columns), 0.01, 0.01, limit.Token);
+        var downSearch = await engine.FindStepsAsync(new(second, columns), 0.01, 0.01, limit.Token);
+        // Reading 90 (MV back to 0) falls near the end of segment 1 (10 readings after it: too short) but whole in segment 2.
+        if (upSearch.Candidates.Select(c => c.StepRow).SequenceEqual(new[] { 29 }) is false ||
+            upSearch.Rejected.Single(r => r.StepRow == 89).Reason != "response_window_too_short" ||
+            downSearch.Candidates.Select(c => c.StepRow).SequenceEqual(new[] { 9 }) is false)
+            throw new Exception("The overlap must keep each step whole in one segment.");
+        var up = upSearch.Candidates[0];
+        var down = downSearch.Candidates[0];
+        // The two segments overlap by design (readings 81-100): a first range that reaches into the overlap
+        // coincides in time with the start of the second one and must be refused as not independent.
+        try
+        {
+            await engine.AssessAsync(ModelFamily.FOPDT, new(first, columns, new StepWindow(up.RowStart, up.RowEnd)),
+                new(second, columns, new StepWindow(down.RowStart, down.RowEnd)), 0.01, 0.01, new ComparisonCriteria(0.05, 0.9), limit.Token);
+            throw new Exception("Trials that coincide in time inside the overlap must be refused.");
+        }
+        catch (CsvInputException error) when (error.Code == "fit_independence") { }
+        // Ending the first range before the overlap (reading 80) restores two disjoint trials.
+        var (fit, assessment, _) = await engine.AssessAsync(ModelFamily.FOPDT,
+            new(first, columns, new StepWindow(up.RowStart, 79)), new(second, columns, new StepWindow(down.RowStart, down.RowEnd)),
+            0.01, 0.01, new ComparisonCriteria(0.05, 0.9), limit.Token);
+        if (!assessment.Accepted || Math.Abs(fit.Gain + 1.5) > 0.05 || fit.TauSeconds is not double tau || Math.Abs(tau - 0.8) > 0.15)
+            throw new Exception($"History steps from two segments must identify the process: {assessment.Accepted} {fit.Gain} {fit.TauSeconds}");
     }
 
     private static AcquisitionTarget Target(int port, byte unit, int first, bool lowWordFirst) =>

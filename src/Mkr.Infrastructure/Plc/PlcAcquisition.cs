@@ -10,14 +10,16 @@ namespace Mkr.Infrastructure.Plc;
 /// never interpolated. A lost connection is reopened at the next scheduled reading until the
 /// tolerated outage is exceeded. Configuration refusals (address, access) stop the capture.
 /// </summary>
-public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory = null) : IReadOnlyAcquisition
+public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory = null,
+    long maximumSamples = PlcDecoding.MaximumOneShotSamples) : IReadOnlyAcquisition
 {
     private readonly Func<AcquisitionTarget, IPlcReader> _factory = factory ?? PlcReaders.Create;
 
     public async Task<AcquisitionResult> CaptureAsync(AcquisitionTarget target, AcquisitionPlan plan,
-        Action<AcquiredSample> received, IProgress<AcquisitionProgress>? progress, CancellationToken cancellationToken)
+        Action<AcquiredSample> received, IProgress<AcquisitionProgress>? progress, CancellationToken cancellationToken,
+        Action<AcquisitionGap>? gapClosed = null)
     {
-        if (PlcDecoding.Validate(target, plan) is { } invalid) throw new ArgumentException(invalid);
+        if (PlcDecoding.Validate(target, plan, maximumSamples) is { } invalid) throw new ArgumentException(invalid);
         var clock = Stopwatch.StartNew();
         var startUtc = DateTimeOffset.UtcNow;
         var period = TimeSpan.FromMilliseconds(plan.PeriodMs);
@@ -46,7 +48,11 @@ public sealed class PlcAcquisition(Func<AcquisitionTarget, IPlcReader>? factory 
         void CloseGap()
         {
             if (gap is { } open)
-                gaps.Add(new AcquisitionGap(open.From, startUtc + clock.Elapsed, open.Reason, open.Count));
+            {
+                var closed = new AcquisitionGap(open.From, startUtc + clock.Elapsed, open.Reason, open.Count);
+                gaps.Add(closed);
+                gapClosed?.Invoke(closed);
+            }
             gap = null;
         }
 

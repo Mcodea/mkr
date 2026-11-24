@@ -638,7 +638,7 @@ public partial class IdentificationWindow : Window
             "fit_same_source_overlap" => "Les deux plages d’un même enregistrement se recouvrent : choisissez deux échelons distincts.",
             "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
             "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
-            "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints.",
+            "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints. Deux segments consécutifs d’un historique se recouvrent volontairement : raccourcissez la fin de la première plage pour qu’elle précède le début de la seconde.",
             "fit_step" => "Sélectionnez une plage qui montre la commande avant et après un seul changement de niveau. Si la commande est déjà au nouveau niveau à la première mesure, utilisez un enregistrement qui commence avant le changement. Vérifiez aussi la stabilité des deux plateaux dans la tolérance déclarée.",
             "fit_baseline" => "La PV avant l’échelon dépasse la tolérance déclarée.",
             "fit_response" => "La variation de PV ne suffit pas pour estimer un modèle.",

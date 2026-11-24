@@ -83,13 +83,15 @@ public static class PlcDecoding
     }
 
     /// <summary>Returns a French reason when the target cannot be read safely, or null when it is consistent.</summary>
-    public static string? Validate(AcquisitionTarget target, AcquisitionPlan plan)
+    public const int MaximumOneShotSamples = 5000;
+
+    public static string? Validate(AcquisitionTarget target, AcquisitionPlan plan, long maximumSamples = MaximumOneShotSamples)
     {
         if (string.IsNullOrWhiteSpace(target.Host)) return "Indiquez l’adresse du banc.";
         if (target.Port is < 1 or > 65535) return "Port TCP invalide.";
         if (string.IsNullOrWhiteSpace(target.ProcessUnit) || string.IsNullOrWhiteSpace(target.CommandUnit))
             return "Indiquez les unités de SP/PV et de MV.";
-        if (plan.Samples is < 1 or > 5000) return "Le nombre de mesures doit être compris entre 1 et 5 000.";
+        if (plan.Samples < 1 || plan.Samples > maximumSamples) return $"Le nombre de mesures doit être compris entre 1 et {maximumSamples:N0}.";
         if (plan.PeriodMs is < 100 or > 60000) return "La période doit être comprise entre 100 ms et 60 s.";
         if (!double.IsFinite(plan.MaximumOutageSeconds) || plan.MaximumOutageSeconds is < 0 or > 600)
             return "La coupure tolérée doit être comprise entre 0 et 600 s.";

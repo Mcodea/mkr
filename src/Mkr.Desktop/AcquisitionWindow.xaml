@@ -108,8 +108,17 @@
             <StackPanel Margin="0,0,12,0"><Label Content="Unité SP et PV" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="Unité SP et PV"/></StackPanel>
             <StackPanel Margin="0,0,12,0"><Label Content="Unité MV" Target="{Binding ElementName=CommandUnit}"/><TextBox x:Name="CommandUnit" Width="100" AutomationProperties.Name="Unité MV"/></StackPanel>
             <StackPanel Margin="0,0,12,0"><Label Content="Période (ms)" Target="{Binding ElementName=Period}"/><TextBox x:Name="Period" Text="1000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Période"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Nombre de mesures" Target="{Binding ElementName=Count}"/><TextBox x:Name="Count" Text="600" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Nombre de mesures"/></StackPanel>
+            <StackPanel x:Name="CountPanel" Margin="0,0,12,0"><Label Content="Nombre de mesures" Target="{Binding ElementName=Count}"/><TextBox x:Name="Count" Text="600" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Nombre de mesures"/></StackPanel>
             <StackPanel><Label Content="Coupure tolérée (s)" Target="{Binding ElementName=Outage}"/><TextBox x:Name="Outage" Text="10" Width="90" AutomationProperties.Name="Coupure tolérée"/></StackPanel>
+          </WrapPanel>
+          <CheckBox x:Name="Continuous" Margin="0,12,0,0" Checked="ModeChanged" Unchecked="ModeChanged"
+                    AutomationProperties.Name="Enregistrement continu">
+            <TextBlock TextWrapping="Wrap" Text="Enregistrement continu (fabriquer un historique) : lecture longue découpée en segments enregistrés au fil de l’eau, pour y retrouver ensuite des essais."/>
+          </CheckBox>
+          <WrapPanel x:Name="HistorianPanel" Visibility="Collapsed" Margin="0,6,0,0">
+            <StackPanel Margin="0,0,12,0"><Label Content="Durée (heures)" Target="{Binding ElementName=Hours}"/><TextBox x:Name="Hours" Text="1" Width="80" TextChanged="PlanChanged" AutomationProperties.Name="Durée en heures"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="Mesures par segment" Target="{Binding ElementName=SegmentSize}"/><TextBox x:Name="SegmentSize" Text="3000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Mesures par segment"/></StackPanel>
+            <StackPanel><Label Content="Recouvrement (mesures)" Target="{Binding ElementName=Overlap}"/><TextBox x:Name="Overlap" Text="300" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Recouvrement"/></StackPanel>
           </WrapPanel>
           <TextBlock x:Name="PlanSummary" Margin="0,6,0,0" Foreground="{StaticResource MkrMuted}" TextWrapping="Wrap"/>
         </StackPanel>

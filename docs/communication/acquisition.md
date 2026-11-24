@@ -59,6 +59,16 @@ ordre d’octets produit des valeurs plausibles mais fausses : seule cette compa
 - L’écran affiche l’état de la connexion, le dernier aller-retour, une barre de progression,
   les mesures reçues et manquées, le temps écoulé et le temps restant, ainsi que la durée prévue avant le lancement.
 
+## Enregistrement continu : fabriquer un historique
+
+Coche « Enregistrement continu » dans la fenêtre d'acquisition. L'écran demande une durée en heures, une taille de segment et un recouvrement. Il affiche le nombre de segments et la taille approximative.
+- **Lecture :** c'est la même lecture seule, au même calendrier, avec les mêmes lacunes. La limite passe de 5 000 mesures à 2 000 000 (par exemple 23 jours à 1 s).
+- **Segments :** la lecture est découpée en segments de 10 à 5 000 mesures (3 000 par défaut). Chaque segment est archivé dans le projet dès qu'il est complet, avec son empreinte, son nom `historique-<session>-<n°>.csv` et sa provenance. Une coupure de courant ou un arrêt ne perd que le segment ouvert, et l'arrêt par l'opérateur enregistre ce segment.
+- **Recouvrement :** chaque segment reprend les dernières mesures du précédent (300 par défaut), à l'identique. Un échelon proche d'une coupure reste entier dans l'un des segments. Un essai plus long que le recouvrement peut être coupé : utilisez alors l'acquisition ponctuelle.
+- **Lacunes :** chaque lacune est rattachée au segment qui la suit, avec sa cause, et jamais interpolée.
+- **Arrêts :** une erreur d'enregistrement d'un segment (disque plein, par exemple) arrête la lecture avec le motif `storage_error`. Les segments déjà enregistrés sont conservés.
+- **Usage :** réalisez les échelons de MV avec le régulateur en manuel pendant l'enregistrement. Ouvrez ensuite « Identification » et utilisez « Rechercher les essais exploitables dans cet enregistrement… ». Deux segments consécutifs se recouvrent en temps. Si une paire choisie sur deux segments voisins est refusée (`fit_independence`), raccourcissez la fin de la première plage pour qu'elle précède le début de la seconde.
+
 ## Archivage (DATA-001)
 
 Le CSV archivé contient `timestamp,SP,PV,MV,rtt_ms,SP_raw,PV_raw,MV_raw` et son empreinte SHA-256.
@@ -76,6 +86,8 @@ Les acquisitions enregistrées avant ce lot (format Modbus d’origine) restent 
 | Calendrier : 100 ms tenus malgré 40 ms d’aller-retour | idem | Période médiane 100 ± 20 ms |
 | S7 : fonctions émises, TSAP, DB et M, alignement des longueurs impaires, refus 0x0A, 0x03, 0x8104 | idem, serveur simulé | Conforme |
 | **Interopérabilité indépendante** : valeurs encodées par pymodbus 3.8.6 et servies par la bibliothèque Snap7 (python-snap7 2.0.2) | idem avec `MKR_INTEROP_PYTHON` | 10 cas relus exactement, refus Snap7 reconnus |
+| Historique : 5 cas (découpe avec recouvrement et chronologie complète, lacune rattachée au bon segment, arrêt sur erreur de stockage, arrêt opérateur, validation du plan) | idem | Aucune mesure perdue ni dupliquée hors recouvrement |
+| Historique de bout en bout : enregistrement, archivage en segments, réouverture, recherche des échelons, identification validée sur deux segments, refus d'un chevauchement en temps | `tests/Mkr.Smoke/AcquisitionChecks.cs` | Gain et constante de temps retrouvés |
 | Parcours graphique S7 puis Modbus depuis le paquet Windows | `tests/windows/acquisition.ps1` | Lecture d’essai, progression 5/5, enregistrement, refus d’adresse |
 | Acquisition, identification et PI ; équivalence avec le parcours CSV (COM-001) | `tests/Mkr.Smoke/AcquisitionChecks.cs` | Inchangé |
 
