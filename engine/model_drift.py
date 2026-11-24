@@ -15,29 +15,64 @@ import numpy as np
 from fopdt import basis, conditional_errors, diagnostics, delay_warnings, estimate, read_step
 from validation_gate import reasons
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SIGNIFICANCE_MULTIPLE = 3.0
-RELATIVE_CHANGE = dict(gain=0.10, tauSeconds=0.15, delaySeconds=0.25)   # below these, a change is not worth acting on
+# Below these relative changes a parameter is not worth acting on. The fast pole of a second-order model is the least determined
+# parameter of its family, hence the wider band.
+RELATIVE_CHANGE = dict(gain=0.10, tauSeconds=0.15, secondTauSeconds=0.30, delaySeconds=0.25)
+FAMILIES = {
+    "FOPDT": ("gain", "tauSeconds", "delaySeconds"),
+    "SOPDT": ("gain", "tauSeconds", "secondTauSeconds", "delaySeconds"),
+    "Integrateur": ("gain", "delaySeconds"),
+}
 
 
-def _model(payload):
-    model = payload.get("model") if isinstance(payload, dict) else None
-    if not isinstance(model, dict) or model.keys() != {"gain", "tauSeconds", "delaySeconds"}:
+def _model(family, model):
+    names = FAMILIES[family]
+    if not isinstance(model, dict) or model.keys() != set(names):
         raise ValueError("drift_mapping")
-    values = [model[k] for k in ("gain", "tauSeconds", "delaySeconds")]
+    values = [model[k] for k in names]
     if any(type(v) not in (int, float) or not math.isfinite(v) for v in values):
         raise ValueError("drift_mapping")
-    gain, tau, delay = values
-    if gain == 0 or tau <= 0 or delay < 0:
+    model = dict(zip(names, (float(v) for v in values)))
+    if (model["gain"] == 0 or model["delaySeconds"] < 0 or any(model[n] <= 0 for n in names if n.endswith("Seconds") and n != "delaySeconds")
+            or ("secondTauSeconds" in model and model["secondTauSeconds"] > model["tauSeconds"])):
         raise ValueError("drift_domain")
-    return gain, tau, delay
+    return model
+
+
+def _predict(family, step, model):
+    if family == "FOPDT":
+        return basis(step.times, model["tauSeconds"], model["delaySeconds"])
+    if family == "SOPDT":
+        from sopdt import basis as second
+        return second(step.times, model["tauSeconds"], model["secondTauSeconds"], model["delaySeconds"])
+    return np.maximum(step.times - model["delaySeconds"], 0)
+
+
+def _refit(family, step):
+    """Re-estimation of the new trial alone: (parameters, standard errors or None, warnings)."""
+    if family == "FOPDT":
+        gain, tau, delay, *_ = estimate(step)
+        warnings = list(delay_warnings(delay, step))
+        fit = diagnostics(step, gain, basis(step.times, tau, delay))
+        errors = conditional_errors(step, gain, tau, delay, fit, warnings)
+        return dict(gain=gain, tauSeconds=tau, delaySeconds=delay), errors, warnings
+    if family == "SOPDT":
+        from sopdt import estimate as fit_second
+        gain, slow, fast, delay, *_ = fit_second(step)
+        return dict(gain=gain, tauSeconds=slow, secondTauSeconds=fast, delaySeconds=delay), None, list(delay_warnings(delay, step))
+    from integrator import estimate as fit_integrator
+    gain, delay, _ = fit_integrator(step)
+    return dict(gain=gain, delaySeconds=delay), None, list(delay_warnings(delay, step))
 
 
 def check(payload):
-    required = {"model", "trial", "mvTolerance", "pvTolerance", "maximumRmse", "maximumResidualLagOne"}
-    if not isinstance(payload, dict) or payload.keys() != required:
+    required = {"family", "model", "trial", "mvTolerance", "pvTolerance", "maximumRmse", "maximumResidualLagOne"}
+    if not isinstance(payload, dict) or payload.keys() != required or payload["family"] not in FAMILIES:
         raise ValueError("drift_mapping")
-    gain, tau, delay = _model(payload)
+    family = payload["family"]
+    old = _model(family, payload["model"])
     tolerances = [payload["mvTolerance"], payload["pvTolerance"]]
     if any(type(v) not in (int, float) or not 1e-100 <= v <= 1e100 for v in tolerances):
         raise ValueError("fit_tolerance")
@@ -45,20 +80,13 @@ def check(payload):
     if any(type(v) not in (int, float) or not 0 < v <= 1e100 for v in criteria.values()):
         raise ValueError("fit_comparison_limits")
     step = read_step(payload["trial"], *tolerances)
-    warnings = []
-    prediction = diagnostics(step, gain, basis(step.times, tau, delay))
-    report = dict(validation=prediction, warnings=[])
-    found = reasons(report, criteria)
+    prediction = diagnostics(step, old["gain"], _predict(family, step, old))
+    found = reasons(dict(validation=prediction, warnings=[]), criteria)
 
-    new_gain, new_tau, new_delay, *_ = estimate(step)
-    new_warnings = list(delay_warnings(new_delay, step))
-    refit = diagnostics(step, new_gain, basis(step.times, new_tau, new_delay))
-    errors = conditional_errors(step, new_gain, new_tau, new_delay, refit, new_warnings)
-    old = dict(gain=gain, tauSeconds=tau, delaySeconds=delay)
-    new = dict(gain=new_gain, tauSeconds=new_tau, delaySeconds=new_delay)
+    new, errors, warnings = _refit(family, step)
     changes = {}
     for name in old:
-        relative = (new[name] - old[name]) / abs(old[name]) if old[name] else math.inf
+        relative = (new[name] - old[name]) / abs(old[name])
         error = errors[name] if errors else None
         significant = error is None or abs(new[name] - old[name]) > SIGNIFICANCE_MULTIPLE * error
         changes[name] = dict(previous=old[name], current=new[name], relativeChange=relative, standardError=error,
@@ -74,6 +102,6 @@ def check(payload):
         verdict = "consistent"
     if errors is None:
         warnings.append("standard_errors_unavailable")         # the flag then rests on the relative threshold alone
-    return dict(algorithmVersion=VERSION, verdict=verdict, reasons=found, driftedParameters=drifted,
+    return dict(algorithmVersion=VERSION, family=family, verdict=verdict, reasons=found, driftedParameters=drifted,
                 predictionRmse=prediction["rmse"], residualLagOne=prediction["residualLagOne"], baselineNoise=step.baseline_noise,
-                changes=changes, warnings=warnings + new_warnings, criteria=criteria)
+                changes=changes, warnings=warnings, criteria=criteria)

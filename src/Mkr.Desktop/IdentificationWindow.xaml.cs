@@ -320,7 +320,7 @@ public partial class IdentificationWindow : Window
         OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         PiPanel.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtPanel.Visibility = tunable && _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
-        DriftButton.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
+        DriftButton.Visibility = tunable && _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur ? Visibility.Visible : Visibility.Collapsed;
         IntegratorButton.Visibility = tunable && _shown?.Family == ModelFamily.Integrateur ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
         TargetPanel.Visibility = tunable && _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
@@ -537,7 +537,7 @@ public partial class IdentificationWindow : Window
     private async void CheckDrift(object sender, RoutedEventArgs args)
     {
         var columns = ReadColumns(ValidationTime, ValidationMv, ValidationPv);
-        if (_shown is not { Family: ModelFamily.FOPDT } model || ValidationSource.SelectedItem is not ImportSummary trial || columns is null ||
+        if (_shown is not { Family: ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur } model || ValidationSource.SelectedItem is not ImportSummary trial || columns is null ||
             MvUnit.Text.Trim().Length == 0 || PvUnit.Text.Trim().Length == 0 ||
             !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance))
         {

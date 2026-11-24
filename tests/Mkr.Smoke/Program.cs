@@ -640,14 +640,24 @@ try
     {
         var criteria = new ComparisonCriteria(0.05, 0.5);
         var same = await SaveStepAsync(9, 1.8);
-        var consistent = await engine.CheckModelDriftAsync(fit, new StepImport(same, columns), 0.01, 0.01, criteria, default);
+        var consistent = await engine.CheckModelDriftAsync(ModelFamily.FOPDT, fit, new StepImport(same, columns), 0.01, 0.01, criteria, default);
         Require(consistent.Verdict == "consistent" && consistent.DriftedParameters.Length == 0 && consistent.Changes.Count == 3,
             "A new step of the same process is consistent with the validated model.");
         Require(consistent.Describe("%", "bar").Contains("reste cohérent"), "The verdict is explained in French.");
-        var other = await engine.CheckModelDriftAsync(fit, new StepImport(trainingSecond, columns), 0.01, 0.01, criteria, default);
+        var other = await engine.CheckModelDriftAsync(ModelFamily.FOPDT, fit, new StepImport(trainingSecond, columns), 0.01, 0.01, criteria, default);
         Require(other.Verdict != "consistent" && other.Reasons.Length > 0, "A second-order response is not consistent with the first-order model.");
+        // The other families: the same process is consistent; a model of another family is not.
+        var secondSame = await SaveStepAsync(12, 1.8, ModelFamily.SOPDT);
+        var secondReport = await engine.CheckModelDriftAsync(ModelFamily.SOPDT, second, new StepImport(secondSame, columns), 0.01, 0.01, criteria, default);
+        Require(secondReport.Verdict == "consistent" && secondReport.Changes.Count == 4, "A new second-order step is consistent with the SOPDT model.");
+        var tankSame = await SaveStepAsync(13, 1.8, ModelFamily.Integrateur);
+        var tankReport = await engine.CheckModelDriftAsync(ModelFamily.Integrateur, third, new StepImport(tankSame, columns), 0.01, 0.01, criteria, default);
+        Require(tankReport.Verdict == "consistent" && tankReport.Changes.Count == 2, "A new integrator step is consistent with the integrating model.");
+        var wrongFamily = await engine.CheckModelDriftAsync(ModelFamily.FOPDT, fit, new StepImport(tankSame, columns), 0.01, 0.01, criteria, default);
+        Require(wrongFamily.Verdict != "consistent", "A tank response is not consistent with a first-order model.");
+        await ThrowsAsync<InvalidOperationException>(() => engine.CheckModelDriftAsync(ModelFamily.BroidaFOPDT, fit, new StepImport(same, columns), 0.01, 0.01, criteria, default));
         await ThrowsAsync<ModelNotAcceptedException>(() => gate.CheckModelDriftAsync(refused, same.Summary, columns, "%", "bar", 0.01, 0.01, null, default));
-        await ThrowsAsync<InvalidOperationException>(() => gate.CheckModelDriftAsync(acceptedSecond, same.Summary, columns, "%", "bar", 0.01, 0.01, null, default));
+        await ThrowsAsync<InvalidOperationException>(() => gate.CheckModelDriftAsync(acceptedSecond with { Family = ModelFamily.BroidaFOPDT }, same.Summary, columns, "%", "bar", 0.01, 0.01, null, default));
     }
 
     // PI for an integrating process (SIMC rule, Skogestad 2003): Kc = 1 / (k' (tau_c + theta)), Ti = 4 (tau_c + theta).

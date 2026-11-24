@@ -14,12 +14,12 @@ def basis(times, tau_slow, tau_fast, delay):
     return np.maximum(0, -np.expm1(-z) - np.exp(-z) * z * phi)
 
 
-def identify(payload):
-    training, validation = read_trials(payload)
-    horizon = float(training.times[-1])
-    cadence = float(np.median(np.diff(training.times)))
+def estimate(step):
+    """Fit one trial: (gain, slow time constant, fast time constant, delay, lowest time constant bound, horizon)."""
+    horizon = float(step.times[-1])
+    cadence = float(np.median(np.diff(step.times)))
     low = cadence / 4
-    y = training.observations - training.baseline
+    y = step.observations - step.baseline
     scale = float(np.max(np.abs(y)))
     normalized = y / scale
 
@@ -28,7 +28,7 @@ def identify(payload):
         return slow, low + (slow - low) * p[1], p[2] * horizon
 
     def profile(p):
-        curve = basis(training.times, *parameters(p))
+        curve = basis(step.times, *parameters(p))
         amplitude = float(np.dot(curve, normalized) / np.dot(curve, curve))
         return amplitude * curve - normalized, amplitude
 
@@ -46,10 +46,16 @@ def identify(payload):
         raise ValueError("fit_solver")
     best = min(candidates, key=lambda result: result.cost)
     slow, fast, delay = parameters(best.x)
-    gain = profile(best.x)[1] * scale / training.amplitude
+    gain = profile(best.x)[1] * scale / step.amplitude
     if not math.isfinite(gain) or gain == 0:
         raise ValueError("fit_response")
+    return gain, slow, fast, delay, low, horizon
 
+
+def identify(payload):
+    training, validation = read_trials(payload)
+    gain, slow, fast, delay, low, horizon = estimate(training)
+    cadence = float(np.median(np.diff(training.times)))
     warnings = []
     if fast <= 1.02 * low or slow >= 0.98 * horizon or delay >= 0.49 * horizon:
         warnings.append("parameter_bound")

@@ -62,8 +62,8 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     public Task<ModelDriftReport> CheckModelDriftAsync(IdentificationStudy model, ImportSummary trial, StepColumns columns,
         string mvUnit, string pvUnit, double mvTolerance, double pvTolerance, StepWindow? window, CancellationToken token)
     {
-        if (model.Family != ModelFamily.FOPDT)
-            throw new InvalidOperationException("Le contrôle de dérive ne couvre que les modèles FOPDT.");
+        if (model.Family is not (ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur))
+            throw new InvalidOperationException("Le contrôle de dérive couvre les modèles FOPDT, SOPDT et intégrateur.");
         if (!model.IsAcceptedForTuning || model.Assessment is not { } assessment)
             throw new ModelNotAcceptedException("Seul un modèle accepté à la validation peut être suivi.");
         var recorded = imports.ReadImport(project.Id, trial.Id);
@@ -76,7 +76,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         }
         var step = new StepImport(recorded, columns, window);
         CheckRecordedUnit(step, mvUnit, pvUnit);
-        return engine.CheckModelDriftAsync(model.Result, step, mvTolerance, pvTolerance, assessment.Criteria, token);
+        return engine.CheckModelDriftAsync(model.Family, model.Result, step, mvTolerance, pvTolerance, assessment.Criteria, token);
     }
 
     public Task<CriteriaSuggestion> SuggestCriteriaAsync(ImportSummary training, StepColumns trainColumns,

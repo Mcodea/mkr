@@ -102,13 +102,22 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return search;
     }
 
-    public async Task<ModelDriftReport> CheckModelDriftAsync(IdentificationResult model, StepImport trial, double mvTolerance,
+    public async Task<ModelDriftReport> CheckModelDriftAsync(ModelFamily family, IdentificationResult model, StepImport trial, double mvTolerance,
         double pvTolerance, ComparisonCriteria criteria, CancellationToken token)
     {
         if (trial.Window is { } window && !window.IsValid) throw new CsvInputException("fit_window");
+        var parameters = family switch
+        {
+            ModelFamily.FOPDT when model.TauSeconds is { } tau => new Dictionary<string, double>
+                { ["gain"] = model.Gain, ["tauSeconds"] = tau, ["delaySeconds"] = model.DelaySeconds },
+            ModelFamily.SOPDT when model.TauSeconds is { } slow && model.SecondTauSeconds is { } fast => new Dictionary<string, double>
+                { ["gain"] = model.Gain, ["tauSeconds"] = slow, ["secondTauSeconds"] = fast, ["delaySeconds"] = model.DelaySeconds },
+            ModelFamily.Integrateur => new Dictionary<string, double> { ["gain"] = model.Gain, ["delaySeconds"] = model.DelaySeconds },
+            _ => throw new InvalidOperationException("Contrôle de dérive : famille ou paramètres non pris en charge.")
+        };
         var payload = new
         {
-            model = new { gain = model.Gain, tauSeconds = model.TauSeconds, delaySeconds = model.DelaySeconds },
+            family = family.ToString(), model = parameters,
             trial = Source(trial), mvTolerance, pvTolerance, maximumRmse = criteria.MaximumRmse,
             maximumResidualLagOne = criteria.MaximumResidualLagOne
         };
@@ -116,7 +125,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var report = json.Deserialize<ModelDriftReport>(JsonOptions);
         string[] verdicts = ["consistent", "drift", "parameter_changed_prediction_acceptable", "inconsistent_without_parameter_change"];
         if (report is null || !verdicts.Contains(report.Verdict) || report.Reasons is null || report.DriftedParameters is null ||
-            report.Warnings is null || report.Changes is null || report.Changes.Count != 3 || !double.IsFinite(report.PredictionRmse) ||
+            report.Warnings is null || report.Changes is null || report.Changes.Count != (family == ModelFamily.SOPDT ? 4 : family == ModelFamily.Integrateur ? 2 : 3) || !double.IsFinite(report.PredictionRmse) ||
             report.DriftedParameters.Any(p => !report.Changes.TryGetValue(p, out var c) || !c.Flagged) ||
             report.Changes.Values.Count(c => c.Flagged) != report.DriftedParameters.Length ||
             (report.Verdict == "consistent" && (report.Reasons.Length > 0 || report.DriftedParameters.Length > 0)) ||

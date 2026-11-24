@@ -23,7 +23,7 @@ def trial(gain=2.0, tau=30.0, delay=5.0, amplitude=3.0, sigma=0.02, seed=1, cade
 
 
 def request(source, model=None, sigma=0.02):
-    return dict(model=model or dict(gain=2.0, tauSeconds=30.0, delaySeconds=5.0), trial=source, mvTolerance=0.01,
+    return dict(family="FOPDT", model=model or dict(gain=2.0, tauSeconds=30.0, delaySeconds=5.0), trial=source, mvTolerance=0.01,
                 pvTolerance=6 * sigma, maximumRmse=max(2 * sigma, 3 * sigma), maximumResidualLagOne=0.5)
 
 
@@ -73,6 +73,69 @@ class Drift(unittest.TestCase):
     def test_the_engine_serves_it(self):
         reply = respond(json.dumps(dict(version=1, requestId="drift", operation="check_model_drift", payload=request(trial()))).encode())
         self.assertEqual(reply["result"]["verdict"], "consistent")
+
+
+def trial_from(response, amplitude=3.0, sigma=0.01, seed=1, pre=12, post=250, cadence=1.0):
+    rng = np.random.default_rng(seed)
+    start = datetime(2026, 5, 1, tzinfo=timezone.utc)
+    lines = ["timestamp,mv,pv"]
+    for i in range(pre + post):
+        t = (i - pre) * cadence
+        lines.append(f"{(start + timedelta(seconds=i * cadence)).isoformat()},{amplitude if t >= 0 else 0},{40 + amplitude * response(t) + rng.normal(0, sigma)}")
+    return dict(raw=base64.b64encode("\n".join(lines).encode()).decode(), delimiter=",",
+                timeColumn="timestamp", mvColumn="mv", pvColumn="pv")
+
+
+def second_order(gain, slow, fast, delay):
+    return lambda t: gain * (1 - (slow * math.exp(-(t - delay) / slow) - fast * math.exp(-(t - delay) / fast)) / (slow - fast)) if t > delay else 0.0
+
+
+def integrating(slope, delay):
+    return lambda t: slope * max(t - delay, 0)
+
+
+def family_request(family, model, source, sigma=0.01):
+    return dict(family=family, model=model, trial=source, mvTolerance=0.01, pvTolerance=6 * sigma,
+                maximumRmse=3 * sigma, maximumResidualLagOne=0.5)
+
+
+class OtherFamilies(unittest.TestCase):
+    SECOND = dict(gain=2.0, tauSeconds=30.0, secondTauSeconds=6.0, delaySeconds=2.0)
+    TANK = dict(gain=0.05, delaySeconds=3.0)
+
+    def test_second_order_drift_is_located_parameter_by_parameter(self):
+        self.assertEqual(check(family_request("SOPDT", self.SECOND, trial_from(second_order(2, 30, 6, 2))))["verdict"], "consistent")
+        for name, response, expected in (("slow pole", second_order(2, 45, 6, 2), "tauSeconds"),
+                                         ("gain", second_order(1.5, 30, 6, 2), "gain"),
+                                         ("fast pole", second_order(2, 30, 12, 2), "secondTauSeconds"),
+                                         ("delay", second_order(2, 30, 6, 7), "delaySeconds")):
+            with self.subTest(change=name):
+                result = check(family_request("SOPDT", self.SECOND, trial_from(response)))
+                self.assertEqual(result["verdict"], "drift")
+                self.assertEqual(result["driftedParameters"], [expected])
+                self.assertIn("standard_errors_unavailable", result["warnings"])    # only the relative threshold applies
+
+    def test_integrator_drift_is_located(self):
+        self.assertEqual(check(family_request("Integrateur", self.TANK, trial_from(integrating(0.05, 3), post=120)))["verdict"], "consistent")
+        slope = check(family_request("Integrateur", self.TANK, trial_from(integrating(0.035, 3), post=120)))
+        self.assertEqual((slope["verdict"], slope["driftedParameters"]), ("drift", ["gain"]))
+        delay = check(family_request("Integrateur", self.TANK, trial_from(integrating(0.05, 8), post=120)))
+        self.assertEqual((delay["verdict"], delay["driftedParameters"]), ("drift", ["delaySeconds"]))
+
+    def test_noise_alone_raises_no_drift_alarm_for_the_other_families(self):
+        for family, model, response, post in (("SOPDT", self.SECOND, second_order(2, 30, 6, 2), 250),
+                                              ("Integrateur", self.TANK, integrating(0.05, 3), 120)):
+            alarms = sum(check(family_request(family, model, trial_from(response, sigma=0.03, seed=s, post=post), sigma=0.03))["verdict"] == "drift"
+                         for s in range(10))
+            self.assertEqual(alarms, 0, family)
+
+    def test_the_model_must_match_its_family(self):
+        source = trial_from(integrating(0.05, 3), post=120)
+        for family, model in (("FOPDT", self.TANK), ("Integrateur", self.SECOND), ("Broida", self.TANK)):
+            with self.subTest(family=family), self.assertRaisesRegex(ValueError, "drift_mapping"):
+                check(family_request(family, model, source))
+        with self.assertRaisesRegex(ValueError, "drift_domain"):
+            check(family_request("SOPDT", dict(self.SECOND, secondTauSeconds=50.0), source))        # the fast pole cannot exceed the slow one
 
 
 if __name__ == "__main__":

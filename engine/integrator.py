@@ -27,16 +27,23 @@ def profile_delay(times, observed):
     return float(candidates[i, j]), float(numerators[i, j] / denominators[i, j])
 
 
+def estimate(step):
+    """Fit one trial: (gain, delay, delay fraction of the horizon)."""
+    horizon = float(step.times[-1])
+    y = step.observations - step.baseline
+    scale = float(np.max(np.abs(y)))
+    fraction, normalized_gain = profile_delay(step.times / horizon, y / scale)
+    delay = fraction * horizon
+    gain = normalized_gain * scale / horizon / step.amplitude
+    if not math.isfinite(gain) or gain == 0:
+        raise ValueError("fit_response")
+    return gain, delay, fraction
+
+
 def identify(payload):
     training, validation = read_trials(payload)
     horizon = float(training.times[-1])
-    y = training.observations - training.baseline
-    scale = float(np.max(np.abs(y)))
-    fraction, normalized_gain = profile_delay(training.times / horizon, y / scale)
-    delay = fraction * horizon
-    gain = normalized_gain * scale / horizon / training.amplitude
-    if not math.isfinite(gain) or gain == 0:
-        raise ValueError("fit_response")
+    gain, delay, fraction = estimate(training)
 
     def tail_change(step):
         n = len(step.observations)

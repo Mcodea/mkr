@@ -22,7 +22,7 @@ Principe : le noyau (identification, validation, réglage, simulation) ne conna�
 | Sujet | État |
 |---|---|
 | Droits des utilisateurs et journal des modifications | ABSENT |
-| Surveillance des boucles après mise en service (dérive du modèle) | PARTIEL : contrôle d'un modèle FOPDT accepté sur un nouvel échelon en boucle ouverte (moteur, contrat .NET, bouton de l'écran d'identification) ; pas de surveillance en fonctionnement normal |
+| Surveillance des boucles après mise en service (dérive du modèle) | PARTIEL : contrôle d'un modèle FOPDT, SOPDT ou intégrateur accepté sur un nouvel échelon en boucle ouverte (moteur, contrat .NET, bouton de l'écran d'identification) ; pas de surveillance en fonctionnement normal |
 | Plusieurs points de fonctionnement d'un même procédé | ABSENT |
 | Couplage entre boucles (MIMO) | ABSENT |
 | Qualification de l'outil lui-même | ABSENT |
