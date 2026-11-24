@@ -60,6 +60,9 @@
                         <ComboBoxItem Content="Clair" Tag="Light"/>
                         <ComboBoxItem Content="Sombre" Tag="Dark"/>
                     </ComboBox>
+                    <Button x:Name="InspectorToggle" Style="{StaticResource MkrNavButton}" Click="ToggleInspector" Padding="12,7" Margin="0,0,6,0" AutomationProperties.Name="Afficher ou masquer les propriétés" ToolTip="Propriétés du projet et de l'étape">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="16"/><TextBlock Text="Propriétés" Margin="8,0,0,0"/></StackPanel>
+                    </Button>
                     <Button Style="{StaticResource MkrNavButton}" Click="OpenHelp" Padding="12,7" AutomationProperties.Name="Aide" ToolTip="Aide et vocabulaire (F1)">
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" FontSize="16"/><TextBlock Text="Aide" Margin="8,0,0,0"/></StackPanel>
                     </Button>
@@ -68,8 +71,9 @@
         </Border>
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="NavColumn" Width="230"/>
+                <ColumnDefinition x:Name="NavColumn" Width="250"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="InspectorColumn" Width="0"/>
             </Grid.ColumnDefinitions>
             <!-- Navigation latérale repliable : uniquement des fonctions réelles -->
             <Border Grid.Column="0" Background="{DynamicResource MkrNavy}">
@@ -81,13 +85,8 @@
                     <Button x:Name="NavCatalogue" Style="{StaticResource MkrNavButton}" Click="OpenCatalogue" AutomationProperties.Name="Ouvrir le catalogue des blocs" ToolTip="Ouvrir le catalogue des blocs">
                         <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="24" VerticalAlignment="Center"/><TextBlock x:Name="NavCatalogueLabel" Text="Catalogue des blocs" Margin="10,0,0,0" VerticalAlignment="Center"/></StackPanel>
                     </Button>
-                    <TextBlock x:Name="StudyHeading" Text="ÉTUDE DU PROJET ACTIF" Foreground="{DynamicResource MkrNavyMuted}" FontSize="10" FontWeight="SemiBold" Margin="12,22,0,8"/>
-                    <Button x:Name="NavData" Style="{StaticResource MkrNavButton}" Click="OpenProject" AutomationProperties.Name="Ouvrir les données et l’acquisition du projet actif" ToolTip="Ouvrir les données et l’acquisition du projet actif" IsEnabled="False">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="24" VerticalAlignment="Center"/><TextBlock x:Name="NavDataLabel" Text="Données et acquisition" Margin="10,0,0,0" VerticalAlignment="Center"/></StackPanel>
-                    </Button>
-                    <Button x:Name="NavIdentification" Style="{StaticResource MkrNavButton}" Click="OpenIdentification" AutomationProperties.Name="Ouvrir l’identification et le réglage du projet actif" ToolTip="Ouvrir l’identification et le réglage du projet actif" IsEnabled="False">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="24" VerticalAlignment="Center"/><TextBlock x:Name="NavIdentificationLabel" Text="Identification et réglage" Margin="10,0,0,0" VerticalAlignment="Center"/></StackPanel>
-                    </Button>
+                    <TextBlock x:Name="StudyHeading" Text="PARCOURS D'ÉTUDE" Foreground="{DynamicResource MkrNavyMuted}" FontSize="10" FontWeight="SemiBold" Margin="12,22,0,8"/>
+                    <StackPanel x:Name="StepList"/>
                 </StackPanel>
             </Border>
             <!-- Espace central -->
@@ -179,6 +178,25 @@
                 </Grid>
             </Border>
             </Grid>
+            <!-- Panneau de propriétés contextuel -->
+            <Border x:Name="Inspector" Grid.Column="2" Visibility="Collapsed" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16,16,16,12">
+                        <TextBlock Text="PROPRIÉTÉS" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="InspectorProject" Text="Aucun projet" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" Margin="0,6,0,6"/>
+                        <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
+                        <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Margin="0,14,0,0" Padding="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock x:Name="InspectorStepTitle" Text="Étape" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="InspectorStepState" Margin="0,4,0,0" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="InspectorStepDetail" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                                <Button x:Name="InspectorOpen" Content="_Ouvrir cette étape" Style="{StaticResource MkrPrimaryButton}" Margin="0,12,0,0" HorizontalAlignment="Left" Click="OpenSelectedStep"
+                                        AutomationProperties.Name="Ouvrir l'étape sélectionnée"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
         </Grid>
         <!-- Barre d'état -->
         <Border Grid.Row="2" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Padding="14,6">

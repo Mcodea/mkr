@@ -114,6 +114,14 @@ try {
     Capture $main '01-espace-projets'
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Step '01b-parcours' {
+        $step = Find $main $id 'Step8'
+        Write-Host ("##INFO Step8 = " + $step.Current.Name)
+        $step.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $null = Find $main $id 'InspectorOpen'
+        Start-Sleep -Milliseconds 700
+        Capture $main '01b-parcours'
+    }
     Press $main 'Ouvrir le projet sélectionné'
     $project = Find $root $name 'MKR — Projet initial'
     Capture $project '02-projet'

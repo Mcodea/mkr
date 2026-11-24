@@ -376,6 +376,23 @@ try
     var acquisitionDb = Path.Combine(directory.FullName, "acquisition.db");
     new SqliteProjectStore(acquisitionDb).Add(project);
     await AcquisitionChecks.Run(acquisitionDb, project.Id, engine);
+    {
+        // The journey is derived from stored facts only; tuning is closed until a model is accepted.
+        var none = StudyJourney.Evaluate(null);
+        Require(none.Count == 10 && none.All(s => s.State == StepState.Blocked), "Without a project every step is closed and says why.");
+        var empty = StudyJourney.Evaluate(new ProjectFacts(false, 0, 0, 0));
+        Require(empty[0].State == StepState.Ready && empty[1].State == StepState.Ready && empty[2].State == StepState.Blocked &&
+            empty[3].State == StepState.Blocked && empty[7].State == StepState.Blocked, "An empty project can only be described and fed with data.");
+        var data = StudyJourney.Evaluate(new ProjectFacts(true, 2, 0, 0));
+        Require(data[0].State == StepState.Done && data[1].State == StepState.Done && data[2].State == StepState.Done && data[3].State == StepState.Ready &&
+            data[4].State == StepState.Blocked, "Data open the identification and nothing after it.");
+        var failed = StudyJourney.Evaluate(new ProjectFacts(true, 2, 1, 0));
+        Require(failed[3].State == StepState.Done && failed[4].State == StepState.Ready && failed[7].State == StepState.Blocked &&
+            failed[7].Detail.Contains("non validé"), "A model that failed validation never opens the tuning.");
+        var accepted = StudyJourney.Evaluate(new ProjectFacts(true, 2, 1, 1));
+        Require(accepted[4].State == StepState.Done && accepted.Skip(5).All(s => s.State == StepState.Ready), "An accepted model opens steps 6 to 10.");
+    }
+
 
     // The sensitivity matrix keeps fixed PI coefficients and survives SQLite reopening.
     var (sensitivity, robustnessVersion) = await engine.AnalyzeRobustnessAsync(
