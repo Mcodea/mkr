@@ -24,6 +24,7 @@ public partial class PidPrototypeWindow : Window
         _tuning = tuning;
         _scenario = scenario;
         InitializeComponent();
+        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         Kp.Text = tuning.Result.Imc.Kp.ToString("G17", CultureInfo.CurrentCulture);
         Ti.Text = tuning.Result.Imc.TiSeconds.ToString("G17", CultureInfo.CurrentCulture);
         ContextInfo.Text =
@@ -96,7 +97,7 @@ public partial class PidPrototypeWindow : Window
                 "Résultats calculés sur le même procédé et le même scénario ; " +
                 "aucun réglage n'est sauvegardé ni transféré.";
             Legend.Text =
-                $"Bleu : PI IMC de référence ; orange : PID manuel ; vert pointillé : consigne. " +
+                $"Courbes : PI IMC de référence, PID manuel, consigne (la légende du graphique les distingue aussi par leur trait). " +
                 $"Piste 1 : mesure ({_model.PvUnit}) · piste 2 : sortie de commande appliquée ({_model.MvUnit}) · " +
                 $"piste 3 : dérivée filtrée PID ({_model.MvUnit}).";
             ResultsPanel.Visibility = PlotPanel.Visibility = Visibility.Visible;
@@ -118,10 +119,43 @@ public partial class PidPrototypeWindow : Window
         finally { InputPanel.IsEnabled = true; }
     }
 
-    private void ResizeGraph(object sender, SizeChangedEventArgs args) => Draw();
-
-    private void Draw() => PidPrototypePlot.Draw(
-        Graph, _pid, _pi, _scenario, _model.PvUnit, _model.MvUnit);
+    private void Draw()
+    {
+        if (_pid is null || _pi is null || _pid.Points.Length != _pi.Points.Length || _pid.Points.Length < 3 ||
+            _pid.Points.Where((p, index) => p.Seconds != _pi.Points[index].Seconds).Any())
+        {
+            Chart.SetTracks(Array.Empty<ChartTrack>());
+            return;
+        }
+        var pi = _pi.Points;
+        var pid = _pid.Points;
+        var seconds = pi.Select(p => p.Seconds).ToArray();
+        var span = new[] { seconds[0], seconds[^1] };
+        var mvPi = pi.Where(p => p.Mv.HasValue).ToArray();
+        var mvPid = pid.Where(p => p.Mv.HasValue).ToArray();
+        var derivative = pid.Where(p => p.Derivative.HasValue).ToArray();
+        Chart.XLabel = "Temps depuis l'origine du scénario (s)";
+        Chart.SetTracks(new[]
+        {
+            new ChartTrack("Mesure et consigne", _model.PvUnit, new[]
+            {
+                new ChartSeries("Consigne", "MkrSignal3", span, new[] { _scenario.Setpoint, _scenario.Setpoint }),
+                new ChartSeries("PI IMC (référence)", "MkrSignal1", seconds, pi.Select(p => p.Pv).ToArray()),
+                new ChartSeries("PID manuel", "MkrSignal2", pid.Select(p => p.Seconds).ToArray(), pid.Select(p => p.Pv).ToArray())
+            }),
+            new ChartTrack("Sortie de commande appliquée", _model.MvUnit, new[]
+            {
+                new ChartSeries("PI IMC", "MkrSignal1", mvPi.Select(p => p.Seconds).ToArray(), mvPi.Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries("PID manuel", "MkrSignal2", mvPid.Select(p => p.Seconds).ToArray(), mvPid.Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries("Limite basse", "MkrPlotAxis", span, new[] { _scenario.MinimumMv, _scenario.MinimumMv }),
+                new ChartSeries("Limite haute", "MkrPlotAxis", span, new[] { _scenario.MaximumMv, _scenario.MaximumMv })
+            }),
+            new ChartTrack("Action dérivée du PID", _model.MvUnit, new[]
+            {
+                new ChartSeries("Dérivée filtrée", "MkrSignal4", derivative.Select(p => p.Seconds).ToArray(), derivative.Select(p => p.Derivative!.Value).ToArray())
+            })
+        });
+    }
 
     private void CloseDialog(object sender, RoutedEventArgs args) => Close();
 }
