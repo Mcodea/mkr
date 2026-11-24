@@ -63,6 +63,12 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "identify_closed_loop":
+        from closed_loop import identify
+        try:
+            return {**response, "result": identify(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] == "calculate_integrator_pi":
         from pi_tuning_integrator import calculate
         try:

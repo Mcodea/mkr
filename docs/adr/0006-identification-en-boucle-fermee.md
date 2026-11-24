@@ -1,6 +1,6 @@
 # ADR 0006 — Identification en boucle fermée
 
-Statut : **PROPOSÉ**, non implémenté. Aucune ligne de code n'en dépend. À valider par un humain avant tout développement.
+Statut : **EXPLORATOIRE, moteur seul**. Le mainteneur n'a pas pu répondre aux questions ouvertes et a demandé un outil industriel universel, indépendant de l'automate. Le moteur Python est implémenté (`engine/closed_loop.py`, opération `identify_closed_loop`) sous l'étiquette « expérimental » ; il n'a **aucun écran** et n'est pas offert à l'utilisateur. Il ne passera pas en « implémenté » sans les données réelles exigées plus bas.
 
 ## Contexte
 
@@ -54,12 +54,24 @@ Procédé FOPDT K = 2, τ = 30 s, θ = 6 s ; PI Kp = 0,5, Ti = 25 s ; consigne �
 - **Régulateurs qui modifient MV hors consigne** (anticipation, sélecteurs, cascade) : l'hypothèse d'une MV fonction de SP et PV seulement est fausse ; à déclarer par l'utilisateur et à signaler.
 - **Fausse assurance :** une porte qui accepte à tort serait plus dangereuse qu'aucune. D'où les critères plus stricts et l'obligation de données réelles.
 
-## Questions ouvertes pour le mainteneur
+## Questions ouvertes : réponses prises par défaut
 
-1. Les boucles visées sont-elles surtout PI avec régulateurs Schneider/Siemens en automatique permanent ? (Cela oriente les cas de test.)
-2. Peut-on obtenir un enregistrement réel de boucle fermée avec, si possible, un essai en boucle ouverte du même procédé ?
-3. Accepte-t-on qu'un intervalle trop large conduise à un refus sans réglage proposé ?
+Le mainteneur ne sait pas y répondre ; les choix suivants découlent de l'exigence « universel et indépendant de l'automate » et sont **révisables** :
+
+1. *Boucles visées :* tout régulateur PID en automatique, quelle que soit la marque. La méthode ne suppose ni structure ni paramètres du régulateur, donc rien de Schneider ou Siemens n'y entre.
+2. *Données réelles :* non disponibles. La fonction reste exploratoire et n'est pas exposée dans l'interface tant qu'un enregistrement réel n'a pas été comparé à un essai en boucle ouverte.
+3. *Intervalle trop large :* refus sans réglage. Retenu.
+
+## État de l'implémentation et résultats mesurés (simulations uniquement)
+
+- **Méthode :** deux étages (FIR de la consigne vers MV, puis ajustement FOPDT de la MV projetée vers PV), délai fractionnaire, 8 lignes de plateau au moins pour mesurer le bruit.
+- **Refus :** échantillonnage non uniforme, saturation de MV, consigne plate ou noyée dans le bruit (écart < 20 fois le bruit mesuré), lignes en manuel (colonne `MANUAL`), fenêtres qui se recouvrent, absence de plateau initial, dispersion trop grande (K > 30 %, τ > 50 %).
+- **Indépendance du régulateur :** deux réglages PI très différents donnent des paramètres voisins (tests).
+- **Comparaison au naïf :** sur 6 tirages bruités, l'erreur moyenne sur τ est plus faible qu'avec l'ajustement direct de MV (test).
+- **Résidus corrélés :** avec une perturbation de charge colorée non mesurée, les résidus sont corrélés **même pour un modèle correct**. Mon premier critère « autocorrélation de rang 1 » refusait à tort des modèles exacts (K = 2,00, τ = 29,9) ; il est devenu un avertissement `correlated_residuals`. Le refus repose sur l'erreur de prédiction de la fenêtre indépendante et sur la dispersion.
+- **Dispersion publiée, calibrée par Monte Carlo :** le rééchantillonnage des résidus seul sous-estimait la dispersion d'un facteur 8 (SE de τ : 1,3 s publié pour 11,1 s réels). La dispersion publiée est maintenant le maximum de ce rééchantillonnage et de l'écart entre deux estimations indépendantes (fenêtres d'estimation et de validation). Mesuré sur 14 tirages : erreur-type de τ publiée 7,5 s pour 10,9 s réels (rapport d'environ 0,7), gain 0,195 pour 0,259. **Elle sous-estime encore d'environ 30 %.** Le test exige un rapport entre 0,5 et 2 : ce n'est pas une garantie.
+- **Précision :** dispersion élevée sous bruit et perturbation fortes (écart-type de τ d'environ 11 s pour τ = 30 s dans ce scénario) : la boucle fermée donne une identification moins précise, et elle peut être refusée.
 
 ## Retour arrière
 
-Aucun code n'existe : refuser cet ADR ne change rien au produit.
+Le module n'est branché à aucun écran : le retirer (`closed_loop.py`, son test, l'opération `identify_closed_loop`) ne change rien au produit livré.
