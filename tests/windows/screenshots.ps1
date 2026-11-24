@@ -114,14 +114,6 @@ try {
     Capture $main '01-espace-projets'
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-    Step '01b-parcours' {
-        $step = Find $main $id 'Step8'
-        Write-Host ("##INFO Step8 = " + $step.Current.Name)
-        $step.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-        $null = Find $main $id 'InspectorOpen'
-        Start-Sleep -Milliseconds 700
-        Capture $main '01b-parcours'
-    }
     Press $main 'Ouvrir le projet sélectionné'
     $project = Find $root $name 'MKR — Projet initial'
     Capture $project '02-projet'
@@ -184,6 +176,17 @@ try {
         Start-Sleep -Milliseconds 800
         Capture $audit '08-journal-audit'
         Close-Window $audit
+    }
+    Step '10-espace-etude' {
+        Close-Window $project
+        Press-Retry $main "Ouvrir l'espace d'étude"
+        $null = Find $main $id 'StudyGrid'
+        Start-Sleep -Milliseconds 1200
+        Capture $main '10-espace-etude'
+        $tab = Find $main $id 'Step4'
+        $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 500
+        Capture $main '10b-onglet-identification'
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"

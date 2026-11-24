@@ -1,16 +1,39 @@
 using System.Diagnostics;
-using System.Windows.Controls;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Mkr.Core;
 
 namespace Mkr.Desktop;
 
+/// <summary>One row of the study table (display strings only).</summary>
+public sealed class StudyRow
+{
+    public required IdentificationStudy Study { get; init; }
+    public string Family => Study.Family.ToString();
+    public string Gain { get; init; } = "";
+    public string Tau { get; init; } = "";
+    public string Delay { get; init; } = "";
+    public string Error { get; init; } = "";
+    public string Decision { get; init; } = "";
+    public string When { get; init; } = "";
+}
+
 public partial class WindowView : Window
 {
+    private static readonly string[] ShortTitles =
+        { "Projet", "Données", "Signaux", "Identification", "Validation", "Stratégie", "Bloc", "Réglage", "Simulation", "Rapport" };
+
     private readonly IImportStore _store;
     private readonly ICsvEngine _engine;
-
     private readonly Func<Project, IdentificationWorkspace> _createIdentification;
+    private IReadOnlyList<JourneyStep> _steps = StudyJourney.Evaluate(null);
+    private int _tab;
+    private IdentificationWorkspace? _workspace;
+    private CsvWorkspace? _csv;
+    private Project? _project;
+    private readonly List<RadioButton> _tabs = new();
 
     internal WindowView(IImportStore store, ICsvEngine engine, Func<Project, IdentificationWorkspace> createIdentification)
     {
@@ -20,119 +43,15 @@ public partial class WindowView : Window
         InitializeComponent();
         ThemeChoice.SelectedIndex = (int)ThemeService.Choice;       // Initialize() ran at startup: reflect the active choice
         var version = typeof(WindowView).Assembly.GetName().Version;
-        RefreshFacts();
         VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
+        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
+        ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
     }
 
-    private readonly string[] _navLabels = { "NavHomeLabel", "NavCatalogueLabel" };
-
-    private void ToggleNavigation(object sender, RoutedEventArgs args)
+    private void ThemeChanged(object sender, SelectionChangedEventArgs args)
     {
-        var collapsed = NavColumn.Width.Value < 120;
-        NavColumn.Width = new GridLength(collapsed ? 250 : 76);
-        var visibility = collapsed ? Visibility.Visible : Visibility.Collapsed;
-        foreach (var name in _navLabels) if (FindName(name) is UIElement label) label.Visibility = visibility;
-        SpaceHeading.Visibility = visibility;
-        StudyHeading.Visibility = visibility;
-        foreach (var label in _stepLabels) label.Visibility = visibility;
-    }
-
-    private readonly List<TextBlock> _stepLabels = new();
-    private IReadOnlyList<JourneyStep> _steps = StudyJourney.Evaluate(null);
-    private int _selectedStep;
-
-    private void ToggleInspector(object sender, RoutedEventArgs args) => SetInspector(Inspector.Visibility != Visibility.Visible);
-
-    private void SetInspector(bool show)
-    {
-        Inspector.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        InspectorColumn.Width = new GridLength(show ? 300 : 0);
-        // On a 1024 px screen the navigation folds to icons so the workspace keeps its room.
-        if (show && ActualWidth < 1200 && NavColumn.Width.Value > 120) ToggleNavigation(this, new RoutedEventArgs());
-    }
-
-    private static string StateGlyph(StepState state) => state switch { StepState.Done => "\uE73E", StepState.Ready => "\uE76C", _ => "\uE72E" };
-    private static string StateName(StepState state) => state switch { StepState.Done => "terminée", StepState.Ready => "disponible", _ => "fermée" };
-
-    private void RebuildSteps()
-    {
-        StepList.Children.Clear();
-        _stepLabels.Clear();
-        var collapsed = NavColumn.Width.Value < 120;
-        foreach (var step in _steps)
-        {
-            var number = step.Number;
-            var button = new Button { Style = (Style)FindResource("MkrNavButton"), Padding = new Thickness(12, 6, 8, 6), ToolTip = step.Detail };
-            System.Windows.Automation.AutomationProperties.SetName(button, $"Étape {number} {step.Title}, {StateName(step.State)}");
-            System.Windows.Automation.AutomationProperties.SetAutomationId(button, "Step" + number);
-            var row = new StackPanel { Orientation = Orientation.Horizontal };
-            row.Children.Add(new TextBlock { Text = StateGlyph(step.State), FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"), FontSize = 14, Width = 22, VerticalAlignment = VerticalAlignment.Center, Opacity = step.State == StepState.Blocked ? 0.75 : 1 });
-            row.Children.Add(new TextBlock { Text = number.ToString(), Width = 22, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
-            var label = new TextBlock { Text = step.Title, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 150, Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible };
-            _stepLabels.Add(label);
-            row.Children.Add(label);
-            button.Content = row;
-            button.Click += (_, _) => { _selectedStep = number - 1; ShowStep(); SetInspector(true); };
-            StepList.Children.Add(button);
-        }
-    }
-
-    private void ShowStep()
-    {
-        var step = _steps[_selectedStep];
-        InspectorStepTitle.Text = $"Étape {step.Number} · {step.Title}";
-        InspectorStepState.Text = step.State switch { StepState.Done => "✔ Terminée", StepState.Ready => "▶ Disponible", _ => "⛔ Fermée" };
-        InspectorStepDetail.Text = step.Detail;
-        InspectorOpen.IsEnabled = step.State != StepState.Blocked;
-    }
-
-    private void OpenSelectedStep(object sender, RoutedEventArgs args)
-    {
-        if (ProjectList.SelectedItem is not Project || _steps[_selectedStep].State == StepState.Blocked) return;
-        if (_selectedStep < 3) OpenProject(sender, args); else OpenIdentification(sender, args);
-        RefreshFacts();
-    }
-
-    private void RefreshFacts()
-    {
-        if (ProjectList.SelectedItem is not Project project)
-        {
-            _steps = StudyJourney.Evaluate(null);
-            InspectorProject.Text = "Aucun projet";
-            InspectorFacts.Text = "Sélectionnez un projet dans la liste.";
-        }
-        else
-        {
-            try
-            {
-                var brief = new CsvWorkspace(project, _store, _engine).ReadLoopBrief();
-                var workspace = _createIdentification(project);
-                var imports = workspace.Sources().Count;
-                var studies = workspace.Studies();
-                var accepted = studies.Count(study => study.IsAcceptedForTuning);
-                var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
-                _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
-                InspectorProject.Text = project.Name;
-                InspectorFacts.Text = $"Boucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes d'identification : {studies.Count}\nModèles acceptés : {accepted}\nCréé le {project.CreatedAt:yyyy-MM-dd} (UTC)";
-            }
-            catch (Exception error)
-            {
-                Trace.TraceError("project.facts {0}", error.GetType().Name);
-                _steps = StudyJourney.Evaluate(null);
-                InspectorFacts.Text = "Impossible de lire l'état du projet. Vérifiez le stockage local.";
-            }
-        }
-        RebuildSteps();
-        ShowStep();
-    }
-
-    private void ShowHome(object sender, RoutedEventArgs args) => ProjectList.Focus();
-
-    private void ProjectSelected(object sender, System.Windows.Controls.SelectionChangedEventArgs args)
-    {
-        var project = ProjectList.SelectedItem as Project;
-        ActiveProject.Text = project is null ? "Aucun projet sélectionné" : $"Projet : {project.Name}";
-        RefreshFacts();
+        if (ThemeChoice.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice) && choice != ThemeService.Choice)
+            ThemeService.Apply(choice);
     }
 
     private void WindowKeyDown(object sender, System.Windows.Input.KeyEventArgs args)
@@ -143,43 +62,285 @@ public partial class WindowView : Window
     }
 
     private void OpenHelp(object sender, RoutedEventArgs args) => new HelpWindow { Owner = this }.ShowDialog();
+    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this, _csv is null ? null : _csv.ReadLoopBrief);
 
-    private void OpenIdentification(object sender, RoutedEventArgs args)
+    // ---------- home ----------
+    private void ProjectSelected(object sender, SelectionChangedEventArgs args)
     {
-        if (ProjectList.SelectedItem is not Project project) return;
-        try { new IdentificationWindow(_createIdentification(project)) { Owner = this }.ShowDialog(); }
-        catch (Exception error)
-        {
-            Trace.TraceError("identification.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible d’ouvrir l’identification. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        _project = ProjectList.SelectedItem as Project;
+        ActiveProject.Text = _project is null ? "Aucun projet sélectionné" : $"Projet : {_project.Name}";
+        OpenStudy.IsEnabled = _project is not null;
     }
-
-    private void ThemeChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs args)
-    {
-        if (ThemeChoice.SelectedItem is System.Windows.Controls.ComboBoxItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice) && choice != ThemeService.Choice)
-            ThemeService.Apply(choice);
-    }
-
-    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this);
 
     private void OpenProject(object sender, RoutedEventArgs args)
     {
-        if (sender is System.Windows.Controls.DataGrid && ProjectList.SelectedItem is null) return;
         if (ProjectList.SelectedItem is not Project project)
         {
-            MessageBox.Show(this, "Sélectionnez un projet dans la liste.", "MKR");
+            if (sender is not DataGrid) MessageBox.Show(this, "Sélectionnez un projet dans la liste.", "MKR");
             return;
         }
         try
         {
             new CsvWindow(new CsvWorkspace(project, _store, _engine), _createIdentification(project)) { Owner = this }.ShowDialog();
+            if (StudyView.Visibility == Visibility.Visible) LoadStudy();
         }
         catch (Exception error)
         {
             Trace.TraceError("project.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible d’ouvrir le projet. Vérifiez le stockage local.", "MKR",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, "Impossible d’ouvrir le projet. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    // ---------- study workspace ----------
+    private void EnterStudy(object sender, RoutedEventArgs args)
+    {
+        if (ProjectList.SelectedItem is not Project project) return;
+        _project = project;
+        HomeView.Visibility = Visibility.Collapsed;
+        StudyView.Visibility = Visibility.Visible;
+        RibbonHost.Visibility = Visibility.Visible;
+        Title = $"MKR — {project.Name}";
+        LoadStudy();
+    }
+
+    private void LeaveStudy()
+    {
+        StudyView.Visibility = Visibility.Collapsed;
+        RibbonHost.Visibility = Visibility.Collapsed;
+        HomeView.Visibility = Visibility.Visible;
+        Title = "MKR — Espace projets";
+    }
+
+    private static string StateGlyph(StepState state) => state switch { StepState.Done => "", StepState.Ready => "", _ => "" };
+    private static string StateName(StepState state) => state switch { StepState.Done => "terminée", StepState.Ready => "disponible", _ => "fermée" };
+
+    private void LoadStudy()
+    {
+        if (_project is null) return;
+        try
+        {
+            _csv = new CsvWorkspace(_project, _store, _engine);
+            _workspace = _createIdentification(_project);
+            var brief = _csv.ReadLoopBrief();
+            var imports = _workspace.Sources().Count;
+            var studies = _workspace.Studies();
+            var accepted = studies.Count(study => study.IsAcceptedForTuning);
+            var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
+            _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
+            InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}";
+            var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
+            StudyGrid.ItemsSource = rows;
+            BuildTabs();
+            if (rows.Count > 0) StudyGrid.SelectedIndex = 0; else ShowStudy(null);
+        }
+        catch (Exception error)
+        {
+            Trace.TraceError("project.facts {0}", error.GetType().Name);
+            _steps = StudyJourney.Evaluate(null);
+            InspectorFacts.Text = "Impossible de lire l'état du projet. Vérifiez le stockage local.";
+            BuildTabs();
+        }
+    }
+
+    private static StudyRow Row(IdentificationStudy study)
+    {
+        var result = study.Result;
+        string F(double v) => v.ToString("G4", CultureInfo.CurrentCulture);
+        return new StudyRow
+        {
+            Study = study,
+            Gain = $"{F(result.Gain)} {study.PvUnit}/{study.MvUnit}",
+            Tau = result.TauSeconds is { } tau ? (result.SecondTauSeconds is { } fast ? $"{F(tau)} / {F(fast)}" : F(tau)) : "—",
+            Delay = F(result.DelaySeconds),
+            Error = $"{F(result.Validation.Rmse)} {study.PvUnit}",
+            Decision = study.IsAcceptedForTuning ? "Accepté" : "Refusé",
+            When = study.CalculatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+        };
+    }
+
+    private void BuildTabs()
+    {
+        TabStrip.Children.Clear();
+        _tabs.Clear();
+        foreach (var step in _steps)
+        {
+            var index = step.Number - 1;
+            var content = new StackPanel { Orientation = Orientation.Horizontal };
+            if (step.State != StepState.Ready)
+                content.Children.Add(new TextBlock { Text = step.State == StepState.Done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            content.Children.Add(new TextBlock { Text = ShortTitles[index], VerticalAlignment = VerticalAlignment.Center });
+            var tab = new RadioButton { Style = (Style)FindResource("MkrRibbonTab"), GroupName = "Steps", IsChecked = index == _tab, Content = content };
+            System.Windows.Automation.AutomationProperties.SetName(tab, $"Étape {step.Number} {step.Title}, {StateName(step.State)}");
+            System.Windows.Automation.AutomationProperties.SetAutomationId(tab, "Step" + step.Number);
+            tab.ToolTip = step.Detail;
+            tab.Checked += (_, _) => { _tab = index; BuildRibbon(); };
+            _tabs.Add(tab);
+            TabStrip.Children.Add(tab);
+        }
+        BuildRibbon();
+    }
+
+    private Button Command(string glyph, string label, string tooltip, Action action, bool enabled = true)
+    {
+        var content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        content.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 22, HorizontalAlignment = HorizontalAlignment.Center });
+        content.Children.Add(new TextBlock { Text = label, FontSize = 11, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0), MaxWidth = 86 });
+        var button = new Button { Style = (Style)FindResource("MkrRibbonButton"), Content = content, ToolTip = tooltip, IsEnabled = enabled };
+        System.Windows.Automation.AutomationProperties.SetName(button, label);
+        button.Click += (_, _) => action();
+        return button;
+    }
+
+    private void BuildRibbon()
+    {
+        RibbonCommands.Children.Clear();
+        if (_steps.Count == 0) return;
+        var step = _steps[_tab];
+        var open = step.State != StepState.Blocked;
+        const string inIdentification = "S'ouvre dans la fenêtre Identification et réglage. ";
+        var selected = (StudyGrid.SelectedItem as StudyRow)?.Study;
+        switch (_tab)
+        {
+            case 0:
+                RibbonCommands.Children.Add(Command("", "Accueil", "Retourner à la liste des projets", LeaveStudy));
+                RibbonCommands.Children.Add(Command("", "Description de la boucle", "Repère, grandeur réglée, point de fonctionnement, objectif", () => OpenProject(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("", "Journal d'audit", "Journal chaîné des actions du projet", OpenAudit));
+                break;
+            case 1:
+                RibbonCommands.Children.Add(Command("", "Importer un CSV", "Importer un fichier ou acquérir en lecture seule depuis l'automate", () => OpenProject(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("", "Acquisition automate", "Lecture seule Modbus TCP / S7comm", () => OpenProject(this, new RoutedEventArgs())));
+                break;
+            case 2:
+                RibbonCommands.Children.Add(Command("", "Rechercher des essais", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("", "Courbes brutes", inIdentification, OpenIdentification, open));
+                break;
+            case 3:
+                RibbonCommands.Children.Add(Command("", "Identifier le procédé", inIdentification, OpenIdentification, open));
+                break;
+            case 4:
+                RibbonCommands.Children.Add(Command("", "Revue de l'étude", "Statut de revue (calculé, vérifié, approuvé) avec quatre yeux", OpenReview, selected is not null));
+                RibbonCommands.Children.Add(Command("", "Contrôle de dérive", inIdentification, OpenIdentification, open));
+                break;
+            case 5:
+                RibbonCommands.Children.Add(Command("", "Choisir IMC ou SIMC", inIdentification, OpenIdentification, open));
+                break;
+            case 6:
+                RibbonCommands.Children.Add(Command("", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("", "Valeurs du bloc", inIdentification, OpenIdentification, open));
+                break;
+            case 7:
+                RibbonCommands.Children.Add(Command("", "Calculer les réglages", inIdentification, OpenIdentification, open));
+                break;
+            case 8:
+                RibbonCommands.Children.Add(Command("", "Simuler", inIdentification, OpenIdentification, open));
+                break;
+            case 9:
+                RibbonCommands.Children.Add(Command("", "Fiche d'étude PDF", inIdentification, OpenIdentification, open));
+                break;
+        }
+        RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+    }
+
+    private void OpenAudit()
+    {
+        if (_csv is null) return;
+        try { new AuditWindow(_csv) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { Trace.TraceError("audit.open {0}", error.GetType().Name); }
+    }
+
+    private void OpenIdentification()
+    {
+        if (_workspace is null) return;
+        try { new IdentificationWindow(_workspace) { Owner = this }.ShowDialog(); }
+        catch (Exception error)
+        {
+            Trace.TraceError("identification.open {0}", error.GetType().Name);
+            MessageBox.Show(this, "Impossible d’ouvrir l’identification. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        LoadStudy();
+    }
+
+    private void OpenReview()
+    {
+        if (_workspace is null || (StudyGrid.SelectedItem as StudyRow)?.Study is not { } study) return;
+        try { new ReviewWindow(_workspace, study.Id, study.Label) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { Trace.TraceError("review.open {0}", error.GetType().Name); }
+    }
+
+    // ---------- values panel and chart ----------
+    private void StudySelected(object sender, SelectionChangedEventArgs args) => ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study);
+    private void TrialChanged(object sender, RoutedEventArgs args) { if (IsLoaded) ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study); }
+
+    private void UpdateVerdictColour()
+    {
+        var study = (StudyGrid.SelectedItem as StudyRow)?.Study;
+        Verdict.Background = study is null ? (Brush)FindResource("MkrBorderStrong") : (Brush)FindResource(study.IsAcceptedForTuning ? "MkrSuccess" : "MkrDanger");
+    }
+
+    private void ShowStudy(IdentificationStudy? study)
+    {
+        if (study is null)
+        {
+            VerdictText.Text = "AUCUNE ÉTUDE";
+            ValuesText.Text = "";
+            ValuesNote.Text = _steps.Count > 3 && _steps[3].State == StepState.Blocked ? "Importez des données (onglet Données), puis identifiez le procédé." : "Aucune identification enregistrée. Ouvrez l'onglet Identification.";
+            Chart.SetTracks(Array.Empty<ChartTrack>());
+            UpdateVerdictColour();
+            BuildRibbon();
+            return;
+        }
+        var result = study.Result;
+        VerdictText.Text = study.IsAcceptedForTuning ? "MODÈLE ACCEPTÉ" : "MODÈLE REFUSÉ";
+        UpdateVerdictColour();
+        string F(double v) => v.ToString("G5", CultureInfo.CurrentCulture);
+        var lines = new List<string> { $"Famille  {study.Family}", $"K  {F(result.Gain)} {study.PvUnit}/{study.MvUnit}" };
+        if (result.TauSeconds is { } tau) lines.Add(result.SecondTauSeconds is { } fast ? $"τ₁  {F(tau)} s\nτ₂  {F(fast)} s" : $"τ  {F(tau)} s");
+        lines.Add($"θ  {F(result.DelaySeconds)} s");
+        lines.Add($"θ prudent  {F(result.TuningDelaySeconds)} s");
+        lines.Add($"RMSE valid.  {F(result.Validation.Rmse)} {study.PvUnit}");
+        if (result.Validation.RSquared is { } r2) lines.Add($"R² valid.  {F(r2)}");
+        ValuesText.Text = string.Join("\n", lines);
+        ValuesNote.Text = study.IsAcceptedForTuning
+            ? "Validé sur un essai indépendant. Les réglages restent à qualifier sur banc."
+            : $"Refusé : {(study.Assessment is { Reasons.Length: > 0 } a ? string.Join(", ", a.Reasons) : "critères non satisfaits")}. Aucun réglage n'en est déduit.";
+
+        var fit = ShowValidation.IsChecked == true ? result.Validation : result.Training;
+        var seconds = fit.Points.Select(p => p.Seconds).ToArray();
+        var step = fit.InputStep;
+        var horizon = seconds.Length > 0 ? seconds[^1] : 1;
+        Chart.XLabel = "Temps depuis l'échelon de la sortie de commande (s)";
+        Chart.SetTracks(new[]
+        {
+            new ChartTrack("Mesure", study.PvUnit, new[]
+            {
+                new ChartSeries("Observée", "MkrSignal1", seconds, fit.Points.Select(p => p.Observed).ToArray()),
+                new ChartSeries("Modèle", "MkrSignal2", seconds, fit.Points.Select(p => p.Predicted).ToArray())
+            }),
+            new ChartTrack("Sortie de commande (écart)", study.MvUnit, new[]
+            {
+                new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { -horizon * 0.05, 0, 0, horizon }, new[] { 0, 0, step, step })
+            })
+        });
+        BuildRibbon();
+    }
+
+    private void ResetZoom(object sender, RoutedEventArgs args) => Chart.ResetView();
+
+    private void ExportImage(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "courbes-etude.png" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportPng(dialog.FileName); CursorText.Text = "Image exportée."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { CursorText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+    }
+
+    private void ExportData(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "courbes-etude.csv" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportCsv(dialog.FileName); CursorText.Text = "Données exportées."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { CursorText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 }
