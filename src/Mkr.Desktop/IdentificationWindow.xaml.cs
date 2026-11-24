@@ -91,6 +91,8 @@ public partial class IdentificationWindow : Window
                 mvTolerance, pvTolerance, token);
             token.ThrowIfCancellationRequested();
             Message.Text = $"{search.Candidates.Length} échelon(s) exploitable(s), {search.Rejected.Length} écarté(s).";
+            if (search.ModeColumn is not null)
+                Message.Text += $" Colonne {search.ModeColumn} utilisée : {search.RowsNotInManual:N0} ligne(s) hors manuel écartée(s).";
             var window = new StepSearchWindow(search, import.FileName, MvUnit.Text.Trim(), PvUnit.Text.Trim()) { Owner = this };
             if (window.ShowDialog() != true || window.SelectedPair is not { } pair) return;
             // Both trials come from this recording: select it for validation too, then set the two explicit ranges.

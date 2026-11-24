@@ -34,7 +34,7 @@ ordre d’octets produit des valeurs plausibles mais fausses : seule cette compa
 Case « Lire aussi le mode du régulateur » : l'utilisateur saisit **l'adresse**, le **type entier** (INT, UINT, DINT, UDINT) et la **valeur brute qui signifie « manuel »** dans son programme. MKR ne suppose aucune convention : sans ces trois informations, le mode n'est pas lu. Un mode booléen se copie d'abord dans un mot.
 - **Adresses consécutives (recommandé).** Le mode est lu avec SP, PV et MV : une seule requête par mesure (Modbus : jusqu'à 125 registres ; S7 : un seul job). Au-delà, Modbus émet une requête par signal et l'écran le signale, car les valeurs ne sont plus prises au même instant.
 - **Archivage.** Le CSV reçoit `MODE_raw` (valeur brute) et `MANUAL` (1 si égale à la valeur déclarée).
-- **Contrôle.** Les mesures hors manuel sont comptées (`SamplesNotInManual`) et signalées à l'arrêt : un essai en boucle ouverte n'y est pas valable. MKR n'écarte rien automatiquement ; le tri reste à l'utilisateur.
+- **Contrôle.** Les mesures hors manuel sont comptées (`SamplesNotInManual`) et signalées à l'arrêt : un essai en boucle ouverte n'y est pas valable. À l'enregistrement continu, le message de fin le dit aussi. **La recherche d'essais** (`find_steps`, version 1.2.0) utilise la colonne `MANUAL` quand elle existe : une ligne hors manuel est traitée comme invalide, donc aucune fenêtre d'essai n'en contient, et le saut de commande du transfert automatique → manuel n'est jamais pris pour un échelon. Sans cette colonne, rien n'est supposé et le résultat l'indique (`modeColumn` nul).
 
 ### Prérequis Siemens
 

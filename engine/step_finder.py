@@ -4,6 +4,10 @@ Every candidate window is validated with the same reader as the identification
 (`fopdt.read_step`), so a window listed here is accepted by the estimators for the
 declared tolerances. Nothing is smoothed, filled or modified: rows are only located.
 
+A column named exactly MANUAL (written by MKR's PLC acquisition: 1 when the raw controller mode equals the value the user declared
+for "manual") is used when present: rows with MANUAL != 1 are treated as invalid, so no trial window can contain a row taken outside manual.
+Without that column nothing is assumed about the mode and the result says so (`modeColumn` null).
+
 Scope: step tests with the controller in manual (MV is the applied output). Closed-loop
 data, ramps, pulses and slow MV drifts are not identification trials and are reported
 as rejections, never silently used.
@@ -17,10 +21,11 @@ from csv_format import from_payload
 from csv_quality import read_table
 from fopdt import number, read_step
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 MAXIMUM_PRE_SAMPLES = 60       # Longest pre-step baseline offered to the estimators.
 MAXIMUM_CANDIDATES = 200       # Bound on the number of windows validated per request.
 MAXIMUM_PAIRS = 20
+MANUAL_COLUMN = "MANUAL"
 AMPLITUDE_RATIO = (0.5, 2.0)   # Same rule as fopdt.read_trials.
 SHARED_BASELINE_SAMPLES = 8    # Baseline kept by the second trial when two steps share a plateau.
 
@@ -57,7 +62,11 @@ def _series(source):
                 values.append(math.nan)       # A gap or bad value only blocks windows containing it.
         return np.array(values)
 
-    return dates, column(ui), column(yi)
+    manual = None
+    if MANUAL_COLUMN in headers:
+        flags = column(headers.index(MANUAL_COLUMN))
+        manual = flags == 1.0                      # a missing or any other value is not manual
+    return dates, column(ui), column(yi), manual
 
 
 def _read_tolerances(payload):
@@ -72,9 +81,11 @@ def _read_tolerances(payload):
 def find(payload):
     mv_tolerance, pv_tolerance = _read_tolerances(payload)
     source = payload["source"]
-    dates, mv, pv = _series(source)
+    dates, mv, pv, manual = _series(source)
     n = len(dates)
     invalid = ~(np.isfinite(mv) & np.isfinite(pv))
+    if manual is not None:
+        invalid |= ~manual
     jump = np.zeros(n, dtype=bool)
     both = ~invalid[1:] & ~invalid[:-1]
     jump[1:] = both & (np.abs(mv[1:] - mv[:-1]) > 2 * mv_tolerance)
@@ -116,6 +127,8 @@ def find(payload):
         except ValueError as error:
             rejected.append(dict(stepRow=k, reason=str(error)))
     return dict(algorithmVersion=VERSION, sourceRows=n, candidates=candidates, rejected=rejected,
+                modeColumn=MANUAL_COLUMN if manual is not None else None,
+                rowsNotInManual=int(np.count_nonzero(~manual)) if manual is not None else 0,
                 pairs=_pairs(source, dates, mv, candidates, mv_tolerance, pv_tolerance))
 
 

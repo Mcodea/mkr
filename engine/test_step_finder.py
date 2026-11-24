@@ -150,5 +150,43 @@ class StepFinderTests(unittest.TestCase):
             find(dict(request(source), source=dict(source, pvColumn="mv")))
 
 
+def with_manual_column(source, manual_until, switch_back=None):
+    """Adds the MANUAL column written by the PLC acquisition: 1 until manual_until seconds, 0 after (controller in automatic)."""
+    text = base64.b64decode(source["raw"]).decode().split("\n")
+    out = [text[0] + ";MANUAL"]
+    start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    for line in text[1:]:
+        seconds = (datetime.fromisoformat(line.split(";")[0]) - start).total_seconds()
+        out.append(f"{line};{1 if seconds < manual_until else 0}")
+    return dict(source, raw=base64.b64encode("\n".join(out).encode()).decode())
+
+
+class ControllerModeTests(unittest.TestCase):
+    def test_without_the_mode_column_nothing_is_assumed_and_the_result_says_so(self):
+        result = find(request(recording([(300, 5.0), (1500, 0.0), (2400, 4.0)], duration=2500)))
+        self.assertIsNone(result["modeColumn"])
+        self.assertEqual(result["rowsNotInManual"], 0)
+        self.assertEqual(len(result["candidates"]), 3)
+
+    def test_a_step_made_while_the_controller_was_not_in_manual_is_not_offered(self):
+        source = with_manual_column(recording([(300, 5.0), (1500, 0.0), (2400, 4.0)], duration=2500), manual_until=2000)
+        result = find(request(source))
+        self.assertEqual(result["modeColumn"], "MANUAL")
+        self.assertEqual(sorted(c["stepRow"] for c in result["candidates"]), [60, 300])      # the step at 2400 s was in automatic
+        self.assertEqual(result["rowsNotInManual"], 100)
+
+    def test_the_transfer_from_automatic_to_manual_is_never_taken_for_a_step(self):
+        # MV jumps at the moment the operator switches to manual: not an identification step.
+        raw = recording([(300, 5.0), (1000, 0.0)], duration=1500)
+        text = base64.b64decode(raw["raw"]).decode().split("\n")
+        start = datetime(2026, 6, 1, tzinfo=timezone.utc)
+        out = [text[0] + ";MANUAL"]
+        for line in text[1:]:
+            seconds = (datetime.fromisoformat(line.split(";")[0]) - start).total_seconds()
+            out.append(f"{line};{1 if seconds >= 300 else 0}")                                # automatic until 300 s, where MV jumps
+        result = find(request(dict(raw, raw=base64.b64encode("\n".join(out).encode()).decode())))
+        self.assertEqual([c["stepRow"] for c in result["candidates"]], [200])                # only the step at 1000 s (row 200)
+
+
 if __name__ == "__main__":
     unittest.main()

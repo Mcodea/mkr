@@ -312,7 +312,10 @@ public partial class AcquisitionWindow : Window
             _ => $"Enregistrement interrompu : {result.Message}"
         };
         summary += $" {result.SegmentsSaved} segment(s) enregistré(s), {result.Statistics.Received:N0} mesures, " +
-            $"{result.Statistics.MissedSamples} manquée(s) en {result.Statistics.Gaps.Length} lacune(s), aucune interpolée.";
+            $"{result.Statistics.MissedSamples} manquée(s) en {result.Statistics.Gaps.Length} lacune(s), aucune interpolée." +
+            (result.Statistics.SamplesNotInManual > 0
+                ? $" ATTENTION : {result.Statistics.SamplesNotInManual:N0} mesure(s) hors du mode manuel déclaré ; la recherche d'essais les écartera (colonne MANUAL)."
+                : "");
         Status.Text = summary;
         if (result.SegmentsSaved > 0 && !_lifetime.IsCancellationRequested)
         {

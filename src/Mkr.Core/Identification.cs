@@ -89,7 +89,7 @@ public sealed record StepPair(int FirstId, int SecondId, double AmplitudeRatio, 
     StepWindow FirstWindow, StepWindow SecondWindow, bool FirstSettled, bool SecondSettled, string[] Notes);
 
 public sealed record StepSearch(string AlgorithmVersion, int SourceRows, StepCandidate[] Candidates,
-    StepRejection[] Rejected, StepPair[] Pairs);
+    StepRejection[] Rejected, StepPair[] Pairs, string? ModeColumn = null, int RowsNotInManual = 0);
 
 /// <summary>
 /// Independence of the estimation and validation trials (AGENTS.md §6.3). Two imports with the same bytes are one trial.
