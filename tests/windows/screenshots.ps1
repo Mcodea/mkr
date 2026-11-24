@@ -178,6 +178,8 @@ try {
         Close-Window $audit
     }
     Step '10-espace-etude' {
+        # a dialog left open by an earlier step (the review window) must not hide the main window
+        try { Close-Window (Find $root $name "MKR — Revue de l'étude") } catch { }
         Close-Window $project
         Press-Retry $main "Ouvrir l'espace d'étude"
         $null = Find $main $id 'StudyGrid'
