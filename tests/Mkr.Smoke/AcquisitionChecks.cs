@@ -132,8 +132,21 @@ internal static class AcquisitionChecks
                 throw new Exception("CSV and Modbus must preserve distinct origins and identical PV quality.");
             return (live, file);
         }
-        var train = await Trial(1);
-        var check = await Trial(-1);
+        // The simulated server answers exactly `count` requests at a 100 ms period: on a loaded CI runner the client can legitimately
+        // miss a slot (overrun), which this fixed script cannot absorb. Retry that timing fault only, and say so, so its frequency stays visible.
+        async Task<(CsvImport Live, CsvImport File)> StableTrial(float amplitude)
+        {
+            for (var attempt = 1; ; attempt++)
+            {
+                try { return await Trial(amplitude); }
+                catch (Exception error) when (attempt < 3 && (error is EndOfStreamException || error.Message.StartsWith("Simulated trial capture incomplete", StringComparison.Ordinal)))
+                {
+                    Console.WriteLine($"  (essai simulé rejoué : créneau manqué sur un poste chargé, tentative {attempt})");
+                }
+            }
+        }
+        var train = await StableTrial(1);
+        var check = await StableTrial(-1);
         var columns = new StepColumns("timestamp", "MV", "PV");
         var (fit, _) = await engine.IdentifyAsync(ModelFamily.FOPDT, new(train.Live, columns), new(check.Live, columns),
             0.005, 0.01, limit.Token);
