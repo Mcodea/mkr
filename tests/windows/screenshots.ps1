@@ -197,7 +197,7 @@ try {
         # a dialog left open by an earlier step (the review window) must not hide the main window
         Close-Others $root $main
         Press-Retry $main "Ouvrir l'espace d'étude"
-        $null = Find $main $id 'StudyGrid'
+        $null = Find $main $id 'StudyPicker'
         Start-Sleep -Milliseconds 1200
         Capture $main '10-espace-etude'
         $tab = Find $main $id 'Step4'
