@@ -636,6 +636,20 @@ try
         await ThrowsAsync<ModelNotAcceptedException>(() => gate.ConvertToPidffAsync(refused, refusedTuning, false, default));
     }
 
+    // Loop monitoring: a validated FOPDT model against a new open-loop step.
+    {
+        var criteria = new ComparisonCriteria(0.05, 0.5);
+        var same = await SaveStepAsync(9, 1.8);
+        var consistent = await engine.CheckModelDriftAsync(fit, new StepImport(same, columns), 0.01, 0.01, criteria, default);
+        Require(consistent.Verdict == "consistent" && consistent.DriftedParameters.Length == 0 && consistent.Changes.Count == 3,
+            "A new step of the same process is consistent with the validated model.");
+        Require(consistent.Describe("%", "bar").Contains("reste cohérent"), "The verdict is explained in French.");
+        var other = await engine.CheckModelDriftAsync(fit, new StepImport(trainingSecond, columns), 0.01, 0.01, criteria, default);
+        Require(other.Verdict != "consistent" && other.Reasons.Length > 0, "A second-order response is not consistent with the first-order model.");
+        await ThrowsAsync<ModelNotAcceptedException>(() => gate.CheckModelDriftAsync(refused, same.Summary, columns, "%", "bar", 0.01, 0.01, null, default));
+        await ThrowsAsync<InvalidOperationException>(() => gate.CheckModelDriftAsync(acceptedSecond, same.Summary, columns, "%", "bar", 0.01, 0.01, null, default));
+    }
+
     // PI for an integrating process (SIMC rule, Skogestad 2003): Kc = 1 / (k' (tau_c + theta)), Ti = 4 (tau_c + theta).
     {
         var level = await engine.CalculateIntegratorPiAsync(-0.3, 2.5, 5, default);

@@ -320,6 +320,7 @@ public partial class IdentificationWindow : Window
         OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         PiPanel.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         SopdtPanel.Visibility = tunable && _shown?.Family == ModelFamily.SOPDT ? Visibility.Visible : Visibility.Collapsed;
+        DriftButton.Visibility = tunable && _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
         IntegratorButton.Visibility = tunable && _shown?.Family == ModelFamily.Integrateur ? Visibility.Visible : Visibility.Collapsed;
         SopdtReport.Text = "";
         TargetPanel.Visibility = tunable && _shown?.Family is ModelFamily.FOPDT or ModelFamily.SOPDT
@@ -531,6 +532,31 @@ public partial class IdentificationWindow : Window
         }
         try { new BlockTargetWindow(_workspace, model, tuning) { Owner = this }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
+    }
+
+    private async void CheckDrift(object sender, RoutedEventArgs args)
+    {
+        var columns = ReadColumns(ValidationTime, ValidationMv, ValidationPv);
+        if (_shown is not { Family: ModelFamily.FOPDT } model || ValidationSource.SelectedItem is not ImportSummary trial || columns is null ||
+            MvUnit.Text.Trim().Length == 0 || PvUnit.Text.Trim().Length == 0 ||
+            !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(PvTolerance, out var pvTolerance))
+        {
+            Message.Text = "Choisissez le nouvel essai dans la zone Validation (source, colonnes), les unités et les tolérances.";
+            return;
+        }
+        Form.IsEnabled = false;
+        var token = _lifetime.Token;
+        try
+        {
+            var report = await _workspace.CheckModelDriftAsync(model, trial, columns, MvUnit.Text.Trim(), PvUnit.Text.Trim(),
+                mvTolerance, pvTolerance, _validationSelection?.Window, token);
+            token.ThrowIfCancellationRequested();
+            Message.Text = "Contrôle de dérive terminé.";
+            MessageBox.Show(this, report.Describe(MvUnit.Text.Trim(), PvUnit.Text.Trim()), "MKR — Contrôle de dérive du modèle");
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = true; }
     }
 
     private void OpenIntegrator(object sender, RoutedEventArgs args)

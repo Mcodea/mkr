@@ -55,6 +55,30 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return engine.FindStepsAsync(recording, mvTolerance, pvTolerance, token);
     }
 
+    /// <summary>
+    /// Confronts an ACCEPTED FOPDT model with a new open-loop step. The trial must be independent of both trials that built the model
+    /// (another recording, or disjoint windows of the same one), and the model's own acceptance criteria are used.
+    /// </summary>
+    public Task<ModelDriftReport> CheckModelDriftAsync(IdentificationStudy model, ImportSummary trial, StepColumns columns,
+        string mvUnit, string pvUnit, double mvTolerance, double pvTolerance, StepWindow? window, CancellationToken token)
+    {
+        if (model.Family != ModelFamily.FOPDT)
+            throw new InvalidOperationException("Le contrôle de dérive ne couvre que les modèles FOPDT.");
+        if (!model.IsAcceptedForTuning || model.Assessment is not { } assessment)
+            throw new ModelNotAcceptedException("Seul un modèle accepté à la validation peut être suivi.");
+        var recorded = imports.ReadImport(project.Id, trial.Id);
+        if (recorded.Summary.Sha256 != trial.Sha256) throw new CsvInputException("preview_provenance");
+        foreach (var (id, previousWindow) in new[] { (model.TrainingId, model.TrainingWindow), (model.ValidationId, model.ValidationWindow) })
+        {
+            var previous = imports.ReadImport(project.Id, id).Summary;
+            if (TrialIndependence.Check(previous, previousWindow, recorded.Summary, window) is { } refusal)
+                throw new CsvInputException(refusal);
+        }
+        var step = new StepImport(recorded, columns, window);
+        CheckRecordedUnit(step, mvUnit, pvUnit);
+        return engine.CheckModelDriftAsync(model.Result, step, mvTolerance, pvTolerance, assessment.Criteria, token);
+    }
+
     public Task<CriteriaSuggestion> SuggestCriteriaAsync(ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, CancellationToken token, StepWindow? trainingWindow, StepWindow? validationWindow)

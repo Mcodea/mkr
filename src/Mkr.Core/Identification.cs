@@ -107,8 +107,43 @@ public static class TrialIndependence
     }
 }
 
+/// <summary>One parameter of the stored model against its re-estimation on a new trial.</summary>
+public sealed record DriftChange(double Previous, double Current, double RelativeChange, double? StandardError, bool Flagged);
+
+/// <summary>Is a validated FOPDT model still consistent with a new open-loop step? Never changes the stored model.</summary>
+public sealed record ModelDriftReport(string AlgorithmVersion, string Verdict, string[] Reasons, string[] DriftedParameters,
+    double PredictionRmse, double? ResidualLagOne, double BaselineNoise, Dictionary<string, DriftChange> Changes, string[] Warnings);
+
+public static class ModelDriftText
+{
+    public static string Describe(this ModelDriftReport report, string mvUnit, string pvUnit)
+    {
+        var text = new System.Text.StringBuilder();
+        text.AppendLine(report.Verdict switch
+        {
+            "consistent" => "Le modèle reste cohérent avec le nouvel essai.",
+            "drift" => "DÉRIVE : le modèle ne décrit plus le nouvel essai ; paramètre(s) changé(s) : " + string.Join(", ", report.DriftedParameters.Select(Name)) + ".",
+            "parameter_changed_prediction_acceptable" => "Un paramètre a changé de façon significative, mais le modèle prédit encore le nouvel essai dans le bruit.",
+            _ => "Le modèle ne prédit plus le nouvel essai dans le bruit, sans qu'un paramètre seul l'explique (structure ou perturbation)."
+        });
+        text.AppendLine($"Erreur de prédiction (RMSE) : {report.PredictionRmse:G4} {pvUnit} · bruit mesuré : {report.BaselineNoise:G4} {pvUnit}");
+        foreach (var (name, change) in report.Changes)
+            text.AppendLine($"  {Name(name)} : {change.Previous:G5} → {change.Current:G5} ({change.RelativeChange:+0.0%;-0.0%}" +
+                            (change.StandardError is { } e ? $", erreur-type {e:G3}" : ", erreur-type indisponible") + (change.Flagged ? ") ⚠" : ")"));
+        if (report.Reasons.Length > 0) text.AppendLine("Motifs de la porte de validation : " + string.Join(", ", report.Reasons));
+        text.AppendLine("Un paramètre n'est signalé que s'il change de plus de trois erreurs-types et au-delà de 10 % (gain), 15 % (constante de temps) ou 25 % (retard). Contrôle validé sur simulations seulement ; il ne modifie pas le modèle enregistré.");
+        return text.ToString();
+    }
+
+    private static string Name(string key) => key switch { "gain" => "gain", "tauSeconds" => "constante de temps (s)", "delaySeconds" => "retard (s)", _ => key };
+}
+
 public interface IIdentificationEngine
 {
+    /// <summary>Predicts a new step with the stored FOPDT model (same acceptance rule as validation) and re-estimates it alone.</summary>
+    Task<ModelDriftReport> CheckModelDriftAsync(IdentificationResult model, StepImport trial, double mvTolerance, double pvTolerance,
+        ComparisonCriteria criteria, CancellationToken token);
+
     /// <summary>Lists the identifiable open-loop steps of a long recording (no window on the source).</summary>
     Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token);
 

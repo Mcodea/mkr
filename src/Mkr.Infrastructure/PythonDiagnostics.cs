@@ -102,6 +102,29 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return search;
     }
 
+    public async Task<ModelDriftReport> CheckModelDriftAsync(IdentificationResult model, StepImport trial, double mvTolerance,
+        double pvTolerance, ComparisonCriteria criteria, CancellationToken token)
+    {
+        if (trial.Window is { } window && !window.IsValid) throw new CsvInputException("fit_window");
+        var payload = new
+        {
+            model = new { gain = model.Gain, tauSeconds = model.TauSeconds, delaySeconds = model.DelaySeconds },
+            trial = Source(trial), mvTolerance, pvTolerance, maximumRmse = criteria.MaximumRmse,
+            maximumResidualLagOne = criteria.MaximumResidualLagOne
+        };
+        var (json, _) = await CallAsync("check_model_drift", payload, token).ConfigureAwait(false);
+        var report = json.Deserialize<ModelDriftReport>(JsonOptions);
+        string[] verdicts = ["consistent", "drift", "parameter_changed_prediction_acceptable", "inconsistent_without_parameter_change"];
+        if (report is null || !verdicts.Contains(report.Verdict) || report.Reasons is null || report.DriftedParameters is null ||
+            report.Warnings is null || report.Changes is null || report.Changes.Count != 3 || !double.IsFinite(report.PredictionRmse) ||
+            report.DriftedParameters.Any(p => !report.Changes.TryGetValue(p, out var c) || !c.Flagged) ||
+            report.Changes.Values.Count(c => c.Flagged) != report.DriftedParameters.Length ||
+            (report.Verdict == "consistent" && (report.Reasons.Length > 0 || report.DriftedParameters.Length > 0)) ||
+            (report.Verdict == "drift" && (report.Reasons.Length == 0 || report.DriftedParameters.Length == 0)))
+            throw new InvalidDataException("Contrôle de dérive incompatible avec le contrat.");
+        return report;
+    }
+
     public async Task<CriteriaSuggestion> SuggestCriteriaAsync(StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token)
     {
@@ -566,7 +589,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ||
-            operation is "assess_model" or "compare_models" or "suggest_criteria" or "find_steps" ? 30 : 10));
+            operation is "assess_model" or "compare_models" or "suggest_criteria" or "find_steps" or "check_model_drift" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)
