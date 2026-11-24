@@ -16,15 +16,13 @@ public partial class IdentificationWindow : Window
     private sealed record WindowChoice(Guid ImportId, StepColumns Columns, StepWindow Window);
     private WindowChoice? _trainingSelection;
     private WindowChoice? _validationSelection;
-    private double? _plotFrom;
-    private double? _plotTo;
-    private double? _dragStartX;
     private readonly IReadOnlyList<ImportSummary> _sources;
 
     internal IdentificationWindow(IdentificationWorkspace workspace)
     {
         _workspace = workspace;
         InitializeComponent();
+        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         FamilyChoice.ItemsSource = Enum.GetValues<ModelFamily>();
         FamilyChoice.SelectedItem = ModelFamily.FOPDT;
         _sources = _workspace.Sources();
@@ -315,7 +313,6 @@ public partial class IdentificationWindow : Window
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
-        _plotFrom = _plotTo = _dragStartX = null;
         // Tuning panels exist only for a model accepted on its independent validation trial (NC-02).
         bool tunable = _shown?.IsAcceptedForTuning == true;
         OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
@@ -345,7 +342,7 @@ public partial class IdentificationWindow : Window
         {
             FitReport.Text = PlotLegend.Text = "";
             VerdictCard.Visibility = Visibility.Collapsed;
-            Plot.Children.Clear();
+            Chart.SetTracks(Array.Empty<ChartTrack>());
             return;
         }
         var result = study.Result;
@@ -662,87 +659,58 @@ public partial class IdentificationWindow : Window
         $"{fit.Samples} points · RMSE {fit.Rmse:G4} {unit} · MAE {fit.Mae:G4} {unit} · " +
         $"R² {fit.RSquared?.ToString("G4") ?? "—"} · corrélation résiduelle lag 1 {fit.ResidualLagOne?.ToString("G4") ?? "—"}";
 
-    private void ResizePlot(object sender, SizeChangedEventArgs args) => DrawPlot();
-
     private FitDiagnostics? DisplayedDiagnostics() => _shown is not { } study ? null :
         PlotSource.SelectedIndex == 0 ? study.Result.Training : study.Result.Validation;
 
-    private void ChangePlotSource(object sender, SelectionChangedEventArgs args)
+    private void ChangePlotSource(object sender, SelectionChangedEventArgs args) => DrawPlot();
+
+    private void ResetPlotZoom(object sender, RoutedEventArgs args) => Chart.ResetView();
+
+    private void ExportPlotImage(object sender, RoutedEventArgs args)
     {
-        _plotFrom = _plotTo = _dragStartX = null;
-        DrawPlot();
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "diagnostic-modele.png" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportPng(dialog.FileName); Message.Text = "Image exportée."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
-    private void ResetPlotZoom(object sender, RoutedEventArgs args)
+    private void ExportPlotData(object sender, RoutedEventArgs args)
     {
-        _plotFrom = _plotTo = _dragStartX = null;
-        DrawPlot();
-    }
-
-    private void PlotStartSelection(object sender, MouseButtonEventArgs args)
-    {
-        var points = DisplayedDiagnostics()?.Points;
-        if (points is not { Length: >= 2 })
-            return;
-        var x = args.GetPosition(Plot).X;
-        var start = _plotFrom ?? points[0].Seconds;
-        var end = _plotTo ?? points[^1].Seconds;
-        if (!IdentificationDiagnosticsPlot.TryTimeAt(x, Plot.ActualWidth, start, end, out _))
-            return;
-        _dragStartX = x;
-        Plot.CaptureMouse();
-    }
-
-    private void PlotEndSelection(object sender, MouseButtonEventArgs args)
-    {
-        if (_dragStartX is not { } x0)
-            return;
-        _dragStartX = null;
-        Plot.ReleaseMouseCapture();
-        var points = DisplayedDiagnostics()?.Points;
-        if (points is not { Length: >= 2 })
-            return;
-        var x1 = args.GetPosition(Plot).X;
-        if (Math.Abs(x1 - x0) < 12)
-            return;
-        var start = _plotFrom ?? points[0].Seconds;
-        var end = _plotTo ?? points[^1].Seconds;
-        if (!IdentificationDiagnosticsPlot.TryTimeAt(x0, Plot.ActualWidth, start, end, out var a) ||
-            !IdentificationDiagnosticsPlot.TryTimeAt(x1, Plot.ActualWidth, start, end, out var b))
-            return;
-        var first = Math.Min(a, b);
-        var last = Math.Max(a, b);
-        // Show only intervals containing at least two genuine stored samples.
-        if (points.Count(p => p.Seconds >= first && p.Seconds <= last) < 2)
-        {
-            Message.Text = "Sélection trop courte : choisissez au moins deux points mesurés.";
-            return;
-        }
-        _plotFrom = first;
-        _plotTo = last;
-        DrawPlot();
-    }
-
-    private void PlotCancelSelection(object sender, MouseEventArgs args)
-    {
-        if (_dragStartX is null)
-            return;
-        _dragStartX = null;
-        Plot.ReleaseMouseCapture();
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "diagnostic-modele.csv" };
+        if (dialog.ShowDialog(this) != true) return;
+        try { Chart.ExportCsv(dialog.FileName); Message.Text = "Données exportées."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
     private void DrawPlot()
     {
-        if (Plot is null || PlotSource is null)
+        if (Chart is null || PlotSource is null)
             return;
         var fit = DisplayedDiagnostics();
         var category = PlotSource.SelectedIndex == 0 ? "Estimation" : "Validation indépendante";
-        PlotLegend.Text = fit is null ? "" :
-            $"{category} · mesure ({_shown!.PvUnit}) · bleu : observée · orange : prédite · violet : résidu (mesurée − prédite)" +
-            (_plotFrom.HasValue && _plotTo.HasValue
-                ? $" · Zoom [{_plotFrom.Value:G5}, {_plotTo.Value:G5}] s" : "");
-        IdentificationDiagnosticsPlot.Draw(Plot, fit?.Points, _shown?.PvUnit ?? "",
-                                           _plotFrom, _plotTo);
+        PlotLegend.Text = fit is null ? "" : $"{category} · {fit.Points.Length} points enregistrés, affichés sans modification.";
+        if (fit is null || _shown is not { } study)
+        {
+            Chart.SetTracks(Array.Empty<ChartTrack>());
+            return;
+        }
+        var points = fit.Points.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+        var seconds = points.Select(p => p.Seconds).ToArray();
+        Chart.XLabel = "Temps après l'échelon (s)";
+        Chart.SetTracks(new[]
+        {
+            new ChartTrack("Mesure", study.PvUnit, new[]
+            {
+                new ChartSeries("Observée", "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
+                new ChartSeries("Prédite par le modèle", "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
+            }),
+            new ChartTrack("Résidu (observée − prédite)", study.PvUnit, new[]
+            {
+                new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())
+            })
+        });
     }
 
     private static StepColumns? ReadColumns(ComboBox time, ComboBox mv, ComboBox pv) =>
