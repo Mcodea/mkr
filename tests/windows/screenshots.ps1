@@ -185,6 +185,35 @@ try {
         Capture $acq '09-acquisition'
         Close-Window $acq
     }
+    Step '11-simulation' {
+        Select-Option $ident 'StudyList' "*$modelId"
+        Press-Retry $ident 'Comparer IMC/Lambda et SIMC'
+        $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
+        Press-Retry $ident 'Simuler le réglage enregistré…'
+        $sim = Find $root $name 'MKR — Simulation PI'
+        Press-Retry $sim 'Simuler et enregistrer'
+        $null = Find $sim $name 'Simulation enregistrée.'
+        Start-Sleep -Milliseconds 1000
+        Capture $sim '11-simulation'
+        Step '12-prototype-pid' {
+            Press-Retry $sim 'Essai PID manuel…'
+            $proto = Find $root $name 'MKR — Laboratoire PID hors ligne'
+            Press-Retry $proto 'Comparer PID / PI'
+            Start-Sleep -Milliseconds 2500
+            Capture $proto '12-prototype-pid'
+            Close-Window $proto
+        }
+        Close-Window $sim
+    }
+    Step '13-boucle-ouverte' {
+        Press-Retry $ident 'Simuler en boucle ouverte…'
+        $open = Find $root $name 'MKR — Simulation en boucle ouverte'
+        foreach ($entry in @{Sample='1';Duration='100';StepAt='0';StepMv='2';Lower='-5';Upper='5'}.GetEnumerator()) { Fill $open $entry.Key $entry.Value }
+        Press-Retry $open 'Simuler'
+        Start-Sleep -Milliseconds 2000
+        Capture $open '13-boucle-ouverte'
+        Close-Window $open
+    }
     Step '08-audit' {
         Close-Window $ident
         Press-Retry $project "Journal d'audit…"
