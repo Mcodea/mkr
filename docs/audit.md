@@ -20,6 +20,6 @@ Code de sortie 0 : chaîne intacte (et empreinte conforme si fournie). 1 : chaî
 
 ## Ce que le journal n'est pas
 
-- L'acteur est le **nom de session Windows**, non authentifié par MKR : il n'y a ni rôles ni droits.
+- L'acteur est l'**identité de la session Windows** (`DOMAINE\utilisateur [SID] @POSTE`), prise dans le système, pas saisie. MKR n'authentifie pas la personne : il n'y a ni rôles ni droits. Voir [exploitation.md](exploitation.md).
 - Il ne trace ni l'ouverture d'un projet ni les simulations de simple prévisualisation.
 - Ce n'est pas une signature : il ne prouve pas qui a écrit, seulement que la suite des entrées n'a pas été altérée depuis l'export.

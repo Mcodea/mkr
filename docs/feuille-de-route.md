@@ -22,7 +22,8 @@ Principe : le noyau (identification, validation, réglage, simulation) ne conna�
 | Sujet | État |
 |---|---|
 | Journal des modifications | PARTIEL : journal d'audit en ajout seul, chaîné par SHA-256, avec vérification, fenêtre de consultation et export vérifiable sans MKR (`scripts/verify-audit-export.py`) (identifications, réglages, valeurs de blocs affichées, dérive, imports, acquisitions, fiche de boucle) |
-| Droits des utilisateurs (rôles, authentification) | ABSENT : l'acteur tracé est le nom de session Windows, non authentifié par MKR |
+| Identité des actions | PARTIEL : identité de session Windows (compte, SID, poste) dans le journal et les revues, règle des quatre yeux avec auto-revue déclarée ; aucun écran de revue à ce jour |
+| Rôles, authentification propre, signature électronique | ABSENT : décision d'exploitation, pas de besoin identifié ; voir `docs/exploitation.md` |
 | Surveillance des boucles après mise en service (dérive du modèle) | PARTIEL : contrôle d'un modèle FOPDT, SOPDT ou intégrateur accepté sur un nouvel échelon en boucle ouverte (moteur, contrat .NET, bouton de l'écran d'identification) ; pas de surveillance en fonctionnement normal |
 | Plusieurs points de fonctionnement d'un même procédé | ABSENT |
 | Couplage entre boucles (MIMO) | ABSENT |

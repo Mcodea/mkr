@@ -15,7 +15,7 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
 
     private void Audit(string action, string subject, string detail)
     {
-        if (store is IAuditLog log) log.Record(project.Id, Environment.UserName, action, subject, detail);
+        if (store is IAuditLog log) log.Record(project.Id, CurrentUser.Get().Label, action, subject, detail);
     }
 
     public bool HasAuditLog => store is IAuditLog;

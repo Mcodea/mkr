@@ -808,6 +808,34 @@ try
             "A displayed block value is always traced as unqualified or refused.");
     }
 
+    // Identity from the session and the four-eyes rule on reviews.
+    {
+        var original = CurrentUser.Provider;
+        try
+        {
+            var author = new UserIdentity("USINE\\dupont", "S-1-5-21-1-2-3-1001", "POSTE-01");
+            var reviewer = new UserIdentity("USINE\\martin", "S-1-5-21-1-2-3-1002", "POSTE-02");
+            var run = Guid.NewGuid();
+            CurrentUser.Provider = new FixedIdentity(author);
+            var calculated = gate.RecordReview(run, ReviewStage.Model, null, ReviewState.Calculated, "Identification terminée", "essai-1");
+            Require(calculated.Reviewer == author.Label && author.Label.Contains("S-1-5-21") && author.Label.Contains("@POSTE-01"),
+                "The reviewer is the session identity (account, SID, machine), never typed text.");
+            Throws<ReviewSeparationException>(() => gate.RecordReview(run, ReviewStage.Model, ReviewState.Calculated, ReviewState.Verified, "Relu", "essai-1"));
+            var self = gate.RecordReview(run, ReviewStage.Model, ReviewState.Calculated, ReviewState.Verified, "Seul sur ce projet", "essai-1", acknowledgeSelfReview: true);
+            Require(self.Reviewer == author.Label + ReviewSeparation.SelfReviewMark, "A declared self-review is recorded as such.");
+            CurrentUser.Provider = new FixedIdentity(reviewer);
+            var approved = gate.RecordReview(run, ReviewStage.Model, ReviewState.Verified, ReviewState.Approved, "Approuvé par un tiers", "essai-1");
+            Require(approved.Reviewer == reviewer.Label, "Another account approves without declaration.");
+            // Self-review stays visible: a later check by the author of an already self-reviewed stage is still the same account.
+            var entries = restored.List(project.Id).Where(e => e.Action == "review.recorded").ToArray();
+            Require(entries.Length == 3 && entries[0].Actor == author.Label && entries[2].Actor == reviewer.Label &&
+                entries[1].Detail.Contains("AUTO-REVUE"), "The audit log names the session identity and flags the self-review.");
+            Require(restored.Verify(project.Id).Intact, "The chain stays intact.");
+            Require(new EnvironmentIdentityProvider().Current.Label.Contains("@"), "The fallback identity still names a machine.");
+        }
+        finally { CurrentUser.Provider = original; }
+    }
+
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");
     if (!string.IsNullOrEmpty(fixture))
     {
@@ -889,4 +917,9 @@ static void Throws<T>(Action operation) where T : Exception
     try { operation(); }
     catch (T) { return; }
     throw new InvalidOperationException($"Expected {typeof(T).Name}.");
+}
+
+internal sealed class FixedIdentity(UserIdentity identity) : IIdentityProvider
+{
+    public UserIdentity Current => identity;
 }

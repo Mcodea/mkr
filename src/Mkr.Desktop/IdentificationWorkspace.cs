@@ -27,7 +27,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     /// </summary>
     private void Audit(string action, string subject, string detail)
     {
-        if (studies is IAuditLog log) log.Record(project.Id, Environment.UserName, action, subject, detail);
+        if (studies is IAuditLog log) log.Record(project.Id, CurrentUser.Get().Label, action, subject, detail);
     }
 
     private async Task<T> Traced<T>(Task<T> task, string action, string subject, Func<T, string> detail)
@@ -38,6 +38,21 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     }
 
     private static string Short(Guid id) => id.ToString()[..8];
+
+    /// <summary>
+    /// Records a review step under the identity of the Windows session (never a typed name) and applies the four-eyes rule:
+    /// the author of a stage cannot verify or approve it unless the self-review is declared, in which case the record says so.
+    /// </summary>
+    public ReviewEvent RecordReview(Guid runId, ReviewStage stage, ReviewState? expected, ReviewState next, string reason, string evidence,
+        bool acknowledgeSelfReview = false)
+    {
+        var store = studies as Mkr.Infrastructure.SqliteProjectStore ?? throw new InvalidOperationException("Historique des validations indisponible.");
+        var identity = CurrentUser.Get().Label;
+        var reviewer = ReviewSeparation.ReviewerFor(store.ReadReviewHistory(project.Id, runId), stage, next, identity, acknowledgeSelfReview);
+        var recorded = store.RecordReview(project.Id, runId, stage, expected, next, reviewer, reason, evidence);
+        Audit("review.recorded", Short(runId), $"{stage} : {next}" + (reviewer != identity ? " · AUTO-REVUE déclarée" : "") + $" · {reason}");
+        return recorded;
+    }
 
     public IReadOnlyList<ImportSummary> Sources() => imports.ListImports(project.Id);
     public IReadOnlyList<IdentificationStudy> Studies() => studies.ListStudies(project.Id);
