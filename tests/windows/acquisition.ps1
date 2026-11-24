@@ -161,7 +161,7 @@ public static extern System.IntPtr GetDlgItem(System.IntPtr dialog, int id);
 public static extern bool PostMessage(System.IntPtr target, uint msg, System.IntPtr wParam, System.IntPtr lParam);
 '@
     Press $window "Démarrer l’enregistrement continu"
-    $dialog = Find $root $name 'Enregistrement continu'
+    $dialog = Find $root $name 'MKR — Enregistrement continu terminé'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
     $ok = [MkrUiTest.NativeDialog]::GetDlgItem([IntPtr]$dialog.Current.NativeWindowHandle, 1)
     if ($ok -eq [IntPtr]::Zero -or ![MkrUiTest.NativeDialog]::PostMessage($ok, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'Bouton OK inaccessible.' }
