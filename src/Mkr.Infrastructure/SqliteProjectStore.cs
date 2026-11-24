@@ -6,7 +6,7 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore, IPiStore
+public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore, IPiStore, IAuditLog
 {
     private readonly string _connectionString;
 
@@ -126,6 +126,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
                 break;
             case 8:
             case 9:
+            case 10:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -133,6 +134,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
 
         transaction.Commit();
         MigrateToVersion9(path);
+        MigrateToVersion10(path);
     }
 
     /// <summary>
@@ -180,6 +182,118 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         command.CommandText = "PRAGMA user_version = 9";
         command.ExecuteNonQuery();
         transaction.Commit();
+    }
+
+    /// <summary>
+    /// Migration 10: append-only audit log with a hash chain. UPDATE and DELETE are refused by triggers (defence in depth:
+    /// a user with full access to the file can still drop them, which the chain verification would then reveal).
+    /// Rollback: restore the project database backup; an older MKR refuses user_version 10.
+    /// </summary>
+    private static void MigrateToVersion10(string path)
+    {
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = true }.ToString();
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version";
+        if ((long)command.ExecuteScalar()! != 9)
+            return;
+        command.CommandText = """
+            CREATE TABLE audit_events (
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                sequence INTEGER NOT NULL,
+                at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                previous_hash TEXT NOT NULL,
+                hash TEXT NOT NULL,
+                PRIMARY KEY (project_id, sequence)
+            );
+            CREATE TRIGGER audit_events_no_update BEFORE UPDATE ON audit_events
+                BEGIN SELECT RAISE(ABORT, 'audit_events est en ajout seul'); END;
+            CREATE TRIGGER audit_events_no_delete BEFORE DELETE ON audit_events
+                BEGIN SELECT RAISE(ABORT, 'audit_events est en ajout seul'); END;
+            PRAGMA user_version = 10;
+            """;
+        command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
+    public AuditEntry Record(Guid projectId, string actor, string action, string subject, string detail)
+    {
+        if (projectId == Guid.Empty || string.IsNullOrWhiteSpace(actor) || string.IsNullOrWhiteSpace(action) ||
+            actor.Length > 200 || action.Length > 100 || subject.Length > 200 || detail.Length > 4000)
+            throw new ArgumentException("Entrée d'audit invalide.");
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction(deferred: false);   // BEGIN IMMEDIATE: two writers cannot take the same sequence
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.CommandText = "SELECT sequence, hash FROM audit_events WHERE project_id=$project ORDER BY sequence DESC LIMIT 1";
+        long sequence = 1;
+        var previous = AuditHash.Genesis;
+        using (var reader = command.ExecuteReader())
+            if (reader.Read())
+            {
+                sequence = reader.GetInt64(0) + 1;
+                previous = reader.GetString(1);
+            }
+        var at = DateTimeOffset.UtcNow;
+        var hash = AuditHash.Compute(projectId, sequence, at, actor, action, subject, detail, previous);
+        command.Parameters.Clear();
+        command.CommandText = """
+            INSERT INTO audit_events (project_id, sequence, at, actor, action, subject, detail, previous_hash, hash)
+            SELECT $project, $sequence, $at, $actor, $action, $subject, $detail, $previous, $hash
+            WHERE EXISTS (SELECT 1 FROM projects WHERE id = $project)
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$sequence", sequence);
+        command.Parameters.AddWithValue("$at", at.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$actor", actor);
+        command.Parameters.AddWithValue("$action", action);
+        command.Parameters.AddWithValue("$subject", subject);
+        command.Parameters.AddWithValue("$detail", detail);
+        command.Parameters.AddWithValue("$previous", previous);
+        command.Parameters.AddWithValue("$hash", hash);
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Projet inconnu : entrée d'audit refusée.");
+        transaction.Commit();
+        return new AuditEntry(sequence, at, actor, action, subject, detail, previous, hash);
+    }
+
+    public IReadOnlyList<AuditEntry> List(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT sequence, at, actor, action, subject, detail, previous_hash, hash FROM audit_events WHERE project_id=$project ORDER BY sequence";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        var entries = new List<AuditEntry>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            entries.Add(new AuditEntry(reader.GetInt64(0),
+                DateTimeOffset.Parse(reader.GetString(1), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+                reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5), reader.GetString(6), reader.GetString(7)));
+        return entries;
+    }
+
+    public AuditVerification Verify(Guid projectId)
+    {
+        var entries = List(projectId);
+        var expectedPrevious = AuditHash.Genesis;
+        long expectedSequence = 1;
+        foreach (var entry in entries)
+        {
+            var recomputed = AuditHash.Compute(projectId, entry.Sequence, entry.At, entry.Actor, entry.Action, entry.Subject, entry.Detail, entry.PreviousHash);
+            if (entry.Sequence != expectedSequence || entry.PreviousHash != expectedPrevious || entry.Hash != recomputed)
+                return new AuditVerification(false, entries.Count, entry.Sequence, entries.Count > 0 ? entries[^1].Hash : AuditHash.Genesis);
+            expectedPrevious = entry.Hash;
+            expectedSequence++;
+        }
+        return new AuditVerification(true, entries.Count, null, expectedPrevious);
     }
 
     public ReviewEvent RecordReview(Guid projectId, Guid runId, ReviewStage stage,

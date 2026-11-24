@@ -157,6 +157,7 @@ try
             ALTER TABLE projects DROP COLUMN loop_tag;
             ALTER TABLE projects DROP COLUMN controlled_quantity;
             ALTER TABLE projects DROP COLUMN operating_point;
+            DROP TABLE audit_events;
             ALTER TABLE projects DROP COLUMN control_objective;
             DROP TABLE study_reviews;
             DROP TABLE pi_simulations;
@@ -534,7 +535,7 @@ try
             verify.Open();
             using var query = verify.CreateCommand();
             query.CommandText = "PRAGMA user_version";
-            Require((long)query.ExecuteScalar()! == 9, "The study table was migrated to version 9.");
+            Require((long)query.ExecuteScalar()! == 10, "The database was migrated to version 10 (study table of version 9, audit log of version 10).");
             query.CommandText = "PRAGMA foreign_key_check";
             using var violations = query.ExecuteReader();
             Require(!violations.Read(), "The migrated database has no orphan reference.");
@@ -603,6 +604,46 @@ try
         var badZone = new CsvFormat(",", new CsvTimeFormat("%d/%m/%Y %H:%M:%S", "Europe/Atlantis"));
         await ThrowsAsync<CsvInputException>(() => engine.AnalyzeAsync(frenchRaw, ";", frenchMapping, default, badZone));
         await ThrowsAsync<CsvInputException>(() => engine.AnalyzeAsync(frenchRaw, ",", frenchMapping, default, france));
+    }
+
+    // Audit log: append-only, hash-chained, tamper-evident (migration 10).
+    {
+        var auditPath = Path.Combine(directory.FullName, "audit.db");
+        var auditStore = new SqliteProjectStore(auditPath);
+        var audited = Project.Create("Journal");
+        auditStore.Add(audited);
+        Require(auditStore.Verify(audited.Id) is { Intact: true, Entries: 0 } empty && empty.HeadHash == AuditHash.Genesis, "An empty log is intact.");
+        var entryOne = auditStore.Record(audited.Id, "operateur", "identification.saved", "etude-1", "FOPDT accepté");
+        var entryTwo = auditStore.Record(audited.Id, "operateur", "block.values.shown", "PIDFF", "non qualifié");
+        var entryThree = auditStore.Record(audited.Id, "relecteur", "model.drift.checked", "etude-1", "consistent");
+        Require(entryOne.Sequence == 1 && entryTwo.Sequence == 2 && entryThree.Sequence == 3 && entryOne.PreviousHash == AuditHash.Genesis &&
+            entryTwo.PreviousHash == entryOne.Hash && entryThree.PreviousHash == entryTwo.Hash, "Entries are chained in order.");
+        var listed = new SqliteProjectStore(auditPath).List(audited.Id);
+        Require(listed.Count == 3 && listed[2].Hash == entryThree.Hash && listed[0].At == entryOne.At, "The log survives reopening unchanged.");
+        Require(auditStore.Verify(audited.Id) is { Intact: true, Entries: 3 } ok && ok.HeadHash == entryThree.Hash, "An untouched log verifies; its head hash identifies it.");
+        Throws<ArgumentException>(() => auditStore.Record(audited.Id, " ", "x", "y", "z"));
+        Throws<InvalidDataException>(() => auditStore.Record(Guid.NewGuid(), "operateur", "x", "y", "z"));
+
+        // Concurrent writers never share a sequence number.
+        await Task.WhenAll(Enumerable.Range(0, 16).Select(i => Task.Run(() =>
+            new SqliteProjectStore(auditPath).Record(audited.Id, "operateur", "acquisition.saved", $"capture-{i}", "ok"))));
+        Require(auditStore.Verify(audited.Id) is { Intact: true, Entries: 19 }, "16 concurrent entries leave a continuous, intact chain.");
+
+        // The triggers refuse an edit or a deletion through SQL.
+        using var auditRaw = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = auditPath, Pooling = false }.ToString());
+        auditRaw.Open();
+        void Execute(string sql) { using var c = auditRaw.CreateCommand(); c.CommandText = sql; c.ExecuteNonQuery(); }
+        Throws<SqliteException>(() => Execute("UPDATE audit_events SET detail='modifié' WHERE sequence=2"));
+        Throws<SqliteException>(() => Execute("DELETE FROM audit_events WHERE sequence=2"));
+        // Someone with full access removes the triggers and edits an entry: the chain shows where.
+        Execute("DROP TRIGGER audit_events_no_update");
+        Execute("UPDATE audit_events SET detail='modifié' WHERE sequence=2");
+        Require(auditStore.Verify(audited.Id) is { Intact: false, FirstBrokenSequence: 2 }, "An edited entry is located by the chain.");
+        Execute("UPDATE audit_events SET detail='non qualifié' WHERE sequence=2");
+        Require(auditStore.Verify(audited.Id).Intact, "Restoring the exact content restores the chain (the hash binds the content).");
+        Execute("DROP TRIGGER audit_events_no_delete");
+        Execute("DELETE FROM audit_events WHERE sequence=3");
+        Require(auditStore.Verify(audited.Id) is { Intact: false, FirstBrokenSequence: 4 }, "A removed entry breaks the chain at the next one.");
     }
 
     // PIDFF documentary conversion (Schneider 33002536, p. 173-183): mixed structure, never qualified, never ready to load.
