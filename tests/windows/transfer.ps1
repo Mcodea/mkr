@@ -181,6 +181,49 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $ident 'Comparer IMC/Lambda et SIMC'
     $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
     if (!(Find $ident $id 'PiReport').Current.Name.Contains('2130 s')) { throw 'Cible absente du résultat PI enregistré.' }
+    # PID_INT and PID_Compact documentary values: nothing is pre-filled, nothing is qualified.
+    Press $ident 'Blocs PID_INT et PID_Compact…'
+    $blocks = Find $root $name 'MKR — Valeurs des blocs PID_INT et PID_Compact (non qualifiées)'
+    if ((Find $blocks $id 'Compute').Current.IsEnabled) { throw 'Calcul actif sans bloc choisi.' }
+    function Wait-Values($window, $pattern) {
+        $until = [DateTime]::UtcNow.AddSeconds(25)
+        do {
+            $text = (Find $window $id 'Values').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
+            if ($text -like $pattern) { return $text }
+            Start-Sleep -Milliseconds 200
+        } while ([DateTime]::UtcNow -lt $until)
+        throw "Valeurs de bloc inattendues (attendu $pattern) : $text"
+    }
+    Select-Option $blocks 'BlockChoice' 'PID_INT'
+    Press $blocks 'Calculer'
+    if (!(Find $blocks $id 'Status').Current.Name.Contains('Renseignez')) { throw 'Un PID_INT sans valeurs d installation doit être refusé.' }
+    Fill $blocks 'PvSpan' '100'
+    Fill $blocks 'MvSpan' '100'
+    Fill $blocks 'Ts' '2'
+    Press $blocks 'Calculer'
+    $text = Wait-Values $blocks '*SIMC*'
+    if (!$text.Contains('IMC / Lambda') -or !($text.Contains('NON QUALIFIÉ') -or $text.Contains('plage documentée'))) {
+        throw "PID_INT : valeurs ou refus documenté attendus. $text"
+    }
+    Select-Option $blocks 'BlockChoice' 'PID_Compact'
+    if ((Find $blocks $id 'Values').GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value) {
+        throw 'Les valeurs du bloc précédent doivent disparaître au changement de bloc.'
+    }
+    Select-Option $blocks 'Version' 'V3.0'
+    Fill $blocks 'PercentPerUnit' '1'
+    Select-Option $blocks 'Cpu' 'S7-1500'
+    Fill $blocks 'Firmware' '3.0'
+    Press $blocks 'Calculer'
+    $text = Wait-Values $blocks '*SIMC*'
+    if (!$text.Contains('pas listée') -or $text.Contains('InvertControl')) { throw "V3.0 doit être refusée sur S7-1500 3.0. $text" }
+    Fill $blocks 'Firmware' '3.1'
+    Press $blocks 'Calculer'
+    $text = Wait-Values $blocks '*InvertControl*'
+    if (!$text.Contains('NON QUALIFIÉ') -or !$text.Contains('DeadZone = 0') -or $text.Contains('pas listée')) {
+        throw "PID_Compact V3.0 sur S7-1500 3.1 : valeurs attendues. $text"
+    }
+    $blocks.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Write-Output 'Blocs PID_INT et PID_Compact : saisies obligatoires, refus de compatibilité, valeurs non qualifiées.'
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
     Fill $ident 'ResponseTarget' '3000'
     Press $ident 'Simuler le réglage enregistré…'
