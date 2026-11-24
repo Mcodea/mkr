@@ -1,0 +1,34 @@
+<Window x:Class="Mkr.Desktop.HelpWindow" Title="MKR — Aide"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="640" Height="560" MinWidth="420" MinHeight="360" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="22,18,22,16">
+        <Button DockPanel.Dock="Bottom" Content="_Fermer" IsCancel="True" IsDefault="True" HorizontalAlignment="Right" Margin="0,14,0,0" Click="CloseHelp"
+                AutomationProperties.Name="Fermer l'aide"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Aide MKR" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                <TextBlock Text="Parcours d'étude" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,14">
+                    1. Créez un projet et décrivez la boucle (repère, grandeur réglée, point de fonctionnement, objectif).
+                    2. Importez un CSV ou acquérez des données depuis l'automate (lecture seule). 3. Identifiez le procédé : une validation sur des données
+                    indépendantes est obligatoire avant tout réglage. 4. Réglez, simulez, puis préparez les valeurs du bloc de votre automate.
+                </TextBlock>
+                <TextBlock Text="Vocabulaire" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,14">
+                    Consigne (SP) : la valeur visée. Mesure (PV) : la valeur lue sur le procédé. Sortie de commande (MV) : la commande appliquée au procédé.
+                    Commande calculée (CV) : la commande demandée avant limitation. Perturbation : une entrée que le régulateur ne commande pas.
+                </TextBlock>
+                <TextBlock Text="Sécurité et limites" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,14">
+                    MKR lit l'automate et n'y écrit jamais. Les valeurs préparées pour un bloc PID restent « non qualifiées » : elles doivent être essayées
+                    sur banc ou en simulation avant toute mise en service. MKR n'est pas déclaré qualifié industriellement.
+                </TextBlock>
+                <TextBlock Text="Raccourcis" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
+                <TextBlock TextWrapping="Wrap">
+                    F1 : cette aide. Alt + lettre soulignée : activer une commande. Double-clic sur un projet : l'ouvrir. Tout est utilisable au clavier (Tab, Maj+Tab).
+                </TextBlock>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
