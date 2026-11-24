@@ -63,6 +63,12 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "check_model_drift":
+        from model_drift import check
+        try:
+            return {**response, "result": check(request["payload"])}
+        except ValueError as error:
+            code = str(error)
     elif request["operation"] == "identify_closed_loop":
         from closed_loop import identify
         try:

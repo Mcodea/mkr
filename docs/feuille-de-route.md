@@ -22,7 +22,7 @@ Principe : le noyau (identification, validation, réglage, simulation) ne conna�
 | Sujet | État |
 |---|---|
 | Droits des utilisateurs et journal des modifications | ABSENT |
-| Surveillance des boucles après mise en service (dérive du modèle) | ABSENT |
+| Surveillance des boucles après mise en service (dérive du modèle) | PARTIEL : moteur `check_model_drift` (modèle FOPDT, nouvel échelon en boucle ouverte), sans écran ni contrat .NET |
 | Plusieurs points de fonctionnement d'un même procédé | ABSENT |
 | Couplage entre boucles (MIMO) | ABSENT |
 | Qualification de l'outil lui-même | ABSENT |
