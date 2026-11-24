@@ -12,7 +12,6 @@ Scope: step tests with the controller in manual (MV is the applied output). Clos
 data, ramps, pulses and slow MV drifts are not identification trials and are reported
 as rejections, never silently used.
 """
-from datetime import datetime, timezone
 import math
 
 import numpy as np

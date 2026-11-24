@@ -24,6 +24,8 @@ def _number(value, low=None, high=None):
 
 def _time_literal(seconds):
     """IEC TIME literal in milliseconds, with a warning when the 1 ms resolution changes the value noticeably."""
+    if seconds * 1000 >= 2 ** 32:
+        raise ValueError("conversion_time_range")                 # an IEC TIME of Control Expert is a 32-bit count of milliseconds
     milliseconds = round(seconds * 1000)
     if milliseconds < 1:
         raise ValueError("conversion_time_resolution")
@@ -81,6 +83,13 @@ def pidff(parameters):
         warnings=warnings)
 
 
+def _register(value):
+    """Integer register value; anything beyond a 32-bit integer is out of every documented register range anyway."""
+    if not math.isfinite(value) or abs(value) >= 2 ** 31:
+        raise ValueError("conversion_range")
+    return round(value)
+
+
 def pid_int(parameters):
     """MKR ideal PI -> PID_INT (INT arithmetic, signals normalised to [0..10000]).
 
@@ -100,7 +109,9 @@ def pid_int(parameters):
     if td > 0:
         raise ValueError("conversion_derivative_undocumented")
     gain = kp * pv_span / mv_span
-    registers = dict(KP=round(gain * 100), TI=round(ti * 10), TS=round(ts * 100), TD=0)
+    if not math.isfinite(gain):
+        raise ValueError("conversion_range")
+    registers = dict(KP=_register(gain * 100), TI=_register(ti * 10), TS=_register(ts * 100), TD=0)
     if registers["KP"] == 0 or abs(registers["KP"]) > 10000 or not 1 <= registers["TI"] <= 20000 or not 1 <= registers["TS"] <= 32000:
         raise ValueError("conversion_range")
     warnings = ["integral_uses_current_deviation", "task_period_multiple", "integer_arithmetic_unqualified", "sampled_behaviour_unqualified",
@@ -189,6 +200,8 @@ def pid_compact(parameters):
         if tf == 0:
             raise ValueError("conversion_filter_required")
         ratio = tf / td
+    if not (math.isfinite(abs(kp) * scale) and math.isfinite(ratio)):
+        raise ValueError("conversion_range")
     warnings = ["sampled_behaviour_unqualified", "limits_and_antiwindup_unqualified", "output_in_percent"]
     if version.startswith("V3"):
         warnings.append("dead_zone_set_to_zero")

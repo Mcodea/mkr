@@ -19,6 +19,7 @@ LOW_PHASE_MARGIN_DEGREES = 30.0
 LOW_GAIN_MARGIN = 2.0
 HIGH_SENSITIVITY = 2.0
 GRID_POINTS = 24000
+MAXIMUM_TIME_RATIO = 1e8      # largest / smallest time scale of the loop that the frequency grid resolves
 
 
 def _rational(w, gain, taus, kp, ti, td, tf):
@@ -41,6 +42,11 @@ def _grid(taus, delay, ti, td, tf):
 def analyze(gain, taus, delay, kp, ti, td, tf=0.0):
     if (not all(math.isfinite(x) for x in (gain, kp, td, tf, delay, *taus)) or math.isnan(ti) or gain == 0 or kp == 0 or ti <= 0 or
             td < 0 or tf < 0 or delay < 0 or not taus or any(t <= 0 for t in taus) or (td > 0 and tf < 0)):
+        raise ValueError("margins_domain")
+    # Hostile or absurd time scales (1e-300 s next to 5 s) made the frequency search run until the caller's deadline killed it.
+    # Margins are meaningful only when every time scale sits within a range that the grid can resolve: refuse the rest at once.
+    scales = [t for t in (*taus, delay, td, tf) if t > 0] + ([] if math.isinf(ti) else [ti])
+    if scales and (max(scales) / min(scales) > MAXIMUM_TIME_RATIO or max(scales) > 1e12 or min(scales) < 1e-9):
         raise ValueError("margins_domain")
     if kp * gain <= 0:
         raise ValueError("margins_sign")        # opposite signs: positive feedback, not a loop to qualify

@@ -739,6 +739,11 @@ public partial class IdentificationWindow : Window
             "broida_crossing" => "Broïda refusée : passages 28 % / 40 % indéterminables ou incohérents.",
             "broida_domain" => "Broïda refusée : les points conduisent à un retard négatif ou à une constante non physique.",
             "fit_solver" => "L’estimateur n’a pas convergé dans les limites prévues.",
+            "fit_tolerance" => "Les tolérances MV et PV doivent être des nombres strictement positifs.",
+            "fit_comparison_limits" => "Les critères d’acceptation du modèle (RMSE, corrélation) sont invalides.",
+            "drift_mapping" or "drift_domain" => "Les paramètres du modèle enregistré ne conviennent pas au contrôle de dérive.",
+            "engine_failure" => "Le moteur de calcul a échoué de façon inattendue : relancez l’opération ; si cela se reproduit, consultez le journal MKR.",
+            "engine_non_finite" => "Le calcul a produit une valeur non finie : vérifiez l’échelle des données et les paramètres saisis.",
             _ => "Vérifiez les colonnes et les données des deux imports."
         } : error is TimeoutException ? error.Message : "Étude indisponible. Vérifiez le stockage et le journal MKR.";
     }

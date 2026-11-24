@@ -122,7 +122,7 @@ def _refit(family, step):
 
 def check(payload):
     required = {"family", "model", "trial", "mvTolerance", "pvTolerance", "maximumRmse", "maximumResidualLagOne"}
-    if not isinstance(payload, dict) or payload.keys() != required or payload["family"] not in FAMILIES:
+    if not isinstance(payload, dict) or payload.keys() != required or not isinstance(payload["family"], str) or payload["family"] not in FAMILIES:
         raise ValueError("drift_mapping")
     family = payload["family"]
     old = _model(family, payload["model"])
@@ -137,13 +137,20 @@ def check(payload):
     found = reasons(dict(validation=prediction, warnings=[]), criteria)
 
     new, errors, warnings = _refit(family, step)
+    cadence = float(np.median(np.diff(step.times)))
     changes = {}
     for name in old:
-        relative = (new[name] - old[name]) / abs(old[name])
+        # A stored delay of exactly zero is legitimate (rapid processes): the change is then measured against one sampling period,
+        # the smallest delay the trial can resolve, instead of dividing by zero.
+        reference = max(abs(old[name]), cadence) if name == "delaySeconds" else abs(old[name])
+        relative = (new[name] - old[name]) / reference
         error = errors[name] if errors else None
         significant = error is None or abs(new[name] - old[name]) > SIGNIFICANCE_MULTIPLE * error
+        # The step instant is only known within one sampling period (the published delay interval): a delay change smaller than that
+        # cannot be told from the onset uncertainty, whatever its statistical significance.
+        resolvable = name != "delaySeconds" or abs(new[name] - old[name]) > step.onset_interval
         changes[name] = dict(previous=old[name], current=new[name], relativeChange=relative, standardError=error,
-                             flagged=bool(abs(relative) > RELATIVE_CHANGE[name] and significant))
+                             flagged=bool(abs(relative) > RELATIVE_CHANGE[name] and significant and resolvable))
     drifted = [n for n, c in changes.items() if c["flagged"]]
     if found and drifted:
         verdict = "drift"

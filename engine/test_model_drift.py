@@ -174,5 +174,27 @@ class StandardErrorCalibration(unittest.TestCase):
                 self.assertLess(ratio, 2.0)
 
 
+class ZeroDelay(unittest.TestCase):
+    """Regression: a stored delay of exactly zero used to raise ZeroDivisionError (relative change against zero)."""
+
+    def test_a_zero_delay_model_is_checked_without_error(self):
+        model = dict(gain=2.0, tauSeconds=30.0, delaySeconds=0.0)
+        same = check(request(trial(delay=0.0), model=model))
+        self.assertEqual(same["verdict"], "consistent")
+        self.assertTrue(math.isfinite(same["changes"]["delaySeconds"]["relativeChange"]))
+
+    def test_a_delay_appearing_on_a_zero_delay_model_is_flagged_but_less_than_one_period_is_not(self):
+        model = dict(gain=2.0, tauSeconds=30.0, delaySeconds=0.0)
+        appeared = check(request(trial(delay=6.0), model=model))
+        self.assertIn("delaySeconds", appeared["driftedParameters"])
+        tiny = check(request(trial(delay=0.4), model=model))                  # below the 1 s step-instant uncertainty
+        self.assertNotIn("delaySeconds", tiny["driftedParameters"])
+
+    def test_the_integrator_with_zero_delay(self):
+        model = dict(gain=0.05, delaySeconds=0.0)
+        result = check(family_request("Integrateur", model, trial_from(integrating(0.05, 0.0), post=120)))
+        self.assertEqual(result["verdict"], "consistent")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -72,6 +72,7 @@ public sealed record BlockConversionResult(bool Converted, string? Reason, Block
         "conversion_kd_below_one" => "La constante du filtre de dérivée dépasse td : le bloc remplacerait kd par 1. Choisissez un filtre inférieur ou égal à td.",
         "conversion_filter_required" => "Une action dérivée exige une constante de filtre : le bloc filtre toujours sa dérivée (Tf = td/kd).",
         "conversion_time_resolution" => "Un temps est inférieur à 1 ms, résolution du type TIME.",
+        "conversion_time_range" => "Un temps dépasse la plage du type TIME (32 bits en millisecondes, environ 49 jours).",
         "conversion_parameters" => "Paramètres de réglage invalides (kp non nul, ti > 0, td ≥ 0).",
         "no_verified_adapter" => "Aucune conversion documentée pour ce bloc.",
         _ => "Conversion refusée : " + Reason

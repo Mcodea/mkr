@@ -99,5 +99,22 @@ class ProductionGuards(unittest.TestCase):
                 analyze(**bad)
 
 
+
+class AbsurdTimeScales(unittest.TestCase):
+    """Regression (found by the hostile-input test): 1e-300 s next to 5 s used to run until the caller's deadline killed the engine."""
+
+    def test_absurd_time_scales_are_refused_at_once(self):
+        import time
+        for taus, delay, ti in (([30.0, 1e-300], 5.0, 40.0), ([1e-300], 5.0, 40.0), ([30.0, 6.0], 1.2e24, 40.0), ([30.0], 5.0, 1e-300)):
+            with self.subTest(taus=taus, delay=delay, ti=ti):
+                started = time.monotonic()
+                with self.assertRaisesRegex(ValueError, "margins_domain"):
+                    analyze(2.0, taus, delay, 1.0, ti, 0.0)
+                self.assertLess(time.monotonic() - started, 1.0)
+
+    def test_a_wide_but_resolvable_range_is_still_analysed(self):
+        self.assertIsNotNone(analyze(2.0, [3600.0], 0.5, 1.0, 7200.0, 0.0))        # seven decades of ratio, fine
+
+
 if __name__ == "__main__":
     unittest.main()

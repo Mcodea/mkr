@@ -3,7 +3,6 @@
 No statistical confidence or guaranteed stability claims. The PI coefficients are held
 fixed while each plant parameter is independently varied by the declared percentage.
 """
-import math
 
 from fopdt_simulation import number
 from pi_simulation import calculate

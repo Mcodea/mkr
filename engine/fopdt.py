@@ -1,6 +1,6 @@
 """Candidate FOPDT identification from two disjoint, documented open-loop steps."""
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 import math
 
 import numpy as np

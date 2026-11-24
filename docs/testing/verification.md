@@ -52,3 +52,7 @@ Ce que cette exécution ajoute à la preuve précédente :
 - le défaut du contrôle de paquet (apostrophes dans une chaîne PowerShell) a été révélé puis corrigé par cette exécution.
 
 **Non couvert :** le parcours graphique de l'import d'un CSV avec les nouveaux champs de format (décimale, notation, fuseau). Il est écrit mais n'a pas de test d'automatisation : il demande de piloter la boîte de dialogue de choix de fichier de Windows.
+
+## Entrées hostiles (test_robustness.py)
+
+Les opérations du moteur sont martelées avec des valeurs hostiles (None, booléens, NaN, ±inf, 1e308, 1e-300, 2^80, types inattendus, clés ajoutées ou retirées), graine fixe. Règle : une entrée mal formée aboutit à un refus codé (`ValueError`), jamais à une autre exception, un blocage ou un résultat non fini. Défauts trouvés et corrigés par ce test ou en le préparant : division par zéro du contrôle de dérive pour un retard enregistré nul ; dépassement d'entier de l'adaptateur de blocs pour des temps ou étendues géants ; type non hachable pour la famille ; **blocage de l'analyse de marges pour des échelles de temps absurdes** (1e-300 s à côté de 5 s : plus de 15 s jusqu'à l'échéance du processus). `mkr_engine.serve` est le dernier filet : une exception inattendue ou un nombre non fini devient un code d'erreur (`engine_failure`, `engine_non_finite`) pour la bonne requête, sans trace ni détail interne.

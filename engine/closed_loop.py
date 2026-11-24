@@ -164,7 +164,10 @@ def identify(payload):
     sp_all = sp - sp[rows_train][:BASELINE_ROWS].mean()
     design = _fir_matrix(sp_all, rows_train, taps)
     ridge = 1e-9 * float(np.trace(design.T @ design))
-    beta = np.linalg.solve(design.T @ design + ridge * np.eye(taps), design.T @ mv_train)    # stage 1
+    try:
+        beta = np.linalg.solve(design.T @ design + ridge * np.eye(taps), design.T @ mv_train)    # stage 1
+    except np.linalg.LinAlgError as error:
+        raise ValueError("cl_fit") from error
     projected = design @ beta
     params, model = fit_fopdt(times[rows_train] - times[rows_train][0], projected, pv_train)   # stage 2
     grid_train = times[rows_train] - times[rows_train][0]
@@ -197,7 +200,10 @@ def identify(payload):
     design_valid = _fir_matrix(sp_valid_all, rows_valid, taps)
     _, mv_valid, _ = deviations(rows_valid)
     ridge_valid = 1e-9 * float(np.trace(design_valid.T @ design_valid))
-    beta_valid = np.linalg.solve(design_valid.T @ design_valid + ridge_valid * np.eye(taps), design_valid.T @ mv_valid)
+    try:
+        beta_valid = np.linalg.solve(design_valid.T @ design_valid + ridge_valid * np.eye(taps), design_valid.T @ mv_valid)
+    except np.linalg.LinAlgError as error:
+        raise ValueError("cl_fit") from error
     params_valid = fit_fopdt(grid_valid, design_valid @ beta_valid, pv_valid)[0]
     between = np.abs(params - params_valid) / math.sqrt(2)           # sample standard deviation of two estimates
     spread = np.maximum(spread, between)

@@ -1,7 +1,6 @@
 """Read a bounded CSV and report descriptive quality without changing its rows."""
 import base64
 import csv
-from datetime import datetime, timezone
 import io
 import math
 import re

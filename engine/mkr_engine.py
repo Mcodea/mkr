@@ -176,6 +176,29 @@ def respond(raw):
     return {**response, "error": {"code": code}}
 
 
+def _request_id(raw):
+    """The request id of a raw request if it can be read safely, so that even a failure reply answers the right request."""
+    try:
+        request = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object)
+        value = request.get("requestId") if isinstance(request, dict) else None
+        return value if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", value) else None
+    except (ValueError, RecursionError, UnicodeDecodeError):
+        return None
+
+
+def serve(raw):
+    """One request in, one JSON document out, whatever happens inside: an unexpected exception or a non-finite number in a result
+    becomes a coded error instead of a traceback and an empty reply (the caller never has to guess why the engine stopped)."""
+    try:
+        response = respond(raw)
+    except Exception:                      # noqa: BLE001 - last line of defence at the process boundary; the code carries no detail
+        response = {"version": 1, "requestId": _request_id(raw), "engineVersion": ENGINE_VERSION, "error": {"code": "engine_failure"}}
+    try:
+        return json.dumps(response, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    except (ValueError, TypeError):
+        failed = {"version": 1, "requestId": response.get("requestId"), "engineVersion": ENGINE_VERSION, "error": {"code": "engine_non_finite"}}
+        return json.dumps(failed, separators=(",", ":")).encode("utf-8")
+
+
 if __name__ == "__main__":
-    response = respond(sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1))
-    sys.stdout.buffer.write(json.dumps(response, separators=(",", ":"), allow_nan=False).encode("utf-8"))
+    sys.stdout.buffer.write(serve(sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1)))

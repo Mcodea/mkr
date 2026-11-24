@@ -1,6 +1,5 @@
 """Read-only and provenance-preserving preview of two imported process signals."""
 import csv
-from datetime import datetime, timezone
 import math
 
 from csv_format import from_payload
