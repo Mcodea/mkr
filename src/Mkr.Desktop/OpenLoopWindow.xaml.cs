@@ -67,7 +67,7 @@ public partial class OpenLoopWindow : Window
                 $"Écart final de la mesure {result.Points[^1].Pv:G5} {_model.PvUnit} · " +
                 $"Écart asymptotique de la mesure {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s · " +
                 $"vitesse limitée {result.RateLimitedSeconds:G5} s\n" +
-                $"Écart de mesure ({_model.PvUnit}) · bleu : simulée · orange : niveau initial";
+                $"Écart de mesure ({_model.PvUnit}) : réponse simulée et niveau initial (voir la légende du graphique)";
             ExportButton.IsEnabled = true;
             DrawPlot();
         }
@@ -88,12 +88,25 @@ public partial class OpenLoopWindow : Window
     private static bool Read(TextBox input, out double value) =>
         double.TryParse(input.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) && double.IsFinite(value);
 
-    private void ResizePlot(object sender, SizeChangedEventArgs args) => DrawPlot();
-
     private void DrawPlot()
     {
-        if (Plot is not null)
-            ComparisonPlot.Draw(Plot, _shown?.Points.Select(point => (point.Seconds, point.Pv, 0.0)).ToArray());
+        if (Chart is null)
+            return;
+        if (_shown is not { Points.Length: >= 2 } result)
+        {
+            Chart.SetTracks(Array.Empty<ChartTrack>());
+            return;
+        }
+        var seconds = result.Points.Select(p => p.Seconds).ToArray();
+        Chart.XLabel = "Temps depuis le début du scénario (s)";
+        Chart.SetTracks(new[]
+        {
+            new ChartTrack("Écart de mesure", _model.PvUnit, new[]
+            {
+                new ChartSeries("Simulée", "MkrSignal1", seconds, result.Points.Select(p => p.Pv).ToArray()),
+                new ChartSeries("Niveau initial", "MkrSignal2", new[] { seconds[0], seconds[^1] }, new[] { 0.0, 0.0 })
+            })
+        });
     }
 
     private void Export(object sender, RoutedEventArgs args)

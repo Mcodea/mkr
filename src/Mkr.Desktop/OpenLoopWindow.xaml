@@ -1,7 +1,8 @@
 <Window x:Class="Mkr.Desktop.OpenLoopWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MKR — Simulation en boucle ouverte" Width="790" Height="525" MinWidth="540" MinHeight="390"
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="MKR — Simulation en boucle ouverte" Width="900" Height="720" MinWidth="540" MinHeight="390"
         WindowStartupLocation="CenterOwner">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="18">
@@ -35,8 +36,9 @@
             </StackPanel>
             <TextBlock x:Name="Message" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="0,8,0,0" />
-            <Canvas x:Name="Plot" Height="208" ClipToBounds="True" SizeChanged="ResizePlot"
-                    AutomationProperties.Name="Réponse de la mesure en boucle ouverte et niveau initial" />
+            <local:SignalChart x:Name="Chart" Height="420" Margin="0,8,0,0"
+                    AutomationProperties.Name="Réponse de la mesure en boucle ouverte et niveau initial, en fonction du temps"
+                    AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète."/>
         </StackPanel>
     </ScrollViewer>
 </Window>
