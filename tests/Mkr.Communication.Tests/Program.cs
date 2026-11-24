@@ -263,6 +263,87 @@ await Check("progress reports state, counts and remaining time", async () =>
     Assert(reading.All(r => r.LastRoundTripMs is >= 0), "latence");
 });
 
+// ---------- Hostile frames: the readers must survive any bytes ----------
+static (byte[] Bytes, bool Close) Hostile(Random rng, byte[] frame)
+{
+    var bytes = (byte[])frame.Clone();
+    switch (rng.Next(6))
+    {
+        case 0:                                                    // flip 1 to 3 random bytes
+            for (int i = 0, n = rng.Next(1, 4); i < n; i++) bytes[rng.Next(bytes.Length)] ^= (byte)rng.Next(1, 256);
+            return (bytes, false);
+        case 1:                                                    // truncate, then close
+            return (bytes[..rng.Next(0, bytes.Length)], true);
+        case 2:                                                    // append garbage
+            return ([.. bytes, .. Enumerable.Range(0, rng.Next(1, 40)).Select(_ => (byte)rng.Next(256))], false);
+        case 3:                                                    // random content of the same length
+            rng.NextBytes(bytes);
+            return (bytes, rng.Next(2) == 0);
+        case 4:                                                    // extreme length fields
+            if (bytes.Length > 6) { bytes[4] = 0xFF; bytes[5] = 0xFF; if (bytes.Length > 11) { bytes[9] = 0xFF; bytes[10] = 0xFF; } }
+            return (bytes, true);
+        default:                                                   // empty frame, then close
+            return ([], true);
+    }
+}
+
+static void AssertSurvived(AcquisitionResult result, List<AcquiredSample> samples, TimeSpan elapsed, string what)
+{
+    if (elapsed > TimeSpan.FromSeconds(30)) throw new Exception($"{what}: trop long ({elapsed.TotalSeconds:F1} s)");
+    if (string.IsNullOrEmpty(result.StopReason)) throw new Exception($"{what}: motif d'arrêt absent");
+    if (samples.Any(s => !double.IsFinite(s.Sp) || !double.IsFinite(s.Pv) || !double.IsFinite(s.Mv)))
+        throw new Exception($"{what}: valeur non finie acceptée");
+}
+
+await Check("modbus hostile replies (60 seeds): never an unexpected exception, never a non-finite value, always bounded", async () =>
+{
+    await using var stub = new ModbusStub();
+    stub.Place(0, 45.25, PlcDataType.Real32, ByteOrder.CDAB);
+    stub.Place(2, -3.5, PlcDataType.Real32, ByteOrder.CDAB);
+    stub.Place(4, 61.875, PlcDataType.Real32, ByteOrder.CDAB);
+    var outcomes = new SortedDictionary<string, int>();
+    for (var seed = 1; seed <= int.Parse(Environment.GetEnvironmentVariable("MKR_HOSTILE_SEEDS") ?? "60"); seed++)
+    {
+        var rng = new Random(seed);
+        stub.Behaviour = (n, request) =>
+        {
+            var (bytes, close) = rng.Next(4) == 0 ? (stub.Normal(request), false) : Hostile(rng, stub.Normal(request));
+            stub.CloseAfterReply = close;
+            return Task.FromResult<byte[]?>(bytes);
+        };
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var (result, samples) = await Capture(Modbus(stub.Port), 3, outage: 1);
+        AssertSurvived(result, samples, clock.Elapsed, $"modbus graine {seed}");
+        var key = result.StopReason + (result.Statistics.Gaps.Length > 0 ? " [" + string.Join("+", result.Statistics.Gaps.Select(g => g.Reason).Distinct().Order()) + "]" : "");
+        outcomes[key] = outcomes.GetValueOrDefault(key) + 1;
+    }
+    Console.WriteLine("      modbus: " + string.Join(", ", outcomes.Select(kv => $"{kv.Key} x{kv.Value}")));
+    Assert(outcomes.Count > 1, "la corruption doit produire autre chose que des acquisitions normales");
+});
+
+await Check("s7 hostile replies (60 seeds): never an unexpected exception, never a non-finite value, always bounded", async () =>
+{
+    var outcomes = new SortedDictionary<string, int>();
+    for (var seed = 1; seed <= int.Parse(Environment.GetEnvironmentVariable("MKR_HOSTILE_SEEDS") ?? "60"); seed++)
+    {
+        await using var stub = new S7Stub();
+        var db = new byte[16];
+        BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(0), 52.5f);
+        BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(4), 48.25f);
+        BinaryPrimitives.WriteSingleBigEndian(db.AsSpan(8), -12.75f);
+        stub.Memory[(0x84, 10)] = db;
+        var rng = new Random(seed);
+        stub.CorruptFrame = frame => rng.Next(4) == 0 ? (frame, false) : Hostile(rng, frame);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var (result, samples) = await Capture(S7(stub.Port), 3, outage: 1);
+        AssertSurvived(result, samples, clock.Elapsed, $"s7 graine {seed}");
+        var key = result.StopReason + (result.Statistics.Gaps.Length > 0 ? " [" + string.Join("+", result.Statistics.Gaps.Select(g => g.Reason).Distinct().Order()) + "]" : "");
+        outcomes[key] = outcomes.GetValueOrDefault(key) + 1;
+    }
+    Console.WriteLine("      s7: " + string.Join(", ", outcomes.Select(kv => $"{kv.Key} x{kv.Value}")));
+    Assert(outcomes.Count > 1, "la corruption doit produire autre chose que des acquisitions normales");
+});
+
 // ---------- Controller mode (address entered by the user, no convention assumed) ----------
 await Check("mode: validation requires address AND declared manual value, integer types only", () =>
 {

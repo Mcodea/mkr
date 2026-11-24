@@ -21,6 +21,8 @@ internal sealed class ModbusStub : IAsyncDisposable
     public Dictionary<int, ushort> Input { get; } = new();
     public Func<int, byte[], Task<byte[]?>>? Behaviour { get; set; }
     public bool Accepting { get; set; } = true;
+    /// <summary>Set by a Behaviour callback: close the connection once the current reply has been written (truncation tests).</summary>
+    public bool CloseAfterReply { get; set; }
     public TimeSpan Delay { get; set; } = TimeSpan.Zero;
     /// <summary>Sends each reply in two TCP segments to exercise frame reassembly.</summary>
     public bool SplitReplies { get; set; }
@@ -103,6 +105,7 @@ internal sealed class ModbusStub : IAsyncDisposable
                     await stream.WriteAsync(reply.AsMemory(5), _stop.Token);
                 }
                 else await stream.WriteAsync(reply, _stop.Token);
+                if (CloseAfterReply) { CloseAfterReply = false; return; }
             }
         }
         catch { }
@@ -130,6 +133,8 @@ internal sealed class S7Stub : IAsyncDisposable
     public Dictionary<(byte Area, int Db), byte[]> Memory { get; } = new();
     public byte ItemCode { get; set; } = 0xFF;
     public (byte Class, byte Code) HeaderError { get; set; }
+    /// <summary>Hostile-frame hook: receives every outgoing TPKT frame and returns what to send and whether to close afterwards.</summary>
+    public Func<byte[], (byte[] Bytes, bool Close)>? CorruptFrame { get; set; }
 
     public S7Stub()
     {
@@ -165,6 +170,14 @@ internal sealed class S7Stub : IAsyncDisposable
         frame[0] = 3;
         BinaryPrimitives.WriteUInt16BigEndian(frame.AsSpan(2), (ushort)frame.Length);
         body.CopyTo(frame, 4);
+        if (CorruptFrame is { } corrupt)
+        {
+            var (bytes, close) = corrupt(frame);
+            await stream.WriteAsync(bytes, _stop.Token);
+            await stream.FlushAsync(_stop.Token);
+            if (close) throw new OperationCanceledException();       // caught by ServeAsync: the peer is closed
+            return;
+        }
         await stream.WriteAsync(frame, _stop.Token);
     }
 
