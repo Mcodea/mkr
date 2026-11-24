@@ -56,6 +56,24 @@
                                             <ComboBoxItem Content="Virgule" Tag=","/>
                                             <ComboBoxItem Content="Point-virgule" Tag=";"/>
                                         </ComboBox>
+                                        <Label Content="_Décimale" Target="{Binding ElementName=DecimalSeparator}"
+                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                        <ComboBox x:Name="DecimalSeparator" Width="90" SelectedIndex="0"
+                                                  SelectedValuePath="Tag" VerticalAlignment="Center"
+                                                  AutomationProperties.Name="Séparateur décimal">
+                                            <ComboBoxItem Content="Point" Tag="."/>
+                                            <ComboBoxItem Content="Virgule" Tag=","/>
+                                        </ComboBox>
+                                        <Label Content="_Date et heure" Target="{Binding ElementName=TimeFormat}"
+                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                        <ComboBox x:Name="TimeFormat" Width="250" SelectedIndex="0"
+                                                  SelectedValuePath="Tag" VerticalAlignment="Center"
+                                                  AutomationProperties.Name="Notation de la date et de l’heure"/>
+                                        <Label Content="_Fuseau" Target="{Binding ElementName=TimeZone}"
+                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                        <TextBox x:Name="TimeZone" Width="140" Text="Europe/Paris" IsEnabled="False"
+                                                 ToolTip="Nom IANA du fuseau de l’enregistreur, par exemple Europe/Paris ou UTC"
+                                                 AutomationProperties.Name="Fuseau horaire"/>
                                         <Button Content="Acquisition _automate…" Click="OpenAcquisition" Margin="12,0,0,0" ToolTip="Schneider (Modbus TCP) ou Siemens (S7comm), en lecture seule"/>
                                         <Button Content="_Choisir un CSV…" Click="ChooseCsv"
                                                 Margin="12,0,0,0" ToolTip="Importer un fichier CSV en UTF-8"/>

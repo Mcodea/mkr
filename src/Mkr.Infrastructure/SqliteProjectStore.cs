@@ -347,7 +347,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
             throw new InvalidDataException("L’empreinte du fichier original ne correspond pas.");
         var metadata = JsonSerializer.Deserialize<ImportMetadata>(reader.GetString(5))
             ?? throw new InvalidDataException("Métadonnées CSV indisponibles.");
-        return new CsvImport(summary, metadata.Delimiter, metadata.Mapping, metadata.Result, metadata.EngineVersion, original, metadata.Acquisition);
+        return new CsvImport(summary, metadata.Delimiter, metadata.Mapping, metadata.Result, metadata.EngineVersion, original, metadata.Acquisition, metadata.Format);
     }
 
     public void SaveImport(Guid projectId, CsvImport import)
@@ -367,7 +367,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         command.Parameters.AddWithValue("$date", import.Summary.ImportedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
         command.Parameters.AddWithValue("$original", import.Original);
         command.Parameters.AddWithValue("$metadata",
-            JsonSerializer.Serialize(new ImportMetadata(import.Delimiter, import.Mapping, import.Result, import.EngineVersion, import.Acquisition)));
+            JsonSerializer.Serialize(new ImportMetadata(import.Delimiter, import.Mapping, import.Result, import.EngineVersion, import.Acquisition, import.Format)));
         command.ExecuteNonQuery();
     }
 
@@ -493,7 +493,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         new(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
             DateTimeOffset.ParseExact(reader.GetString(3), "O", CultureInfo.InvariantCulture));
 
-    private sealed record ImportMetadata(string Delimiter, CsvMapping Mapping, CsvResult Result, string EngineVersion, AcquisitionOrigin? Acquisition = null);
+    private sealed record ImportMetadata(string Delimiter, CsvMapping Mapping, CsvResult Result, string EngineVersion, AcquisitionOrigin? Acquisition = null, CsvFormat? Format = null);
 
     private SqliteConnection Open()
     {

@@ -3,9 +3,10 @@ import csv
 from datetime import datetime, timezone
 import math
 
-from csv_quality import NUMBER, TIMESTAMP, read_table
+from csv_format import from_payload
+from csv_quality import read_table
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 MAX_PLOT_POINTS = 600
 
 
@@ -43,8 +44,12 @@ def display_indices(mv, pv, limit=MAX_PLOT_POINTS):
 
 def preview(payload):
     expected = {"raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"}
-    if not isinstance(payload, dict) or payload.keys() != expected:
+    if not isinstance(payload, dict) or payload.keys() - {"format"} != expected:
         raise ValueError("preview_mapping")
+    try:
+        fmt = from_payload(payload, payload["delimiter"])
+    except ValueError as error:
+        raise ValueError("preview_mapping") from error
     try:
         headers, rows = read_table(payload)
     except (UnicodeError, csv.Error) as error:
@@ -55,11 +60,8 @@ def preview(payload):
     ti, mi, pi = [headers.index(name) for name in names]
     times, mv, pv = [], [], []
     for row in rows:
-        stamp = row[ti]
-        if not TIMESTAMP.fullmatch(stamp):
-            raise ValueError("preview_time")
         try:
-            date = datetime.fromisoformat(stamp).astimezone(timezone.utc)
+            date = fmt.timestamp(row[ti])
         except (ValueError, OverflowError) as error:
             raise ValueError("preview_time") from error
         if times and date <= times[-1]:
@@ -67,8 +69,7 @@ def preview(payload):
         times.append(date)
         values = []
         for index in (mi, pi):
-            cell = row[index].strip()
-            value = float(cell) if NUMBER.fullmatch(cell) else math.nan
+            value = fmt.number(row[index])
             if not math.isfinite(value) or abs(value) > 1e100:
                 raise ValueError("preview_data")
             values.append(value)

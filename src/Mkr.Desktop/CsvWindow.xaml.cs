@@ -21,6 +21,11 @@ public partial class CsvWindow : Window
         _identification = identification;
         Title = $"MKR — {workspace.ProjectName}";
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
+        TimeFormat.Items.Add(new ComboBoxItem { Content = "ISO 8601 avec décalage (Z ou +hh:mm)", Tag = "" });
+        foreach (var (pattern, label) in CsvFormat.Patterns)
+            TimeFormat.Items.Add(new ComboBoxItem { Content = "Heure locale · " + label, Tag = pattern });
+        TimeFormat.SelectedIndex = 0;
+        TimeFormat.SelectionChanged += (_, _) => TimeZone.IsEnabled = !string.IsNullOrEmpty((string?)TimeFormat.SelectedValue);
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
         var brief = workspace.ReadLoopBrief();
         LoopTag.Text = brief.Tag;
@@ -65,9 +70,28 @@ public partial class CsvWindow : Window
                 return;
             ShowResult(result);
             Analyze.IsEnabled = true;
-            StatusText.Text = "Sélectionnez les colonnes, le rôle et l’unité. L’horodatage doit inclure un décalage UTC ou Z.";
+            StatusText.Text = "Sélectionnez les colonnes, le rôle et l’unité.";
+            if (result.SuggestedFormat is { } suggestion) ApplySuggestion(suggestion);
         });
     }
+
+    /// <summary>The proposal only fills the controls: the user confirms it by importing, or corrects it.</summary>
+    private void ApplySuggestion(CsvFormatSuggestion suggestion)
+    {
+        DecimalSeparator.SelectedValue = suggestion.Decimal;
+        TimeFormat.SelectedValue = suggestion.TimePattern ?? "";
+        var local = suggestion.TimePattern is not null;
+        StatusText.Text = "Format proposé d’après les premières lignes : " +
+            (suggestion.Decimal == "," ? "décimale virgule" : "décimale point") + " · " +
+            (local ? $"heure locale (colonne {suggestion.TimeColumn}) : vérifiez le fuseau avant d’importer."
+                   : suggestion.IsoWithOffset ? "horodatage ISO 8601 avec décalage."
+                   : "aucune colonne de date reconnue : choisissez la notation.") +
+            " Sélectionnez les colonnes, le rôle et l’unité.";
+    }
+
+    private CsvFormat ReadFormat() => new((string)DecimalSeparator.SelectedValue,
+        string.IsNullOrEmpty((string?)TimeFormat.SelectedValue) ? null
+            : new CsvTimeFormat((string)TimeFormat.SelectedValue, TimeZone.Text.Trim()));
 
     private async void AnalyzeCsv(object sender, RoutedEventArgs args)
     {
@@ -79,7 +103,7 @@ public partial class CsvWindow : Window
         }
         await RunAsync(async token =>
         {
-            var import = await _workspace.AnalyzeAndSaveAsync(new CsvMapping(time, value, role, Unit.Text.Trim()), token);
+            var import = await _workspace.AnalyzeAndSaveAsync(new CsvMapping(time, value, role, Unit.Text.Trim()), token, ReadFormat());
             Analyze.IsEnabled = false;
             ShowImport(import);
             Imports.ItemsSource = _workspace.List();
@@ -175,6 +199,12 @@ public partial class CsvWindow : Window
         Role.SelectedItem = import.Mapping.Role;
         Unit.Text = import.Mapping.Unit;
         Delimiter.SelectedValue = import.Delimiter;
+        var format = import.Format ?? CsvFormat.Default;
+        DecimalSeparator.SelectedValue = format.Decimal;
+        TimeFormat.SelectedValue = format.Time?.Pattern ?? "";
+        TimeZone.Text = format.Time?.Zone ?? TimeZone.Text;
+        if (!(import.Format ?? CsvFormat.Default).IsDefault)
+            Report.Text += $"  |  Lecture : {import.Format!.Describe()}.";
         if (import.Acquisition is { } origin)
             Report.Text += $"  |  {origin.Describe()} · unités PV {origin.ProcessUnit}, MV {origin.CommandUnit}.";
         var quality = import.Result.Quality!;
@@ -201,6 +231,8 @@ public partial class CsvWindow : Window
             "csv_empty" => "Le fichier ne contient aucune ligne de données.",
             "csv_encoding_or_syntax" => "Le CSV doit être en UTF-8 et respecter la syntaxe des champs entre guillemets.",
             "csv_mapping" => "Le mapping doit indiquer deux colonnes distinctes, un rôle et une unité.",
+            "csv_format" => "Format de lecture invalide : une décimale virgule exige le séparateur point-virgule, et le fuseau doit être un nom IANA (par exemple Europe/Paris ou UTC).",
+            "csv_timezone" => "Fuseau horaire inconnu. Utilisez un nom IANA, par exemple Europe/Paris, Europe/Brussels ou UTC.",
             _ => "Requête CSV invalide."
         } : "Opération impossible. Vérifiez le stockage local, le fichier et la disponibilité de Python.";
     }

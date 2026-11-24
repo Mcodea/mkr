@@ -53,3 +53,10 @@ Le moteur 0.10 enrichit aussi `calculate_pi` (1.1.0) et `calculate_simc_pid` (1.
 - **`calculate_simc_pid` :** le résultat porte un champ `margins`.
 - **Contenu de `margins` :** `gainCrossoverRadPerSecond`, `phaseMarginDegrees`, `delayMarginSeconds`, `phaseCrossoverRadPerSecond`, `gainMargin`, `gainMarginDb` (null signifie infini ou indéfini), `peakSensitivity`, `peakSensitivityRadPerSecond` et `warnings`.
 - **Compatibilité :** le champ est facultatif côté client, donc les réglages enregistrés avant ce lot restent lisibles, sans marges.
+
+Le moteur 0.10 accepte un champ facultatif `format` dans `analyze_csv`, `preview_trial`, `find_steps` et chaque source d'identification (ADR 0005).
+- **Forme :** `{"decimal": "." | ",", "time": null | {"pattern": <motif de la liste fermée>, "zone": <nom IANA ou "UTC">}}`.
+- **Absence :** par défaut, c'est le format ISO 8601 avec décalage et la décimale point, comme avant.
+- **Refus :** un format invalide, ou une virgule décimale avec le séparateur virgule, donne `csv_format` (`fit_mapping` ou `preview_mapping` selon l'opération). Un fuseau inconnu donne `csv_timezone`.
+- **Inspection :** `inspect_csv` renvoie en plus `suggestedFormat` (`decimal`, `timeColumn`, `timePattern`, `isoWithOffset`), une proposition à confirmer.
+- **Versions :** `analyze_csv` 1.1.0, aperçu 1.2.0, identification FOPDT 1.4.0.

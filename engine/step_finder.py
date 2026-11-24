@@ -13,7 +13,8 @@ import math
 
 import numpy as np
 
-from csv_quality import TIMESTAMP, read_table
+from csv_format import from_payload
+from csv_quality import read_table
 from fopdt import number, read_step
 
 VERSION = "1.1.0"
@@ -26,8 +27,12 @@ SHARED_BASELINE_SAMPLES = 8    # Baseline kept by the second trial when two step
 
 def _series(source):
     required = {"raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"}
-    if not isinstance(source, dict) or source.keys() != required:
+    if not isinstance(source, dict) or source.keys() - {"format"} != required:
         raise ValueError("fit_mapping")
+    try:
+        fmt = from_payload(source, source["delimiter"])
+    except ValueError as error:
+        raise ValueError("fit_mapping") from error
     headers, rows = read_table(source)
     columns = [source[field] for field in ("timeColumn", "mvColumn", "pvColumn")]
     if any(not isinstance(c, str) or c not in headers for c in columns) or len(set(columns)) != 3:
@@ -35,10 +40,8 @@ def _series(source):
     ti, ui, yi = (headers.index(c) for c in columns)
     dates = []
     for row in rows:
-        if not TIMESTAMP.fullmatch(row[ti]):
-            raise ValueError("fit_time")
         try:
-            dates.append(datetime.fromisoformat(row[ti]).astimezone(timezone.utc))
+            dates.append(fmt.timestamp(row[ti]))
         except (OverflowError, ValueError) as error:
             raise ValueError("fit_time") from error
     times = np.array([(d - dates[0]).total_seconds() for d in dates])
@@ -49,7 +52,7 @@ def _series(source):
         values = []
         for row in rows:
             try:
-                values.append(number(row[index]))
+                values.append(number(row[index], fmt))
             except ValueError:
                 values.append(math.nan)       # A gap or bad value only blocks windows containing it.
         return np.array(values)

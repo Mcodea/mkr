@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)][string]$OutputDirectory,
     [string]$Python = 'python'
 )
@@ -23,7 +23,7 @@ Get-ChildItem "$pythonRoot/Lib" | Where-Object { $_.Name -notin @('site-packages
     Copy-Item -Destination $lib.FullName -Recurse
 & $Python -I -m pip install --disable-pip-version-check --only-binary=:all: --no-deps --no-compile --target "$lib/site-packages" -r engine/requirements.txt
 $env:PYTHONNOUSERSITE = '1'
-& "$runtime/python.exe" -I -c 'import sys, pathlib, scipy.optimize, openpyxl; assert pathlib.Path(scipy.__file__).is_relative_to(pathlib.Path(sys.executable).parent)'
+& "$runtime/python.exe" -I -c 'import sys, pathlib, scipy.optimize, openpyxl, zoneinfo; zoneinfo.ZoneInfo('Europe/Paris'); assert pathlib.Path(scipy.__file__).is_relative_to(pathlib.Path(sys.executable).parent)'
 $reply = '{"version":1,"requestId":"portable","operation":"ping","payload":{}}' | & "$runtime/python.exe" -I "$package/engine/mkr_engine.py" | ConvertFrom-Json
 if ($reply.requestId -ne 'portable' -or !$reply.engineVersion -or $reply.error) { throw 'Bundled engine did not answer ping.' }
 $transition = @{

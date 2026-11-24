@@ -48,6 +48,8 @@ def analyze(headers, rows, payload):
             or not isinstance(unit, str) or not unit.strip() or len(unit) > 40):
         raise ValueError("csv_mapping")
 
+    from csv_format import from_payload
+    fmt = from_payload(payload, payload.get("delimiter"))
     ti, vi = headers.index(time_column), headers.index(value_column)
     seen = set()
     previous = None
@@ -56,9 +58,7 @@ def analyze(headers, rows, payload):
     intervals = []
     for row in rows:
         try:
-            if not TIMESTAMP.fullmatch(row[ti]):
-                raise ValueError()
-            stamp = datetime.fromisoformat(row[ti]).astimezone(timezone.utc)
+            stamp = fmt.timestamp(row[ti])
         except (ValueError, OverflowError):
             invalid_times += 1
             previous = None
@@ -75,7 +75,7 @@ def analyze(headers, rows, payload):
         if not cell:
             missing += 1
             continue
-        value = float(cell) if NUMBER.fullmatch(cell) else math.nan
+        value = fmt.number(cell)
         if not math.isfinite(value):
             invalid += 1
             continue
@@ -83,7 +83,7 @@ def analyze(headers, rows, payload):
         minimum = value if minimum is None else min(value, minimum)
         maximum = value if maximum is None else max(value, maximum)
 
-    return dict(algorithmVersion="1.0.0", validValues=valid, missingValues=missing,
+    return dict(algorithmVersion="1.1.0", validValues=valid, missingValues=missing,
                 invalidValues=invalid, invalidTimestamps=invalid_times,
                 duplicateTimestamps=duplicates, reversedTimestamps=reversals,
                 minimum=minimum, maximum=maximum, minPositiveStepSeconds=min(intervals, default=None),
@@ -94,13 +94,16 @@ def process_csv(payload, inspect_only):
     keys = {"raw", "delimiter"}
     if not inspect_only:
         keys |= {"timeColumn", "valueColumn", "role", "unit"}
-    if payload.keys() != keys:
+    if not keys <= payload.keys() <= keys | {"format"}:
         raise ValueError("invalid_request")
     try:
         headers, rows = read_table(payload)
     except (UnicodeError, csv.Error) as error:
         raise ValueError("csv_encoding_or_syntax") from error
     result = dict(headers=headers, preview=rows[:200], rowCount=len(rows))
+    if inspect_only:
+        from csv_format import suggest
+        result["suggestedFormat"] = suggest(headers, rows)
     if not inspect_only:
         result["quality"] = analyze(headers, rows, payload)
     return result

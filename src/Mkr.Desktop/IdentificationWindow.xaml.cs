@@ -633,7 +633,7 @@ public partial class IdentificationWindow : Window
         Message.Text = error is CsvInputException input ? input.Code switch
         {
             "preview_mapping" => "Sélectionnez des colonnes de temps, MV et PV distinctes.",
-            "preview_time" => "Les horodatages doivent être valides, UTC explicites et strictement croissants.",
+            "preview_time" => "Les horodatages doivent être valides, sans heure locale inexistante ou ambiguë (changement d’heure), et strictement croissants.",
             "preview_data" => "MV et PV doivent contenir des nombres finis sur chaque ligne pour cet aperçu.",
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
             "fit_same_source_window" => "Deux essais d’un même enregistrement exigent deux plages explicites (bouton « Rechercher les essais »).",
@@ -646,7 +646,7 @@ public partial class IdentificationWindow : Window
             "fit_response" => "La variation de PV ne suffit pas pour estimer un modèle.",
             "fit_amplitude" => "Les amplitudes absolues des échelons doivent rester dans un rapport de 0,5 à 2.",
             "fit_data" => "Vérifiez les valeurs numériques MV/PV : les données manquantes et non finies empêchent l’estimation.",
-            "fit_time" => "Les horodatages doivent inclure un décalage UTC et être strictement croissants.",
+            "fit_time" => "Les horodatages doivent être valides, sans heure locale inexistante ou ambiguë (changement d’heure), et strictement croissants. Pour une heure locale, le format et le fuseau sont ceux déclarés à l’import.",
             "fit_recorded_mapping" => "Le rôle ou l’unité déclaré contredit le mapping enregistré lors de l’import.",
             "fit_integrator_tail" => "L’essai d’estimation ne montre pas une dérive suffisante en fin d’échelon.",
             "pi_domain" => "Le modèle et le temps de réponse sont hors du domaine de calcul PI.",

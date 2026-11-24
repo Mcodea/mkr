@@ -15,8 +15,10 @@ class CsvTests(unittest.TestCase):
     def test_preview_keeps_delimiters_quotes_and_newlines(self):
         csv = '\ufefftemps;valeur;note\r\n0; 1 ;"A;B\r\nC"\r\n'.encode()
         result = run(csv, "inspect_csv")["result"]
+        suggestion = result.pop("suggestedFormat")                      # a proposal, never applied silently
         self.assertEqual(result, dict(headers=["temps", "valeur", "note"],
                                       preview=[["0", " 1 ", "A;B\r\nC"]], rowCount=1))
+        self.assertEqual((suggestion["decimal"], suggestion["timeColumn"]), (".", None))
 
     def test_quality_equal_instants_and_unmodified_anomalies(self):
         csv = (b"ts;x\n2025-01-01T00:00:00Z;2\n2025-01-01T01:00:00+01:00;\n"
@@ -24,7 +26,7 @@ class CsvTests(unittest.TestCase):
                b"2025-01-01T00:00:01;1e999\n2025-01-01T00:00:08Z;1_000\n")
         response = run(csv, "analyze_csv", timeColumn="ts", valueColumn="x", role="PV", unit="bar")
         report = response["result"]["quality"]
-        self.assertEqual(report, dict(algorithmVersion="1.0.0", validValues=2, missingValues=1,
+        self.assertEqual(report, dict(algorithmVersion="1.1.0", validValues=2, missingValues=1,
                                      invalidValues=3, invalidTimestamps=1, duplicateTimestamps=1,
                                      reversedTimestamps=1, minimum=2, maximum=4,
                                      minPositiveStepSeconds=3, maxPositiveStepSeconds=3))

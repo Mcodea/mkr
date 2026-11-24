@@ -36,13 +36,16 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     public Task<CsvImport> SaveCaptureAsync(IReadOnlyList<AcquiredSample> samples, AcquisitionOrigin origin, CancellationToken token)
         => Mkr.Infrastructure.AcquisitionArchive.SaveAsync(project.Id, store, engine, samples, origin, token);
 
-    public async Task<CsvImport> AnalyzeAndSaveAsync(CsvMapping mapping, CancellationToken token)
+    public async Task<CsvImport> AnalyzeAndSaveAsync(CsvMapping mapping, CancellationToken token, CsvFormat? format = null)
     {
         var original = _original ?? throw new InvalidOperationException("Aucun CSV chargé.");
-        var (result, version) = await engine.AnalyzeAsync(original, _delimiter!, mapping, token);
+        if (format is { Decimal: "," } && _delimiter == ",")
+            throw new CsvInputException("csv_format");
+        format = format is { IsDefault: true } ? null : format;
+        var (result, version) = await engine.AnalyzeAsync(original, _delimiter!, mapping, token, format);
         token.ThrowIfCancellationRequested();
         var summary = new ImportSummary(Guid.NewGuid(), _fileName!, Convert.ToHexString(SHA256.HashData(original)), DateTimeOffset.UtcNow);
-        var import = new CsvImport(summary, _delimiter!, mapping, result, version, original);
+        var import = new CsvImport(summary, _delimiter!, mapping, result, version, original, Format: format);
         store.SaveImport(project.Id, import);
         _original = null;
         return import;

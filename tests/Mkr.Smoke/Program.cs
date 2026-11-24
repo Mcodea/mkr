@@ -498,7 +498,7 @@ try
     }, 2, default));
 
     // History mode: two steps of ONE long recording (up at 300 s, down at 1500 s) are located, paired and identified.
-    {
+    // (Not wrapped in braces: the French-export check below compares against these results.)
         var longCsv = new StringBuilder("timestamp;mv;pv\n");
         var longStart = new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero);
         for (var i = 0; i < 600; i++)
@@ -552,6 +552,57 @@ try
             "Same-source trials need explicit, non-overlapping ranges; identical bytes under another import stay refused.");
         await ThrowsAsync<CsvInputException>(() => gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns,
             "%", "bar", 0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default, pair.FirstWindow, overlapping));
+
+    // NC-16: a French historian export (semicolon, decimal comma, local date and time in Europe/Paris) is read
+    // exactly like the same recording written in ISO 8601: same steps, same model.
+    {
+        var france = new CsvFormat(",", new CsvTimeFormat("%d/%m/%Y %H:%M:%S", "Europe/Paris"));
+        var frenchCsv = new StringBuilder("Horodatage;Commande;Mesure\n");
+        var localStart = new DateTime(2026, 7, 1, 8, 0, 0);
+        for (var i = 0; i < 600; i++)
+        {
+            double t = 5.0 * i, mv = t >= 300 && t < 1500 ? 2 : 0, level = 0;
+            if (t >= 310) level += 2 * (1 - Math.Exp(-(t - 310) / 40));
+            if (t >= 1510) level -= 2 * (1 - Math.Exp(-(t - 1510) / 40));
+            frenchCsv.Append(FormattableString.Invariant($"{localStart.AddSeconds(t):dd/MM/yyyy HH:mm:ss};{mv};{8 - 1.5 * level:G17}\n").Replace('.', ','));
+        }
+        var frenchRaw = Encoding.UTF8.GetBytes(frenchCsv.ToString());
+        var inspected = await engine.InspectAsync(frenchRaw, ";", default);
+        Require(inspected.SuggestedFormat == new CsvFormatSuggestion(",", "Horodatage", "%d/%m/%Y %H:%M:%S", false),
+            "The first rows propose the French format without applying it.");
+        var frenchMapping = new CsvMapping("Horodatage", "Mesure", "PV", "bar");
+        var unread = (await engine.AnalyzeAsync(frenchRaw, ";", frenchMapping, default)).Result.Quality!;
+        // Every timestamp and every decimal-comma value is refused; only plain integers such as "8" remain valid.
+        Require(unread.InvalidTimestamps == 600 && unread.InvalidValues > 0 && unread.ValidValues + unread.InvalidValues == 600,
+            "Without the declared format the French export is refused, never misread.");
+        var (frenchResult, frenchVersion) = await engine.AnalyzeAsync(frenchRaw, ";", frenchMapping, default, france);
+        Require(frenchResult.Quality is { ValidValues: 600, InvalidValues: 0, InvalidTimestamps: 0, MinPositiveStepSeconds: 5, MaxPositiveStepSeconds: 5 },
+            "The declared format reads all 600 rows with a uniform 5 s period.");
+        var frenchSummary = new ImportSummary(Guid.NewGuid(), "export-historien.csv", Convert.ToHexString(SHA256.HashData(frenchRaw)), DateTimeOffset.UtcNow);
+        restored.SaveImport(project.Id, new CsvImport(frenchSummary, ";", frenchMapping, frenchResult, frenchVersion, frenchRaw, Format: france));
+        var reopenedFrench = new SqliteProjectStore(legacyPath).ReadImport(project.Id, frenchSummary.Id);
+        Require(reopenedFrench.Format == france && reopenedFrench.Original.SequenceEqual(frenchRaw) &&
+            reopenedFrench.Format.Describe().Contains("Europe/Paris"), "The format and the unchanged original survive SQLite reopening.");
+        var frenchColumns = new StepColumns("Horodatage", "Commande", "Mesure");
+        var frenchSearch = await gate.FindStepsAsync(frenchSummary, frenchColumns, "%", "bar", 0.01, 0.01, default);
+        var isoSearch = await gate.FindStepsAsync(longSummary, columns, "%", "bar", 0.01, 0.01, default);
+        Require(frenchSearch.Candidates.Select(c => (c.StepRow, c.Amplitude, c.RowStart, c.RowEnd)).SequenceEqual(
+                isoSearch.Candidates.Select(c => (c.StepRow, c.Amplitude, c.RowStart, c.RowEnd))) &&
+            frenchSearch.Candidates[1].StartUtc - frenchSearch.Candidates[0].StartUtc ==
+                isoSearch.Candidates[1].StartUtc - isoSearch.Candidates[0].StartUtc,
+            "The French export yields the same steps, at the same spacing, as the ISO recording.");
+        var frenchPair = frenchSearch.Pairs[0];
+        var frenchStudy = await gate.CalculateAsync(ModelFamily.FOPDT, frenchSummary, frenchColumns, frenchSummary, frenchColumns, "%", "bar",
+            0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default, frenchPair.FirstWindow, frenchPair.SecondWindow);
+        Require(frenchStudy.IsAcceptedForTuning && Math.Abs(frenchStudy.Result.Gain - fromHistory.Result.Gain) < 1e-9 &&
+            Math.Abs(frenchStudy.Result.TauSeconds!.Value - fromHistory.Result.TauSeconds!.Value) < 1e-9,
+            "Identification on the French export equals identification on the ISO recording.");
+        var frenchPreview = await engine.PreviewTrialAsync(new StepImport(reopenedFrench, frenchColumns), default);
+        Require(frenchPreview.SourceRows == 600 && frenchPreview.FirstUtc == new DateTimeOffset(2026, 7, 1, 6, 0, 0, TimeSpan.Zero),
+            "Preview converts 08:00 Europe/Paris in July to 06:00 UTC.");
+        var badZone = new CsvFormat(",", new CsvTimeFormat("%d/%m/%Y %H:%M:%S", "Europe/Atlantis"));
+        await ThrowsAsync<CsvInputException>(() => engine.AnalyzeAsync(frenchRaw, ";", frenchMapping, default, badZone));
+        await ThrowsAsync<CsvInputException>(() => engine.AnalyzeAsync(frenchRaw, ",", frenchMapping, default, france));
     }
 
     var fixture = Environment.GetEnvironmentVariable("MKR_TRANSFER_FIXTURE");

@@ -6,9 +6,10 @@ import math
 import numpy as np
 from scipy.optimize import least_squares
 
-from csv_quality import NUMBER, TIMESTAMP, read_table
+from csv_format import DEFAULT as DEFAULT_FORMAT, from_payload
+from csv_quality import read_table
 
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 
 @dataclass
@@ -24,9 +25,8 @@ class Step:
     baseline_noise: float = 0.0
 
 
-def number(cell):
-    cell = cell.strip()
-    value = float(cell) if NUMBER.fullmatch(cell) else math.nan
+def number(cell, fmt=None):
+    value = (fmt or DEFAULT_FORMAT).number(cell)
     if not math.isfinite(value) or abs(value) > 1e100:
         raise ValueError("fit_data")
     return value
@@ -34,9 +34,13 @@ def number(cell):
 
 def read_step(source, input_tolerance, output_tolerance):
     required = {"raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"}
-    if not isinstance(source, dict) or (
-            source.keys() != required and source.keys() != required | {"rowStart", "rowEnd"}):
+    optional = source.keys() - {"format"} if isinstance(source, dict) else None
+    if not isinstance(source, dict) or (optional != required and optional != required | {"rowStart", "rowEnd"}):
         raise ValueError("fit_mapping")
+    try:
+        fmt = from_payload(source, source["delimiter"])
+    except ValueError as error:
+        raise ValueError("fit_mapping") from error
     headers, rows = read_table(source)
     if "rowStart" in source:
         first, last = source["rowStart"], source["rowEnd"]
@@ -53,16 +57,14 @@ def read_step(source, input_tolerance, output_tolerance):
     dates = []
     for row in rows:
         try:
-            if not TIMESTAMP.fullmatch(row[ti]):
-                raise ValueError()
-            dates.append(datetime.fromisoformat(row[ti]).astimezone(timezone.utc))
+            dates.append(fmt.timestamp(row[ti]))
         except (OverflowError, ValueError) as error:
             raise ValueError("fit_time") from error
     times = np.array([(date - dates[0]).total_seconds() for date in dates])
     if np.any(np.diff(times) <= 0):
         raise ValueError("fit_time")
-    inputs = np.array([number(row[ui]) for row in rows])
-    outputs = np.array([number(row[yi]) for row in rows])
+    inputs = np.array([number(row[ui], fmt) for row in rows])
+    outputs = np.array([number(row[yi], fmt) for row in rows])
     candidates = np.flatnonzero(np.abs(inputs - inputs[0]) > 2 * input_tolerance)
     if not len(candidates):
         raise ValueError("fit_step")

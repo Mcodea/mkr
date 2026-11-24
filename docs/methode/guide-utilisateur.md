@@ -13,6 +13,8 @@ Tout réglage produit reste une **proposition technique** à valider en simulati
 
 Les trois modes aboutissent au même objet : des enregistrements horodatés MV/PV, avec leur provenance. Le moteur d'identification ne sait pas d'où ils viennent.
 
+**Exports français.** Un fichier d'historien avec virgule décimale et date locale (`01/07/2026 08:00:00`) s'importe avec le point-virgule comme séparateur. MKR propose la décimale et la notation d'après le contenu : confirmez-les et choisissez le **fuseau** de l'enregistreur (par exemple `Europe/Paris`). Un enregistreur qui reste à l'heure d'hiver toute l'année se déclare en UTC avec ses décalages. Une heure qui n'existe pas ou qui est ambiguë lors d'un changement d'heure est refusée : le rapport de qualité la compte.
+
 ## 2. Faire un bon essai (ce que MKR exige, et pourquoi)
 
 **Principe : un échelon de MV, régulateur en manuel, procédé stable.**

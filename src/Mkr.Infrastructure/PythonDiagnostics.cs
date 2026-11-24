@@ -25,9 +25,14 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
     }
 
     public async Task<(CsvResult Result, string EngineVersion)> AnalyzeAsync(byte[] original,
-        string delimiter, CsvMapping mapping, CancellationToken token)
+        string delimiter, CsvMapping mapping, CancellationToken token, CsvFormat? format = null)
     {
-        var payload = new { raw = original, delimiter, mapping.TimeColumn, mapping.ValueColumn, mapping.Role, mapping.Unit };
+        var payload = new Dictionary<string, object>
+        {
+            ["raw"] = original, ["delimiter"] = delimiter, ["timeColumn"] = mapping.TimeColumn,
+            ["valueColumn"] = mapping.ValueColumn, ["role"] = mapping.Role, ["unit"] = mapping.Unit
+        };
+        if (format is { IsDefault: false }) payload["format"] = format;
         var (result, version) = await CallAsync("analyze_csv", payload, token).ConfigureAwait(false);
         return (ReadCsvResult(result, expectQuality: true), version);
     }
@@ -42,6 +47,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             ["mvColumn"] = source.Columns.MvColumn,
             ["pvColumn"] = source.Columns.PvColumn
         };
+        if (source.Import.Format is { IsDefault: false } format)
+            fields["format"] = format;
         if (source.Window is { } window)
         {
             if (!window.IsValid)
@@ -172,14 +179,16 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
 
     public async Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token)
     {
-        var payload = new
+        var payload = new Dictionary<string, object>
         {
-            raw = trial.Import.Original,
-            trial.Import.Delimiter,
-            trial.Columns.TimeColumn,
-            trial.Columns.MvColumn,
-            trial.Columns.PvColumn
+            ["raw"] = trial.Import.Original,
+            ["delimiter"] = trial.Import.Delimiter,
+            ["timeColumn"] = trial.Columns.TimeColumn,
+            ["mvColumn"] = trial.Columns.MvColumn,
+            ["pvColumn"] = trial.Columns.PvColumn
         };
+        if (trial.Import.Format is { IsDefault: false } format)
+            payload["format"] = format;
         var (result, _) = await CallAsync("preview_trial", payload, token).ConfigureAwait(false);
         var preview = result.Deserialize<TrialPreview>(JsonOptions);
         if (preview is null || preview.SourceRows < 2 || preview.DisplayedRows < 2 ||
@@ -496,7 +505,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         if (csv is null || csv.Headers is null || csv.Preview is null || csv.RowCount < 1 ||
             csv.Preview.Length != Math.Min(200, csv.RowCount) ||
             csv.Preview.Any(row => row is null || row.Length != csv.Headers.Length) ||
-            expectQuality != (csv.Quality is not null))
+            expectQuality != (csv.Quality is not null) ||
+            (csv.SuggestedFormat is { } suggestion && suggestion.Decimal is not ("." or ",")))
             throw new InvalidDataException("Résultat CSV incompatible avec le contrat.");
         return csv;
     }
