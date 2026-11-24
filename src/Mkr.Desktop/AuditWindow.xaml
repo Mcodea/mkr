@@ -19,6 +19,8 @@
         <StackPanel Grid.Row="2" Margin="0,12,0,0">
             <WrapPanel>
                 <Button Content="_Vérifier l'intégrité" Click="Verify"/>
+                <Button Content="_Exporter…" Click="Export" Margin="8,0,0,0"
+                        ToolTip="Fichier à conserver hors du projet : vérifiable sans MKR avec scripts/verify-audit-export.py"/>
                 <Button Content="_Fermer" IsCancel="True" Margin="8,0,0,0"/>
             </WrapPanel>
             <TextBlock x:Name="VerifyStatus" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>

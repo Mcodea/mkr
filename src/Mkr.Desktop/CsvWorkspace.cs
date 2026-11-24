@@ -20,6 +20,17 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
 
     public bool HasAuditLog => store is IAuditLog;
     public IReadOnlyList<AuditEntry> AuditEntries() => store is IAuditLog log ? log.List(project.Id) : [];
+    /// <summary>Writes the audit log as JSON Lines; the export itself is then traced (after, so it is not part of the exported chain).</summary>
+    public AuditVerification ExportAudit(string path)
+    {
+        if (store is not IAuditLog log) throw new InvalidOperationException("Journal indisponible pour ce stockage.");
+        var entries = log.List(project.Id);
+        var verification = log.Verify(project.Id);
+        File.WriteAllText(path, AuditExport.Write(project.Id, project.Name, entries, DateTimeOffset.UtcNow), new System.Text.UTF8Encoding(false));
+        Audit("audit.exported", Path.GetFileName(path), $"{entries.Count} entrée(s), empreinte de tête {verification.HeadHash}" + (verification.Intact ? "" : " · CHAÎNE ROMPUE à l'export"));
+        return verification;
+    }
+
     public AuditVerification? VerifyAudit() => store is IAuditLog log ? log.Verify(project.Id) : null;
     public LoopBrief ReadLoopBrief() => store.ReadLoopBrief(project.Id);
     public void SaveLoopBrief(LoopBrief brief)

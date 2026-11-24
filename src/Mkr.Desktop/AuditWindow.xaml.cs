@@ -23,6 +23,24 @@ public partial class AuditWindow : Window
         Entries.Text = text.Length == 0 ? "Aucune entrée pour ce projet." : text.ToString();
     }
 
+    private void Export(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = "Exporter le journal d'audit", Filter = "Journal d'audit (*.jsonl)|*.jsonl", DefaultExt = ".jsonl",
+            FileName = $"journal-audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var result = _workspace.ExportAudit(dialog.FileName);
+            VerifyStatus.Text = $"Journal exporté : {result.Entries} entrée(s). Empreinte de tête à noter : {result.HeadHash}" +
+                (result.Intact ? "" : " — ATTENTION : la chaîne était rompue au moment de l'export.");
+            Load();
+        }
+        catch (Exception error) { VerifyStatus.Text = "Export impossible : " + error.Message; }
+    }
+
     private void Verify(object sender, RoutedEventArgs args)
     {
         try

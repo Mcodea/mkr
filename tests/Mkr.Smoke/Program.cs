@@ -629,6 +629,55 @@ try
             new SqliteProjectStore(auditPath).Record(audited.Id, "operateur", "acquisition.saved", $"capture-{i}", "ok"))));
         Require(auditStore.Verify(audited.Id) is { Intact: true, Entries: 19 }, "16 concurrent entries leave a continuous, intact chain.");
 
+        // Export: verified by .NET AND by the independent Python script; any edit of the file is detected by both.
+        var exported = AuditExport.Write(audited.Id, "Journal", auditStore.List(audited.Id), DateTimeOffset.UtcNow);
+        Require(AuditExport.Verify(exported) is { Intact: true, Entries: 19 } && AuditExport.Verify(exported).HeadHash == auditStore.Verify(audited.Id).HeadHash,
+            "An exported log verifies and carries the same head hash.");
+        var exportFile = Path.Combine(directory.FullName, "journal.jsonl");
+        File.WriteAllText(exportFile, exported);
+        var verifier = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "scripts", "verify-audit-export.py"));
+        if (!File.Exists(verifier)) verifier = Environment.GetEnvironmentVariable("MKR_AUDIT_VERIFIER") ?? verifier;
+        Require(File.Exists(verifier) || Environment.GetEnvironmentVariable("CI") != "true", "In CI the independent verifier script must be found, not silently skipped.");
+        if (File.Exists(verifier))
+        {
+            int RunVerifier(string file, string? head = null)
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python") { RedirectStandardOutput = true };
+                foreach (var argument in new[] { "-I", verifier, file }.Concat(head is null ? [] : [head])) info.ArgumentList.Add(argument);
+                using var process = System.Diagnostics.Process.Start(info)!;
+                process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                return process.ExitCode;
+            }
+            Require(RunVerifier(exportFile) == 0, "The independent Python verifier accepts the export.");
+            Require(RunVerifier(exportFile, auditStore.Verify(audited.Id).HeadHash) == 0, "...and the head hash noted elsewhere.");
+            Require(RunVerifier(exportFile, new string('a', 64)) == 1, "...but refuses a different head hash (a rewritten project).");
+            var tamperedFile = Path.Combine(directory.FullName, "journal-modifie.jsonl");
+            File.WriteAllText(tamperedFile, exported.Replace("capture-3", "capture-X"));
+            Require(RunVerifier(tamperedFile) == 1, "The Python verifier detects an edited entry.");
+        }
+        var tamperedText = exported.Replace("capture-3", "capture-X");
+        Require(AuditExport.Verify(tamperedText) is { Intact: false }, "The .NET verifier detects an edited entry.");
+        Require(AuditExport.Verify(string.Join('\n', exported.Split('\n').Where(l => !l.Contains("capture-5")))) is { Intact: false }, "A removed line is detected.");
+        Require(AuditExport.Verify("pas du json\n") is { Intact: false } && AuditExport.Verify("") is { Intact: false }, "Malformed files are refused, not skipped.");
+        // Characters outside the Basic Multilingual Plane are length-prefixed in UTF-16 code units by both implementations.
+        var emojiProject = Project.Create("Émoji");
+        auditStore.Add(emojiProject);
+        auditStore.Record(emojiProject.Id, "opérateur", "x", "étude 🙂", "détail 🙂 « guillemets » \"json\" \\");
+        var emojiExport = AuditExport.Write(emojiProject.Id, "Émoji", auditStore.List(emojiProject.Id), DateTimeOffset.UtcNow);
+        Require(AuditExport.Verify(emojiExport).Intact, "Non-ASCII text round-trips through the export.");
+        if (File.Exists(verifier))
+        {
+            var emojiFile = Path.Combine(directory.FullName, "emoji.jsonl");
+            File.WriteAllText(emojiFile, emojiExport);
+            var info = new System.Diagnostics.ProcessStartInfo(Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python") { RedirectStandardOutput = true };
+            foreach (var argument in new[] { "-I", verifier, emojiFile }) info.ArgumentList.Add(argument);
+            using var run = System.Diagnostics.Process.Start(info)!;
+            run.StandardOutput.ReadToEnd();
+            run.WaitForExit();
+            Require(run.ExitCode == 0, "The Python verifier agrees with .NET on non-ASCII and astral characters.");
+        }
+
         // The triggers refuse an edit or a deletion through SQL.
         using var auditRaw = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = auditPath, Pooling = false }.ToString());
         auditRaw.Open();
