@@ -2,7 +2,18 @@ name: Vérification MKR
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+      - 'codex/**'
+      - 'chatgpt/**'
   workflow_dispatch:
+
+# One run per branch tip: a newer push cancels the older Windows run.
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
