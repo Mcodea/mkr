@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Mkr.Desktop;
 
@@ -15,6 +16,21 @@ public static class ThemeService
 
     public static ThemeChoice Choice { get; private set; } = ThemeChoice.System;
     public static bool IsDark { get; private set; }
+
+    /// <summary>
+    /// An implicit Style for Window never reaches the application's own window classes (WindowView, CsvWindow…: WPF styles apply to the
+    /// exact type only), so each window takes its background, text colour and font from the theme here, as resource references:
+    /// a theme switch then updates open windows too.
+    /// </summary>
+    public static void RegisterWindowDefaults() =>
+        EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.InitializedEvent, new EventHandler((sender, _) =>
+        {
+            if (sender is not Window window) return;
+            window.SetResourceReference(Control.BackgroundProperty, "MkrCanvas");
+            window.SetResourceReference(Control.ForegroundProperty, "MkrText");
+            window.SetResourceReference(Control.FontFamilyProperty, "MkrFont");
+            window.SetResourceReference(Control.FontSizeProperty, "MkrFontBody");
+        }));
 
     public static void Initialize(string dataDirectory)
     {
