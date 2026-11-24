@@ -12,6 +12,8 @@ import math
 QUALIFICATION = "non_qualified"
 PIDFF_SOURCE = dict(document="Schneider Electric, EcoStruxure Control Expert - Régulation - Bibliothèque de blocs, 33002536",
                     edition="09/2020 (33002536.16)", library="Control", block="PIDFF")
+PIDINT_SOURCE = dict(document="Schneider Electric, EcoStruxure Control Expert - Bibliothèque de blocs standard, 33002520",
+                     edition="09/2020 (33002520.20)", library="Standard", block="PID_INT")
 
 
 def _number(value, low=None, high=None):
@@ -76,4 +78,46 @@ def pidff(parameters):
             dict(page=183, name="incremental algorithm (ti > 0, aw_type = 0)",
                  text="OUTD = TermP + TermI + TermD + TermFF ; TermP = sense x kp x delta(DEV_WGH) ; TermI = sense x kp x dt/ti x dev"),
         ],
+        warnings=warnings)
+
+
+def pid_int(parameters):
+    """MKR ideal PI -> PID_INT (INT arithmetic, signals normalised to [0..10000]).
+
+    33002520 p. 141: DOUT = KP [de(t) + TS/(10 TI) e(t)] / 100, e = SP - PV in counts (p. 137), KP = register / 100,
+    TI in tenths of a second, TS in hundredths. With e in counts, KP = Kp x pv_span / mv_span (counts of output per
+    count of measurement). The derivative action Dt has no equation in the document: td > 0 is refused. Sign: a positive
+    KP raises the output when PV falls, which is MKR's Kp > 0 (the manual's "positif : arriere" is consistent with it).
+    """
+    keys = {"kp", "tiSeconds", "tdSeconds", "tsSeconds", "pvSpan", "mvSpan"}
+    if not isinstance(parameters, dict) or parameters.keys() != keys:
+        raise ValueError("conversion_parameters")
+    kp = _number(parameters["kp"])
+    ti, td, ts = _number(parameters["tiSeconds"], 0), _number(parameters["tdSeconds"], 0), _number(parameters["tsSeconds"], 0)
+    pv_span, mv_span = _number(parameters["pvSpan"], 0), _number(parameters["mvSpan"], 0)
+    if kp == 0 or ti <= 0 or ts <= 0 or pv_span <= 0 or mv_span <= 0:
+        raise ValueError("conversion_parameters")
+    if td > 0:
+        raise ValueError("conversion_derivative_undocumented")
+    gain = kp * pv_span / mv_span
+    registers = dict(KP=round(gain * 100), TI=round(ti * 10), TS=round(ts * 100), TD=0)
+    if registers["KP"] == 0 or abs(registers["KP"]) > 10000 or not 1 <= registers["TI"] <= 20000 or not 1 <= registers["TS"] <= 32000:
+        raise ValueError("conversion_range")
+    warnings = ["integral_uses_current_deviation", "task_period_multiple", "integer_arithmetic_unqualified", "sampled_behaviour_unqualified",
+                "document_inconsistencies"]
+    rounded = [abs(registers[name] / factor - value) > 1e-3 * abs(value) for name, factor, value in
+               (("KP", 100, gain), ("TI", 10, ti), ("TS", 100, ts))]
+    if any(rounded):
+        warnings.append("register_rounding")
+    return dict(
+        block="PID_INT", structure="mixed", qualification=QUALIFICATION, readyToLoad=False, source=PIDINT_SOURCE,
+        parameters=dict(KP=registers["KP"], TI=registers["TI"], TD=0, TS=registers["TS"], PV_DEV=False, gain=gain,
+                        units=dict(KP="gain x100", TI="0.1 s", TS="0.01 s")),
+        neutral=dict(),
+        toDetermine=["OUT_MAX", "OUT_MIN", "NO_BUMP", "PV_SUP", "PV_INF", "task period (TS is rounded to a multiple)",
+                     "scaling of the physical MV and PV to [0..10000]"],
+        equations=[
+            dict(page=141, name="incremental PI, TI > 0", text="DOUT = KP [de(t) + TS/(10 TI) e(t)] / 100 ; OUT = OUT + DOUT ; e = SP - PV"),
+            dict(page=141, name="TI = 0", text="OUT = KP e / 100 + 5000"),
+            dict(page=140, name="units", text="KP x100, TI in 0.1 s, TS in 0.01 s")],
         warnings=warnings)

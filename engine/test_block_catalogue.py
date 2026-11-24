@@ -7,22 +7,15 @@ class CatalogueTests(unittest.TestCase):
         entries = lookup({"cpu": "M580"})["entries"]
         self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT", "PID_INT", "PID_Compact"})
         self.assertTrue(all(not e["selectable"] and "cpu" in e["unverifiedTargetFields"] for e in entries))
-        # Siemens PID_Compact and Schneider PIDINT are listed with no equation, parameter or fact: nothing is claimed
+        # Siemens PID_Compact is listed with no equation, parameter or fact: nothing is claimed
         # about them until the official documentation is read (AGENTS.md §7).
         siemens = lookup({"manufacturer": "Siemens"})["entries"]
         self.assertEqual([e["name"] for e in siemens], ["PID_Compact"] * 3)
-        for name in ("PID_Compact", "PID_INT"):
+        for name in ("PID_Compact",):
             entries = lookup({"name": name})["entries"]
             for entry in entries:
                 self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
                 self.assertFalse(entry["selectable"])
-        for name in ("PID_INT",):
-            entry, = lookup({"name": name})["entries"]
-            self.assertEqual((entry["equation"], entry["parameters"], entry["status"]), (None, [], "to_verify"))
-            # Only pin names transcribed from user captures: no claim about behaviour, units or equations.
-            self.assertTrue(all(f["source"].startswith(("CAPTURE-", "SIEMENS-", "SE-33002520")) for f in entry["facts"]))
-            self.assertFalse(entry["selectable"])
-            self.assertFalse(convert(dict(name=name, target={}, parameters={"kp": 1}))["converted"])
         self.assertFalse(convert(dict(name="PID_Compact", target={"libraryVersion": "V3.x"}, parameters={"kp": 1}))["converted"])
 
     def test_conversion_refused_and_document_edition_not_used_as_software_version(self):
@@ -120,9 +113,8 @@ class SiemensVersionsTests(unittest.TestCase):
 
     def test_designated_vendor_documents_are_recorded_as_not_read(self):
         sources = {s["id"]: s for s in lookup({})["sources"]}
-        # 33002536 (PIDFF) has been read since: its edition and scope say so. 33002520 (PID_INT) is still not read.
-        self.assertEqual(sources["SE-33002520K01000"]["edition"], "non lue")
-        self.assertIn("NON LU", sources["SE-33002520K01000"]["scope"])
+        # 33002536 (PIDFF) and 33002520 (PID_INT) have been read since: their edition and scope say so.
+        self.assertEqual(sources["SE-33002520K01000"]["edition"], "09/2020 (33002520.20)")
         self.assertEqual(sources["SE-33002536K01000"]["edition"], "09/2020 (33002536.16)")
 
 
