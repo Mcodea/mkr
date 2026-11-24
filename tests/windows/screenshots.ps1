@@ -92,6 +92,15 @@ function Capture($window, $label) {
         Write-Host "##CAPTURE-END $label"
     } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
 }
+function Press-Retry($parent, $caption) {
+    for ($attempt = 1; $attempt -le 4; $attempt++) {
+        try { Press $parent $caption; return } catch { Start-Sleep -Milliseconds 800 }
+    }
+    Press $parent $caption
+}
+function Step($label, [scriptblock]$body) {
+    try { & $body } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
+}
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
@@ -117,35 +126,40 @@ try {
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
-    Press $ident "Revue de l'étude…"
-    $review = Find $root $name "MKR — Revue de l'étude"
-    Fill $review 'Reason' 'Identification terminée'
-    Fill $review 'Evidence' 'essai-7 / essai-8'
-    Press $review 'Marquer comme calculé'
-    $null = Wait-Name $review 'StateLine' '*Calculé*'
-    Capture $review '05-revue'
-    Close-Window $review
-    $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
-    Select-Option $ident 'StudyList' "*$integratorId"
-    Press $ident 'Régler le procédé intégrateur…'
-    $tuning = Find $root $name "MKR — Réglage d'un procédé intégrateur"
-    Fill $tuning 'ResponseSeconds' '8'
-    Press $tuning 'Calculer'
-    $null = Wait-Value $tuning 'Result' '*SIMC_integrating*'
-    Capture $tuning '06-reglage-integrateur'
-    Press $tuning 'Valeurs du bloc PIDFF…'
-    $values = Find $root $name 'MKR — Valeurs du bloc PIDFF (non qualifiées)'
-    $null = Wait-Value $values 'Values' '*NON QUALIFIÉ*'
-    Capture $values '07-valeurs-bloc-pidff'
-    Close-Window $values
-    Close-Window $tuning
-    Press $ident 'Blocs PID__INT et PID__Compact…'
-    Close-Window $ident
-    Press $project "Journal d'audit…"
-    $audit = Find $root $name "MKR — Journal d'audit"
-    $null = Wait-Value $audit 'Entries' '*review.recorded*'
-    Capture $audit '08-journal-audit'
-    Close-Window $audit
+    Step '05-revue' {
+        Press-Retry $ident "Revue de l'étude…"
+        $review = Find $root $name "MKR — Revue de l'étude"
+        Fill $review 'Reason' 'Identification terminée'
+        Fill $review 'Evidence' 'essai-7 / essai-8'
+        Press-Retry $review 'Marquer comme calculé'
+        $null = Wait-Name $review 'StateLine' '*Calculé*'
+        Capture $review '05-revue'
+        Close-Window $review
+    }
+    Step '06-integrateur' {
+        $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
+        Select-Option $ident 'StudyList' "*$integratorId"
+        Press-Retry $ident 'Régler le procédé intégrateur…'
+        $tuning = Find $root $name "MKR — Réglage d'un procédé intégrateur"
+        Fill $tuning 'ResponseSeconds' '8'
+        Press-Retry $tuning 'Calculer'
+        $null = Wait-Value $tuning 'Result' '*SIMC_integrating*'
+        Capture $tuning '06-reglage-integrateur'
+        Press-Retry $tuning 'Valeurs du bloc PIDFF…'
+        $values = Find $root $name 'MKR — Valeurs du bloc PIDFF (non qualifiées)'
+        $null = Wait-Value $values 'Values' '*NON QUALIFIÉ*'
+        Capture $values '07-valeurs-bloc-pidff'
+        Close-Window $values
+        Close-Window $tuning
+    }
+    Step '08-audit' {
+        Close-Window $ident
+        Press-Retry $project "Journal d'audit…"
+        $audit = Find $root $name "MKR — Journal d'audit"
+        $null = Wait-Value $audit 'Entries' '*review.recorded*'
+        Capture $audit '08-journal-audit'
+        Close-Window $audit
+    }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
 } finally {
