@@ -62,8 +62,8 @@ function Wait-Name($parent, $field, $pattern, $seconds = 25) {
     throw "Texte attendu dans ${field} : $pattern. Obtenu : $text"
 }
 function Texts($window) {
-    $textCondition = [System.Windows.Automation.PropertyCondition]::new($type, [System.Windows.Automation.ControlType]::Text)
-    return (@($window.FindAll($scope, $textCondition) | ForEach-Object { $_.Current.Name }) -join "`n")
+    # A native message box exposes its text under a control type that varies with the Windows build: read every descendant name.
+    return (@($window.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join "`n")
 }
 function Close-Window($window) { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
 
