@@ -36,6 +36,8 @@ internal sealed class ChartTrack(string title, string unit, IEnumerable<ChartSer
     public string Unit { get; } = unit;
     public List<ChartSeries> Series { get; } = series.ToList();
     public List<ChartBand> Bands { get; } = new();
+    /// <summary>Share of the chart height (default 1; a main signal track can use 2).</summary>
+    public double Weight { get; init; } = 1;
 }
 
 /// <summary>
@@ -97,8 +99,20 @@ internal sealed class SignalChart : FrameworkElement
 
     // ---------- geometry ----------
     private double PlotWidth => Math.Max(1, ActualWidth - LeftMargin - RightMargin);
-    private double TrackHeight => _tracks.Count == 0 ? 0 : Math.Max(40, (ActualHeight - TopMargin - BottomMargin - TrackGap * _tracks.Count) / _tracks.Count);
-    private double TrackTop(int index) => TopMargin + LegendHeight + index * (TrackHeight + TrackGap);
+    // Tracks share the height by weight (the main signal can get twice the room of a command track).
+    private double TrackHeightAt(int index)
+    {
+        var total = _tracks.Sum(t => t.Weight);
+        var room = ActualHeight - TopMargin - BottomMargin - TrackGap * _tracks.Count;
+        return Math.Max(40, room * _tracks[index].Weight / total);
+    }
+
+    private double TrackTop(int index)
+    {
+        var top = TopMargin + LegendHeight;
+        for (var i = 0; i < index; i++) top += TrackHeightAt(i) + TrackGap;
+        return top;
+    }
     private double XToPixel(double x) => LeftMargin + (x - _lo) / (_hi - _lo) * PlotWidth;
     private double PixelToX(double px) => _lo + (px - LeftMargin) / PlotWidth * (_hi - _lo);
 
@@ -160,7 +174,7 @@ internal sealed class SignalChart : FrameworkElement
         {
             var track = _tracks[t];
             var top = TrackTop(t);
-            var height = TrackHeight;
+            var height = TrackHeightAt(t);
             var (ymin, ymax) = YRange(track);
             double Y(double v) => top + (ymax - v) / (ymax - ymin) * height;
 
@@ -244,7 +258,7 @@ internal sealed class SignalChart : FrameworkElement
         }
 
         // shared time axis
-        var bottom = TrackTop(_tracks.Count - 1) + TrackHeight;
+        var bottom = TrackTop(_tracks.Count - 1) + TrackHeightAt(_tracks.Count - 1);
         foreach (var (ex, label) in _events)
         {
             if (ex < _lo || ex > _hi) continue;

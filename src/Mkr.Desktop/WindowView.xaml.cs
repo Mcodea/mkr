@@ -352,7 +352,7 @@ public partial class WindowView : Window
             {
                 new ChartSeries("Observée", "MkrSignal1", seconds, fit.Points.Select(p => p.Observed).ToArray()),
                 new ChartSeries("Modèle", "MkrSignal2", seconds, fit.Points.Select(p => p.Predicted).ToArray())
-            }),
+            }) { Weight = 2 },
             new ChartTrack("Sortie de commande (écart)", study.MvUnit, new[]
             {
                 new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { -horizon * 0.05, 0, 0, horizon }, new[] { 0, 0, step, step })

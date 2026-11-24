@@ -705,7 +705,7 @@ public partial class IdentificationWindow : Window
             {
                 new ChartSeries("Observée", "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
                 new ChartSeries("Prédite par le modèle", "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
-            }),
+            }) { Weight = 2 },
             new ChartTrack("Résidu (observée − prédite)", study.PvUnit, new[]
             {
                 new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())

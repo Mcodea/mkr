@@ -142,7 +142,7 @@ public partial class PidPrototypeWindow : Window
                 new ChartSeries("Consigne", "MkrSignal3", span, new[] { _scenario.Setpoint, _scenario.Setpoint }),
                 new ChartSeries("PI IMC (référence)", "MkrSignal1", seconds, pi.Select(p => p.Pv).ToArray()),
                 new ChartSeries("PID manuel", "MkrSignal2", pid.Select(p => p.Seconds).ToArray(), pid.Select(p => p.Pv).ToArray())
-            }),
+            }) { Weight = 2 },
             new ChartTrack("Sortie de commande appliquée", _model.MvUnit, new[]
             {
                 new ChartSeries("PI IMC", "MkrSignal1", mvPi.Select(p => p.Seconds).ToArray(), mvPi.Select(p => p.Mv!.Value).ToArray()),

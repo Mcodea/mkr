@@ -16,5 +16,5 @@ Composant interne (aucune bibliothèque tierce, donc aucune licence). Remplace p
 | Thèmes | Couleurs lues dans les jetons du thème ; redessin au changement de thème | Test de contraste |
 | Trous de données | Valeur non finie = rupture de trait, jamais interpolée | Relecture de code |
 
-Écrans adoptés : prévisualisation des signaux. À adopter : identification (diagnostics), simulation, comparaison PI, prototype PID.
+Écrans adoptés : prévisualisation des signaux, espace d'étude, diagnostic d'identification, simulation PI (enveloppes de sensibilité, marqueur de perturbation), prototype PID, simulation en boucle ouverte. Il ne reste plus de tracé dessiné à la main. Hauteurs de pistes pondérées (signal principal ×2). Mode « Agrandir » dans l'espace d'étude.
 Limites : pas d'axes multiples sur une même piste, pas de curseurs à deux repères, pas de test de performance chronométré, rendu non vérifié à 4K/150 %.

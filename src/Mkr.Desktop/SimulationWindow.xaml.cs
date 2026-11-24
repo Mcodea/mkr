@@ -300,7 +300,7 @@ public partial class SimulationWindow : Window
             new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
             new ChartSeries("Mesure IMC / Lambda", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
             new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
-        });
+        }) { Weight = 2 };
         if (study.Robustness?.Envelope is { } envelope && envelope.Seconds.Length == seconds.Length &&
             envelope.Imc.MinPv.Length == seconds.Length && envelope.Imc.MaxPv.Length == seconds.Length &&
             envelope.Simc.MinPv.Length == seconds.Length && envelope.Simc.MaxPv.Length == seconds.Length)
