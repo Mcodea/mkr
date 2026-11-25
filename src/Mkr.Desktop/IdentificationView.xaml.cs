@@ -37,7 +37,7 @@ public partial class IdentificationView : UserControl, IStepView
         var first = initial is null ? null : studies.FirstOrDefault(item => item.Id == initial.Id);
         first ??= studies.FirstOrDefault(item => item.IsAcceptedForTuning) ?? studies.FirstOrDefault();
         if (first is not null) StudyList.SelectedItem = first;
-        TrialsPanel.IsExpanded = studies.Count == 0;
+        TrialsPanel.IsExpanded = true;      // expanded: the trials form must stay reachable (and testable) like before; the chart is unaffected
         if (_sources.Count < 2)
             Message.Text = "Importez deux essais CSV dans ce projet.";
     }

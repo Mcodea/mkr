@@ -105,7 +105,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </Expander>
-                    <Expander x:Name="TrialsPanel" Style="{StaticResource MkrPanel}" Header="Essais d'identification (estimation et validation)" IsExpanded="False">
+                    <Expander x:Name="TrialsPanel" Style="{StaticResource MkrPanel}" Header="Essais d'identification (estimation et validation)">
                         <StackPanel x:Name="Form" Margin="10,8">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
                         <StackPanel>
@@ -190,7 +190,7 @@
                     </CheckBox>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Réglage et actions sur le modèle accepté" IsExpanded="False">
+                    <Expander Style="{StaticResource MkrPanel}" Header="Réglage et actions sur le modèle accepté">
                         <StackPanel Margin="10,8">
                 <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
                         Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
@@ -244,7 +244,7 @@
                 </GroupBox>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Rapport détaillé de l'étude" IsExpanded="False">
+                    <Expander Style="{StaticResource MkrPanel}" Header="Rapport détaillé de l'étude">
                         <StackPanel Margin="10,8">
                             <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
                         </StackPanel>
