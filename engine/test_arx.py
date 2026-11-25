@@ -100,6 +100,33 @@ class Recovery(unittest.TestCase):
         self.assertLessEqual(peak, 1.7 + 0.1)
 
 
+class Windows(unittest.TestCase):
+    def test_a_row_window_selects_the_informative_part_of_a_longer_recording(self):
+        ts = 2.0
+        rng = np.random.default_rng(4)
+        u, v = prbs(500, rng), prbs(400, rng)
+        u_full = np.concatenate([np.ones(150) * 3.0, u])                    # 150 rows with a constant input first: no information there
+        y_full = first_order_zoh(u_full, 20.0, 1.5, 2, ts, 0.0, 0.0, 0.02, rng)
+        w = first_order_zoh(v, 20.0, 1.5, 2, ts, 0.0, 0.0, 0.02, rng)
+        train, valid = make(1, u_full, y_full, ts), make(2, v, w, ts)
+        with self.assertRaisesRegex(ValueError, "arx_excitation"):          # the first rows alone carry no excitation
+            arx.identify(payload(dict(train, rowStart=0, rowEnd=149), valid))
+        result = arx.identify(payload(dict(train, rowStart=150, rowEnd=649), valid))
+        self.assertEqual(result["decision"], "accepted", result.get("reasons"))
+        first_order = result["selected"]["firstOrder"]
+        self.assertAlmostEqual(first_order["gain"], 1.5, delta=0.02 * 1.5)
+
+    def test_invalid_windows_are_refused(self):
+        ts = 2.0
+        rng = np.random.default_rng(5)
+        u = prbs(300, rng)
+        y = first_order_zoh(u, 20.0, 1.5, 2, ts, 0.0, 0.0, 0.02, rng)
+        train = make(1, u, y, ts)
+        for window in ({"rowStart": 10, "rowEnd": 10}, {"rowStart": -1, "rowEnd": 50}, {"rowStart": 0, "rowEnd": 300}, {"rowStart": 0.5, "rowEnd": 50}):
+            with self.subTest(window=window), self.assertRaisesRegex(ValueError, "arx_mapping"):
+                arx.identify(payload(dict(train, **window), train))
+
+
 class Refusals(unittest.TestCase):
     def series(self, seed=3, **changes):
         ts = 2.0

@@ -70,6 +70,19 @@ public sealed record ComparisonCriteria(double MaximumRmse, double MaximumResidu
 public sealed record ModelComparison(string? Selected, Dictionary<string, ModelCandidate> Candidates, string Decision,
     string AlgorithmVersion, ComparisonCriteria Criteria, HoldoutTest? HoldoutTest = null);
 
+/// <summary>One discrete-time candidate (ARX or output-error) judged on the independent validation series.</summary>
+public sealed record ArxCandidate(int Na, int Nb, int Nk, int Parameters, string Estimator, double ValidationSimulationRmse,
+    double? ResidualLagOne, string[] Reasons, bool Accepted);
+
+/// <summary>First-order equivalent (zero-order hold) of an accepted (1,1) candidate, with delta-method standard errors.</summary>
+public sealed record ArxFirstOrder(double Gain, double TauSeconds, double DelaySeconds, Dictionary<string, double> StandardErrors);
+
+public sealed record ArxSelected(int Na, int Nb, int Nk, string Estimator, double ValidationSimulationRmse, ArxFirstOrder? FirstOrder);
+
+/// <summary>Result of the ARX / output-error identification (arbitrary excitation, no steady-state start). Refusal carries reasons and actions.</summary>
+public sealed record ArxIdentification(string AlgorithmVersion, double SamplePeriodSeconds, string Decision, ArxSelected? Selected,
+    IReadOnlyList<ArxCandidate> Candidates, string[]? Reasons = null, string[]? Actions = null);
+
 /// <summary>Holdout F-test of the validation mean square errors, FOPDT over SOPDT (audit NC-04).</summary>
 public sealed record HoldoutTest(double MseRatio, double Critical, double Level);
 
@@ -149,6 +162,9 @@ public interface IIdentificationEngine
 
     Task<ModelComparison> CompareAsync(StepImport training, StepImport validation, double mvTolerance,
         double pvTolerance, double maximumRmse, double maximumResidualLagOne, CancellationToken token);
+
+    /// <summary>ARX / output-error identification of open-loop data with any excitation; refuses closed-loop, constant-input and irregularly sampled data.</summary>
+    Task<ArxIdentification> IdentifyArxAsync(StepImport training, StepImport validation, double mvTolerance, double maximumRmse, CancellationToken token);
 
     Task<TrialPreview> PreviewTrialAsync(StepImport trial, CancellationToken token);
 

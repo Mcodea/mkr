@@ -43,13 +43,18 @@ MAXIMUM_ABSOLUTE = 1e100
 def read_series(source, mv_tolerance):
     required = {"raw", "delimiter", "timeColumn", "mvColumn", "pvColumn"}
     keys = source.keys() - {"format"} if isinstance(source, dict) else None
-    if keys != required:
+    if keys != required and keys != required | {"rowStart", "rowEnd"}:
         raise ValueError("arx_mapping")
     try:
         fmt = from_payload(source, source["delimiter"])
     except ValueError as error:
         raise ValueError("arx_mapping") from error
     headers, rows = read_table(source)
+    if "rowStart" in source:
+        first, last = source["rowStart"], source["rowEnd"]
+        if type(first) is not int or type(last) is not int or not 0 <= first < last < len(rows):
+            raise ValueError("arx_mapping")
+        rows = rows[first:last + 1]          # inclusive data-row indices, as for the step identification; the source stays intact
     columns = [source[k] for k in ("timeColumn", "mvColumn", "pvColumn")]
     if any(not isinstance(c, str) or c not in headers for c in columns) or len(set(columns)) != 3:
         raise ValueError("arx_mapping")

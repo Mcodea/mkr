@@ -94,6 +94,28 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return report;
     }
 
+    public Task<ArxIdentification> IdentifyArxAsync(StepImport training, StepImport validation, double mvTolerance, double maximumRmse, CancellationToken token) =>
+        Guard(() => IdentifyArxAsyncCore(training, validation, mvTolerance, maximumRmse, token));
+
+    private async Task<ArxIdentification> IdentifyArxAsyncCore(StepImport training, StepImport validation, double mvTolerance, double maximumRmse, CancellationToken token)
+    {
+        if (!(mvTolerance > 0) || !(maximumRmse > 0) || !double.IsFinite(mvTolerance) || !double.IsFinite(maximumRmse))
+            throw new InvalidDataException("Tolérances ARX invalides.");
+        var payload = new { training = Source(training), validation = Source(validation), mvTolerance, maximumRmse, loop = "open" };
+        var (json, _) = await CallAsync("identify_arx", payload, token).ConfigureAwait(false);
+        var result = json.Deserialize<ArxIdentification>(JsonOptions);
+        if (result?.Candidates is null || string.IsNullOrWhiteSpace(result.AlgorithmVersion) || !(result.SamplePeriodSeconds > 0) ||
+            result.Candidates.Count == 0 || result.Candidates.Any(c => c.Reasons is null || c.Accepted != (c.Reasons.Length == 0)))
+            throw new InvalidDataException("Identification ARX incompatible avec le contrat.");
+        bool accepted = result.Decision == "accepted";
+        if (result.Decision is not ("accepted" or "refused") || accepted != (result.Selected is not null) ||
+            (!accepted && (result.Reasons is null || result.Actions is null)) ||
+            (accepted && (!result.Candidates.Any(c => c.Accepted && c.Na == result.Selected!.Na && c.Nb == result.Selected.Nb && c.Nk == result.Selected.Nk) ||
+                          (result.Selected!.FirstOrder is { } f && (!double.IsFinite(f.Gain) || !(f.TauSeconds > 0) || f.DelaySeconds < 0)))))
+            throw new InvalidDataException("Décision ARX incohérente.");
+        return result;
+    }
+
     public Task<StepSearch> FindStepsAsync(StepImport recording, double mvTolerance, double pvTolerance, CancellationToken token) =>
         Guard(() => FindStepsAsyncCore(recording, mvTolerance, pvTolerance, token));
 
