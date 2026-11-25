@@ -1,9 +1,7 @@
-<Window x:Class="Mkr.Desktop.SimulationWindow"
+<UserControl x:Class="Mkr.Desktop.SimulationView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:Mkr.Desktop"
-        Title="MKR — Simulation PI" Width="1140" Height="850" MinWidth="760" MinHeight="580"
-        WindowStartupLocation="CenterOwner">
+        xmlns:local="clr-namespace:Mkr.Desktop">
     <DockPanel Margin="18">
         <TextBlock DockPanel.Dock="Bottom" x:Name="Message" TextWrapping="Wrap" Margin="0,10,0,0"
                    AutomationProperties.LiveSetting="Polite" />
@@ -140,4 +138,4 @@
             </StackPanel>
         </ScrollViewer>
     </DockPanel>
-</Window>
+</UserControl>

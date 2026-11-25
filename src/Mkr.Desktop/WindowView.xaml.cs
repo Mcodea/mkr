@@ -106,6 +106,7 @@ public partial class WindowView : Window
 
     private void LeaveStudy()
     {
+        ReleaseStepHost();
         StudyView.Visibility = Visibility.Collapsed;
         RibbonHost.Visibility = Visibility.Collapsed;
         HomeView.Visibility = Visibility.Visible;
@@ -120,6 +121,7 @@ public partial class WindowView : Window
         if (_project is null) return;
         try
         {
+            ReleaseStepHost();
             _csv = new CsvWorkspace(_project, _store, _engine);
             _workspace = _createIdentification(_project);
             var brief = _csv.ReadLoopBrief();
@@ -225,8 +227,7 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("", "Contrôle de dérive", inIdentification, OpenIdentification, open));
                 break;
             case 5:
-                RibbonCommands.Children.Add(Command("\uE9F5", "Réglage guidé", "Objectif de robustesse, réglage le plus rapide qui le respecte sur toute l'incertitude du modèle, ou refus expliqué", () => OpenWindow(() => new GuidedTuningWindow(_workspace!, selected!)), open && selected is not null));
-                break;
+                break;                      // the guided tuning is shown in the workspace itself (UpdateStepHost)
             case 6:
                 RibbonCommands.Children.Add(Command("\uE8F1", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
                 RibbonCommands.Children.Add(Command("\uE8C8", "Valeurs du bloc", "Valeurs documentaires du bloc choisi, toujours non qualifiées. Demande un réglage PI enregistré.", () => OpenWithTuning(tuning => new BlockTargetWindow(_workspace!, selected!, tuning)), open && selected is not null));
@@ -237,20 +238,92 @@ public partial class WindowView : Window
                     RibbonCommands.Children.Add(Command("\uE9D2", "Réglage intégrateur", "Règle SIMC des procédés intégrateurs", () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
                 break;
             case 8:
-                RibbonCommands.Children.Add(Command("\uE768", "Simuler le réglage", "Simulation en boucle fermée du dernier réglage PI enregistré de l'étude affichée", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 RibbonCommands.Children.Add(Command("\uE916", "Boucle ouverte", "Réponse du modèle à un échelon, sans régulateur", () => OpenWindow(() => new OpenLoopWindow(_workspace!, selected!)), open && selected is not null));
                 break;
             case 9:
                 RibbonCommands.Children.Add(Command("\uE749", "Fiche d'étude PDF", "Depuis la fenêtre de simulation : « Fiche de mise au point (PDF) »", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 break;
         }
-        // chart commands are always at hand, whichever step is shown
-        RibbonCommands.Children.Add(new Border { Width = 1, Margin = new Thickness(8, 6, 8, 6), Background = (Brush)FindResource("MkrBorder") });
-        RibbonCommands.Children.Add(Command("\uE740", _focusChart ? "Réduire" : "Agrandir", "Donner tout l'espace au graphique (masque le panneau de valeurs et le tableau)", () => { ToggleChartFocus(); BuildRibbon(); }));
-        RibbonCommands.Children.Add(Command("\uE71E", "Vue complète", "Revenir à l'horizon complet du graphique (double-clic ou Origine)", () => Chart.ResetView()));
-        RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
-        RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
+        UpdateStepHost(selected, open);
+        // chart commands are at hand whenever the chart (not a hosted step view) is shown
+        if (StepHost.Visibility != Visibility.Visible)
+        {
+            RibbonCommands.Children.Add(new Border { Width = 1, Margin = new Thickness(8, 6, 8, 6), Background = (Brush)FindResource("MkrBorder") });
+            RibbonCommands.Children.Add(Command("\uE740", _focusChart ? "Réduire" : "Agrandir", "Donner tout l'espace au graphique (masque le panneau de valeurs et le tableau)", () => { ToggleChartFocus(); BuildRibbon(); }));
+            RibbonCommands.Children.Add(Command("\uE71E", "Vue complète", "Revenir à l'horizon complet du graphique (double-clic ou Origine)", () => Chart.ResetView()));
+            RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
+            RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
+        }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+    }
+
+    // ---------- step views hosted in the workspace ----------
+    private string? _hostKey;
+    private IStepView? _hosted;
+
+    /// <summary>Releases the hosted view (cancels its pending calculations) and forgets it so that the next evaluation rebuilds it.</summary>
+    private void ReleaseStepHost()
+    {
+        _hosted?.Cancel();
+        _hosted = null;
+        _hostKey = null;
+        StepHost.Child = null;
+        StepHost.Visibility = Visibility.Collapsed;
+    }
+
+    private static TextBlock Placeholder(string text) => new()
+    {
+        Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(24, 20, 24, 0), FontSize = 15
+    };
+
+    /// <summary>
+    /// Shows the step view belonging to the selected tab inside the workspace: the guided tuning (strategy) and the closed-loop simulation. The view is
+    /// rebuilt only when the tab, the study or the tuning changes, so the user's inputs survive redraws. A closed step says why instead.
+    /// </summary>
+    private void UpdateStepHost(IdentificationStudy? selected, bool open)
+    {
+        if (_workspace is null || (_tab != 5 && _tab != 8))
+        {
+            if (StepHost.Visibility == Visibility.Visible || _hosted is not null) ReleaseStepHost();
+            return;
+        }
+        PiStudy? tuning = null;
+        if (_tab == 8 && selected is not null)
+            tuning = _workspace.PiStudies(selected.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
+        var key = $"{_tab}|{selected?.Id}|{selected?.IsAcceptedForTuning}|{tuning?.Id}|{open}";
+        if (key == _hostKey) return;
+        ReleaseStepHost();
+        _hostKey = key;
+        StepHost.Visibility = Visibility.Visible;
+        if (!open || selected is null || !selected.IsAcceptedForTuning)
+        {
+            StepHost.Child = Placeholder(selected is null
+                ? "Aucune étude affichée. Identifiez le procédé (onglet Identification) puis faites accepter le modèle (onglet Validation)."
+                : "Le modèle affiché n'a pas été accepté à la validation indépendante : aucun réglage ni simulation n'est autorisé. Choisissez une étude acceptée ou refaites l'identification.");
+            return;
+        }
+        try
+        {
+            if (_tab == 5)
+            {
+                var view = new GuidedTuningView(_workspace, selected) { ShowClose = false };
+                _hosted = view;
+                StepHost.Child = view;
+            }
+            else if (tuning is null)
+                StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage (Calculer les réglages), puis revenez ici.");
+            else
+            {
+                var view = new SimulationView(_workspace, selected, tuning);
+                _hosted = view;
+                StepHost.Child = view;
+            }
+        }
+        catch (Exception error)
+        {
+            Trace.TraceError("step.host {0}", error.GetType().Name);
+            StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+        }
     }
 
     private void OpenWindow(Func<Window> create)

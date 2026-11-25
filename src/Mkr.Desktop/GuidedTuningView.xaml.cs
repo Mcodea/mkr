@@ -8,13 +8,19 @@ using Mkr.Core;
 namespace Mkr.Desktop;
 
 /// <summary>Guided tuning of an accepted model: robustness objective in, tuning or an explained refusal out.</summary>
-public partial class GuidedTuningWindow : Window
+public partial class GuidedTuningView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
     private readonly string _mvUnit, _pvUnit;
     private readonly double _noiseUpperBound;
     private readonly Func<string, double?, CancellationToken, Task<GuidedTuning>> _recommend;
     private readonly CancellationTokenSource _lifetime = new();
+
+    /// <summary>Raised by « Fermer »; the dialog host closes itself, the inline host has no use for the button (<see cref="ShowClose"/>).</summary>
+    public event EventHandler? CloseRequested;
+    public bool ShowClose { set => CloseButton.Visibility = value ? Visibility.Visible : Visibility.Collapsed; }
+    public void Cancel() => _lifetime.Cancel();
+    private void CloseView(object sender, RoutedEventArgs args) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
     public sealed class Row
     {
@@ -26,7 +32,7 @@ public partial class GuidedTuningWindow : Window
         public string Verdict { get; init; } = "";
     }
 
-    internal GuidedTuningWindow(IdentificationWorkspace workspace, IdentificationStudy model)
+    internal GuidedTuningView(IdentificationWorkspace workspace, IdentificationStudy model)
         : this(workspace, model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
             $"Modèle {model.Family} · K = {model.Result.Gain:G5} {model.PvUnit}/{model.MvUnit}" +
             (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
@@ -36,7 +42,7 @@ public partial class GuidedTuningWindow : Window
     }
 
     /// <summary>From an accepted ARX / OE study (ADR 0008): the first-order equivalent of the retained (1,1) model, delay quantised to the sampling grid.</summary>
-    internal GuidedTuningWindow(IdentificationWorkspace workspace, ArxStudy study)
+    internal GuidedTuningView(IdentificationWorkspace workspace, ArxStudy study)
         : this(workspace, study.MvUnit, study.PvUnit, 0,
             study.Result.Selected is { FirstOrder: { } f, Nk: var nk }
                 ? $"Modèle ARX / OE (1,1) · K = {f.Gain:G5} {study.PvUnit}/{study.MvUnit} · τ = {f.TauSeconds:G5} s · θ prudent = {nk * study.Result.SamplePeriodSeconds:G5} s (quantifié au pas de {study.Result.SamplePeriodSeconds:G3} s)"
@@ -45,7 +51,7 @@ public partial class GuidedTuningWindow : Window
     {
     }
 
-    private GuidedTuningWindow(IdentificationWorkspace workspace, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
+    private GuidedTuningView(IdentificationWorkspace workspace, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
         Func<string, double?, CancellationToken, Task<GuidedTuning>> recommend)
     {
         InitializeComponent();
@@ -56,7 +62,6 @@ public partial class GuidedTuningWindow : Window
         _recommend = recommend;
         ModelLine.Text = modelLine;
         ObjectiveChanged(this, null!);
-        Closed += (_, _) => _lifetime.Cancel();
     }
 
     private string ObjectiveTag => (Objective.SelectedItem as ComboBoxItem)?.Tag as string ?? DesignObjectives.Balanced;

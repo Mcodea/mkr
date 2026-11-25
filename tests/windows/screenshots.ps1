@@ -243,13 +243,16 @@ try {
         $step6 = Find $main $id 'Step6'
         $step6.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 500
-        try { Press $main 'Réglage guidé' } catch { }
-        $guided = Find $root $name 'MKR — Réglage guidé'
-        try { Press $guided 'Calculer le réglage guidé' } catch { }
-        $null = Wait-Name $guided 'Status' '*.'
+        # single window: the guided tuning is shown inside the study workspace (no dialog)
+        $null = Find $main $id 'Objective'
+        try { Press $main 'Calculer le réglage guidé' } catch { }
+        $null = Wait-Name $main 'Status' '*.'
         Start-Sleep -Milliseconds 800
-        Capture $guided '14-reglage-guide'
-        Close-Window $guided
+        Capture $main '14-reglage-guide'
+        $step9 = Find $main $id 'Step9'
+        $step9.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 1200
+        Capture $main '15-simulation-integree'
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"

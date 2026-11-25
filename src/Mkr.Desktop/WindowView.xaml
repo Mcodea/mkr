@@ -251,6 +251,8 @@
                         AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
                     <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                 </Grid>
+                <!-- Contenu de l'étape affiché dans la fenêtre (réglage guidé, simulation…) : recouvre le graphique quand l'étape a sa propre vue -->
+                <Border x:Name="StepHost" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
             </Grid>
             <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
                 <Grid Margin="10,6,10,6">

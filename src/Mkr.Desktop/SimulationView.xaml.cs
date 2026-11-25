@@ -10,15 +10,17 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-public partial class SimulationWindow : Window
+public partial class SimulationView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
     private readonly IdentificationStudy _model;
     private readonly PiStudy _tuning;
     private readonly CancellationTokenSource _lifetime = new();
+
+    public void Cancel() { _lifetime.Cancel(); _lifetime.Dispose(); }
     private PiSimulationStudy? _shown;
 
-    internal SimulationWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
+    internal SimulationView(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
         _workspace = workspace;
         _model = model;
@@ -32,7 +34,6 @@ public partial class SimulationWindow : Window
         Saved.ItemsSource = _workspace.Simulations(_tuning.Id);
         if (Saved.Items.Count > 0)
             Saved.SelectedIndex = 0;
-        Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
     private bool TryReadScenario(out PiScenario scenario)
@@ -99,7 +100,7 @@ public partial class SimulationWindow : Window
         try
         {
             new PidPrototypeWindow(_workspace, _model, _tuning, scenario)
-            { Owner = this }.ShowDialog();
+            { Owner = Window.GetWindow(this) }.ShowDialog();
         }
         catch (Exception error)
         {
@@ -339,7 +340,7 @@ public partial class SimulationWindow : Window
     {
         if (_shown is not { } simulation) return;
         var dialog = new SaveFileDialog { Title = "Exporter la fiche enregistrée", FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try
         {
             _workspace.ExportSheet(dialog.FileName, _model, _tuning, simulation);
@@ -357,7 +358,7 @@ public partial class SimulationWindow : Window
         if (_shown is not { } simulation)
             return;
         var dialog = new SaveFileDialog { Title = "Exporter les séries enregistrées", FileName = $"MKR-{simulation.Id:N}.csv", Filter = "CSV (*.csv)|*.csv" };
-        if (dialog.ShowDialog(this) != true)
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         try
         {
