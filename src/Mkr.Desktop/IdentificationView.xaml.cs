@@ -8,17 +8,21 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-public partial class IdentificationWindow : Window
+public partial class IdentificationView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
     private readonly CancellationTokenSource _lifetime = new();
+
+    /// <summary>Raised when a study or a tuning has been saved, so that a hosting workspace can refresh its own table and journey.</summary>
+    public event EventHandler? StudiesChanged;
+    public void Cancel() { _lifetime.Cancel(); _lifetime.Dispose(); }
     private IdentificationStudy? _shown;
     private sealed record WindowChoice(Guid ImportId, StepColumns Columns, StepWindow Window);
     private WindowChoice? _trainingSelection;
     private WindowChoice? _validationSelection;
     private readonly IReadOnlyList<ImportSummary> _sources;
 
-    internal IdentificationWindow(IdentificationWorkspace workspace)
+    internal IdentificationView(IdentificationWorkspace workspace)
     {
         _workspace = workspace;
         InitializeComponent();
@@ -30,7 +34,6 @@ public partial class IdentificationWindow : Window
         StudyList.ItemsSource = _workspace.Studies();
         if (_sources.Count < 2)
             Message.Text = "Importez deux essais CSV dans ce projet.";
-        Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
     private void SelectTraining(object sender, SelectionChangedEventArgs args)
@@ -92,7 +95,7 @@ public partial class IdentificationWindow : Window
             Message.Text = $"{search.Candidates.Length} échelon(s) exploitable(s), {search.Rejected.Length} écarté(s).";
             if (search.ModeColumn is not null)
                 Message.Text += $" Colonne {search.ModeColumn} utilisée : {search.RowsNotInManual:N0} ligne(s) hors manuel écartée(s).";
-            var window = new StepSearchWindow(search, import.FileName, MvUnit.Text.Trim(), PvUnit.Text.Trim()) { Owner = this };
+            var window = new StepSearchWindow(search, import.FileName, MvUnit.Text.Trim(), PvUnit.Text.Trim()) { Owner = Window.GetWindow(this) };
             if (window.ShowDialog() != true || window.SelectedPair is not { } pair) return;
             // Both trials come from this recording: select it for validation too, then set the two explicit ranges.
             ValidationSource.SelectedItem = import;
@@ -138,7 +141,7 @@ public partial class IdentificationWindow : Window
             var window = new TrialPreviewWindow(preview, import.FileName,
                 string.IsNullOrWhiteSpace(MvUnit.Text) ? "unité de la sortie de commande non renseignée" : MvUnit.Text.Trim(),
                 string.IsNullOrWhiteSpace(PvUnit.Text) ? "unité de la mesure non renseignée" : PvUnit.Text.Trim())
-                { Owner = this };
+                { Owner = Window.GetWindow(this) };
             if (window.ShowDialog() == true && window.SelectedWindow is { } range)
             {
                 var choice = new WindowChoice(import.Id, columns, range);
@@ -210,7 +213,7 @@ public partial class IdentificationWindow : Window
             Message.Text = "Réglage impossible : le modèle ARX retenu est du second ordre ; MKR ne documente pas encore de réduction au premier ordre pour le régler. Aucun réglage n'est inventé.";
             return;
         }
-        try { new GuidedTuningWindow(_workspace, study) { Owner = this }.ShowDialog(); }
+        try { new GuidedTuningWindow(_workspace, study) { Owner = Window.GetWindow(this) }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
@@ -319,7 +322,7 @@ public partial class IdentificationWindow : Window
                     return;
                 }
                 lines.Add("Estimer et enregistrer ce modèle avec les critères et les résultats de comparaison ?");
-                if (MessageBox.Show(this, string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
+                if (MessageBox.Show(Window.GetWindow(this), string.Join(Environment.NewLine, lines), "Comparaison sur essai indépendant",
                     MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
                 family = Enum.Parse<ModelFamily>(comparison.Selected);
                 FamilyChoice.SelectedItem = family;
@@ -336,6 +339,7 @@ public partial class IdentificationWindow : Window
                 : "Étude enregistrée mais refusée à la validation indépendante : " +
                   string.Join(", ", study.Assessment!.Reasons.Select(ReasonText)) +
                   ". Aucun réglage ne peut en être déduit.";
+            StudiesChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -584,6 +588,7 @@ public partial class IdentificationWindow : Window
             PiList.ItemsSource = studies;
             PiList.SelectedItem = studies.First(item => item.Id == saved.Id);
             Message.Text = "Réglages théoriques PI enregistrés.";
+            StudiesChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -593,7 +598,7 @@ public partial class IdentificationWindow : Window
     private void OpenLoop(object sender, RoutedEventArgs args)
     {
         if (_shown is { Family: ModelFamily.FOPDT } model)
-            new OpenLoopWindow(_workspace, model) { Owner = this }.ShowDialog();
+            new OpenLoopWindow(_workspace, model) { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 
     private async void ShowPidffValues(object sender, RoutedEventArgs args)
@@ -615,7 +620,7 @@ public partial class IdentificationWindow : Window
                     ? conversion.Describe(label, model.MvUnit, model.PvUnit)
                     : $"{label} : {result.RefusalText}");
             }
-            new BlockValuesWindow("MKR — Valeurs du bloc PIDFF (non qualifiées)", string.Join("\n──────────\n\n", sections)) { Owner = this }.ShowDialog();
+            new BlockValuesWindow("MKR — Valeurs du bloc PIDFF (non qualifiées)", string.Join("\n──────────\n\n", sections)) { Owner = Window.GetWindow(this) }.ShowDialog();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -628,14 +633,14 @@ public partial class IdentificationWindow : Window
             Message.Text = "Sélectionnez un réglage PI enregistré.";
             return;
         }
-        try { new BlockTargetWindow(_workspace, model, tuning) { Owner = this }.ShowDialog(); }
+        try { new BlockTargetWindow(_workspace, model, tuning) { Owner = Window.GetWindow(this) }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
     private void OpenReview(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } model) return;
-        try { new ReviewWindow(_workspace, model.Id, model.Label) { Owner = this }.ShowDialog(); }
+        try { new ReviewWindow(_workspace, model.Id, model.Label) { Owner = Window.GetWindow(this) }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
@@ -657,7 +662,7 @@ public partial class IdentificationWindow : Window
                 mvTolerance, pvTolerance, _validationSelection?.Window, token);
             token.ThrowIfCancellationRequested();
             Message.Text = "Contrôle de dérive terminé.";
-            MessageBox.Show(this, report.Describe(MvUnit.Text.Trim(), PvUnit.Text.Trim()), "MKR — Contrôle de dérive du modèle");
+            MessageBox.Show(Window.GetWindow(this), report.Describe(MvUnit.Text.Trim(), PvUnit.Text.Trim()), "MKR — Contrôle de dérive du modèle");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -667,7 +672,7 @@ public partial class IdentificationWindow : Window
     private void OpenIntegrator(object sender, RoutedEventArgs args)
     {
         if (_shown is not { Family: ModelFamily.Integrateur } model) return;
-        try { new IntegratorWindow(_workspace, model) { Owner = this }.ShowDialog(); }
+        try { new IntegratorWindow(_workspace, model) { Owner = Window.GetWindow(this) }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
@@ -680,7 +685,7 @@ public partial class IdentificationWindow : Window
         }
         try
         {
-            new SimulationWindow(_workspace, model, tuning) { Owner = this }.ShowDialog();
+            new SimulationWindow(_workspace, model, tuning) { Owner = Window.GetWindow(this) }.ShowDialog();
         }
         catch (Exception error) { ShowError(error); }
     }
@@ -724,7 +729,7 @@ public partial class IdentificationWindow : Window
     private void ExportPlotImage(object sender, RoutedEventArgs args)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "diagnostic-modele.png" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { Chart.ExportPng(dialog.FileName); Message.Text = "Image exportée."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
@@ -733,7 +738,7 @@ public partial class IdentificationWindow : Window
     private void ExportPlotData(object sender, RoutedEventArgs args)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "diagnostic-modele.csv" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { Chart.ExportCsv(dialog.FileName); Message.Text = "Données exportées."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }

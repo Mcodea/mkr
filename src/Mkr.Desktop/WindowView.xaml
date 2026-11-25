@@ -96,6 +96,11 @@
                             ToolTip="MKR lit les données de l’automate et n’y écrit jamais." AutomationProperties.Name="Automate : lecture seule">
                         <TextBlock Text="Automate : lecture seule" Foreground="{DynamicResource MkrNavyText}" FontSize="12"/>
                     </Border>
+                    <ComboBox x:Name="ModeChoice" SelectionChanged="ModeChanged" Width="120" Margin="0,0,8,0" SelectedIndex="0" AutomationProperties.Name="Mode d'utilisation"
+                              ToolTip="Assisté : MKR indique la prochaine étape. Expert : aucun guidage, toutes les étapes à plat.">
+                        <ComboBoxItem Content="Assisté" Tag="Assisted"/>
+                        <ComboBoxItem Content="Expert" Tag="Expert"/>
+                    </ComboBox>
                     <ComboBox x:Name="ThemeChoice" SelectionChanged="ThemeChanged" Width="140" Margin="0,0,8,0" AutomationProperties.Name="Thème de l'interface">
                         <ComboBoxItem Content="Suivre Windows" Tag="System"/>
                         <ComboBoxItem Content="Clair" Tag="Light"/>
@@ -111,6 +116,13 @@
         <Border x:Name="RibbonHost" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
             <StackPanel>
                 <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,2,8,0"/>
+                <Border x:Name="AssistBanner" Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Padding="14,6" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="AssistText" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
+                        <Button x:Name="AssistGo" Grid.Column="1" Content="Y aller" Click="GoToNext" Margin="12,0,0,0" Padding="12,4" MinHeight="28" AutomationProperties.Name="Aller à la prochaine étape"/>
+                    </Grid>
+                </Border>
                 <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" MinHeight="78" Padding="8,4">
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

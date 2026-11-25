@@ -8,18 +8,23 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-public partial class CsvWindow : Window
+public partial class CsvView : UserControl, IStepView
 {
     private readonly CsvWorkspace _workspace;
-    private readonly IdentificationWorkspace _identification;
     private readonly CancellationTokenSource _lifetime = new();
 
-    internal CsvWindow(CsvWorkspace workspace, IdentificationWorkspace identification)
+    /// <summary>The « Identification… » button: the dialog host opens the identification dialog, the workspace goes to the identification tab.</summary>
+    public event EventHandler? IdentificationRequested;
+
+    /// <summary>An import, an acquisition or the process description was saved: a hosting workspace refreshes its journey.</summary>
+    public event EventHandler? DataChanged;
+    public void Cancel() { _lifetime.Cancel(); _lifetime.Dispose(); }
+    public void ShowLoopDescription() { if (Tabs.Items.Count > 1) Tabs.SelectedIndex = 1; }
+
+    internal CsvView(CsvWorkspace workspace)
     {
         InitializeComponent();
         _workspace = workspace;
-        _identification = identification;
-        Title = $"MKR — {workspace.ProjectName}";
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
         TimeFormat.Items.Add(new ComboBoxItem { Content = "ISO 8601 avec décalage (Z ou +hh:mm)", Tag = "" });
         foreach (var (pattern, label) in CsvFormat.Patterns)
@@ -38,14 +43,13 @@ public partial class CsvWindow : Window
         Description.Text = brief.Description;
         Imports.ItemsSource = workspace.List();
         StatusText.Text = "Choisissez un CSV ou ouvrez un import enregistré.";
-        Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
-    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this, _workspace.ReadLoopBrief);
+    private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(Window.GetWindow(this), _workspace.ReadLoopBrief);
 
     private void OpenAcquisition(object sender, RoutedEventArgs args)
     {
-        var window = new AcquisitionWindow(_workspace) { Owner = this };
+        var window = new AcquisitionWindow(_workspace) { Owner = Window.GetWindow(this) };
         if (window.ShowDialog() == true && window.SavedImport is { } recorded)
         {
             Analyze.IsEnabled = false;
@@ -53,13 +57,14 @@ public partial class CsvWindow : Window
             Imports.SelectedItem = recorded.Summary;
             ShowImport(recorded);
             StatusText.Text = "Acquisition enregistrée dans le projet.";
+            DataChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     private async void ChooseCsv(object sender, RoutedEventArgs args)
     {
         var dialog = new OpenFileDialog { Filter = "Fichiers CSV (*.csv)|*.csv" };
-        if (dialog.ShowDialog(this) != true)
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         Analyze.IsEnabled = false;
         Preview.ItemsSource = null;
@@ -111,6 +116,7 @@ public partial class CsvWindow : Window
             ShowImport(import);
             Imports.ItemsSource = _workspace.List();
             StatusText.Text = "Import et rapport enregistrés.";
+            DataChanged?.Invoke(this, EventArgs.Empty);
         });
     }
 
@@ -146,7 +152,7 @@ public partial class CsvWindow : Window
                 Filter = "Fichiers CSV (*.csv)|*.csv",
                 OverwritePrompt = true
             };
-            if (dialog.ShowDialog(this) != true)
+            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
                 return;
             File.WriteAllBytes(dialog.FileName, import.Original);
             StatusText.Text = "Fichier original exporté.";
@@ -156,14 +162,13 @@ public partial class CsvWindow : Window
 
     private void OpenAudit(object sender, RoutedEventArgs args)
     {
-        try { new AuditWindow(_workspace) { Owner = this }.ShowDialog(); }
+        try { new AuditWindow(_workspace) { Owner = Window.GetWindow(this) }.ShowDialog(); }
         catch (Exception error) { ShowError(error); }
     }
 
     private void OpenIdentification(object sender, RoutedEventArgs args)
     {
-        try { new IdentificationWindow(_identification) { Owner = this }.ShowDialog(); }
-        catch (Exception error) { ShowError(error); }
+        IdentificationRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void SaveDescription(object sender, RoutedEventArgs args)
@@ -172,6 +177,7 @@ public partial class CsvWindow : Window
         {
             _workspace.SaveLoopBrief(new(LoopTag.Text, LoopControlledQuantity.Text, LoopOperatingPoint.Text, LoopObjective.Text, Description.Text));
             StatusText.Text = "Description enregistrée.";
+            DataChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception error) { ShowError(error); }
     }

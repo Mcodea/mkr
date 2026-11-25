@@ -49,6 +49,31 @@ public partial class WindowView : Window
         ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
     }
 
+    private bool _assisted = true;
+
+    private void ModeChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (ModeChoice.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
+        _assisted = tag == "Assisted";
+        UpdateAssistBanner();
+    }
+
+    /// <summary>Assisted mode names the next step the project can do; expert mode shows nothing of the kind.</summary>
+    private void UpdateAssistBanner()
+    {
+        if (AssistBanner is null) return;
+        var next = _assisted ? StudyJourney.NextStep(_steps) : null;
+        AssistBanner.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
+        if (next is null) return;
+        AssistText.Text = $"Mode assisté · prochaine étape : {next.Number}. {next.Title}. {next.Detail}";
+        AssistGo.IsEnabled = _tab != next.Number - 1;
+    }
+
+    private void GoToNext(object sender, RoutedEventArgs args)
+    {
+        if (StudyJourney.NextStep(_steps) is { } next) SelectTab(next.Number - 1);
+    }
+
     private void ThemeChanged(object sender, SelectionChangedEventArgs args)
     {
         if (ThemeChoice.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice) && choice != ThemeService.Choice)
@@ -116,12 +141,12 @@ public partial class WindowView : Window
     private static string StateGlyph(StepState state) => state switch { StepState.Done => "", StepState.Ready => "", _ => "" };
     private static string StateName(StepState state) => state switch { StepState.Done => "terminée", StepState.Ready => "disponible", _ => "fermée" };
 
-    private void LoadStudy()
+    private void LoadStudy(bool keepIdentification = false)
     {
         if (_project is null) return;
         try
         {
-            ReleaseStepHost();
+            ReleaseStepHost(keepIdentification);
             _csv = new CsvWorkspace(_project, _store, _engine);
             _workspace = _createIdentification(_project);
             var brief = _csv.ReadLoopBrief();
@@ -202,29 +227,21 @@ public partial class WindowView : Window
         if (_steps.Count == 0) return;
         var step = _steps[_tab];
         var open = step.State != StepState.Blocked;
-        const string inIdentification = "S'ouvre dans la fenêtre Identification et réglage. ";
         var selected = (StudyGrid.SelectedItem as StudyRow)?.Study;
         switch (_tab)
         {
             case 0:
                 RibbonCommands.Children.Add(Command("", "Accueil", "Retourner à la liste des projets", LeaveStudy));
-                RibbonCommands.Children.Add(Command("", "Description de la boucle", "Repère, grandeur réglée, point de fonctionnement, objectif", () => OpenProject(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("", "Description de la boucle", "Repère, grandeur réglée, point de fonctionnement, objectif", () => GoToDescription()));
                 RibbonCommands.Children.Add(Command("", "Journal d'audit", "Journal chaîné des actions du projet", OpenAudit));
                 break;
             case 1:
-                RibbonCommands.Children.Add(Command("", "Importer un CSV", "Importer un fichier ou acquérir en lecture seule depuis l'automate", () => OpenProject(this, new RoutedEventArgs())));
-                RibbonCommands.Children.Add(Command("", "Acquisition automate", "Lecture seule Modbus TCP / S7comm", () => OpenProject(this, new RoutedEventArgs())));
-                break;
+                break;                      // shown in the workspace itself: the data and process view (UpdateStepHost)
             case 2:
-                RibbonCommands.Children.Add(Command("", "Rechercher des essais", inIdentification, OpenIdentification, open));
-                RibbonCommands.Children.Add(Command("", "Courbes brutes", inIdentification, OpenIdentification, open));
-                break;
             case 3:
-                RibbonCommands.Children.Add(Command("", "Identifier le procédé", inIdentification, OpenIdentification, open));
-                break;
+                break;                      // shown in the workspace itself: the identification view (UpdateStepHost)
             case 4:
                 RibbonCommands.Children.Add(Command("", "Revue de l'étude", "Statut de revue (calculé, vérifié, approuvé) avec quatre yeux", OpenReview, selected is not null));
-                RibbonCommands.Children.Add(Command("", "Contrôle de dérive", inIdentification, OpenIdentification, open));
                 break;
             case 5:
                 break;                      // the guided tuning is shown in the workspace itself (UpdateStepHost)
@@ -233,7 +250,6 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("\uE8C8", "Valeurs du bloc", "Valeurs documentaires du bloc choisi, toujours non qualifiées. Demande un réglage PI enregistré.", () => OpenWithTuning(tuning => new BlockTargetWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 break;
             case 7:
-                RibbonCommands.Children.Add(Command("\uE8EF", "Calculer les réglages", inIdentification, OpenIdentification, open));
                 if (selected is { Family: ModelFamily.Integrateur })
                     RibbonCommands.Children.Add(Command("\uE9D2", "Réglage intégrateur", "Règle SIMC des procédés intégrateurs", () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
                 break;
@@ -255,6 +271,7 @@ public partial class WindowView : Window
             RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
         }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+        UpdateAssistBanner();
     }
 
     // ---------- step views hosted in the workspace ----------
@@ -262,11 +279,13 @@ public partial class WindowView : Window
     private IStepView? _hosted;
 
     /// <summary>Releases the hosted view (cancels its pending calculations) and forgets it so that the next evaluation rebuilds it.</summary>
-    private void ReleaseStepHost()
+    private void ReleaseStepHost(bool keepIdentification = false)
     {
         _hosted?.Cancel();
         _hosted = null;
         _hostKey = null;
+        if (!keepIdentification && _identification is not null) { _identification.Cancel(); _identification = null; }
+        if (!keepIdentification && _data is not null) { _data.Cancel(); _data = null; }
         StepHost.Child = null;
         StepHost.Visibility = Visibility.Collapsed;
     }
@@ -276,23 +295,83 @@ public partial class WindowView : Window
         Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(24, 20, 24, 0), FontSize = 15
     };
 
+    private IdentificationView? _identification;
+    private CsvView? _data;
+
+    private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 4 or 7;
+
     /// <summary>
-    /// Shows the step view belonging to the selected tab inside the workspace: the guided tuning (strategy) and the closed-loop simulation. The view is
-    /// rebuilt only when the tab, the study or the tuning changes, so the user's inputs survive redraws. A closed step says why instead.
+    /// Shows the step view belonging to the selected tab inside the workspace: the identification view (signals, identification, validation and PI tunings,
+    /// one instance shared by those tabs so that the user's inputs survive), the guided tuning (strategy) and the closed-loop simulation. Guided tuning and
+    /// simulation are rebuilt only when the tab, the study or the tuning changes. A closed step says why instead.
     /// </summary>
     private void UpdateStepHost(IdentificationStudy? selected, bool open)
     {
-        if (_workspace is null || (_tab != 5 && _tab != 8))
+        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 5 or 8))
         {
-            if (StepHost.Visibility == Visibility.Visible || _hosted is not null) ReleaseStepHost();
+            if (StepHost.Visibility == Visibility.Visible) { StepHost.Child = null; StepHost.Visibility = Visibility.Collapsed; }
+            _hosted?.Cancel();
+            _hosted = null;
+            _hostKey = null;
+            return;
+        }
+        if (_tab == 1)
+        {
+            _hosted?.Cancel();
+            _hosted = null;
+            _hostKey = "data";
+            StepHost.Visibility = Visibility.Visible;
+            try
+            {
+                if (_data is null)
+                {
+                    _data = new CsvView(_csv!);
+                    _data.IdentificationRequested += (_, _) => SelectTab(3);
+                    _data.DataChanged += (_, _) => RefreshAfterChange();
+                }
+                if (!ReferenceEquals(StepHost.Child, _data)) StepHost.Child = _data;
+            }
+            catch (Exception error)
+            {
+                Trace.TraceError("step.host {0}", error.GetType().Name);
+                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+            }
+            return;
+        }
+        if (IsIdentificationTab(_tab))
+        {
+            _hosted?.Cancel();
+            _hosted = null;
+            _hostKey = "identification";
+            StepHost.Visibility = Visibility.Visible;
+            if (!open)
+            {
+                StepHost.Child = Placeholder(_steps[_tab].Detail);
+                return;
+            }
+            try
+            {
+                if (_identification is null)
+                {
+                    _identification = new IdentificationView(_workspace);
+                    _identification.StudiesChanged += (_, _) => RefreshAfterChange();
+                }
+                if (!ReferenceEquals(StepHost.Child, _identification)) StepHost.Child = _identification;
+            }
+            catch (Exception error)
+            {
+                Trace.TraceError("step.host {0}", error.GetType().Name);
+                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+            }
             return;
         }
         PiStudy? tuning = null;
         if (_tab == 8 && selected is not null)
             tuning = _workspace.PiStudies(selected.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
         var key = $"{_tab}|{selected?.Id}|{selected?.IsAcceptedForTuning}|{tuning?.Id}|{open}";
-        if (key == _hostKey) return;
-        ReleaseStepHost();
+        if (key == _hostKey && ReferenceEquals(StepHost.Child, _hosted)) return;
+        _hosted?.Cancel();
+        _hosted = null;
         _hostKey = key;
         StepHost.Visibility = Visibility.Visible;
         if (!open || selected is null || !selected.IsAcceptedForTuning)
@@ -311,7 +390,7 @@ public partial class WindowView : Window
                 StepHost.Child = view;
             }
             else if (tuning is null)
-                StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage (Calculer les réglages), puis revenez ici.");
+                StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage, puis revenez ici.");
             else
             {
                 var view = new SimulationView(_workspace, selected, tuning);
@@ -324,6 +403,25 @@ public partial class WindowView : Window
             Trace.TraceError("step.host {0}", error.GetType().Name);
             StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
         }
+    }
+
+    private void SelectTab(int index)
+    {
+        if (index >= 0 && index < _tabs.Count) _tabs[index].IsChecked = true;
+    }
+
+    /// <summary>« Description de la boucle »: the process description lives in the data view (Procédé tab).</summary>
+    private void GoToDescription()
+    {
+        SelectTab(1);
+        _data?.ShowLoopDescription();
+    }
+
+    /// <summary>A study or a tuning was saved from a hosted view: refresh the table, the journey and the inspector without losing the view.</summary>
+    private void RefreshAfterChange()
+    {
+        if (_project is null) return;
+        LoadStudy(keepIdentification: true);
     }
 
     private void OpenWindow(Func<Window> create)
@@ -356,18 +454,6 @@ public partial class WindowView : Window
         if (_csv is null) return;
         try { new AuditWindow(_csv) { Owner = this }.ShowDialog(); }
         catch (Exception error) { Trace.TraceError("audit.open {0}", error.GetType().Name); }
-    }
-
-    private void OpenIdentification()
-    {
-        if (_workspace is null) return;
-        try { new IdentificationWindow(_workspace) { Owner = this }.ShowDialog(); }
-        catch (Exception error)
-        {
-            Trace.TraceError("identification.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible d’ouvrir l’identification. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        LoadStudy();
     }
 
     private void OpenReview()
