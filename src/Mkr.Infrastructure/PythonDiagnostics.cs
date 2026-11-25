@@ -290,6 +290,40 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
+    public Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, CancellationToken token) =>
+        Guard(() => RecommendTuningAsyncCore(family, model, objective, token));
+
+    private async Task<GuidedTuning> RecommendTuningAsyncCore(ModelFamily family, IdentificationResult model, string objective, CancellationToken token)
+    {
+        if (family is not (ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur))
+            throw new InvalidOperationException("Le réglage guidé couvre les modèles FOPDT, SOPDT et intégrateur.");
+        var limit = DesignObjectives.MaximumPeakSensitivity(objective);
+        // Mean sampling period of the identification data: the loop adds half of it to the delay (Skogestad 2003).
+        var sample = model.Training.HorizonSeconds / Math.Max(model.Training.Samples - 1, 1);
+        object? errors = family == ModelFamily.FOPDT && model.StandardErrors is { } e
+            ? new { gain = e.Gain, tauSeconds = e.TauSeconds, delaySeconds = e.DelaySeconds } : null;
+        if (family == ModelFamily.Integrateur && model.StandardErrors is null) errors = null;
+        var payload = new
+        {
+            family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
+            tauSeconds = family == ModelFamily.Integrateur ? (double?)null : model.TauSeconds,
+            delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
+            sampleSeconds = sample, standardErrors = errors, objective
+        };
+        var (json, _) = await CallAsync("recommend_tuning", payload, token).ConfigureAwait(false);
+        var tuning = json.Deserialize<GuidedTuning>(JsonOptions);
+        static bool Finite(TuningCandidate? c) => c is { Controller: { } k } && double.IsFinite(k.Kp) && k.Kp != 0 && double.IsFinite(k.TiSeconds) && k.TiSeconds > 0 &&
+            double.IsFinite(k.TdSeconds) && k.TdSeconds >= 0 && double.IsFinite(c.ResponseSeconds) && c.ResponseSeconds > 0 && double.IsFinite(c.WorstPeakSensitivity);
+        // Contract: a recommendation always carries a finite, correctly signed, unqualified controller that respects the objective; a refusal carries reasons.
+        if (tuning is null || string.IsNullOrWhiteSpace(tuning.AlgorithmVersion) || tuning.Objective != objective || Math.Abs(tuning.MaximumPeakSensitivity - limit) > 1e-9 ||
+            tuning.Decision is not ("recommended" or "refused") ||
+            (tuning.IsRecommended && (!Finite(tuning.Recommendation) || Math.Sign(tuning.Recommendation!.Controller.Kp) != Math.Sign(model.Gain) ||
+                tuning.Recommendation.WorstPeakSensitivity > limit + 1e-9 || !tuning.Recommendation.StableOnAllCorners || tuning.Qualification != "model_based_unqualified")) ||
+            (!tuning.IsRecommended && (tuning.Recommendation is not null || tuning.Reasons is not { Length: > 0 } || tuning.Actions is not { Length: > 0 })))
+            throw new InvalidDataException("Réglage guidé incompatible avec le contrat.");
+        return tuning;
+    }
+
     public Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token) =>
         Guard(() => CalculateIntegratorPiAsyncCore(slope, delaySeconds, responseSeconds, token));
 

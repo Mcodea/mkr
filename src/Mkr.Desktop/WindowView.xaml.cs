@@ -224,7 +224,7 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("", "Contrôle de dérive", inIdentification, OpenIdentification, open));
                 break;
             case 5:
-                RibbonCommands.Children.Add(Command("\uE9F5", "Choisir IMC ou SIMC", inIdentification, OpenIdentification, open));
+                RibbonCommands.Children.Add(Command("\uE9F5", "Réglage guidé", "Objectif de robustesse, réglage le plus rapide qui le respecte sur toute l'incertitude du modèle, ou refus expliqué", () => OpenWindow(() => new GuidedTuningWindow(_workspace!, selected!)), open && selected is not null));
                 break;
             case 6:
                 RibbonCommands.Children.Add(Command("\uE8F1", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));

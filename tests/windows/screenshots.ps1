@@ -238,6 +238,17 @@ try {
         Press-Retry $main 'Agrandir'
         Start-Sleep -Milliseconds 700
         Capture $main '10c-graphique-agrandi'
+        Press-Retry $main 'Réduire'
+        $step6 = Find $main $id 'Step6'
+        $step6.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 500
+        try { Press $main 'Réglage guidé' } catch { }
+        $guided = Find $root $name 'MKR — Réglage guidé'
+        try { Press $guided 'Calculer le réglage guidé' } catch { }
+        $null = Wait-Name $guided 'Status' '*.'
+        Start-Sleep -Milliseconds 800
+        Capture $guided '14-reglage-guide'
+        Close-Window $guided
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
