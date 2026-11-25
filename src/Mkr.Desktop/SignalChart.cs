@@ -69,6 +69,8 @@ internal sealed class SignalChart : FrameworkElement
 
     public string XLabel { get; set; } = "Temps (s)";
     public bool SelectionEnabled { get; set; }
+    /// <summary>Per-track value boxes next to the cursor. Off where a compact readout elsewhere on screen already gives the values (no stacked boxes).</summary>
+    public bool ShowValueBoxes { get; set; } = true;
     public bool HasData => _tracks.Any(t => t.Series.Any(s => s.X.Length > 1));
     public (double From, double To) View => (_lo, _hi);
 
@@ -295,7 +297,7 @@ internal sealed class SignalChart : FrameworkElement
                     var i = ChartMath.NearestIndex(s.X, c);
                     if (i >= 0) lines.Add($"{s.Name} : {s.Y[i].ToString("G6", CultureInfo.CurrentCulture)} {_tracks[t].Unit}".TrimEnd());
                 }
-                if (lines.Count == 0) continue;
+                if (lines.Count == 0 || !ShowValueBoxes) continue;
                 var text = Text($"t = {c.ToString("G6", CultureInfo.CurrentCulture)} s\n" + string.Join("\n", lines), 11, Theme("MkrText"));
                 var left = px + 10 + text.Width + 12 > LeftMargin + PlotWidth ? px - 10 - text.Width - 12 : px + 10;
                 var box = new Rect(left, TrackTop(t) + 4, text.Width + 12, text.Height + 8);

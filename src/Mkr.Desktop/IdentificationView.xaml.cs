@@ -26,6 +26,7 @@ public partial class IdentificationView : UserControl, IStepView
     {
         _workspace = workspace;
         InitializeComponent();
+        Chart.RangeSelected += (from, to) => { _window = from < to ? (from, to) : (to, from); DrawPlot(); };
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         FamilyChoice.ItemsSource = Enum.GetValues<ModelFamily>();
         FamilyChoice.SelectedItem = ModelFamily.FOPDT;
@@ -377,6 +378,7 @@ public partial class IdentificationView : UserControl, IStepView
     private void ShowStudy(object sender, SelectionChangedEventArgs args)
     {
         _shown = StudyList.SelectedItem as IdentificationStudy;
+        _window = null;
         // Tuning panels exist only for a model accepted on its independent validation trial (NC-02).
         bool tunable = _shown?.IsAcceptedForTuning == true;
         OpenLoopButton.Visibility = _shown?.Family == ModelFamily.FOPDT ? Visibility.Visible : Visibility.Collapsed;
@@ -506,8 +508,8 @@ public partial class IdentificationView : UserControl, IStepView
         VerdictMetrics.Children.Add(Tile("Retard θ", $"{result.DelaySeconds:G4} s"));
         if (study.Assessment is { } decision && result.Validation is { } validation)
             VerdictMetrics.Children.Add(Tile("Erreur de validation", $"{validation.Rmse:G3} / {decision.Criteria.MaximumRmse:G3} {study.PvUnit}"));
-        VerdictCard.Visibility = Visibility.Visible;
-        VerdictCard.BringIntoView();                      // the decision is the first thing to read after choosing a study
+        VerdictMetrics.Visibility = Visibility.Collapsed;          // the parameter table already lists these values
+        VerdictCard.Visibility = Visibility.Visible;                      // the decision is the first thing to read after choosing a study
     }
 
     private void ChangeResponseProfile(object sender, SelectionChangedEventArgs args) => UpdateResponseTarget();
@@ -757,6 +759,10 @@ public partial class IdentificationView : UserControl, IStepView
         if (TrialsPanel.IsExpanded) TrialsPanel.BringIntoView();
     }
 
+    private (double From, double To)? _window;
+
+    private void ClearWindow(object sender, RoutedEventArgs args) { _window = null; DrawPlot(); }
+
     private bool _chartOnly;
 
     private void ToggleChartOnly(object sender, RoutedEventArgs args)
@@ -785,10 +791,12 @@ public partial class IdentificationView : UserControl, IStepView
     }
 
     /// <summary>FIT = 100 · (1 − ‖y − ŷ‖ / ‖y − mean(y)‖), the normalised-RMSE fit of the plotted trial (a display metric, not an acceptance criterion).</summary>
-    private static double? FitPercent(FitDiagnostics? fit)
+    private static double? FitPercent(FitDiagnostics? fit) => FitPercent(fit?.Points);
+
+    private static double? FitPercent(FitPoint[]? all)
     {
-        if (fit is null) return null;
-        var points = fit.Points.Where(p => double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+        if (all is null) return null;
+        var points = all.Where(p => double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
         if (points.Length < 3) return null;
         var mean = points.Average(p => p.Observed);
         var denominator = Math.Sqrt(points.Sum(p => (p.Observed - mean) * (p.Observed - mean)));
@@ -796,10 +804,10 @@ public partial class IdentificationView : UserControl, IStepView
         return 100 * (1 - Math.Sqrt(points.Sum(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted))) / denominator);
     }
 
-    private static double? Iae(FitDiagnostics? fit)
+    private static double? Iae(FitPoint[]? all)
     {
-        if (fit is null) return null;
-        var points = fit.Points.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+        if (all is null) return null;
+        var points = all.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
         if (points.Length < 2) return null;
         var total = 0.0;
         for (var i = 1; i < points.Length; i++)
@@ -850,12 +858,26 @@ public partial class IdentificationView : UserControl, IStepView
 
         var shown = DisplayedDiagnostics();
         var label = PlotSource.SelectedIndex == 0 ? "estimation" : "validation";
-        if (FitPercent(shown) is { } fitValue) QualityTable.Children.Add(KeyValue($"FIT ({label}, NRMSE)", fitValue.ToString("F1", CultureInfo.CurrentCulture), "%"));
         if (shown is not null)
         {
-            QualityTable.Children.Add(KeyValue($"RMSE ({label})", shown.Rmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
-            if (shown.RSquared is { } r2) QualityTable.Children.Add(KeyValue($"R² ({label})", r2.ToString("F3", CultureInfo.CurrentCulture)));
-            if (Iae(shown) is { } iae) QualityTable.Children.Add(KeyValue($"IAE ({label})", iae.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit + "·s"));
+            // Without a selected A–B range the figures cover the whole displayed trial; with one, only the points inside it (display only: nothing is re-estimated).
+            var pts = shown.Points;
+            if (_window is { } w)
+            {
+                pts = pts.Where(p => p.Seconds >= w.From && p.Seconds <= w.To).ToArray();
+                label += " A–B";
+            }
+            if (FitPercent(pts) is { } fitValue) QualityTable.Children.Add(KeyValue($"FIT ({label}, NRMSE)", fitValue.ToString("F1", CultureInfo.CurrentCulture), "%"));
+            var finite = pts.Where(p => double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+            if (finite.Length > 0)
+            {
+                var rmse = Math.Sqrt(finite.Average(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted)));
+                QualityTable.Children.Add(KeyValue($"RMSE ({label})", rmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
+                var mean = finite.Average(p => p.Observed);
+                var total = finite.Sum(p => (p.Observed - mean) * (p.Observed - mean));
+                if (total > 0) QualityTable.Children.Add(KeyValue($"R² ({label})", (1 - finite.Sum(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted)) / total).ToString("F3", CultureInfo.CurrentCulture)));
+            }
+            if (Iae(pts) is { } iae) QualityTable.Children.Add(KeyValue($"IAE ({label})", iae.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit + "·s"));
         }
         if (study.Assessment is { } decision)
             QualityTable.Children.Add(KeyValue("Seuil de RMSE (validation)", decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
@@ -907,12 +929,18 @@ public partial class IdentificationView : UserControl, IStepView
                 new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())
             }) { Weight = 1 }
         });
-        // A and B bound the segment of this trial that the fit covers; the shading is that segment.
-        if (seconds.Length > 1)
+        // A and B are the bounds the user selected by dragging on the chart (left button); the shading is that range. Nothing is shown until then.
+        if (_window is { } range)
         {
-            Chart.SetEvents(new[] { (first, "A"), (horizon, "B") });
-            Chart.SetHighlight(first, horizon);
-            PlotLegend.Text += $" · A–B : fenêtre d'ajustement, de {first:G4} s à {horizon:G4} s après l'échelon.";
+            Chart.SetEvents(new[] { (range.From, "A"), (range.To, "B") });
+            Chart.SetHighlight(range.From, range.To);
+            PlotLegend.Text += $" · plage A–B : de {range.From:G4} s à {range.To:G4} s (indicateurs recalculés sur cette plage, sans nouvelle estimation).";
+        }
+        else
+        {
+            Chart.SetEvents(Array.Empty<(double, string)>());
+            Chart.SetHighlight(null, null);
+            PlotLegend.Text += " · glissez sur le graphique pour choisir une plage A–B.";
         }
         RefreshSidePanels();
     }
