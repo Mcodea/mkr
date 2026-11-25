@@ -48,7 +48,7 @@ class ReferenceCampaign(unittest.TestCase):
                                tauSeconds=None if family == "Integrateur" else float(report["tauSeconds"]),
                                delaySeconds=float(interval[1] if interval else report["delaySeconds"]),
                                secondTauSeconds=float(report["secondTauSeconds"]) if family == "SOPDT" else None,
-                               sampleSeconds=cadence, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None,
+                               sampleSeconds=cadence, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=False,
                                # the application's contract: gain, slow time constant and delay errors; no time constant for the integrator
                                standardErrors=None if not report.get("standardErrors") else dict(
                                    gain=float(report["standardErrors"]["gain"]),

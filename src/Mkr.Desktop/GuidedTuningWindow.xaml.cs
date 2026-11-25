@@ -110,6 +110,15 @@ public partial class GuidedTuningWindow : Window
             if (tuning.ClosestTuning is { } near)
                 text.AppendLine($"\nLe plus proche essayé : τc = {F(near.ResponseSeconds)} s, sensibilité au pire cas {F(near.WorstPeakSensitivity)} (limite {F(tuning.MaximumPeakSensitivity)}). Il n'est pas recommandé.");
         }
+        if (tuning.Optimized is { } opt)
+        {
+            text.AppendLine();
+            text.AppendLine("Réglage optimisé pour le rejet de perturbation (gain intégral maximal sous la même contrainte de robustesse) :");
+            text.AppendLine($"  Kp = {F(opt.Controller.Kp)} {mv}/{pv}   Ti = {F(opt.Controller.TiSeconds)} s   Ki = {F(opt.IntegralGain)}");
+            text.AppendLine($"  Gain intégral ×{opt.IntegralGainRatio:G3} par rapport au réglage ci-dessus : l'erreur cumulée après une perturbation de charge diminue d'autant.");
+            text.AppendLine($"  Sensibilité au pire cas {F(opt.WorstPeakSensitivity)} · dépassement nominal sur un échelon de consigne : {opt.NominalOvershootPercent:G3} %.");
+            text.AppendLine("  Compromis : intégrale plus vive, donc davantage de dépassement en suivi de consigne.");
+        }
         if (tuning.Warnings is { Length: > 0 })
         {
             text.AppendLine();
@@ -141,6 +150,7 @@ public partial class GuidedTuningWindow : Window
         "uncertainty_not_quantified" => "incertitude des paramètres non quantifiée (erreurs-types indisponibles pour ce modèle).",
         "closed_loop_slower_than_the_process" => "la boucle fermée visée est plus lente que le procédé lui-même : l'incertitude impose beaucoup de marge.",
         "pid_second_pole_exceeds_delay" => "second pôle supérieur au retard : un PID est justifié (règle SIMC) ; la dérivée est filtrée (Tf = Td/10 par défaut, plage usuelle 2 à 20) et ce filtre fait partie de la boucle jugée.",
+        "optimisation_covers_pi_only" => "l'optimisation du gain intégral ne couvre pas le PID.",
         "second_pole_uncertainty_not_propagated" => "l'incertitude du second pôle n'est pas propagée (gain, constante lente et retard le sont).",
         "half_rule_second_pole_not_above_delay" => "second pôle non supérieur au retard : règle de la moitié, puis PI.",
         "first_order_model_pi_is_the_rule" => "modèle du premier ordre : le PI est la règle SIMC.",

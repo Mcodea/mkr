@@ -308,7 +308,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
             tauSeconds = family == ModelFamily.Integrateur ? (double?)null : model.TauSeconds,
             delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
-            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent
+            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true
         };
         var (json, _) = await CallAsync("recommend_tuning", payload, token).ConfigureAwait(false);
         var tuning = json.Deserialize<GuidedTuning>(JsonOptions);
@@ -321,6 +321,9 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
                 tuning.Recommendation.WorstPeakSensitivity > limit + 1e-9 || !tuning.Recommendation.StableOnAllCorners || tuning.Qualification != "model_based_unqualified")) ||
             (!tuning.IsRecommended && (tuning.Recommendation is not null || tuning.Reasons is not { Length: > 0 } || tuning.Actions is not { Length: > 0 })))
             throw new InvalidDataException("Réglage guidé incompatible avec le contrat.");
+        if (tuning.Optimized is { } o && (!double.IsFinite(o.Controller.Kp) || o.Controller.Kp == 0 || Math.Sign(o.Controller.Kp) != Math.Sign(model.Gain) || !(o.Controller.TiSeconds > 0) ||
+            !double.IsFinite(o.IntegralGain) || o.IntegralGain <= 0 || !(o.WorstPeakSensitivity <= limit + 1e-9) || !double.IsFinite(o.NominalOvershootPercent) || o.NominalOvershootPercent < 0))
+            throw new InvalidDataException("Réglage optimisé incompatible avec le contrat.");
         return tuning;
     }
 

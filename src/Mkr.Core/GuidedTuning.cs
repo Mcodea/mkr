@@ -7,6 +7,9 @@ public sealed record TuningController(string Structure, double Kp, double TiSeco
 public sealed record TuningCandidate(double ResponseSeconds, TuningController Controller, bool StableOnAllCorners, double WorstPeakSensitivity,
     string? WorstCase = null, double? MultipleOfEffectiveDelay = null);
 
+/// <summary>PI that maximises the integral gain (load-disturbance rejection) under the same sensitivity constraint on every corner.</summary>
+public sealed record OptimizedTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double NominalOvershootPercent, double IntegralGainRatio);
+
 /// <summary>
 /// Result of the guided tuning (engine/recommend.py). The user states a robustness objective, never a response time.
 /// <see cref="Decision"/> is "recommended" or "refused"; a refusal carries reasons and the actions that would allow a recommendation.
@@ -15,7 +18,7 @@ public sealed record GuidedTuning(string AlgorithmVersion, string Decision, stri
     string? Structure = null, TuningCandidate? Recommendation = null, double? UncertaintyCoverageSigma = null, bool UncertaintyQuantified = false,
     double EffectiveDelaySeconds = 0, double SamplePeriodSeconds = 0, TuningCandidate[]? Alternatives = null, string[]? Warnings = null,
     string[]? Reasons = null, string[]? Actions = null, string Qualification = "none", TuningCandidate? ClosestTuning = null, string[]? References = null,
-    double? DerivativeFilterRatio = null, double? ProcessVariationPercent = null)
+    double? DerivativeFilterRatio = null, double? ProcessVariationPercent = null, OptimizedTuning? Optimized = null)
 {
     public bool IsRecommended => Decision == "recommended";
 }

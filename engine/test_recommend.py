@@ -10,7 +10,7 @@ from recommend import COVERAGE, OBJECTIVES, calculate
 
 
 def request(**changes):
-    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, derivativeFilterRatio=None, processVariationPercent=None,
+    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, derivativeFilterRatio=None, processVariationPercent=None, optimise=False,
                 standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=1.0), objective="balanced")
     base.update(changes)
     return base
@@ -169,7 +169,7 @@ class Robustness(unittest.TestCase):
 
     def test_the_integrator_takes_the_process_variation_too(self):
         plain = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
-                               standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None))
+                               standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
         varied = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
                                 standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=30.0))
         self.assertIn("uncertainty_not_quantified", plain["warnings"])
@@ -180,6 +180,78 @@ class Robustness(unittest.TestCase):
         times = [calculate(request(objective=name))["recommendation"]["responseSeconds"] for name in ("robust", "balanced", "performance")]
         self.assertGreaterEqual(times[0], times[1])
         self.assertGreaterEqual(times[1], times[2])
+
+
+def worst_peak(family, plants, kp, ti, sampling):
+    """Independent worst-case sensitivity peak over the corner plants (written here, not the module's search)."""
+    peaks = []
+    for k, tau, delay in plants:
+        if family == "Integrateur":
+            w = np.logspace(-5, 2, 30000)
+            s = 1j * w
+            loop = kp * (1 + 1 / (ti * s)) * k * np.exp(-s * (delay + sampling)) / s
+            peaks.append(float(np.max(1 / np.abs(1 + loop))))
+        else:
+            peaks.append(sensitivity_peak(k, [tau], delay + sampling, kp, ti, 0.0))
+    return max(peaks)
+
+
+def settles(family, plants, kp, ti, sampling, horizon):
+    return max(closed_loop_settles(k, [] if family == "Integrateur" else [tau], delay + sampling, kp, ti, 0.0, horizon)[0] for k, tau, delay in plants)
+
+
+class Optimisation(unittest.TestCase):
+    CASES = (
+        ("FOPDT", dict(gain=2.0, tauSeconds=40.0, delaySeconds=10.0, standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=1.0)),
+         [(2.0 * g, 40.0 + t * 4.0, 10.0 + d * 2.0) for g in (0.95, 1.05) for t in (-1, 1) for d in (-1, 1)] + [(2.0, 40.0, 10.0)], 1.0, 2500.0),
+        ("Integrateur", dict(gain=0.02, tauSeconds=None, delaySeconds=5.0, standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3)),
+         [(0.02 + g * 0.002, 1.0, 5.0 + d * 0.6) for g in (-1, 1) for d in (-1, 1)] + [(0.02, 1.0, 5.0)], 1.0, 1500.0),
+    )
+
+    def run_case(self, family, kwargs):
+        return calculate(request(family=family, objective="balanced", optimise=True, **kwargs))
+
+    def test_the_optimum_respects_the_sensitivity_limit_on_the_corners_and_settles(self):
+        for family, kwargs, plants, sample, horizon in self.CASES:
+            with self.subTest(family=family):
+                result = self.run_case(family, kwargs)
+                opt = result["optimized"]
+                self.assertIsNotNone(opt)
+                kp, ti = abs(opt["controller"]["kp"]), opt["controller"]["tiSeconds"]
+                self.assertLessEqual(worst_peak(family, plants, kp, ti, 0.5 * sample), OBJECTIVES["balanced"] + 5e-3)
+                self.assertLess(settles(family, plants, kp, ti, 0.5 * sample, horizon), 0.02)
+
+    def test_the_optimum_is_at_least_as_good_as_the_rule_based_tuning_and_says_what_it_costs(self):
+        for family, kwargs, plants, sample, horizon in self.CASES:
+            with self.subTest(family=family):
+                result = self.run_case(family, kwargs)
+                rec, opt = result["recommendation"]["controller"], result["optimized"]
+                self.assertGreaterEqual(opt["integralGain"], abs(rec["kp"]) / rec["tiSeconds"] * 0.99)
+                self.assertGreaterEqual(opt["integralGainRatio"], 0.99)
+                # the cost is announced: the nominal set-point overshoot agrees with the independent time-domain simulation
+                kp, ti = abs(opt["controller"]["kp"]), opt["controller"]["tiSeconds"]
+                k, tau, delay = plants[-1]
+                _, peak = closed_loop_settles(k, [] if family == "Integrateur" else [tau], delay + 0.5 * sample, kp, ti, 0.0, horizon)
+                self.assertAlmostEqual(opt["nominalOvershootPercent"], max(0.0, peak * 100), delta=3.0)
+
+    def test_the_optimum_is_on_the_constraint_boundary(self):
+        for family, kwargs, plants, sample, horizon in self.CASES:
+            with self.subTest(family=family):
+                opt = self.run_case(family, kwargs)["optimized"]
+                kp, ti = abs(opt["controller"]["kp"]), opt["controller"]["tiSeconds"]
+                limit = OBJECTIVES["balanced"]
+                for scaled_kp, scaled_ti, label in ((kp * 1.04, ti, "more gain"), (kp, ti / 1.04, "shorter Ti")):
+                    violated = worst_peak(family, plants, scaled_kp, scaled_ti, 0.5 * sample) > limit or \
+                        settles(family, plants, scaled_kp, scaled_ti, 0.5 * sample, horizon) > 0.02
+                    self.assertTrue(violated, f"{label} must break the constraint if the integral gain is maximal")
+
+    def test_the_optimisation_is_off_by_default_and_only_for_pi(self):
+        self.assertIsNone(calculate(request())["optimized"])
+        pid = calculate(request(family="SOPDT", secondTauSeconds=15.0, optimise=True))
+        self.assertIsNone(pid["optimized"])
+        self.assertIn("optimisation_covers_pi_only", pid["warnings"])
+        with self.assertRaises(ValueError):
+            calculate(request(optimise="yes"))
 
 
 class Refusals(unittest.TestCase):
@@ -209,7 +281,7 @@ class Refusals(unittest.TestCase):
 
     def test_integrator_uncertainty_uses_slope_and_delay_corners(self):
         result = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
-                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced", derivativeFilterRatio=None, processVariationPercent=None))
+                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
         self.assertEqual(result["decision"], "recommended")
         self.assertTrue(result["uncertaintyQuantified"])
         self.assertLessEqual(result["recommendation"]["worstPeakSensitivity"], 1.7 + 1e-9)

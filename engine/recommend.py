@@ -90,7 +90,7 @@ def _is_stable(rows):
 
 def calculate(payload):
     required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective", "derivativeFilterRatio",
-                "processVariationPercent"}
+                "processVariationPercent", "optimise"}
     if not isinstance(payload, dict) or payload.keys() != required:
         raise ValueError("recommend_input")
     family, gain, tau, delay, second, sample = (payload[k] for k in ("family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds"))
@@ -99,6 +99,9 @@ def calculate(payload):
     if ratio is not None and (not _number(ratio) or not 2 <= ratio <= 100):
         raise ValueError("recommend_input")
     ratio = DEFAULT_FILTER_RATIO if ratio is None else float(ratio)
+    if type(payload["optimise"]) is not bool:
+        raise ValueError("recommend_input")
+    optimise = payload["optimise"]
     variation = payload["processVariationPercent"]
     if variation is not None and (not _number(variation) or not 0 < variation <= 50):
         raise ValueError("recommend_input")
@@ -122,7 +125,7 @@ def calculate(payload):
 
     limit = OBJECTIVES[objective]
     if family == "Integrateur":
-        return _integrator(gain, delay, sample, errors, objective, limit, variation)
+        return _integrator(gain, delay, sample, errors, objective, limit, variation, optimise)
     notes, tau1, tau2, theta = [], tau, None, delay
     if family == "SOPDT":
         if second > delay:
@@ -183,11 +186,19 @@ def calculate(payload):
     warnings = list(notes)
     if chosen["responseSeconds"] > tau1:
         warnings.append("closed_loop_slower_than_the_process")
+    optimized = None
+    if optimise and tau2 is None:
+        optimized = optimise_pi(family, gain, tau1, effective, plants, limit, sampling_delay)
+        if optimized is not None:
+            c = chosen["controller"]
+            optimized["integralGainRatio"] = optimized["integralGain"] / (abs(c["kp"]) / c["tiSeconds"])
+    elif optimise:
+        warnings.append("optimisation_covers_pi_only")
     return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit,
                 family=family, structure=chosen["controller"]["structure"], recommendation=chosen,
                 uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
                 processVariationPercent=variation, effectiveDelaySeconds=effective, samplePeriodSeconds=sample,
-                derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
+                optimized=optimized, derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
                 alternatives=_alternatives(evaluated, chosen), warnings=warnings, qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control",
                             "Morari & Zafiriou 1989, Robust Process Control"])
@@ -204,10 +215,10 @@ def _alternatives(evaluated, chosen):
 def _refusal(family, objective, limit, reasons, actions, notes, best=None, evaluated=()):
     return dict(algorithmVersion=VERSION, decision="refused", objective=objective, maximumPeakSensitivity=limit, family=family,
                 reasons=reasons, actions=actions, closestTuning=best, warnings=notes, qualification="none",
-                alternatives=[], recommendation=None)
+                alternatives=[], recommendation=None, optimized=None)
 
 
-def _integrator(slope, delay, sample, errors, objective, limit, variation=None):
+def _integrator(slope, delay, sample, errors, objective, limit, variation=None, optimise=False):
     """SIMC for an integrating process with dead time; corners on the slope and the delay (the only two parameters)."""
     sampling_delay = sample / 2
     effective = delay + sampling_delay
@@ -259,8 +270,136 @@ def _integrator(slope, delay, sample, errors, objective, limit, variation=None):
                         ["Réduire l'incertitude (essai plus long, deuxième échelon).", "Ou choisir un objectif moins exigeant en connaissance du compromis."],
                         notes, best, entries)
     chosen = next(e for e in entries if e["multipleOfEffectiveDelay"] == MULTIPLES[chosen_index])
+    optimized = None
+    if optimise:
+        optimized = optimise_pi("Integrateur", slope, 1.0, effective, [(n, k, 1.0, d, None) for n, k, d in plants], limit, sampling_delay)
+        if optimized is not None:
+            optimized["integralGainRatio"] = optimized["integralGain"] / (abs(chosen["controller"]["kp"]) / chosen["controller"]["tiSeconds"])
     return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit, family="Integrateur",
                 structure="PI", recommendation=chosen, uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
-                processVariationPercent=variation, effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
+                processVariationPercent=variation, optimized=optimized, effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
                 qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control"])
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Constrained optimisation of the PI integral gain (Astrom, Panagopoulos and Hagglund, "Design of PI controllers based on non-convex
+# optimization", Automatica 34 (1998) 585-601): maximise Ki = Kp / Ti, which sets the integrated error of a load disturbance
+# (IAE ~ 1/Ki for a well damped loop), under the maximum sensitivity constraint on EVERY corner of the uncertainty box.
+# ---------------------------------------------------------------------------------------------------------------------------------
+import numpy as np
+
+_W = np.logspace(-4, 2, 2500)           # coarse grid used inside the search; the result is verified with the full-resolution margins
+
+
+def _loop(w, kp, ti, plants, integrating):
+    s = 1j * w[None, :]
+    gains = np.array([p[1] for p in plants], dtype=float)[:, None]
+    delays = np.array([p[3] for p in plants], dtype=float)[:, None]
+    process = gains / s if integrating else gains / (np.array([p[2] for p in plants], dtype=float)[:, None] * s + 1)
+    return kp * (1 + 1 / (ti * s)) * process * np.exp(-s * delays)
+
+
+def _feasible(kp, ti, plants, limit, integrating, w):
+    """Stable on every plant and peak sensitivity <= limit (coarse grid)."""
+    loop = _loop(w, kp, ti, plants, integrating)
+    sensitivity = 1 / np.abs(1 + loop)
+    if float(sensitivity.max()) > limit:
+        return False
+    # exact continuous phase (no unwrapping ambiguity at low frequency): PI -atan(1/(Ti w)), process, dead time
+    w2 = w[None, :]
+    delays = np.array([p[3] for p in plants], dtype=float)[:, None]
+    lag = -math.pi / 2 if integrating else -np.arctan(np.array([p[2] for p in plants], dtype=float)[:, None] * w2)
+    phase = -np.arctan2(1.0, ti * w2) + lag - w2 * delays
+    for row in range(loop.shape[0]):
+        if phase[row, 0] <= -math.pi and abs(loop[row, 0]) >= 1:
+            return False                    # already beyond -180 degrees where the loop gain is above one: unstable (Ti too short)
+        crossing = np.flatnonzero((phase[row, :-1] > -math.pi) & (phase[row, 1:] <= -math.pi))
+        if len(crossing) and abs(loop[row, crossing[0]]) >= 1:
+            return False
+    return True
+
+
+
+
+def _max_kp(ti, plants, limit, integrating, w, x_grid):
+    """Largest Kp for which the loop is stable with Ms <= limit on every plant (scan, then bisection against the next infeasible point)."""
+    scale = 1.0 / max(abs(plants[0][1]), 1e-300)
+    feasible = [bool(_feasible(x * scale, ti, plants, limit, integrating, w)) for x in x_grid]
+    indices = [i for i, ok in enumerate(feasible) if ok]
+    if not indices or indices[-1] == len(x_grid) - 1:
+        return 0.0                  # nothing feasible, or still feasible at the end of the physical range: do not trust an open end
+    low, high = x_grid[indices[-1]] * scale, x_grid[indices[-1] + 1] * scale
+    for _ in range(30):
+        mid = (low + high) / 2
+        low, high = (mid, high) if _feasible(mid, ti, plants, limit, integrating, w) else (low, mid)
+    return float(low)
+
+
+def _nominal_overshoot(gain, tau, delay, kp, ti, integrating):
+    """Overshoot (percent of the unit set-point step) of the nominal loop: explicit Euler simulation, delay buffer."""
+    scale = max(ti, delay, tau if not integrating else 0.0, 1e-9)
+    dt = max(min(scale, delay if delay > 0 else scale) / 40, scale / 4000)
+    steps = int(min(60 * scale, 5e5 * dt) / dt)
+    lag = int(round(delay / dt))
+    buffer, state, integral, output, peak = [0.0] * (lag + 1), 0.0, 0.0, 0.0, 0.0
+    for _ in range(steps):
+        error = 1.0 - output
+        integral += error * dt
+        buffer.append(kp * (error + integral / ti))
+        delayed = buffer.pop(0)
+        if integrating:
+            state += dt * gain * delayed
+        else:
+            state += dt * (gain * delayed - state) / tau
+        output = state
+        peak = max(peak, output)
+    return max(0.0, (peak - 1.0) * 100.0)
+
+
+def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
+    """Best PI (largest Ki) for the corner set, or None. `plants` use positive gains; delays include the sampling delay."""
+    integrating = family == "Integrateur"
+    scaled = [(n, abs(k), t1, d + sampling_delay, t2) for n, k, t1, d, t2 in plants]
+    scale = max(theta_total, 1e-9)
+    # frequency grid and gain range cover every crossover a stable loop can have (below about 20 / theta_total)
+    w = np.logspace(math.log10(1e-3 / max(tau1 if not integrating else 20 * scale, scale)), math.log10(100 / scale), 3000)
+    x_grid = np.geomspace(1e-3 / scale, 20 / scale, 160) if integrating else np.geomspace(1e-3, 20 * max(1.0, tau1 / scale), 160)
+    ti_grid = np.geomspace(0.05 * tau1, 3 * tau1, 18) if not integrating else np.geomspace(0.5 * scale, 400 * scale, 22)
+    best = None
+    for ti in ti_grid:
+        kp = _max_kp(ti, scaled, limit, integrating, w, x_grid)
+        if kp > 0 and (best is None or kp / ti > best[0]):
+            best = (kp / ti, kp, ti)
+    if best is None:
+        return None
+    # local refinement of Ti around the best grid point
+    for factor in np.geomspace(0.8, 1.25, 9):
+        ti = best[2] * factor
+        kp = _max_kp(ti, scaled, limit, integrating, w, x_grid)
+        if kp > 0 and kp / ti > best[0]:
+            best = (kp / ti, kp, ti)
+    _, kp, ti = best
+    # full-resolution verification (the module's own margin search); back off on the coarse-grid error
+    for _ in range(40):
+        try:
+            peaks = []
+            for _, k, t1, d, t2 in scaled:
+                if integrating:
+                    _, pm, peak = loop_margins(k, d, kp, ti)
+                    ok = pm is not None and pm > 0
+                else:
+                    m = analyze(k, [t1], d, kp, ti, 0.0, 0.0)
+                    peak, ok = m["peakSensitivity"], "nominal_unstable" not in m["warnings"] and m["phaseMarginDegrees"] is not None and m["phaseMarginDegrees"] > 0
+                if not ok:
+                    peak = math.inf
+                peaks.append(peak)
+        except ValueError:
+            return None
+        if max(peaks) <= limit:
+            nominal = scaled[0]
+            return dict(controller=dict(structure="PI", kp=math.copysign(kp, gain), tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0),
+                        integralGain=kp / ti, worstPeakSensitivity=max(peaks),
+                        nominalOvershootPercent=_nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating))
+        kp *= 0.995
+    return None

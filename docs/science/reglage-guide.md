@@ -10,6 +10,11 @@
 4bis. Filtre de la dérivée (PID) : Tf = Td/N, N = 10 par défaut (usuel : 2 à 20) ; il est inclus dans les marges évaluées sur chaque coin.
 5. Sortie : le réglage, ses marges au pire cas, les réglages voisins pour comparer vitesse et robustesse, les avertissements (`closed_loop_slower_than_the_process`, `uncertainty_not_quantified`…).
 
+## Réglage optimisé (PI)
+En plus du réglage SIMC, MKR calcule le PI qui **maximise le gain intégral Ki = Kp/Ti** sous la même contrainte de sensibilité sur tous les coins de l'incertitude (Åström, Panagopoulos et Hägglund, *Automatica* 34, 1998). Pour une perturbation de charge en échelon, l'erreur cumulée vaut environ 1/Ki : plus Ki est grand, plus la perturbation est rejetée vite. Le compromis est annoncé : davantage de dépassement sur un changement de consigne (dépassement nominal affiché). Pour un PID, l'optimisation n'est pas disponible (`optimisation_covers_pi_only`).
+
+Méthode : pour chaque Ti d'une grille, plus grand Kp stable respectant la contrainte (balayage puis dichotomie, car l'ensemble admissible peut être un intervalle pour un procédé intégrateur), puis affinage de Ti et vérification finale avec la recherche de marges en pleine résolution.
+
 ## Variation du procédé sur la plage de fonctionnement
 Le champ facultatif « Variation attendue du procédé (%) » élargit la boîte d'incertitude à ±v % du gain, de la constante de temps et du retard (maximum entre cette valeur et ±2 erreurs-types). C'est le moyen de tenir compte d'un procédé dont la dynamique change avec le point de fonctionnement, sans modèle non linéaire.
 
