@@ -323,7 +323,7 @@
                     <!-- Contenu de l'étape affiché dans la fenêtre (réglage guidé, simulation…) : recouvre le graphique quand l'étape a sa propre vue -->
                     <Border x:Name="StepHost" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
                 </Grid>
-                <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
+                <Border x:Name="StudyTablePanel" Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
                     <Grid Margin="10,6,10,6">
                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                         <Button x:Name="TableToggle" Content="▸ Tableau des études d'identification" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"

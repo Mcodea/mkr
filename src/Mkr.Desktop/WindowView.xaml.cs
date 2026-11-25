@@ -372,6 +372,7 @@ public partial class WindowView : Window
                 break;
         }
         UpdateStepHost(selected, open);
+        StudyTablePanel.Visibility = _tab == 4 ? Visibility.Visible : Visibility.Collapsed;     // the study table only serves the validation view
         // chart commands are at hand whenever the chart (not a hosted step view) is shown
         if (StepHost.Visibility != Visibility.Visible)
         {
@@ -400,6 +401,7 @@ public partial class WindowView : Window
         _hostKey = null;
         _openLoop = false;
         if (!keepIdentification && _identification is not null) { _identification.Cancel(); _identification = null; }
+        _diagnostic = null;
         if (!keepIdentification && _data is not null) { _data.Cancel(); _data = null; _dataHost = null; }
         StepHost.Child = null;
         StepHost.Visibility = Visibility.Collapsed;
@@ -419,10 +421,11 @@ public partial class WindowView : Window
 
     private IdentificationView? _identification;
     private CsvView? _data;
+    private DiagnosticView? _diagnostic;
     private bool _openLoop;                   // simulation tab: the open-loop response instead of the closed-loop PI comparison
-    private ScrollViewer? _dataHost;
+    private UIElement? _dataHost;
 
-    private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 7;
+    private static bool IsIdentificationTab(int tab) => tab is 3 or 7;
 
     /// <summary>
     /// Shows the step view belonging to the selected tab inside the workspace: the identification view (signals, identification, validation and PI tunings,
@@ -431,7 +434,7 @@ public partial class WindowView : Window
     /// </summary>
     private void UpdateStepHost(IdentificationStudy? selected, bool open)
     {
-        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 5 or 6 or 8))
+        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 2 or 5 or 6 or 8))
         {
             if (StepHost.Visibility == Visibility.Visible) { StepHost.Child = null; StepHost.Visibility = Visibility.Collapsed; }
             _hosted?.Cancel();
@@ -453,8 +456,26 @@ public partial class WindowView : Window
                     _data.IdentificationRequested += (_, _) => SelectTab(3);
                     _data.DataChanged += (_, _) => RefreshAfterChange();
                 }
-                if (_dataHost is null) _dataHost = Scrolling(_data, 720);
+                if (_dataHost is null) { _data.MinHeight = 420; _dataHost = _data; }
                 if (!ReferenceEquals(StepHost.Child, _dataHost)) StepHost.Child = _dataHost;
+            }
+            catch (Exception error)
+            {
+                Trace.TraceError("step.host {0}", error.GetType().Name);
+                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+            }
+            return;
+        }
+        if (_tab == 2)
+        {
+            _hosted?.Cancel();
+            _hosted = null;
+            _hostKey = "diagnostic";
+            StepHost.Visibility = Visibility.Visible;
+            try
+            {
+                _diagnostic = new DiagnosticView(_csv!);
+                StepHost.Child = _diagnostic;
             }
             catch (Exception error)
             {
@@ -513,7 +534,7 @@ public partial class WindowView : Window
             {
                 var view = new GuidedTuningView(_workspace, selected) { ShowClose = false };
                 _hosted = view;
-                StepHost.Child = _hostChild = Scrolling(view, 720);
+                { view.MinHeight = 420; StepHost.Child = _hostChild = view; }
             }
             else if (_tab == 8 && _openLoop)
             {

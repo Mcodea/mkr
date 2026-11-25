@@ -292,7 +292,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             for (var i = 0; i <= lineSpecs.Length; i++) CompareGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             CompareGrid.Children.Add(Cell("Critère", 0, 0, header: true));
             for (var column = 0; column < rows.Count; column++)
-                CompareGrid.Children.Add(Cell(rows[column].Name.Replace(" (rejet de perturbation)", ""), 0, column + 1, header: true));
+                CompareGrid.Children.Add(Cell(rows[column].Name.Replace(" (rejet de perturbation)", "").Replace("Recommandé", "Recom."), 0, column + 1, header: true));
             for (var line = 0; line < lineSpecs.Length; line++)
             {
                 CompareGrid.Children.Add(Cell(lineSpecs[line].Label, line + 1, 0));

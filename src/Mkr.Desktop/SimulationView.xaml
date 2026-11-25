@@ -9,6 +9,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
+            <Border.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="10,2"/></Style>
+<Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style>
+<Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style></Border.Resources>
             <StackPanel>
                 <TextBlock x:Name="Units" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
                     <WrapPanel Margin="0">

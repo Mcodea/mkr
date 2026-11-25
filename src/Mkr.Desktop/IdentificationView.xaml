@@ -9,6 +9,9 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
+            <Border.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="10,2"/></Style>
+<Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style>
+<Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style></Border.Resources>
             <StackPanel x:Name="Form0">
                     <WrapPanel Margin="0">
                         <Label Content="Famille" Target="{Binding ElementName=FamilyChoice}" />
@@ -41,14 +44,17 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <WrapPanel Margin="0,0,0,4">
+                    <WrapPanel.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="10,2"/></Style>
+<Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style>
+<Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style></WrapPanel.Resources>
                     <Label Content="_Essai affiché" Target="{Binding ElementName=PlotSource}" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="PlotSource" Width="140" SelectedIndex="1" SelectionChanged="ChangePlotSource" VerticalAlignment="Center">
+                    <ComboBox x:Name="PlotSource" Width="120" SelectedIndex="1" SelectionChanged="ChangePlotSource" VerticalAlignment="Center">
                         <ComboBoxItem Content="Estimation"/>
                         <ComboBoxItem Content="Validation"/>
                     </ComboBox>
-                    <Button Content="_Réinitialiser le zoom" Click="ResetPlotZoom" Margin="10,0,0,0" ToolTip="Revenir à l’horizon complet de l’essai affiché"/>
-                    <Button Content="Exporter l'_image…" Click="ExportPlotImage" Margin="6,0,0,0"/>
-                    <Button Content="Exporter les _données…" Click="ExportPlotData" Margin="6,0,0,0"/>
+                    <Button Content="_Vue complète" Click="ResetPlotZoom" Margin="10,0,0,0" ToolTip="Revenir à l’horizon complet de l’essai affiché"/>
+                    <Button Content="_Image…" Click="ExportPlotImage" Margin="6,0,0,0"/>
+                    <Button Content="_Données…" Click="ExportPlotData" Margin="6,0,0,0"/>
                 </WrapPanel>
                 <TextBlock x:Name="PlotLegend" Grid.Row="1" Margin="0,0,0,4" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
                 <local:SignalChart x:Name="Chart" Grid.Row="2" MinHeight="300"
