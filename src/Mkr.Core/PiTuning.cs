@@ -62,6 +62,9 @@ public interface IPiEngine
     /// <summary>Guided tuning of an ACCEPTED model for a robustness objective (see <see cref="DesignObjectives"/>), with refusal when the data do not support one.</summary>
     Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token);
 
+    /// <summary>Guided tuning from an ACCEPTED ARX / OE study (first-order equivalent only; refusals explained). ADR 0008.</summary>
+    Task<GuidedTuning> RecommendTuningFromArxAsync(ArxStudy study, string objective, double? processVariationPercent, CancellationToken token);
+
     /// <summary>Documentary PIDFF conversion of a tuning (mixed structure). Never qualified, never ready to load.</summary>
     Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,
         double? filterSeconds, CancellationToken token);

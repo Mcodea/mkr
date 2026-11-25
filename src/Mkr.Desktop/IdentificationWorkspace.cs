@@ -185,6 +185,12 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
                                  : $"{objective} : refusé ({string.Join(", ", r.Reasons ?? [])})");
     }
 
+    /// <summary>Guided tuning from an accepted ARX / OE study (ADR 0008); a refused study or a second-order model is explained, never tuned.</summary>
+    public Task<GuidedTuning> RecommendTuningFromArxAsync(ArxStudy study, string objective, double? processVariationPercent, CancellationToken token) =>
+        Traced(piEngine.RecommendTuningFromArxAsync(study, objective, processVariationPercent, token), "tuning.guided.arx", Short(study.Id),
+            r => r.IsRecommended ? $"{objective} : τc = {r.Recommendation!.ResponseSeconds:G6} s, Ms pire cas {r.Recommendation.WorstPeakSensitivity:G4} (théorique, depuis l'étude ARX)"
+                                 : $"{objective} : refusé ({string.Join(", ", r.Reasons ?? [])})");
+
     /// <summary>PI for an accepted integrator model: the model gain is the slope in PV units per second per MV unit.</summary>
     public Task<IntegratorPi> CalculateIntegratorPiAsync(IdentificationStudy model, double responseSeconds, CancellationToken token)
     {

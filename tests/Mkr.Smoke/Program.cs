@@ -419,6 +419,12 @@ try
         Require(failed[3].State == StepState.Done && failed[4].State == StepState.Ready && failed[7].State == StepState.Blocked &&
             failed[7].Detail.Contains("non validé"), "A model that failed validation never opens the tuning.");
         var accepted = StudyJourney.Evaluate(new ProjectFacts(true, 2, 1, 1));
+        Require(StudyJourney.NextStep(StudyJourney.Evaluate(null)) is null, "No project: no next step, the blocked reason is shown instead.");
+        Require(StudyJourney.NextStep(empty)?.Number == 1, "An empty project starts with the description of the process.");
+        Require(StudyJourney.NextStep(StudyJourney.Evaluate(new ProjectFacts(true, 0, 0, 0)))?.Number == 2, "A described project without data goes to the acquisition.");
+        Require(StudyJourney.NextStep(data)?.Number == 4, "With data and no study the next step is the identification.");
+        Require(StudyJourney.NextStep(failed)?.Number == 5, "A refused identification leads to the validation step, never to a tuning.");
+        Require(StudyJourney.NextStep(accepted)?.Number == 6, "An accepted model opens the strategy step.");
         Require(accepted[4].State == StepState.Done && accepted.Skip(5).All(s => s.State == StepState.Ready), "An accepted model opens steps 6 to 10.");
     }
 

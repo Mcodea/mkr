@@ -100,6 +100,31 @@ class Recovery(unittest.TestCase):
         self.assertLessEqual(peak, 1.7 + 0.1)
 
 
+class QuantisedDelayConvention(unittest.TestCase):
+    """The application tunes from an accepted (1,1) ARX study with the delay quantised to the sampling grid (ADR 0008): tuning delay = nk Ts
+    (the upper bound of the continuous delay represented by a (1,1) model with nk samples) and delay standard error = Ts / 2, so that the
+    uncertainty box [(nk - 1) Ts, (nk + 1) Ts] covers every continuous delay the grid cannot distinguish. Check on the TRUE plants."""
+
+    def test_the_tuning_holds_for_every_continuous_delay_between_the_grid_values(self):
+        ts, tau, gain, d = 2.0, 20.0, 1.5, 3
+        rng = np.random.default_rng(7)
+        u, v = prbs(600, rng), prbs(500, rng)
+        y = first_order_zoh(u, tau, gain, d, ts, 2.0, 10.0, 0.02, rng)
+        w = first_order_zoh(v, tau, gain, d, ts, -1.0, 10.0, 0.02, rng)
+        result = arx.identify(payload(make(1, u, y, ts), make(2, v, w, ts)))
+        selected = result["selected"]
+        nk, first = selected["nk"], selected["firstOrder"]
+        se = first["standardErrors"]
+        tuning = recommend(dict(family="FOPDT", gain=first["gain"], tauSeconds=first["tauSeconds"], delaySeconds=nk * ts, secondTauSeconds=None,
+                                sampleSeconds=ts, standardErrors=dict(gain=se["gain"], tauSeconds=se["tauSeconds"], delaySeconds=ts / 2),
+                                objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
+        self.assertEqual(tuning["decision"], "recommended")
+        c = tuning["recommendation"]["controller"]
+        for true_delay in (d * ts, d * ts + 0.5 * ts, d * ts + 0.9 * ts, nk * ts):           # between the grid delay and the tuning delay
+            peak = sensitivity_peak(gain, [tau], true_delay + ts / 2, c["kp"], c["tiSeconds"], 0.0)
+            self.assertLessEqual(peak, 1.7 + 0.05, f"true delay {true_delay}")
+
+
 class Windows(unittest.TestCase):
     def test_a_row_window_selects_the_informative_part_of_a_longer_recording(self):
         ts = 2.0

@@ -213,6 +213,7 @@ def calculate(payload):
             if controller is not None:
                 try:
                     performance[name] = closed_loop_performance(gain, tau1, tau2, effective, controller)
+                    performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau1, tau2, effective, controller, sample)
                 except ValueError:
                     warnings.append("performance_simulation_failed_" + name)
         warnings.append("performance_is_nominal_without_actuator_limits")
@@ -309,6 +310,7 @@ def _integrator(slope, delay, sample, errors, objective, limit, variation=None, 
             if controller is not None:
                 try:
                     performance[name] = closed_loop_performance(slope, 1.0, None, effective, controller, integrating=True)
+                    performance[name]["noiseToControlGain"] = noise_to_control_gain(slope, 1.0, None, effective, controller, sample, integrating=True)
                 except ValueError:
                     notes.append("performance_simulation_failed_" + name)
         notes.append("performance_is_nominal_without_actuator_limits")
@@ -552,6 +554,21 @@ def _pid_peak(kp, ti, td, tf, process):
     return float((1 / np.abs(1 + loop)).max())
 
 
+def noise_to_control_gain(gain, tau1, tau2, delay, controller, sample, integrating=False):
+    """RMS gain from white measurement noise to the controller output, C S = C / (1 + C P) (Astrom and Hagglund 2006, noise sensitivity),
+    over the band 0 .. pi / Ts of the sampled loop: for a measurement noise of standard deviation sigma the output standard deviation is
+    about sigma times this gain (aliasing and the sample-and-hold are ignored). `delay` is the total (effective) dead time."""
+    kp, ti, td, tf = controller["kp"], controller["tiSeconds"], controller["tdSeconds"], controller["filterSeconds"]
+    w = np.linspace(math.pi / sample / 20000, math.pi / sample, 20000)
+    s = 1j * w
+    c = kp * (1 + 1 / (ti * s) + (td * s / (tf * s + 1) if td > 0 else 0))
+    p = gain / s if integrating else gain / (tau1 * s + 1)
+    if tau2 and not integrating:
+        p = p / (tau2 * s + 1)
+    p = p * np.exp(-s * delay)
+    return float(np.sqrt(np.mean(np.abs(c / (1 + c * p)) ** 2)))
+
+
 def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multiple=40.0, resolution=400.0, integrating=False):
     """Nominal closed-loop criteria from an explicit time simulation (Euler, delay buffer, no actuator limit):
     set-point step (unit, P and I on the error, D on the measurement) and load-disturbance step at the plant input (unit, set-point 0).
@@ -570,7 +587,7 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         head = 0
         states = [0.0] * max(len(lags), 1)
         integral = yf = 0.0
-        iae = ise = itae = peak = 0.0
+        iae = ise = itae = peak = peak_mv = 0.0
         last_outside = 0.0
         y = 0.0
         for i in range(steps):
@@ -579,6 +596,7 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             integral += kp / ti * error * dt
             derivative = -kp * td * (y - yf) / tf if tf > 0 and td > 0 else 0.0
             u = kp * error + integral + derivative
+            peak_mv = max(peak_mv, abs(u))
             if tf > 0:
                 yf += dt * (y - yf) / tf
             buffer[head] = u + load
@@ -600,10 +618,11 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
                 last_outside = t
             if not math.isfinite(y) or abs(y) > 1e6:
                 raise ValueError("recommend_simulation_diverged")
-        return iae, ise, itae, peak, last_outside
+        return iae, ise, itae, peak, last_outside, peak_mv
 
-    iae, ise, itae, peak, settle = run(1.0, 0.0)
-    l_iae, l_ise, l_itae, _, _ = run(0.0, 1.0)
-    return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle),
-                loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae),
+    iae, ise, itae, peak, settle, peak_mv = run(1.0, 0.0)
+    l_iae, l_ise, l_itae, _, _, load_peak_mv = run(0.0, 1.0)
+    return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle,
+                                  peakMv=peak_mv, initialMvStep=abs(kp)),
+                loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae, peakMv=load_peak_mv),
                 highFrequencyGain=abs(kp) * (1 + (td / tf if tf > 0 else 0.0)), horizonSeconds=horizon, stepSeconds=dt)

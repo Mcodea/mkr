@@ -55,6 +55,12 @@ public static class StudyJourney
         };
     }
 
+    /// <summary>
+    /// The first step the project can do now and has not completed: guidance only, derived from the same facts as the journey. Null when no step is
+    /// available (no project selected, or the facts could not be read), in which case the blocked reason of the first step is the right message.
+    /// </summary>
+    public static JourneyStep? NextStep(IReadOnlyList<JourneyStep> steps) => steps.FirstOrDefault(step => step.State == StepState.Ready);
+
     public static readonly IReadOnlyList<string> Titles = new[]
     {
         "Configuration du procédé", "Acquisition des données", "Analyse et qualification des signaux", "Identification du modèle",

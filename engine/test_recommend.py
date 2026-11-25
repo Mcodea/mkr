@@ -324,6 +324,58 @@ class IntegratorPid(unittest.TestCase):
         self.assertAlmostEqual(result["setpointStep"]["overshootPercent"], 100 * (float(y.max()) - 1), delta=0.3)      # the PI zero makes the set-point response overshoot although the poles are real
 
 
+class NoiseSensitivity(unittest.TestCase):
+    """noise_to_control_gain against a Monte-Carlo time simulation written here: sampled loop with an exact zero-order-hold plant (scipy),
+    forward-Euler integral, backward-Euler filtered derivative, white measurement noise of unit variance, set-point zero. The gain must
+    equal the standard deviation of the controller output (the discrete loop adds a half-sample delay, handled by the effective delay)."""
+
+    @staticmethod
+    def monte_carlo(gain, tau, delay_steps, h, controller, steps=120000, seed=1):
+        from test_support_plant import first_order, stepper
+        kp, ti, td, tf = controller["kp"], controller["tiSeconds"], controller["tdSeconds"], controller["filterSeconds"]
+        state, output, advance = stepper(first_order(gain, tau), h, delay_steps * h)
+        rng = np.random.default_rng(seed)
+        noise = rng.standard_normal(steps)
+        decay, change = (tf / (tf + h), kp * td / (tf + h)) if td > 0 else (0.0, 0.0)
+        integral = derivative = previous_error = 0.0
+        history, outputs = [], []
+        for k in range(steps):
+            error = -(output(state) + noise[k])
+            derivative = decay * derivative + change * (error - previous_error)
+            previous_error = error
+            u = kp * error + integral + derivative
+            integral += kp * h / ti * error
+            history.append(u)
+            outputs.append(u)
+            state = advance(state, k, history)
+        return float(np.std(outputs[steps // 10:]))
+
+    def test_the_gain_matches_the_simulated_output_standard_deviation(self):
+        h, delay_steps, gain, tau = 0.05, 40, 2.0, 20.0
+        for controller in (dict(kp=0.6, tiSeconds=18.0, tdSeconds=0.0, filterSeconds=0.0),
+                           dict(kp=1.2, tiSeconds=15.0, tdSeconds=3.0, filterSeconds=0.3)):
+            with self.subTest(controller=controller):
+                predicted = recommend.noise_to_control_gain(gain, tau, None, delay_steps * h + h / 2, controller, h)
+                simulated = self.monte_carlo(gain, tau, delay_steps, h, controller)
+                # continuous-time band-limited formula versus a sampled loop: within 5 % for the PI, within 10 % with the derivative (backward-Euler
+                # filter near the Nyquist frequency differs from the continuous one, the formula is conservative: 12.7 predicted for 11.9 simulated)
+                self.assertAlmostEqual(predicted, simulated, delta=(0.10 if controller["tdSeconds"] > 0 else 0.05) * simulated)
+
+    def test_a_static_plant_gives_the_closed_form_kp_over_one_plus_kp_k(self):
+        gain, kp = 2.0, 1.5                          # plant lag far faster than the sampling band: C S = Kp / (1 + Kp K) up to a few percent
+        predicted = recommend.noise_to_control_gain(gain, 1e-4, None, 0.0, dict(kp=kp, tiSeconds=1e9, tdSeconds=0.0, filterSeconds=0.0), 1.0)
+        self.assertAlmostEqual(predicted, kp / (1 + kp * gain), delta=0.03 * kp / (1 + kp * gain))
+
+    def test_the_derivative_term_costs_noise_and_the_report_says_so(self):
+        p = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, standardErrors=None, objective="balanced",
+                 derivativeFilterRatio=None, processVariationPercent=None, optimise=True)
+        performance = calculate(p)["performance"]
+        self.assertGreater(performance["optimizedPid"]["noiseToControlGain"], 3 * performance["optimizedPi"]["noiseToControlGain"])
+        for entry in performance.values():
+            self.assertGreater(entry["setpointStep"]["peakMv"], 0)
+            self.assertGreaterEqual(entry["setpointStep"]["peakMv"], entry["setpointStep"]["initialMvStep"] - 1e-9)
+
+
 class Serialisation(unittest.TestCase):
     def test_every_result_is_plain_json_the_bridge_can_carry(self):        # numpy scalars once surfaced as "engine_non_finite" through the bridge
         import json

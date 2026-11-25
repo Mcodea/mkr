@@ -332,6 +332,11 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
             sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true
         };
+        return await RecommendCoreAsync(payload, objective, limit, model.Gain, token).ConfigureAwait(false);
+    }
+
+    private async Task<GuidedTuning> RecommendCoreAsync(object payload, string objective, double limit, double modelGain, CancellationToken token)
+    {
         var (json, _) = await CallAsync("recommend_tuning", payload, token).ConfigureAwait(false);
         var tuning = json.Deserialize<GuidedTuning>(JsonOptions);
         static bool Finite(TuningCandidate? c) => c is { Controller: { } k } && double.IsFinite(k.Kp) && k.Kp != 0 && double.IsFinite(k.TiSeconds) && k.TiSeconds > 0 &&
@@ -339,23 +344,51 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         // Contract: a recommendation always carries a finite, correctly signed, unqualified controller that respects the objective; a refusal carries reasons.
         if (tuning is null || string.IsNullOrWhiteSpace(tuning.AlgorithmVersion) || tuning.Objective != objective || Math.Abs(tuning.MaximumPeakSensitivity - limit) > 1e-9 ||
             tuning.Decision is not ("recommended" or "refused") ||
-            (tuning.IsRecommended && (!Finite(tuning.Recommendation) || Math.Sign(tuning.Recommendation!.Controller.Kp) != Math.Sign(model.Gain) ||
+            (tuning.IsRecommended && (!Finite(tuning.Recommendation) || Math.Sign(tuning.Recommendation!.Controller.Kp) != Math.Sign(modelGain) ||
                 tuning.Recommendation.WorstPeakSensitivity > limit + 1e-9 || !tuning.Recommendation.StableOnAllCorners || tuning.Qualification != "model_based_unqualified")) ||
             (!tuning.IsRecommended && (tuning.Recommendation is not null || tuning.Reasons is not { Length: > 0 } || tuning.Actions is not { Length: > 0 })))
             throw new InvalidDataException("Réglage guidé incompatible avec le contrat.");
-        if (tuning.Optimized is { } o && (!double.IsFinite(o.Controller.Kp) || o.Controller.Kp == 0 || Math.Sign(o.Controller.Kp) != Math.Sign(model.Gain) || !(o.Controller.TiSeconds > 0) ||
+        if (tuning.Optimized is { } o && (!double.IsFinite(o.Controller.Kp) || o.Controller.Kp == 0 || Math.Sign(o.Controller.Kp) != Math.Sign(modelGain) || !(o.Controller.TiSeconds > 0) ||
             !double.IsFinite(o.IntegralGain) || o.IntegralGain <= 0 || !(o.WorstPeakSensitivity <= limit + 1e-9) || !double.IsFinite(o.NominalOvershootPercent) || o.NominalOvershootPercent < 0))
             throw new InvalidDataException("Réglage optimisé incompatible avec le contrat.");
-        if (tuning.OptimizedPid is { } p && (p.Controller.Structure != "PID" || !double.IsFinite(p.Controller.Kp) || p.Controller.Kp == 0 || Math.Sign(p.Controller.Kp) != Math.Sign(model.Gain) ||
+        if (tuning.OptimizedPid is { } p && (p.Controller.Structure != "PID" || !double.IsFinite(p.Controller.Kp) || p.Controller.Kp == 0 || Math.Sign(p.Controller.Kp) != Math.Sign(modelGain) ||
             !(p.Controller.TiSeconds > 0) || !(p.Controller.TdSeconds > 0) || !(p.Controller.FilterSeconds > 0) || !double.IsFinite(p.IntegralGain) || p.IntegralGain <= 0 ||
             !(p.WorstPeakSensitivity <= limit + 1e-9) ||
             (tuning.Optimized is { } pi && p.PidNotBetterThanPi is { } flag && flag != (p.IntegralGain <= pi.IntegralGain))))
             throw new InvalidDataException("PID optimisé incompatible avec le contrat.");
         static bool Good(LoopPerformance? l) => l is null || (new[] { l.SetpointStep.Iae, l.SetpointStep.Ise, l.SetpointStep.Itae, l.LoadDisturbanceStep.Iae, l.LoadDisturbanceStep.Ise,
-            l.LoadDisturbanceStep.Itae, l.HighFrequencyGain }.All(v => double.IsFinite(v) && v >= 0));
+            l.LoadDisturbanceStep.Itae, l.HighFrequencyGain, l.NoiseToControlGain ?? 0, l.SetpointStep.PeakMv ?? 0 }.All(v => double.IsFinite(v) && v >= 0));
         if (tuning.Performance is { } perf && !(Good(perf.Recommended) && Good(perf.OptimizedPi) && Good(perf.OptimizedPid)))
             throw new InvalidDataException("Critères de performance incompatibles avec le contrat.");
         return tuning;
+    }
+
+    public Task<GuidedTuning> RecommendTuningFromArxAsync(ArxStudy study, string objective, double? processVariationPercent, CancellationToken token) =>
+        Guard(() => RecommendTuningFromArxAsyncCore(study, objective, processVariationPercent, token));
+
+    /// <summary>
+    /// Guided tuning from an ACCEPTED ARX / OE study whose model is the first-order equivalent (ADR 0008). The ARX acceptance criteria on the
+    /// independent validation series are the validation gate. The delay is quantised to the sampling grid: the tuning delay is the upper bound
+    /// nk * Ts and its standard error is Ts / 2, so the uncertainty box spans [(nk - 1) Ts, (nk + 1) Ts].
+    /// </summary>
+    private async Task<GuidedTuning> RecommendTuningFromArxAsyncCore(ArxStudy study, string objective, double? processVariationPercent, CancellationToken token)
+    {
+        if (!study.IsAccepted || study.Result.Selected is not { } selected)
+            throw new InvalidOperationException("Réglage impossible : l'étude ARX a été refusée à la validation indépendante.");
+        if (selected.FirstOrder is not { } first)
+            throw new InvalidOperationException("Réglage impossible : le modèle retenu est du second ordre ; aucune réduction au premier ordre n'est documentée dans MKR.");
+        if (!double.IsFinite(first.Gain) || first.Gain == 0 || !(first.TauSeconds > 0) || !(study.Result.SamplePeriodSeconds > 0) ||
+            first.StandardErrors is not { } se || !se.TryGetValue("gain", out var gainError) || !se.TryGetValue("tauSeconds", out var tauError))
+            throw new InvalidDataException("Étude ARX incomplète pour le réglage guidé.");
+        var sample = study.Result.SamplePeriodSeconds;
+        var limit = DesignObjectives.MaximumPeakSensitivity(objective);
+        var payload = new
+        {
+            family = "FOPDT", gain = first.Gain, tauSeconds = (double?)first.TauSeconds, delaySeconds = selected.Nk * sample, secondTauSeconds = (double?)null,
+            sampleSeconds = sample, standardErrors = (object?)new { gain = gainError, tauSeconds = tauError, delaySeconds = sample / 2 },
+            objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true
+        };
+        return await RecommendCoreAsync(payload, objective, limit, first.Gain, token).ConfigureAwait(false);
     }
 
     public Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token) =>

@@ -195,6 +195,25 @@ public partial class IdentificationWindow : Window
         finally { Form.IsEnabled = true; }
     }
 
+    private ArxStudy? _lastArx;
+
+    private void TuneFromArx(object sender, RoutedEventArgs args)
+    {
+        if (_lastArx is not { } study) return;
+        if (!study.IsAccepted)
+        {
+            Message.Text = "Réglage impossible : l'étude ARX a été refusée à la validation indépendante. Aucun réglage n'en est déduit.";
+            return;
+        }
+        if (study.Result.Selected?.FirstOrder is null)
+        {
+            Message.Text = "Réglage impossible : le modèle ARX retenu est du second ordre ; MKR ne documente pas encore de réduction au premier ordre pour le régler. Aucun réglage n'est inventé.";
+            return;
+        }
+        try { new GuidedTuningWindow(_workspace, study) { Owner = this }.ShowDialog(); }
+        catch (Exception error) { ShowError(error); }
+    }
+
     private async void IdentifyArx(object sender, RoutedEventArgs args)
     {
         var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
@@ -221,6 +240,8 @@ public partial class IdentificationWindow : Window
             var saved = await _workspace.IdentifyArxAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
                 mvTolerance, rmse, token, _trainingSelection?.Window, _validationSelection?.Window);
             token.ThrowIfCancellationRequested();
+            _lastArx = saved;
+            ArxTuneButton.IsEnabled = true;
             Message.Text = saved.Result.Describe(mvUnit, pvUnit) + $"Étude ARX enregistrée ({saved.Id.ToString()[..8]}), {(saved.IsAccepted ? "acceptée" : "refusée : aucun réglage ne peut en être déduit")}.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }

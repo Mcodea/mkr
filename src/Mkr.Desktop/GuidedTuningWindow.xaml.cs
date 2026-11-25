@@ -11,7 +11,9 @@ namespace Mkr.Desktop;
 public partial class GuidedTuningWindow : Window
 {
     private readonly IdentificationWorkspace _workspace;
-    private readonly IdentificationStudy _model;
+    private readonly string _mvUnit, _pvUnit;
+    private readonly double _noiseUpperBound;
+    private readonly Func<string, double?, CancellationToken, Task<GuidedTuning>> _recommend;
     private readonly CancellationTokenSource _lifetime = new();
 
     public sealed class Row
@@ -25,14 +27,34 @@ public partial class GuidedTuningWindow : Window
     }
 
     internal GuidedTuningWindow(IdentificationWorkspace workspace, IdentificationStudy model)
+        : this(workspace, model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
+            $"Modèle {model.Family} · K = {model.Result.Gain:G5} {model.PvUnit}/{model.MvUnit}" +
+            (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
+            $" · θ prudent = {model.Result.TuningDelaySeconds:G5} s",
+            (objective, variation, token) => workspace.RecommendTuningAsync(model, objective, variation, token))
+    {
+    }
+
+    /// <summary>From an accepted ARX / OE study (ADR 0008): the first-order equivalent of the retained (1,1) model, delay quantised to the sampling grid.</summary>
+    internal GuidedTuningWindow(IdentificationWorkspace workspace, ArxStudy study)
+        : this(workspace, study.MvUnit, study.PvUnit, 0,
+            study.Result.Selected is { FirstOrder: { } f, Nk: var nk }
+                ? $"Modèle ARX / OE (1,1) · K = {f.Gain:G5} {study.PvUnit}/{study.MvUnit} · τ = {f.TauSeconds:G5} s · θ prudent = {nk * study.Result.SamplePeriodSeconds:G5} s (quantifié au pas de {study.Result.SamplePeriodSeconds:G3} s)"
+                : "Modèle ARX / OE sans équivalent du premier ordre",
+            (objective, variation, token) => workspace.RecommendTuningFromArxAsync(study, objective, variation, token))
+    {
+    }
+
+    private GuidedTuningWindow(IdentificationWorkspace workspace, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
+        Func<string, double?, CancellationToken, Task<GuidedTuning>> recommend)
     {
         InitializeComponent();
         _workspace = workspace;
-        _model = model;
-        var result = model.Result;
-        ModelLine.Text = $"Modèle {model.Family} · K = {result.Gain:G5} {model.PvUnit}/{model.MvUnit}" +
-            (result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
-            $" · θ prudent = {result.TuningDelaySeconds:G5} s";
+        _mvUnit = mvUnit;
+        _pvUnit = pvUnit;
+        _noiseUpperBound = noiseUpperBound;
+        _recommend = recommend;
+        ModelLine.Text = modelLine;
         ObjectiveChanged(this, null!);
         Closed += (_, _) => _lifetime.Cancel();
     }
@@ -67,7 +89,7 @@ public partial class GuidedTuningWindow : Window
         Status.Text = "Calcul en cours : recherche du réglage le plus rapide qui respecte l'objectif sur toute l'incertitude…";
         try
         {
-            var tuning = await _workspace.RecommendTuningAsync(_model, ObjectiveTag, variation, token);
+            var tuning = await _recommend(ObjectiveTag, variation, token);
             token.ThrowIfCancellationRequested();
             Show(tuning);
         }
@@ -85,8 +107,8 @@ public partial class GuidedTuningWindow : Window
         Verdict.Background = (Brush)FindResource(tuning.IsRecommended ? "MkrSuccess" : "MkrDanger");
         VerdictText.Text = tuning.IsRecommended ? "RÉGLAGE RECOMMANDÉ (théorique)" : "RÉGLAGE REFUSÉ : les données ne le permettent pas";
         var text = new StringBuilder();
-        var mv = _model.MvUnit;
-        var pv = _model.PvUnit;
+        var mv = _mvUnit;
+        var pv = _pvUnit;
         text.AppendLine($"Objectif : {Objective.Text}");
         if (tuning.Recommendation is { } rec)
         {
@@ -139,6 +161,11 @@ public partial class GuidedTuningWindow : Window
             {
                 if (l is null) return;
                 text.AppendLine($"  {name} : consigne IAE {F(l.SetpointStep.Iae)}, dépassement {F(l.SetpointStep.OvershootPercent ?? 0)} %, établissement à 2 % {F(l.SetpointStep.SettlingSeconds ?? 0)} s · perturbation de charge IAE {F(l.LoadDisturbanceStep.Iae)} · gain haute fréquence {F(l.HighFrequencyGain)}");
+                if (l.SetpointStep.PeakMv is { } peak && l.SetpointStep.InitialMvStep is { } kick)
+                    text.AppendLine($"      commande : à un échelon de consigne de 1 {pv}, saut initial {F(kick)} {mv}, maximum demandé {F(peak)} {mv} (à multiplier par votre échelon réel, à comparer à la plage de l'actionneur)");
+                if (l.NoiseToControlGain is { } noise)
+                    text.AppendLine($"      bruit : un bruit de mesure d'écart-type σ donne environ {F(noise)} σ d'écart-type sur la commande" +
+                        (_noiseUpperBound > 0 ? $" ; avec σ ≤ {F(_noiseUpperBound)} {pv} (erreur d'ajustement, borne haute du bruit) : ≤ {F(noise * _noiseUpperBound)} {mv}" : ""));
             }
             Line("Recommandé", perf.Recommended);
             Line("PI optimisé", perf.OptimizedPi);

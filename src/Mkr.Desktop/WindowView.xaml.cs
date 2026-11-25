@@ -128,7 +128,8 @@ public partial class WindowView : Window
             var accepted = studies.Count(study => study.IsAcceptedForTuning);
             var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
             _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
-            InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}";
+            InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}" +
+                (StudyJourney.NextStep(_steps) is { } next ? $"\n\nProchaine étape : {next.Number}. {next.Title}\n{next.Detail}" : "");
             var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
             StudyGrid.ItemsSource = rows;
             StudyPicker.ItemsSource = rows;

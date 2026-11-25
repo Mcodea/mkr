@@ -98,9 +98,9 @@ public sealed record ArxIdentification(string AlgorithmVersion, double SamplePer
         if (chosen.FirstOrder is { } f)
         {
             text.AppendLine($"Équivalent du premier ordre (maintien d'ordre zéro) : K = {f.Gain:G5} {pvUnit}/{mvUnit} (± {f.StandardErrors.GetValueOrDefault("gain"):G2}) · τ = {f.TauSeconds:G5} s (± {f.StandardErrors.GetValueOrDefault("tauSeconds"):G2}) · θ = {f.DelaySeconds:G5} s (multiple du pas).");
-            text.AppendLine("La course est enregistrée comme étude ARX (ADR 0007) ; elle n'alimente pas encore le réglage guidé, qui demande une étude validée.");
+            text.AppendLine("L'exécution est enregistrée comme étude ARX (ADR 0007). Le réglage guidé est possible depuis une étude acceptée du premier ordre (ADR 0008).");
         }
-        else text.AppendLine("Second ordre : pas d'équivalent du premier ordre ; le réglage guidé de ce modèle n'est pas encore branché.");
+        else text.AppendLine("Second ordre : pas d'équivalent du premier ordre ; MKR ne documente pas de réduction au premier ordre : aucun réglage n'en est déduit.");
         text.AppendLine("Statut : calculé et vérifié sur données synthétiques ; non qualifié sur procédé réel.");
         return text.ToString();
     }
