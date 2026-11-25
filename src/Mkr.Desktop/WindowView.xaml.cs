@@ -42,7 +42,8 @@ public partial class WindowView : Window
         _engine = engine;
         _createIdentification = createIdentification;
         InitializeComponent();
-        ThemeChoice.SelectedIndex = (int)ThemeService.Choice;       // Initialize() ran at startup: reflect the active choice
+        ReflectTheme();       // Initialize() ran at startup: reflect the active choice in the menu
+        BuildToolbar();
         var version = typeof(WindowView).Assembly.GetName().Version;
         VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
@@ -51,33 +52,84 @@ public partial class WindowView : Window
 
     private bool _assisted = true;
 
-    private void ModeChanged(object sender, SelectionChangedEventArgs args)
+    private void ReflectTheme()
     {
-        if (ModeChoice.SelectedItem is not ComboBoxItem { Tag: string tag }) return;
-        _assisted = tag == "Assisted";
-        UpdateAssistBanner();
+        MenuThemeSystem.IsChecked = ThemeService.Choice == ThemeChoice.System;
+        MenuThemeLight.IsChecked = ThemeService.Choice == ThemeChoice.Light;
+        MenuThemeDark.IsChecked = ThemeService.Choice == ThemeChoice.Dark;
     }
 
-    /// <summary>Assisted mode names the next step the project can do; expert mode shows nothing of the kind.</summary>
-    private void UpdateAssistBanner()
+    private void MenuTheme(object sender, RoutedEventArgs args)
     {
-        if (AssistBanner is null) return;
-        var next = _assisted ? StudyJourney.NextStep(_steps) : null;
-        AssistBanner.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
+        if (sender is MenuItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice)) ThemeService.Apply(choice);
+        ReflectTheme();
+    }
+
+    private void MenuMode(object sender, RoutedEventArgs args)
+    {
+        _assisted = ReferenceEquals(sender, MenuAssisted);
+        MenuAssisted.IsChecked = _assisted;
+        MenuExpert.IsChecked = !_assisted;
+        UpdateNext();
+    }
+
+    private void MenuNewProject(object sender, RoutedEventArgs args)
+    {
+        if (StudyView.Visibility == Visibility.Visible) LeaveStudy();
+        ProjectName.Focus();
+    }
+
+    private void MenuHome(object sender, RoutedEventArgs args) { if (StudyView.Visibility == Visibility.Visible) LeaveStudy(); }
+    private void MenuQuit(object sender, RoutedEventArgs args) => Close();
+    private void MenuDescription(object sender, RoutedEventArgs args) { if (StudyView.Visibility == Visibility.Visible) GoToDescription(); }
+    private void MenuAudit(object sender, RoutedEventArgs args) { if (StudyView.Visibility == Visibility.Visible) OpenAudit(); }
+    private void MenuReview(object sender, RoutedEventArgs args) { if (StudyView.Visibility == Visibility.Visible) OpenReview(); }
+
+    /// <summary>Quick access to the main stages, like a desktop toolbar; disabled until a project is open.</summary>
+    private readonly List<Button> _toolbarButtons = new();
+
+    private void BuildToolbar()
+    {
+        void Add(string glyph, string label, string tooltip, Action action, bool needsStudy)
+        {
+            var content = new StackPanel { Orientation = Orientation.Horizontal };
+            content.Children.Add(new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+            content.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+            var button = new Button { Style = (Style)FindResource("MkrBarButton"), Content = content, ToolTip = tooltip, Padding = new Thickness(10, 5, 10, 5), Foreground = (Brush)FindResource("MkrText") };
+            button.SetResourceReference(Control.ForegroundProperty, "MkrText");
+            System.Windows.Automation.AutomationProperties.SetName(button, label);
+            button.Click += (_, _) => action();
+            if (needsStudy) _toolbarButtons.Add(button);
+            Toolbar.Children.Add(button);
+        }
+        void Separator() => Toolbar.Children.Add(new Border { Width = 1, Margin = new Thickness(6, 4, 6, 4), Background = (Brush)FindResource("MkrBorder") });
+        Add("\uE80F", "Accueil", "Liste des projets", () => { if (StudyView.Visibility == Visibility.Visible) LeaveStudy(); }, false);
+        Add("\uE81C", "Journal d'audit", "Journal chaîné des actions du projet", () => { if (StudyView.Visibility == Visibility.Visible) OpenAudit(); }, true);
+        Separator();
+        Add("\uE768", "Acquisition", "Données du procédé : import CSV, acquisition en lecture seule", () => SelectTab(1), true);
+        Add("\uE9D9", "Identifier", "Identification du modèle et validation sur un essai indépendant", () => SelectTab(3), true);
+        Add("\uE9F5", "Régler PID", "Réglage guidé : objectif de robustesse, comparaison, courbes", () => SelectTab(5), true);
+        Add("\uE916", "Simuler", "Simulation en boucle fermée du réglage", () => SelectTab(8), true);
+        Add("\uE749", "Rapport", "Fiche d'étude", () => SelectTab(9), true);
+        foreach (var button in _toolbarButtons) button.IsEnabled = false;
+    }
+
+    private void SetToolbarEnabled(bool enabled) { foreach (var button in _toolbarButtons) button.IsEnabled = enabled; }
+
+    /// <summary>The next step the project can do, shown as the status-bar button of a desktop wizard (assisted mode only).</summary>
+    private void UpdateNext()
+    {
+        var next = _assisted && StudyView.Visibility == Visibility.Visible ? StudyJourney.NextStep(_steps) : null;
+        NextButton.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
         if (next is null) return;
-        AssistText.Text = $"Mode assisté · prochaine étape : {next.Number}. {next.Title}. {next.Detail}";
-        AssistGo.IsEnabled = _tab != next.Number - 1;
+        NextButton.Content = $"Suivant : {ShortTitles[next.Number - 1]}  \u203A";
+        NextButton.ToolTip = $"{next.Title}. {next.Detail}";
+        NextButton.IsEnabled = _tab != next.Number - 1;
     }
 
     private void GoToNext(object sender, RoutedEventArgs args)
     {
         if (StudyJourney.NextStep(_steps) is { } next) SelectTab(next.Number - 1);
-    }
-
-    private void ThemeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        if (ThemeChoice.SelectedItem is ComboBoxItem { Tag: string tag } && Enum.TryParse(tag, out ThemeChoice choice) && choice != ThemeService.Choice)
-            ThemeService.Apply(choice);
     }
 
     private void WindowKeyDown(object sender, System.Windows.Input.KeyEventArgs args)
@@ -94,7 +146,7 @@ public partial class WindowView : Window
     private void ProjectSelected(object sender, SelectionChangedEventArgs args)
     {
         _project = ProjectList.SelectedItem as Project;
-        ActiveProject.Text = _project is null ? "Aucun projet sélectionné" : $"Projet : {_project.Name}";
+        ActiveProject.Text = _project is null ? "aucun projet sélectionné" : _project.Name;
         OpenStudy.IsEnabled = _project is not null;
     }
 
@@ -117,7 +169,7 @@ public partial class WindowView : Window
         _project = project;
         HomeView.Visibility = Visibility.Collapsed;
         StudyView.Visibility = Visibility.Visible;
-        RibbonHost.Visibility = Visibility.Visible;
+        SetToolbarEnabled(true);
         Title = $"MKR — {project.Name}";
         LoadStudy();
     }
@@ -126,7 +178,8 @@ public partial class WindowView : Window
     {
         ReleaseStepHost();
         StudyView.Visibility = Visibility.Collapsed;
-        RibbonHost.Visibility = Visibility.Collapsed;
+        SetToolbarEnabled(false);
+        NextButton.Visibility = Visibility.Collapsed;
         HomeView.Visibility = Visibility.Visible;
         Title = "MKR — Espace projets";
     }
@@ -148,6 +201,7 @@ public partial class WindowView : Window
             var accepted = studies.Count(study => study.IsAcceptedForTuning);
             var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
             _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
+            StatusFacts.Text = $"Enregistrements : {imports}   ·   Études : {studies.Count}   ·   Modèles acceptés : {accepted}";
             InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}" +
                 (StudyJourney.NextStep(_steps) is { } next ? $"\n\nProchaine étape : {next.Number}. {next.Title}\n{next.Detail}" : "");
             var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
@@ -181,6 +235,10 @@ public partial class WindowView : Window
         };
     }
 
+    private static readonly string[] NavGlyphs =
+        { "\uE80F", "\uE8F1", "\uE9D9", "\uE9D2", "\uE73E", "\uE9F5", "\uE8C8", "\uE8EF", "\uE768", "\uE749" };
+
+    /// <summary>Vertical navigation: one item per step of the journey, with its state (done, ready, closed).</summary>
     private void BuildTabs()
     {
         TabStrip.Children.Clear();
@@ -189,10 +247,11 @@ public partial class WindowView : Window
         {
             var index = step.Number - 1;
             var content = new StackPanel { Orientation = Orientation.Horizontal };
-            if (step.State != StepState.Ready)
-                content.Children.Add(new TextBlock { Text = step.State == StepState.Done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            content.Children.Add(new TextBlock { Text = NavGlyphs[index], FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0), Width = 20 });
             content.Children.Add(new TextBlock { Text = ShortTitles[index], VerticalAlignment = VerticalAlignment.Center });
-            var tab = new RadioButton { Style = (Style)FindResource("MkrRibbonTab"), GroupName = "Steps", IsChecked = index == _tab, Content = content };
+            if (step.State != StepState.Ready)
+                content.Children.Add(new TextBlock { Text = step.State == StepState.Done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), Opacity = 0.75 });
+            var tab = new RadioButton { Style = (Style)FindResource("MkrNavItem"), GroupName = "Steps", IsChecked = index == _tab, Content = content };
             System.Windows.Automation.AutomationProperties.SetName(tab, $"Étape {step.Number} {step.Title}, {StateName(step.State)}");
             System.Windows.Automation.AutomationProperties.SetAutomationId(tab, "Step" + step.Number);
             tab.ToolTip = step.Detail;
@@ -200,7 +259,54 @@ public partial class WindowView : Window
             _tabs.Add(tab);
             TabStrip.Children.Add(tab);
         }
+        BuildStages();
         BuildRibbon();
+    }
+
+    /// <summary>The seven stages of a regulation study as chevrons, like the reference screens: done, current, ahead.</summary>
+    private static readonly (string Title, int[] Steps, int Tab)[] StageMap =
+    {
+        ("Données", new[] { 0, 1 }, 1), ("Diagnostic", new[] { 2 }, 2), ("Identification", new[] { 3, 4 }, 3), ("Stratégie", new[] { 5 }, 5),
+        ("Réglage", new[] { 6, 7 }, 7), ("Simulation", new[] { 8 }, 8), ("Rapport", new[] { 9 }, 9)
+    };
+
+    private void BuildStages()
+    {
+        Stages.Children.Clear();
+        Stages.ColumnDefinitions.Clear();
+        for (var i = 0; i < StageMap.Length; i++)
+        {
+            var (title, steps, tab) = StageMap[i];
+            Stages.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var current = steps.Contains(_tab);
+            var done = _steps.Count > 0 && steps.All(s => _steps[s].State == StepState.Done);
+            var closed = _steps.Count > 0 && _steps[steps[0]].State == StepState.Blocked;
+            var fill = current ? "MkrNavy" : done ? "MkrSurfaceAlt" : "MkrSurface";
+            var chevron = new System.Windows.Shapes.Polygon
+            {
+                Points = new PointCollection { new Point(0, 0), new Point(88, 0), new Point(100, 50), new Point(88, 100), new Point(0, 100), new Point(12, 50) },
+                Stretch = Stretch.Fill, StrokeThickness = 1, Margin = new Thickness(i == 0 ? 0 : -6, 0, 0, 0)
+            };
+            chevron.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, fill);
+            chevron.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, current ? "MkrNavy" : "MkrBorder");
+            var label = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
+            if (done || closed)
+                label.Children.Add(new TextBlock { Text = done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 12, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
+                                                   Foreground = (Brush)FindResource(current ? "MkrNavyText" : done ? "MkrSuccess" : "MkrMuted") });
+            var text = new TextBlock { Text = title, FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center };
+            text.SetResourceReference(TextBlock.ForegroundProperty, current ? "MkrNavyText" : closed ? "MkrMuted" : "MkrText");
+            label.Children.Add(text);
+            var cell = new Grid { Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
+            cell.Children.Add(chevron);
+            cell.Children.Add(label);
+            var target = tab;
+            cell.MouseLeftButtonUp += (_, _) => SelectTab(target);
+            System.Windows.Automation.AutomationProperties.SetName(cell, $"Étape {title}");
+            System.Windows.Automation.AutomationProperties.SetAutomationId(cell, "Stage" + (i + 1));
+            cell.ToolTip = _steps.Count > 0 ? _steps[steps[0]].Detail : title;
+            Grid.SetColumn(cell, i);
+            Stages.Children.Add(cell);
+        }
     }
 
     private Button Command(string glyph, string label, string tooltip, Action action, bool enabled = true)
@@ -219,6 +325,8 @@ public partial class WindowView : Window
         RibbonCommands.Children.Clear();
         if (_steps.Count == 0) return;
         var step = _steps[_tab];
+        ScreenTitle.Text = step.Title;
+        BuildStages();
         var open = step.State != StepState.Blocked;
         var selected = (StudyGrid.SelectedItem as StudyRow)?.Study;
         switch (_tab)
@@ -263,10 +371,8 @@ public partial class WindowView : Window
             RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
         }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
-        RibbonBar.MinHeight = RibbonCommands.Children.Count == 0 ? 0 : 78;      // a step shown by its own view has no command row: do not keep an empty band
-        // when the assisted banner already says the same thing about this very step, the note under the tabs would only repeat it
-        RibbonBar.Visibility = RibbonCommands.Children.Count == 0 && _assisted && StudyJourney.NextStep(_steps)?.Number == step.Number ? Visibility.Collapsed : Visibility.Visible;
-        UpdateAssistBanner();
+        RibbonHost.Visibility = RibbonCommands.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;     // no empty command band
+        UpdateNext();
     }
 
     // ---------- step views hosted in the workspace ----------
@@ -532,6 +638,7 @@ public partial class WindowView : Window
     {
         if (study is null)
         {
+            ActiveStudy.Text = "Étude : aucune";
             VerdictText.Text = "AUCUNE ÉTUDE";
             ValuesText.Text = "";
             ValuesNote.Text = _steps.Count > 3 && _steps[3].State == StepState.Blocked ? "Importez des données (onglet Données), puis identifiez le procédé." : "Aucune identification enregistrée. Ouvrez l'onglet Identification.";
@@ -541,6 +648,7 @@ public partial class WindowView : Window
             return;
         }
         var result = study.Result;
+        ActiveStudy.Text = $"Étude : {study.Family} · {study.CalculatedAt.ToLocalTime():g} · " + (study.IsAcceptedForTuning ? "modèle accepté" : "modèle refusé");
         VerdictText.Text = study.IsAcceptedForTuning ? "MODÈLE ACCEPTÉ" : "MODÈLE REFUSÉ";
         UpdateVerdictColour();
         string F(double v) => v.ToString("G5", CultureInfo.CurrentCulture);

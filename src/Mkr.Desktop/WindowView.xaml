@@ -25,6 +25,30 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="MkrNavItem" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,1,0,1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Frame" Background="Transparent" CornerRadius="5" Padding="{TemplateBinding Padding}" BorderThickness="2" BorderBrush="Transparent">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource MkrAccentPale}"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Frame" Property="Background" Value="{DynamicResource MkrNavy}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource MkrNavyText}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource MkrAccent}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="MkrRibbonTab" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource MkrMuted}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -74,67 +98,68 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <!-- Barre supérieure -->
-        <Border Grid.Row="0" Background="{DynamicResource MkrNavy}" Padding="14,6">
+        <!-- Barre de menus -->
+        <Menu Grid.Row="0" Background="{DynamicResource MkrSurface}" Foreground="{DynamicResource MkrText}" Padding="4,2" AutomationProperties.Name="Menus">
+            <MenuItem Header="_Fichier">
+                <MenuItem Header="_Nouveau projet…" Click="MenuNewProject"/>
+                <MenuItem Header="_Accueil (liste des projets)" Click="MenuHome"/>
+                <Separator/>
+                <MenuItem Header="_Quitter" Click="MenuQuit"/>
+            </MenuItem>
+            <MenuItem Header="_Affichage">
+                <MenuItem x:Name="MenuAssisted" Header="Mode _assisté" IsCheckable="True" IsChecked="True" Click="MenuMode"/>
+                <MenuItem x:Name="MenuExpert" Header="Mode _expert" IsCheckable="True" Click="MenuMode"/>
+                <Separator/>
+                <MenuItem x:Name="MenuThemeSystem" Header="Thème : suivre _Windows" IsCheckable="True" Click="MenuTheme" Tag="System"/>
+                <MenuItem x:Name="MenuThemeLight" Header="Thème : _clair" IsCheckable="True" Click="MenuTheme" Tag="Light"/>
+                <MenuItem x:Name="MenuThemeDark" Header="Thème : _sombre" IsCheckable="True" Click="MenuTheme" Tag="Dark"/>
+            </MenuItem>
+            <MenuItem Header="_Projet">
+                <MenuItem Header="_Description de la boucle" Click="MenuDescription"/>
+                <MenuItem Header="_Journal d'audit" Click="MenuAudit"/>
+                <MenuItem Header="_Revue de l'étude" Click="MenuReview"/>
+            </MenuItem>
+            <MenuItem Header="_Outils">
+                <MenuItem Header="_Catalogue des blocs constructeurs" Click="OpenCatalogue"/>
+                <MenuItem Header="_Vérifier le moteur Python" Command="{Binding CheckEngine}"/>
+            </MenuItem>
+            <MenuItem Header="Ai_de">
+                <MenuItem Header="Aide et _vocabulaire (F1)" Click="OpenHelp"/>
+            </MenuItem>
+        </Menu>
+        <!-- Barre d'outils : accès direct aux grandes étapes -->
+        <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,1" Padding="6,2">
+            <StackPanel x:Name="Toolbar" Orientation="Horizontal"/>
+        </Border>
+        <!-- En-tête : produit, projet, étude -->
+        <Border Grid.Row="2" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1" Padding="16,8">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="MKR" FontSize="21" FontWeight="Bold" Foreground="{DynamicResource MkrNavyText}"/>
-                    <TextBlock Text="Ingénierie de régulation" FontSize="11" Foreground="{DynamicResource MkrNavyMuted}" Margin="10,0,0,3" VerticalAlignment="Bottom"/>
-                </StackPanel>
-                <Border Grid.Column="1" Background="{DynamicResource MkrNavySoft}" CornerRadius="6" Padding="12,4" Margin="20,0,12,0" HorizontalAlignment="Left" VerticalAlignment="Center">
-                    <TextBlock x:Name="ActiveProject" Text="Aucun projet sélectionné" Foreground="{DynamicResource MkrNavyText}" TextTrimming="CharacterEllipsis"
-                               AutomationProperties.Name="Projet actif" AutomationProperties.LiveSetting="Polite"/>
-                </Border>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="{DynamicResource MkrNavySoft}" CornerRadius="6" Padding="10,4" Margin="0,0,10,0"
-                            ToolTip="MKR lit les données de l’automate et n’y écrit jamais." AutomationProperties.Name="Automate : lecture seule">
-                        <TextBlock Text="Automate : lecture seule" Foreground="{DynamicResource MkrNavyText}" FontSize="12"/>
+                    <Border Background="{DynamicResource MkrNavy}" CornerRadius="6" Padding="10,4" VerticalAlignment="Center">
+                        <TextBlock Text="MKR" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource MkrNavyText}"/>
                     </Border>
-                    <ComboBox x:Name="ModeChoice" SelectionChanged="ModeChanged" Width="120" Margin="0,0,8,0" SelectedIndex="0" AutomationProperties.Name="Mode d'utilisation"
-                              ToolTip="Assisté : MKR indique la prochaine étape. Expert : aucun guidage, toutes les étapes à plat.">
-                        <ComboBoxItem Content="Assisté" Tag="Assisted"/>
-                        <ComboBoxItem Content="Expert" Tag="Expert"/>
-                    </ComboBox>
-                    <ComboBox x:Name="ThemeChoice" SelectionChanged="ThemeChanged" Width="140" Margin="0,0,8,0" AutomationProperties.Name="Thème de l'interface">
-                        <ComboBoxItem Content="Suivre Windows" Tag="System"/>
-                        <ComboBoxItem Content="Clair" Tag="Light"/>
-                        <ComboBoxItem Content="Sombre" Tag="Dark"/>
-                    </ComboBox>
-                    <Button Style="{StaticResource MkrBarButton}" Click="OpenHelp" AutomationProperties.Name="Aide" ToolTip="Aide et vocabulaire (F1)">
-                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE897;" FontFamily="Segoe MDL2 Assets" FontSize="16"/><TextBlock Text="Aide" Margin="8,0,0,0"/></StackPanel>
-                    </Button>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Ingénierie de régulation" FontSize="12" Foreground="{DynamicResource MkrMuted}"/>
+                    </StackPanel>
+                    <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="18,2,18,2"/>
                 </StackPanel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock AutomationProperties.Name="Projet actif" AutomationProperties.LiveSetting="Polite"><Run Text="Projet : " FontWeight="SemiBold"/><Run x:Name="ActiveProject" Text="aucun projet sélectionné"/></TextBlock>
+                    <TextBlock x:Name="ActiveStudy" Foreground="{DynamicResource MkrMuted}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Border Grid.Column="2" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="10,4" VerticalAlignment="Center"
+                        ToolTip="MKR lit les données de l’automate et n’y écrit jamais." AutomationProperties.Name="Automate : lecture seule">
+                    <TextBlock Text="Automate : lecture seule" FontSize="12"/>
+                </Border>
             </Grid>
         </Border>
-        <!-- Onglets d'étapes et ruban d'actions (espace d'étude seulement) -->
-        <Border x:Name="RibbonHost" Grid.Row="1" Visibility="Collapsed" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
-            <StackPanel>
-                <StackPanel x:Name="TabStrip" Orientation="Horizontal" Margin="8,2,8,0"/>
-                <Border x:Name="AssistBanner" Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Padding="14,6" Visibility="Collapsed">
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock x:Name="AssistText" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
-                        <Button x:Name="AssistGo" Grid.Column="1" Content="Y aller" Click="GoToNext" Margin="12,0,0,0" Padding="12,4" MinHeight="28" AutomationProperties.Name="Aller à la prochaine étape"/>
-                    </Grid>
-                </Border>
-                <Border x:Name="RibbonBar" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" MinHeight="78" Padding="8,4">
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <StackPanel x:Name="RibbonCommands" Orientation="Horizontal"/>
-                        <TextBlock x:Name="RibbonNote" Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center" Margin="16,0,8,0" Foreground="{DynamicResource MkrMuted}"
-                                   AutomationProperties.LiveSetting="Polite"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-        </Border>
         <!-- Accueil -->
-        <Grid x:Name="HomeView" Grid.Row="2" Margin="28,20,28,12">
+        <Grid x:Name="HomeView" Grid.Row="3" Margin="28,20,28,12">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -222,76 +247,111 @@
                 </Grid>
             </Border>
         </Grid>
-        <!-- Espace d'étude -->
-        <Grid x:Name="StudyView" Grid.Row="2" Visibility="Collapsed">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="ValuesColumn" Width="218"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Border x:Name="ValuesPanel" Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="14,12,12,10">
-                            <TextBlock Text="VALEURS DU MODÈLE" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold"/>
-                            <Border x:Name="Verdict" CornerRadius="4" Padding="8,3" Margin="0,8,0,10" HorizontalAlignment="Left" Background="{DynamicResource MkrBorderStrong}">
-                                <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource MkrOnStatus}"/>
-                            </Border>
-                            <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
-                            <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" Margin="0,0,0,10" AutomationProperties.Name="Étude affichée"/>
-                            <TextBlock x:Name="ValuesText" TextWrapping="Wrap" FontFamily="{DynamicResource MkrMono}" LineHeight="22"/>
-                            <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"/>
-                            <TextBlock Text="PROJET" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,18,0,6"/>
-                            <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Border>
-                <Grid Grid.Column="1" Margin="10,8,10,6">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
-                        <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
-                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                    <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-                </Grid>
-                <!-- Contenu de l'étape affiché dans la fenêtre (réglage guidé, simulation…) : recouvre le graphique quand l'étape a sa propre vue -->
-                <Border x:Name="StepHost" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
-            </Grid>
-            <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
-                <Grid Margin="10,6,10,6">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <Button x:Name="TableToggle" Content="▸ Tableau des études d'identification" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"
-                            AutomationProperties.Name="Afficher ou masquer le tableau des études"/>
-                    <DataGrid x:Name="StudyGrid" Grid.Row="1" Height="130" Visibility="Collapsed" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Famille" Binding="{Binding Family}" Width="90"/>
-                            <DataGridTextColumn Header="Gain K" Binding="{Binding Gain}" Width="*"/>
-                            <DataGridTextColumn Header="Constante τ (s)" Binding="{Binding Tau}" Width="*"/>
-                            <DataGridTextColumn Header="Retard θ (s)" Binding="{Binding Delay}" Width="*"/>
-                            <DataGridTextColumn Header="Erreur de validation" Binding="{Binding Error}" Width="*"/>
-                            <DataGridTextColumn Header="Décision" Binding="{Binding Decision}" Width="110"/>
-                            <DataGridTextColumn Header="Calculée" Binding="{Binding When}" Width="130"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
+        <!-- Espace d'étude : navigation à gauche, titre et étapes, barre d'écran, contenu -->
+        <Grid x:Name="StudyView" Grid.Row="3" Visibility="Collapsed">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="188"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="TabStrip" Margin="6,10,6,10"/>
+                </ScrollViewer>
             </Border>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="16,10,12,8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <TextBlock x:Name="ScreenTitle" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,24,0" AutomationProperties.LiveSetting="Polite"/>
+                    <Grid x:Name="Stages" Grid.Column="1" Height="34" HorizontalAlignment="Stretch"/>
+                </Grid>
+                <Border x:Name="RibbonHost" Grid.Row="1" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,1" Padding="10,4" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <StackPanel x:Name="RibbonCommands" Orientation="Horizontal"/>
+                        <TextBlock x:Name="RibbonNote" Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center" Margin="12,0,4,0" Foreground="{DynamicResource MkrMuted}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="2">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="ValuesColumn" Width="218"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="ValuesPanel" Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="14,12,12,10">
+                                <TextBlock Text="VALEURS DU MODÈLE" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold"/>
+                                <Border x:Name="Verdict" CornerRadius="4" Padding="8,3" Margin="0,8,0,10" HorizontalAlignment="Left" Background="{DynamicResource MkrBorderStrong}">
+                                    <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource MkrOnStatus}"/>
+                                </Border>
+                                <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
+                                <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" Margin="0,0,0,10" AutomationProperties.Name="Étude affichée"/>
+                                <TextBlock x:Name="ValuesText" TextWrapping="Wrap" FontFamily="{DynamicResource MkrMono}" LineHeight="22"/>
+                                <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"/>
+                                <TextBlock Text="PROJET" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,18,0,6"/>
+                                <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                    <Grid Grid.Column="1" Margin="10,8,10,6">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                            <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
+                            AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                        <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+                    <!-- Contenu de l'étape affiché dans la fenêtre (réglage guidé, simulation…) : recouvre le graphique quand l'étape a sa propre vue -->
+                    <Border x:Name="StepHost" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
+                </Grid>
+                <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
+                    <Grid Margin="10,6,10,6">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Button x:Name="TableToggle" Content="▸ Tableau des études d'identification" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"
+                                AutomationProperties.Name="Afficher ou masquer le tableau des études"/>
+                        <DataGrid x:Name="StudyGrid" Grid.Row="1" Height="130" Visibility="Collapsed" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Famille" Binding="{Binding Family}" Width="90"/>
+                                <DataGridTextColumn Header="Gain K" Binding="{Binding Gain}" Width="*"/>
+                                <DataGridTextColumn Header="Constante τ (s)" Binding="{Binding Tau}" Width="*"/>
+                                <DataGridTextColumn Header="Retard θ (s)" Binding="{Binding Delay}" Width="*"/>
+                                <DataGridTextColumn Header="Erreur de validation" Binding="{Binding Error}" Width="*"/>
+                                <DataGridTextColumn Header="Décision" Binding="{Binding Decision}" Width="110"/>
+                                <DataGridTextColumn Header="Calculée" Binding="{Binding When}" Width="130"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+    
+                </Grid>
+            </Grid>
         </Grid>
-        <!-- Barre d'état -->
-        <Border Grid.Row="3" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Padding="14,5">
+        <!-- Barre d'état : état, faits du projet, étape suivante -->
+        <Border Grid.Row="4" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0" Padding="14,6">
             <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource MkrMuted}" Margin="0,0,12,0" AutomationProperties.LiveSetting="Polite"/>
-                <Button Grid.Column="1" Content="_Vérifier le moteur Python" Command="{Binding CheckEngine}" Margin="0,0,12,0" ToolTip="Vérifier la disponibilité du moteur scientifique local"/>
-                <TextBlock Grid.Column="2" x:Name="VersionText" Foreground="{DynamicResource MkrMuted}" FontSize="11" VerticalAlignment="Center"/>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource MkrSuccess}" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
+                </StackPanel>
+                <TextBlock x:Name="StatusFacts" Grid.Column="1" Margin="22,0,12,0" VerticalAlignment="Center" Foreground="{DynamicResource MkrMuted}" TextTrimming="CharacterEllipsis"/>
+                <Button x:Name="NextButton" Grid.Column="2" Style="{StaticResource MkrPrimaryButton}" Click="GoToNext" Visibility="Collapsed" MinHeight="32" Padding="16,4"
+                        AutomationProperties.Name="Aller à la prochaine étape"/>
+                <TextBlock Grid.Column="3" x:Name="VersionText" Foreground="{DynamicResource MkrMuted}" FontSize="11" VerticalAlignment="Center" Margin="14,0,0,0"/>
             </Grid>
         </Border>
     </Grid>
