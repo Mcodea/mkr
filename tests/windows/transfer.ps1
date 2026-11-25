@@ -62,6 +62,17 @@ function Verify-Comparison($window) {
     }
 }
 $study = (Get-Content -LiteralPath (Join-Path $Fixture 'study.txt') -Raw).Trim()
+function Go-Tab($window, $number) {
+    # Single window: the steps of the study are the tabs of the workspace (Step1 ... Step10).
+    $tab = Find $window $id "Step$number"
+    $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 700
+}
+function Go-Home($window) {
+    Go-Tab $window 1
+    Press $window 'Accueil'
+    $null = Find $window $id 'ProjectList'
+}
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
@@ -74,7 +85,8 @@ try {
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name "MKR — Projet initial"
+    $null = Find $main $id 'StudyPicker'
+    $project = $main      # single window: the project's data are the « Données » tab of the workspace
     (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Fill $project 'LoopTag' 'PIC-202'
     Fill $project 'LoopControlledQuantity' 'Pression de refoulement'
@@ -82,9 +94,11 @@ try {
     Fill $project 'LoopObjective' 'Maintenir la pression aval'
     Press $project 'Enregistrer la description'
     $null = Find $project $name 'Description enregistrée.'
-    $project.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    # back to the project list and into the workspace again: the description must have been persisted
+    Go-Home $main
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name 'MKR — Projet initial'
+    $null = Find $main $id 'StudyPicker'
+    $project = $main
     (Find $project $name 'Procédé').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     foreach ($entry in @{LoopTag='PIC-202'; LoopControlledQuantity='Pression de refoulement'; LoopOperatingPoint='5 bar'; LoopObjective='Maintenir la pression aval'; Description="Procédé d’essai"}.GetEnumerator()) {
         $value = (Find $project $id $entry.Key).GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value
@@ -103,7 +117,8 @@ try {
     }
     $bench.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
     Press $project 'Identification…'
-    $ident = Find $root $name 'MKR — Identification'
+    $null = Find $main $id 'StudyList'
+    $ident = $main        # single window: the identification is the « Identification » tab
     Select-Option $ident 'TrainingSource' 'essai-1.csv*'
     Select-Option $ident 'ValidationSource' 'essai-2.csv*'
     foreach ($prefix in @('Training', 'Validation')) {
@@ -177,9 +192,14 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     foreach ($part in @('essai-6.csv','FOPDT · RMSE','SOPDT · RMSE','erreur de validation excessive','Aucun des deux modèles')) {
         if (!$details.Contains($part)) { throw "Explication du refus absente : $part. $details" }
     }
-    $ident.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    # leave the workspace and come back: the identification view is rebuilt from the stored studies
+    Go-Home $main
+    Press $main 'Ouvrir le projet sélectionné'
+    $null = Find $main $id 'StudyPicker'
+    $project = $main
     Press $project 'Identification…'
-    $ident = Find $root $name 'MKR — Identification'
+    $null = Find $main $id 'StudyList'
+    $ident = $main
     $after = @(Study-Labels $ident)
     if ($before.Count -ne $after.Count -or (Compare-Object $before $after)) {
         throw 'Les études enregistrées ont changé après le refus.'

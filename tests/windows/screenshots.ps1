@@ -67,6 +67,17 @@ function Texts($window) {
 }
 function Close-Window($window) { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
 
+function Go-Tab($window, $number) {
+    # Single window: the steps of the study are the tabs of the workspace (Step1 ... Step10).
+    $tab = Find $window $id "Step$number"
+    $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 700
+}
+function Go-Home($window) {
+    Go-Tab $window 1
+    Press $window 'Accueil'
+    $null = Find $window $id 'ProjectList'
+}
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 $out = Join-Path $env:RUNNER_TEMP 'mkr-captures'
@@ -106,7 +117,9 @@ function Close-Others($rootElement, $mainWindow) {
     for ($pass = 0; $pass -lt 6; $pass++) {
         $found = @($rootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $windowType)) +
                  @($mainWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants, $windowType))
-        $others = @($found | Where-Object { $_.Current.Name -like 'MKR — *' -and $_.Current.Name -ne 'MKR — Espace projets' })
+        $mainHandle = $mainWindow.Current.NativeWindowHandle
+        # the main window is identified by its handle: in the workspace its title is the project's, not « Espace projets »
+        $others = @($found | Where-Object { $_.Current.Name -like 'MKR — *' -and $_.Current.NativeWindowHandle -ne $mainHandle })
         if ($others.Count -eq 0) { return }
         foreach ($other in $others) {
             try { $other.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch { }
@@ -130,7 +143,8 @@ try {
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name 'MKR — Projet initial'
+    $null = Find $main $id 'StudyPicker'
+    $project = $main      # single window: the project's data are the « Données » tab of the workspace
     Capture $project '02-projet'
     Press $project 'Préparer les essais sur banc…'
     $catalogue = Find $root $name 'MKR — Catalogue des blocs'
@@ -139,7 +153,8 @@ try {
     Capture $catalogue '03-catalogue-blocs'
     Close-Window $catalogue
     Press $project 'Identification…'
-    $ident = Find $root $name 'MKR — Identification'
+    $null = Find $main $id 'StudyList'
+    $ident = $main        # single window: the identification is the « Identification » tab
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
@@ -180,10 +195,12 @@ try {
         Close-Window $tuning
     }
     Step '09-acquisition' {
+        Go-Tab $main 2
         Press-Retry $project 'Acquisition automate…'
         $acq = Find $root $name 'MKR — Acquisition en lecture seule'
         Capture $acq '09-acquisition'
         Close-Window $acq
+        Go-Tab $main 4
     }
     Step '11-simulation' {
         Select-Option $ident 'StudyList' "*$modelId"
@@ -218,7 +235,7 @@ try {
         Close-Window $open
     }
     Step '08-audit' {
-        Close-Window $ident
+        Go-Tab $main 2
         Press-Retry $project "Journal d'audit…"
         $audit = Find $root $name "MKR — Journal d'audit"
         Start-Sleep -Milliseconds 800
@@ -228,6 +245,7 @@ try {
     Step '10-espace-etude' {
         # a dialog left open by an earlier step (the review window) must not hide the main window
         Close-Others $root $main
+        Go-Home $main
         Press-Retry $main "Ouvrir l'espace d'étude"
         $null = Find $main $id 'StudyPicker'
         Start-Sleep -Milliseconds 1200

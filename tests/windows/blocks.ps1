@@ -81,6 +81,17 @@ function Audit-Rows($window, $filter) {
 }
 function Close-Window($window) { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }
 
+function Go-Tab($window, $number) {
+    # Single window: the steps of the study are the tabs of the workspace (Step1 ... Step10).
+    $tab = Find $window $id "Step$number"
+    $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 700
+}
+function Go-Home($window) {
+    Go-Tab $window 1
+    Press $window 'Accueil'
+    $null = Find $window $id 'ProjectList'
+}
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
@@ -92,9 +103,11 @@ try {
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name 'MKR — Projet initial'
+    $null = Find $main $id 'StudyPicker'
+    $project = $main      # single window: the project's data are the « Données » tab of the workspace
     Press $project 'Identification…'
-    $ident = Find $root $name 'MKR — Identification'
+    $null = Find $main $id 'StudyList'
+    $ident = $main        # single window: the identification is the « Identification » tab
 
     # ---- Integrator tuning window ----
     $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
@@ -182,7 +195,7 @@ try {
     Write-Output 'Revue : identité de session, refus sans déclaration, auto-revue inscrite comme telle.'
 
     # ---- Audit log: the actions above are traced and the chain is intact ----
-    Close-Window $ident
+    Go-Tab $main 2
     Press $project "Journal d'audit…"
     $audit = Find $root $name "MKR — Journal d'audit"
     foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked', 'review.recorded')) {

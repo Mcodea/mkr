@@ -98,23 +98,16 @@ public partial class WindowView : Window
         OpenStudy.IsEnabled = _project is not null;
     }
 
+    /// <summary>« Ouvrir le projet sélectionné » (and double-click): one window, so the project opens in the workspace on its data tab.</summary>
     private void OpenProject(object sender, RoutedEventArgs args)
     {
-        if (ProjectList.SelectedItem is not Project project)
+        if (ProjectList.SelectedItem is not Project)
         {
             if (sender is not DataGrid) MessageBox.Show(this, "Sélectionnez un projet dans la liste.", "MKR");
             return;
         }
-        try
-        {
-            new CsvWindow(new CsvWorkspace(project, _store, _engine), _createIdentification(project)) { Owner = this }.ShowDialog();
-            if (StudyView.Visibility == Visibility.Visible) LoadStudy();
-        }
-        catch (Exception error)
-        {
-            Trace.TraceError("project.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible d’ouvrir le projet. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        EnterStudy(sender, args);
+        SelectTab(1);
     }
 
     // ---------- study workspace ----------

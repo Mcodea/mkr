@@ -67,6 +67,17 @@ function Open-Acquisition($root, $project) {
 $manifest = Join-Path $env:RUNNER_TEMP 'mkr-ui-interop.json'
 if (Test-Path $manifest) { Remove-Item $manifest }
 $servers = Start-Process -FilePath $Python -ArgumentList @('-I', (Resolve-Path 'tests/interop/plc_servers.py').Path, $manifest, '15020', '15102') -PassThru -WindowStyle Hidden
+function Go-Tab($window, $number) {
+    # Single window: the steps of the study are the tabs of the workspace (Step1 ... Step10).
+    $tab = Find $window $id "Step$number"
+    $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 700
+}
+function Go-Home($window) {
+    Go-Tab $window 1
+    Press $window 'Accueil'
+    $null = Find $window $id 'ProjectList'
+}
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
@@ -86,7 +97,8 @@ try {
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
-    $project = Find $root $name 'MKR — Projet initial'
+    $null = Find $main $id 'StudyPicker'
+    $project = $main      # single window: the project's data are the « Données » tab of the workspace
 
     # Siemens S7comm: DB10.DBD0/4/8 REAL served by Snap7.
     $window = Open-Acquisition $root $project
