@@ -146,6 +146,19 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $savedLabel = $selected[0].Current.Name
     if ($savedLabel -notmatch 'FOPDT.*[0-9a-f]{8}$' -or $savedLabel.EndsWith($study)) { throw "Nouvelle étude attendue : $savedLabel" }
     $before = @(Study-Labels $ident)
+    # ARX / OE button: the click must reach the engine and come back as an explained decision or an explained refusal; nothing is stored
+    # (the unchanged study list is checked below, after the next refusal).
+    Press $ident 'Identifier par ARX / OE'
+    $status = Find $ident $id 'Message'
+    $until = [DateTime]::UtcNow.AddSeconds(40)
+    do {
+        $arx = $status.Current.Name
+        if ($arx -match 'Identification ARX|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { break }
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $until)
+    Write-Host "ARX : $($arx -replace '\s+', ' ')"
+    if ($arx -notmatch 'Identification ARX|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { throw "Réponse ARX absente ou brute : $arx" }
+    if ($arx -match 'Exception|System\.|Traceback|engine_') { throw "Erreur ARX non traduite : $arx" }
     # The holdout now follows an integrating process, unlike the training trace.
     Select-Option $ident 'ValidationSource' 'essai-6.csv*'
     Select-Option $ident 'ValidationTime' 'timestamp'
