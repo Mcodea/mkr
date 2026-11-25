@@ -74,3 +74,59 @@ class SimulationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IndependentOracle(unittest.TestCase):
+    """The unsaturated loop is linear: its set-point and load responses are those of the discrete closed-loop transfer functions
+    (zero-order-hold plant G(z) = K (1 - p) z^-d / (z - p), controller C(z) = kp (z - 1 + h/Ti) / (z - 1)), evaluated here by scipy's
+    dlsim from polynomial arithmetic written in this test: nothing is shared with the simulator under test (audit F-10)."""
+
+    @staticmethod
+    def closed_loop(gain, tau, h, delay_steps, kp, ti, source):
+        import numpy as np
+        p = math.exp(-h / tau)
+        plant_num = np.array([gain * (1 - p)])
+        plant_den = np.polymul([1.0, -p], np.r_[1.0, np.zeros(delay_steps)])            # (z - p) z^d
+        ctrl_num, ctrl_den = kp * np.array([1.0, -1.0 + h / ti]), np.array([1.0, -1.0])
+        open_num, open_den = np.polymul(ctrl_num, plant_num), np.polymul(ctrl_den, plant_den)
+        char = np.polyadd(open_den, open_num)                                           # 1 + C G, common denominator
+        numerator = open_num if source == "setpoint" else np.polymul(ctrl_den, plant_num)     # load: G / (1 + C G)
+        return numerator, char
+
+    def run_case(self, gain, tau, h, delay_steps, kp, ti, duration, setpoint, disturbance, event_steps):
+        import numpy as np
+        from scipy import signal
+        n = round(duration / h)
+        mine = calculate(payload(gain=gain, tauSeconds=tau, delaySeconds=delay_steps * h, sampleSeconds=h, durationSeconds=duration,
+                                 setpoint=setpoint, disturbance=disturbance, disturbanceAtSeconds=event_steps * h,
+                                 imc=dict(kp=kp, tiSeconds=ti), simc=dict(kp=kp, tiSeconds=ti)))["imc"]["points"]
+        expected = np.zeros(n + 1)
+        if setpoint:
+            num, den = self.closed_loop(gain, tau, h, delay_steps, kp, ti, "setpoint")
+            _, y = signal.dlsim(signal.dlti(num, den, dt=h), setpoint * np.ones(n + 1))
+            expected += y[:, 0]
+        if disturbance:
+            num, den = self.closed_loop(gain, tau, h, delay_steps, kp, ti, "load")
+            load = np.where(np.arange(n + 1) >= event_steps, disturbance, 0.0)
+            _, y = signal.dlsim(signal.dlti(num, den, dt=h), load)
+            expected += y[:, 0]
+        return np.array([point["pv"] for point in mine]), expected
+
+    def test_setpoint_and_load_responses_match_the_discrete_closed_loop_transfer_functions(self):
+        import numpy as np
+        cases = (dict(gain=2.0, tau=4.0, h=0.1, delay_steps=0, kp=0.5, ti=4.0),
+                 dict(gain=1.5, tau=20.0, h=0.5, delay_steps=6, kp=0.6, ti=18.0),
+                 dict(gain=-3.0, tau=8.0, h=0.2, delay_steps=10, kp=-0.2, ti=9.0),
+                 dict(gain=0.4, tau=60.0, h=1.0, delay_steps=3, kp=2.0, ti=50.0))
+        for case in cases:
+            for setpoint, disturbance in ((1.0, 0.0), (0.0, 0.7), (1.0, -0.5)):
+                with self.subTest(case=case, setpoint=setpoint, disturbance=disturbance):
+                    mine, expected = self.run_case(duration=case["h"] * 400, setpoint=setpoint, disturbance=disturbance, event_steps=150, **case)
+                    self.assertLess(float(np.max(np.abs(mine - expected))), 1e-9)
+
+    def test_the_oracle_itself_detects_a_wrong_controller(self):                      # guard against an oracle that agrees with everything
+        import numpy as np
+        mine, expected = self.run_case(gain=2.0, tau=4.0, h=0.1, delay_steps=0, kp=0.5, ti=4.0, duration=40.0, setpoint=1.0, disturbance=0.0, event_steps=0)
+        wrong = calculate(payload(imc=dict(kp=0.5, tiSeconds=3.0), simc=dict(kp=0.5, tiSeconds=3.0), durationSeconds=40.0))["imc"]["points"]
+        self.assertGreater(float(np.max(np.abs(np.array([p["pv"] for p in wrong]) - expected))), 1e-3)
+

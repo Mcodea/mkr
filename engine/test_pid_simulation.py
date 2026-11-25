@@ -150,3 +150,49 @@ class FilteredPidTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IndependentOracle(unittest.TestCase):
+    """Unsaturated filtered PID (P and I on the error, backward-Euler filtered D on the measurement): the loop is linear, so the
+    set-point and load responses are those of the discrete transfer functions evaluated by scipy's dlsim from polynomial algebra
+    written in this test (audit F-10). u = C_pi (r - y) - Cd y + d, C_pi = kp (z - 1 + h/Ti) / (z - 1), Cd = g (z - 1) / (z - a),
+    a = Tf / (Tf + h), g = kp Td / (Tf + h); plant G(z) = K (1 - p) z^-m / (z - p)."""
+
+    def responses(self, gain, tau, h, delay_steps, kp, ti, td, tf, n, setpoint, disturbance, event):
+        import math
+        import numpy as np
+        from scipy import signal
+        p, a, g = math.exp(-h / tau), tf / (tf + h), kp * td / (tf + h)
+        gn, gd = np.array([gain * (1 - p)]), np.polymul([1.0, -p], np.r_[1.0, np.zeros(delay_steps)])
+        n1, d1, nd, dd = kp * np.array([1.0, -1.0 + h / ti]), np.array([1.0, -1.0]), g * np.array([1.0, -1.0]), np.array([1.0, -a])
+        char = np.polyadd(np.polymul(np.polymul(d1, dd), gd), np.polymul(np.polyadd(np.polymul(n1, dd), np.polymul(nd, d1)), gn))
+        expected = np.zeros(n + 1)
+        if setpoint:
+            _, y = signal.dlsim(signal.dlti(np.polymul(np.polymul(n1, dd), gn), char, dt=h), setpoint * np.ones(n + 1))
+            expected += y[:, 0]
+        if disturbance:
+            load = np.where(np.arange(n + 1) >= event, disturbance, 0.0)
+            _, y = signal.dlsim(signal.dlti(np.polymul(np.polymul(d1, dd), gn), char, dt=h), load)
+            expected += y[:, 0]
+        mine = calculate(case(gain=gain, tauSeconds=tau, delaySeconds=delay_steps * h, sampleSeconds=h, durationSeconds=n * h,
+                              controller=dict(kp=kp, tiSeconds=ti, tdSeconds=td, filterSeconds=tf), setpoint=setpoint,
+                              disturbance=disturbance, disturbanceAtSeconds=event * h, minimumMv=-1e6, maximumMv=1e6))
+        return np.array([point["pv"] for point in mine["points"]]), expected
+
+    def test_pid_responses_match_the_discrete_closed_loop_transfer_functions(self):
+        import numpy as np
+        cases = (dict(gain=2.0, tau=4.0, h=0.05, delay_steps=5, kp=0.5, ti=4.0, td=0.4, tf=0.15),
+                 dict(gain=1.5, tau=30.0, h=0.5, delay_steps=8, kp=1.2, ti=14.0, td=3.0, tf=0.6),
+                 dict(gain=-2.0, tau=10.0, h=0.2, delay_steps=4, kp=-0.8, ti=9.0, td=1.5, tf=0.3))
+        for parameters in cases:
+            for setpoint, disturbance in ((1.0, 0.0), (0.0, 0.6), (1.0, -0.4)):
+                with self.subTest(parameters=parameters, setpoint=setpoint, disturbance=disturbance):
+                    mine, expected = self.responses(n=300, setpoint=setpoint, disturbance=disturbance, event=120, **parameters)
+                    self.assertLess(float(np.max(np.abs(mine - expected))), 1e-8)
+
+    def test_the_oracle_detects_a_wrong_derivative_time(self):
+        import numpy as np
+        mine, expected = self.responses(gain=2.0, tau=4.0, h=0.05, delay_steps=5, kp=0.5, ti=4.0, td=0.4, tf=0.15, n=300, setpoint=1.0, disturbance=0.0, event=0)
+        _, other = self.responses(gain=2.0, tau=4.0, h=0.05, delay_steps=5, kp=0.5, ti=4.0, td=0.8, tf=0.15, n=300, setpoint=1.0, disturbance=0.0, event=0)
+        self.assertGreater(float(np.max(np.abs(mine - other))), 1e-4)
+
