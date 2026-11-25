@@ -336,6 +336,9 @@ try {
         $tab = Find $main $id 'Step4'
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Show-Page $main 'PageResults'
+        $noisyId = (Get-Content -LiteralPath (Join-Path $Fixture 'noisy-demo-study.txt') -Raw).Trim()
+        Select-Option $main 'StudyList' "*$noisyId"
+        Start-Sleep -Milliseconds 800
         $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
         foreach ($size in @(@(1920,1080), @(1366,768))) {
             Set-Resolution $size[0] $size[1]

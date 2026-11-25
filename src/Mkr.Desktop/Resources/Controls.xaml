@@ -265,7 +265,7 @@
                                         </ControlTemplate>
                                     </ToggleButton.Template>
                                 </ToggleButton>
-                                <ContentPresenter x:Name="Body" Margin="0"/>
+                                <ContentPresenter x:Name="Body" Margin="0" TextElement.Foreground="{DynamicResource MkrText}"/>
                             </DockPanel>
                         </Border>
                         <ControlTemplate.Triggers>

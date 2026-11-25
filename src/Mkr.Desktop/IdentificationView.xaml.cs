@@ -861,10 +861,10 @@ public partial class IdentificationView : UserControl, IStepView
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
         grid.Children.Add(new TextBlock { Text = label, Margin = new Thickness(10, 4, 6, 4), TextWrapping = TextWrapping.Wrap });
-        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 4, 4, 4), TextAlignment = TextAlignment.Right };
+        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 2, 4, 2), TextAlignment = TextAlignment.Right };
         Grid.SetColumn(val, 1);
         grid.Children.Add(val);
-        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 4, 8, 4), Foreground = (Brush)FindResource("MkrMuted") };
+        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 2, 8, 2), Foreground = (Brush)FindResource("MkrMuted") };
         Grid.SetColumn(u, 2);
         grid.Children.Add(u);
         return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
@@ -893,8 +893,7 @@ public partial class IdentificationView : UserControl, IStepView
         ParameterTable.Children.Add(KeyValue(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain du procédé K", result.Gain.ToString("G5", CultureInfo.CurrentCulture), gainUnit));
         if (result.TauSeconds is { } tau) ParameterTable.Children.Add(KeyValue(result.SecondTauSeconds is null ? "Constante de temps τ" : "Constante lente τ₁", tau.ToString("G5", CultureInfo.CurrentCulture), "s"));
         if (result.SecondTauSeconds is { } fast) ParameterTable.Children.Add(KeyValue("Constante rapide τ₂", fast.ToString("G5", CultureInfo.CurrentCulture), "s"));
-        ParameterTable.Children.Add(KeyValue("Temps mort θ", result.DelaySeconds.ToString("G5", CultureInfo.CurrentCulture), "s"));
-        ParameterTable.Children.Add(KeyValue("Temps mort prudent (réglage)", result.TuningDelaySeconds.ToString("G5", CultureInfo.CurrentCulture), "s"));
+        ParameterTable.Children.Add(KeyValue($"Temps mort θ (prudent : {result.TuningDelaySeconds.ToString("G4", CultureInfo.CurrentCulture)} s)", result.DelaySeconds.ToString("G5", CultureInfo.CurrentCulture), "s"));
 
         var shown = DisplayedDiagnostics();
         var label = PlotSource.SelectedIndex == 0 ? "estimation" : "validation";
@@ -920,9 +919,9 @@ public partial class IdentificationView : UserControl, IStepView
             if (Iae(pts) is { } iae) QualityTable.Children.Add(KeyValue($"IAE ({label})", iae.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit + "·s"));
         }
         if (study.Assessment is { } decision)
-            QualityTable.Children.Add(KeyValue("Seuil de RMSE (validation)", decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
+            VerdictCard.ToolTip = $"{VerdictDetail.Text} Seuil de RMSE : {decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture)} {study.PvUnit}.";
 
-        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).Select(item => new ModelRow
+        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).GroupBy(item => item.Family).Select(group => group.OrderByDescending(item => item.CalculatedAt).First()).Select(item => new ModelRow
         {
             Study = item,
             Family = item.Family == ModelFamily.Integrateur ? "Intégrateur" : item.Family.ToString(),

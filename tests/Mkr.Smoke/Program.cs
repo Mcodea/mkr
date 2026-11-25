@@ -97,11 +97,19 @@ try
         "Description, original, mapping and report survive reopening.");
     Throws<InvalidDataException>(() => restored.ReadImport(Guid.NewGuid(), summary.Id));
 
-    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5, int secondsPerSample = 1)
+    async Task<CsvImport> SaveStepAsync(int day, double amplitude, ModelFamily family = ModelFamily.FOPDT, double delaySeconds = 2.5, int secondsPerSample = 1, int samples = 60, double tau = 4, double noise = 0)
     {
+        var seed = (uint)(day * 2654435761u + 12345);
+        double Gauss()
+        {
+            // Deterministic pseudo-noise (sum of twelve uniforms, mean 0, standard deviation 1): reproducible demonstration data, never used by a check.
+            var sum = 0.0;
+            for (var k = 0; k < 12; k++) { seed = seed * 1664525u + 1013904223u; sum += seed / 4294967296.0; }
+            return sum - 6;
+        }
         var csv = new StringBuilder("timestamp;mv;pv\n");
         var start = new DateTimeOffset(2026, 1, day, 0, 0, 0, TimeSpan.Zero);
-        for (var i = 0; i < 60; i++)
+        for (var i = 0; i < samples; i++)
         {
             var t = i - 6;
             var x = Math.Max(0, t - delaySeconds / secondsPerSample);
@@ -109,9 +117,9 @@ try
             {
                 ModelFamily.SOPDT => 1 - (5 * Math.Exp(-x / 5) - 2 * Math.Exp(-x / 2)) / 3,
                 ModelFamily.Integrateur => x / 10,
-                _ => 1 - Math.Exp(-x / 4)
+                _ => 1 - Math.Exp(-x / tau)
             };
-            var y = 8 - 3 * amplitude * response;
+            var y = 8 - 3 * amplitude * response + (noise > 0 ? noise * Gauss() : 0);
             csv.Append(FormattableString.Invariant($"{start.AddSeconds(i * secondsPerSample):O};{(t >= 0 ? amplitude : 0)};{y:G17}\n"));
         }
 
@@ -970,7 +978,18 @@ try
         var rapidStudy = new IdentificationStudy(Guid.NewGuid(), rapidTraining.Summary.Id, rapidValidation.Summary.Id,
             columns, columns, "%", "bar", 0.01, 0.01, DateTimeOffset.UtcNow, rapidVersion, rapidFit, Assessment: rapidAssessment);
         restored.SaveStudy(project.Id, rapidStudy);
+        // Demonstration study with measurement noise (screens and captures only): a first-order process with a realistic time constant, noisy like a real transmitter.
+        var noisyTraining = await SaveStepAsync(20, 2, delaySeconds: 10, samples: 700, tau: 60, noise: 0.03);
+        var noisyValidation = await SaveStepAsync(21, -1.5, delaySeconds: 10, samples: 700, tau: 60, noise: 0.03);
+        var (noisyFit, noisyVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
+            new StepImport(noisyTraining, columns), new StepImport(noisyValidation, columns), 0.2, 0.2, default);
+        var (_, noisyAssessment, _) = await engine.AssessAsync(ModelFamily.FOPDT, new StepImport(noisyTraining, columns),
+            new StepImport(noisyValidation, columns), 0.2, 0.2, new ComparisonCriteria(0.2, 0.8), default);
+        var noisyStudy = new IdentificationStudy(Guid.NewGuid(), noisyTraining.Summary.Id, noisyValidation.Summary.Id,
+            columns, columns, "%", "bar", 0.2, 0.2, DateTimeOffset.UtcNow, noisyVersion, noisyFit, Assessment: noisyAssessment);
+        restored.SaveStudy(project.Id, noisyStudy);
         Directory.CreateDirectory(fixture);
+        File.WriteAllText(Path.Combine(fixture, "noisy-demo-study.txt"), noisyStudy.Id.ToString()[..8]);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
         // Fixtures for the block, integrator and drift windows (tests/windows/blocks.ps1).
         var integratorCriteria = new ComparisonCriteria(0.001, 1);

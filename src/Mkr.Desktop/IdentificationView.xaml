@@ -109,8 +109,8 @@
                             <StackPanel x:Name="QualityTable"/>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (études du projet)">
-                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="26" ColumnHeaderHeight="30" MaxHeight="190"
+                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (dernière étude de chaque famille)">
+                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="22" ColumnHeaderHeight="26" MaxHeight="150"
                                   SelectionMode="Single" SelectionChanged="ModelTableChanged" AutomationProperties.Name="Comparaison des modèles">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Modèle" Binding="{Binding Family}" Width="1.2*"/>
