@@ -63,6 +63,12 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "identify_arx":
+        try:
+            from arx import identify as identify_arx
+            return {**response, "result": identify_arx(request["payload"])}
+        except ValueError as error:
+            code = str(error) if str(error).startswith("arx_") else "fit_data"
     elif request["operation"] == "recommend_tuning":
         from recommend import calculate as recommend
         try:

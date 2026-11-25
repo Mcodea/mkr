@@ -21,7 +21,7 @@ Un test automatisé réussi ne vaut jamais le niveau 5 ou 6. **Aucune fonction n
 | Simulation PI/PID (saturation, anti-windup, bruit, perturbation, transfert manuel/auto) | 1–2 | cas analytiques partiels | validation contre un simulateur indépendant (voir F-10) |
 | Conversions Schneider PIDFF, PID_INT, Siemens PID_Compact | 1 (forme) | équations lues dans les documents officiels, équivalence de forme à un oracle | **essai sur le bloc réel**, jamais qualifié |
 | Optimisation numérique sous contraintes | 0 | — | F-05 |
-| ARX / identification sans régime permanent initial | 0 | — | F-08 |
+| ARX / sortie-erreur, sans régime permanent initial | 3 (moteur seulement) | `test_arx.py` : vérité synthétique exacte, refus | interface, données expérimentales |
 
 ## 3. Constats
 | # | Gravité | Constat | Décision |
@@ -33,7 +33,7 @@ Un test automatisé réussi ne vaut jamais le niveau 5 ou 6. **Aucune fonction n
 | F-05 | moyenne | Pas d'optimisation numérique : recherche en grille dans la famille SIMC. | **Corrigé pour le PI (25/11)** : optimisation du gain intégral Ki = Kp/Ti sous la contrainte de sensibilité sur tous les coins de l'incertitude (Åström, Panagopoulos et Hägglund, Automatica 34, 1998) ; critère de perturbation de charge, IAE ≈ 1/Ki. Vérifiée par des oracles indépendants (balayage fréquentiel et simulation temporelle écrits dans les tests) : contrainte respectée sur les coins, optimum sur la frontière (+4 % de gain ou −4 % de Ti la viole), dépassement annoncé conforme à la simulation à 3 points près. Exemples : FOPDT +37 % de Ki (dépassement nominal 17 %), intégrateur +59 % (dépassement 40 %). **Ouvert** : optimisation du PID et critères de suivi de consigne. |
 | F-06 | moyenne | Le choix P / PI / PID suit la règle SIMC (PID seulement si le second pôle dépasse le retard) ; pas d'évaluation de la commande intégrale seule pour un retard dominant. | Documenté ; **ouvert**. |
 | F-07 | moyenne | Le filtre de la dérivée du PID n'était pas dimensionné (`derivative_filter_unspecified`). | **Corrigé pour le réglage guidé** : Tf = Td/N, N = 10 par défaut (plage usuelle 2 à 20, Åström et Hägglund 2006), et le filtre est inclus dans les marges de la boucle jugée (la sensibilité est évaluée avec le filtre). N reste un choix de conception, pas une optimisation sur le bruit : le bruit de mesure réel n'est pas encore pris en compte. Les anciens réglages PID SIMC « simples » restent non filtrés. |
-| F-08 | élevée | Seuls des échelons isolés avec régime permanent initial sont acceptés. | **Ouvert** (ARX, état initial estimé). |
+| F-08 | élevée | Seuls des échelons isolés avec régime permanent initial sont acceptés. | **Corrigé au niveau du moteur (25/11)** : `arx.py` (ARX et sortie-erreur, excitation quelconque, point de fonctionnement estimé, critères de validation indépendants, refus), vérifié sur données synthétiques ([détails](arx.md)). **Ouvert** : exposition dans l'interface, données expérimentales, retard fractionnaire, intégrateur. |
 | F-09 | moyenne | Dispersion de l'identification en boucle fermée sous-estimée d'environ 30 %. | Publiée ; reste expérimentale. |
 | F-10 | élevée | Les simulateurs PI/PID de MKR sont validés surtout par leurs propres tests. | **Atténué** pour le réglage guidé (oracles écrits dans les tests, voir §4) ; reste à faire pour la simulation complète. |
 | F-11 | faible | `pi_tuning_integrator.loop_margins` n'utilise que le premier passage à 0 dB et le premier croisement de phase ; correct pour PI sur intégrateur, non général. | Noté. |
