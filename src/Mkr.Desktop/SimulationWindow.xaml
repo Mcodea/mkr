@@ -15,6 +15,8 @@
                 <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                 <StackPanel x:Name="ScenarioForm">
                     <TextBlock Text="01  ·  Paramètres du scénario" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <Expander x:Name="ScenarioFields" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8">
+                    <StackPanel>
                     <WrapPanel Margin="0,0,0,6">
                         <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
                         <TextBox x:Name="Sample" Width="75" />
@@ -49,6 +51,8 @@
                             <Button Content="Tester le transfert" Click="RunTransfer"/>
                         </WrapPanel>
                     </GroupBox>
+                    </StackPanel>
+                    </Expander>
                     <WrapPanel Margin="0,0,0,8">
                         <Button Content="_Simuler et enregistrer" Click="Run" />
                         <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>

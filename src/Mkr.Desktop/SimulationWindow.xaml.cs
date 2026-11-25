@@ -121,6 +121,7 @@ public partial class SimulationWindow : Window
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
             Message.Text = "Simulation enregistrée.";
+            ScenarioFields.IsExpanded = false; // laisse la place au graphique
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
