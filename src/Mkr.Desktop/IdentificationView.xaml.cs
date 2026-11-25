@@ -84,7 +84,7 @@ public partial class IdentificationView : UserControl, IStepView
             Message.Text = "Choisissez l’enregistrement, ses trois colonnes, les unités et les tolérances de la sortie de commande et de la mesure avant la recherche.";
             return;
         }
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         Message.Text = "Recherche des échelons exploitables…";
         var token = _lifetime.Token;
         try
@@ -111,7 +111,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private async void PreviewTraining(object sender, RoutedEventArgs args) =>
@@ -129,7 +129,7 @@ public partial class IdentificationView : UserControl, IStepView
             return;
         }
 
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         Message.Text = "Lecture des courbes brutes en cours…";
         var token = _lifetime.Token;
         try
@@ -163,7 +163,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private async void ProposeCriteria(object sender, RoutedEventArgs args)
@@ -177,7 +177,7 @@ public partial class IdentificationView : UserControl, IStepView
             Message.Text = "Choisissez les deux essais, leurs colonnes, les unités et les tolérances avant de proposer des critères.";
             return;
         }
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -195,7 +195,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private ArxStudy? _lastArx;
@@ -235,7 +235,7 @@ public partial class IdentificationView : UserControl, IStepView
             Message.Text = "Les essais d'estimation et de validation doivent être indépendants (imports ou plages distincts, sans ligne commune).";
             return;
         }
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         Message.Text = "Identification ARX / sortie-erreur…";
         var token = _lifetime.Token;
         try
@@ -249,7 +249,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private async void Calculate(object sender, RoutedEventArgs args)
@@ -295,7 +295,7 @@ public partial class IdentificationView : UserControl, IStepView
             return;
         }
         var criteria = new ComparisonCriteria(rmse, lag);
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         Message.Text = "Estimation et évaluation…";
         var token = _lifetime.Token;
         try
@@ -343,7 +343,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private static string ReasonText(string reason) => reason switch
@@ -654,7 +654,7 @@ public partial class IdentificationView : UserControl, IStepView
             Message.Text = "Choisissez le nouvel essai dans la zone Validation (source, colonnes), les unités et les tolérances.";
             return;
         }
-        Form.IsEnabled = false;
+        Form.IsEnabled = Form0.IsEnabled = false;
         var token = _lifetime.Token;
         try
         {
@@ -666,7 +666,7 @@ public partial class IdentificationView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
-        finally { Form.IsEnabled = true; }
+        finally { Form.IsEnabled = Form0.IsEnabled = true; }
     }
 
     private void OpenIntegrator(object sender, RoutedEventArgs args)
