@@ -271,6 +271,7 @@ public partial class WindowView : Window
             RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
         }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+        RibbonBar.MinHeight = RibbonCommands.Children.Count == 0 ? 0 : 78;      // a step shown by its own view has no command row: do not keep an empty band
         UpdateAssistBanner();
     }
 

@@ -236,6 +236,16 @@ try {
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 500
         Capture $main '10b-onglet-identification'
+        foreach ($entry in @(@('Step2','10d-onglet-donnees'), @('Step5','10e-onglet-validation'), @('Step8','10f-onglet-reglage'))) {
+            $other = Find $main $id $entry[0]
+            $other.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+            Start-Sleep -Milliseconds 700
+            Capture $main $entry[1]
+        }
+        # the chart commands belong to the first tab only (the other tabs show their own view)
+        $first = Find $main $id 'Step1'
+        $first.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 500
         Press-Retry $main 'Agrandir'
         Start-Sleep -Milliseconds 700
         Capture $main '10c-graphique-agrandi'
