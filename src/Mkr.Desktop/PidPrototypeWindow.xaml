@@ -1,0 +1,88 @@
+<Window x:Class="Mkr.Desktop.PidPrototypeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="MKR — Laboratoire PID hors ligne" Width="1100" Height="840"
+        MinWidth="790" MinHeight="570" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="22">
+        <TextBlock DockPanel.Dock="Bottom" x:Name="Status" Margin="0,10,0,0"
+                   TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <TextBlock Text="MKR  /  LABORATOIRE SCIENTIFIQUE  /  PID"
+                           FontSize="11" Foreground="{DynamicResource MkrAccent}" FontWeight="SemiBold"/>
+                <TextBlock Text="Essai PID filtré — hors ligne" FontSize="26" FontWeight="SemiBold"
+                           Margin="0,7,0,5"/>
+                <TextBlock Text="Prototype non qualifié industriellement · Aucun paramètre envoyé vers un automate · Calculs non enregistrés"
+                           TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,15"/>
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
+                        BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
+                    <StackPanel x:Name="InputPanel">
+                        <TextBlock Text="01  ·  Paramètres manuels du régulateur" FontSize="16"
+                                   FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="ContextInfo" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Label Content="Kp" Target="{Binding ElementName=Kp}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Kp" Width="90" Margin="0,0,12,0"/>
+                            <Label Content="Ti (s)" Target="{Binding ElementName=Ti}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Ti" Width="90" Margin="0,0,12,0"/>
+                            <Label Content="Td (s)" Target="{Binding ElementName=Td}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Td" Width="90" Text="0.2" Margin="0,0,12,0"/>
+                            <Label Content="Tf (s)" Target="{Binding ElementName=Tf}" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Tf" Width="90" Text="0.1"/>
+                        </WrapPanel>
+                        <TextBlock Text="P et I sur l’écart (consigne − mesure) · D uniquement sur la mesure · filtre discret Euler implicite · intégration conditionnelle."
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,9"/>
+                        <WrapPanel>
+                            <Button x:Name="RunButton" Content="_Comparer PID / PI" Click="Run"
+                                    Style="{StaticResource MkrPrimaryButton}"
+                                    ToolTip="Simulation locale sur le même procédé et le même scénario"/>
+                            <Button Content="_Fermer" Click="CloseDialog" Margin="10,0,0,0"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="ResultsPanel" Visibility="Collapsed"
+                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
+                        BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="02  ·  Comparaison des performances"
+                                   FontWeight="SemiBold" FontSize="16" Margin="0,0,0,9"/>
+                        <TextBlock x:Name="ResultMeta" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
+                        <DataGrid x:Name="Metrics" AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserAddRows="False" Height="150"
+                                  AutomationProperties.Name="Comparaison des performances PI et PID">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Méthode" Binding="{Binding Method}" Width="130"/>
+                                <DataGridTextColumn Header="IAE" Binding="{Binding Iae, StringFormat=G6}" Width="100"/>
+                                <DataGridTextColumn Header="ISE" Binding="{Binding Ise, StringFormat=G6}" Width="100"/>
+                                <DataGridTextColumn Header="Erreur finale" Binding="{Binding FinalError, StringFormat=G6}" Width="130"/>
+                                <DataGridTextColumn Header="Sat. (s)" Binding="{Binding Saturation, StringFormat=G6}" Width="110"/>
+                                <DataGridTextColumn Header="Rampe (s)" Binding="{Binding RateLimited, StringFormat=G6}" Width="120"/>
+                                <DataGridTextColumn Header="Gel I (pas)" Binding="{Binding FrozenSteps}" Width="110"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="PlotPanel" Visibility="Collapsed"
+                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
+                        BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="03  ·  Courbes comparées sur le même horizon"
+                                   FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="Legend" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,8"/>
+                        <local:SignalChart x:Name="Chart" Height="680"
+                                AutomationProperties.Name="Comparaison temporelle : consigne, mesure PI et PID, sortie de commande appliquée, action dérivée, en fonction du temps"
+                                AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                        <TextBlock x:Name="CursorText" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="Simulation FOPDT nominale, valeurs d'écart. L'amélioration d'un indicateur n'est pas une garantie de stabilité ni de compatibilité constructeur."
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

@@ -1,0 +1,205 @@
+<Window x:Class="Mkr.Desktop.IdentificationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="MKR — Identification" Width="960" Height="780" MinWidth="620" MinHeight="480"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="18">
+        <TextBlock x:Name="Message" DockPanel.Dock="Bottom" Margin="0,12,0,0" TextWrapping="Wrap"
+                   AutomationProperties.LiveSetting="Polite" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <TextBlock FontSize="22" FontWeight="SemiBold" Text="Identification par échelons" />
+                <TextBlock Margin="0,5,0,12" TextWrapping="Wrap"
+                           Text="Deux essais distincts du même procédé, avec un échelon propre de la sortie de commande pour chacun : deux CSV, ou deux plages d’un même historique (bouton « Rechercher les essais »). La validation utilise le deuxième essai." />
+                <StackPanel x:Name="Form">
+                    <GroupBox Header="Estimation" Margin="0,0,0,8">
+                        <StackPanel>
+                            <WrapPanel Margin="6">
+                            <Label Content="Import" Target="{Binding ElementName=TrainingSource}" />
+                            <ComboBox x:Name="TrainingSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectTraining" >
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                            </ComboBox>
+                            <Label Content="Temps" Target="{Binding ElementName=TrainingTime}" />
+                            <ComboBox x:Name="TrainingTime" Width="95" />
+                            <Label Content="Sortie de commande" Target="{Binding ElementName=TrainingMv}" />
+                            <ComboBox x:Name="TrainingMv" Width="95" />
+                            <Label Content="Mesure" Target="{Binding ElementName=TrainingPv}" />
+                            <ComboBox x:Name="TrainingPv" Width="95" />
+                        </WrapPanel>
+                        <Button Content="Afficher les _courbes brutes (estimation)…"
+                                Click="PreviewTraining" HorizontalAlignment="Left"
+                                Margin="12,0,12,8"
+                                ToolTip="Sélectionner une plage du CSV original pour le prochain calcul"/>
+                        <Button x:Name="FindTrials" Content="_Rechercher les essais exploitables dans cet enregistrement…"
+                                Click="FindTrialsInRecording" HorizontalAlignment="Left" Margin="12,0,12,8"
+                                ToolTip="Pour un historique long : repère les échelons propres de la sortie de commande et propose deux plages indépendantes"/>
+                        <TextBlock x:Name="TrainingRangeInfo" Text="Estimation : fichier complet" Margin="12,0,8,8"
+                                   Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="Validation" Margin="0,0,0,8">
+                        <StackPanel>
+                            <WrapPanel Margin="6">
+                            <Label Content="Import" Target="{Binding ElementName=ValidationSource}" />
+                            <ComboBox x:Name="ValidationSource" Width="200" DisplayMemberPath="Label" SelectionChanged="SelectValidation" >
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                            </ComboBox>
+                            <Label Content="Temps" Target="{Binding ElementName=ValidationTime}" />
+                            <ComboBox x:Name="ValidationTime" Width="95" />
+                            <Label Content="Sortie de commande" Target="{Binding ElementName=ValidationMv}" />
+                            <ComboBox x:Name="ValidationMv" Width="95" />
+                            <Label Content="Mesure" Target="{Binding ElementName=ValidationPv}" />
+                            <ComboBox x:Name="ValidationPv" Width="95" />
+                        </WrapPanel>
+                        <Button Content="Afficher les courbes brutes (_validation)…"
+                                Click="PreviewValidation" HorizontalAlignment="Left"
+                                Margin="12,0,12,8"
+                                ToolTip="Sélectionner une plage indépendante pour la validation"/>
+                        <TextBlock x:Name="ValidationRangeInfo" Text="Validation : fichier complet" Margin="12,0,8,8"
+                                   Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </GroupBox>
+                    <WrapPanel Margin="0,0,0,8">
+                        <Label Content="Unité de la sortie de commande" Target="{Binding ElementName=MvUnit}" />
+                        <TextBox x:Name="MvUnit" Width="65" MaxLength="40" />
+                        <Label Content="Tolérance de la sortie de commande (plateaux)" Target="{Binding ElementName=MvTolerance}" />
+                        <TextBox x:Name="MvTolerance" Width="82" />
+                        <Label Content="Unité de la mesure" Target="{Binding ElementName=PvUnit}" />
+                        <TextBox x:Name="PvUnit" Width="65" MaxLength="40" />
+                        <Label Content="Tolérance de la mesure avant échelon" Target="{Binding ElementName=PvTolerance}" />
+                        <TextBox x:Name="PvTolerance" Width="82" />
+                    </WrapPanel>
+                    <WrapPanel Margin="0,0,0,8">
+                        <Label Content="Erreur quadratique max. (RMSE, unité de la mesure)" Target="{Binding ElementName=MaximumRmse}"/>
+                        <TextBox x:Name="MaximumRmse" Width="76"/>
+                        <Label Content="Corrélation résiduelle maximale |r₁|" Target="{Binding ElementName=MaximumLag}"/>
+                        <TextBox x:Name="MaximumLag" Width="76"/>
+                        <Button x:Name="SuggestCriteria" Content="_Proposer les critères" Click="ProposeCriteria" Margin="0,0,8,0"
+                                ToolTip="Calculés à partir du bruit mesuré sur les plateaux avant échelon, sans regarder l’ajustement"/>
+                        <Button x:Name="CompareModels" Content="Comparer FOPDT et SOPDT" Click="Calculate"/>
+                    </WrapPanel>
+                    <CheckBox x:Name="Confirmed" Margin="0,2,0,8">
+                        <TextBlock TextWrapping="Wrap" Text="Les deux essais ont été réalisés en boucle ouverte, sans saturation connue, avec les mêmes unités et dans des conditions comparables." />
+                    </CheckBox>
+                    <WrapPanel Margin="0,0,0,10">
+                        <Label Content="Famille" Target="{Binding ElementName=FamilyChoice}" />
+                        <ComboBox x:Name="FamilyChoice" Width="95" Margin="0,0,8,0" />
+                        <Button Content="_Estimer et enregistrer" Click="Calculate" />
+                        <Label Content="Études" Target="{Binding ElementName=StudyList}" Margin="10,0,0,0" />
+                        <ComboBox x:Name="StudyList" Width="260" DisplayMemberPath="Label" SelectionChanged="ShowStudy" >
+                            <ComboBox.ItemContainerStyle>
+                                <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+                                    <Setter Property="AutomationProperties.AutomationId" Value="{Binding Id}"/>
+                                </Style>
+                            </ComboBox.ItemContainerStyle>
+                        </ComboBox>
+                    </WrapPanel>
+                </StackPanel>
+                <Border x:Name="VerdictCard" Visibility="Collapsed" CornerRadius="8" Padding="14" Margin="0,10,0,8" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="VerdictBadge" CornerRadius="14" Padding="14,6" VerticalAlignment="Top" Margin="0,0,16,0">
+                            <TextBlock x:Name="VerdictTitle" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock x:Name="VerdictDetail" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                            <WrapPanel x:Name="VerdictMetrics" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
+                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
+                        BorderThickness="1" Padding="14" CornerRadius="6" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Diagnostic du modèle" FontWeight="SemiBold" FontSize="17"
+                                   Margin="0,0,0,8"/>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Label Content="_Essai affiché" Target="{Binding ElementName=PlotSource}"
+                                   VerticalAlignment="Center"/>
+                            <ComboBox x:Name="PlotSource" Width="160" SelectedIndex="1"
+                                      SelectionChanged="ChangePlotSource" VerticalAlignment="Center">
+                                <ComboBoxItem Content="Estimation"/>
+                                <ComboBoxItem Content="Validation"/>
+                            </ComboBox>
+                            <Button Content="_Réinitialiser le zoom" Click="ResetPlotZoom" Margin="12,0,0,0"
+                                    ToolTip="Revenir à l’horizon complet de l’essai affiché"/>
+                            <Button Content="Exporter l'_image…" Click="ExportPlotImage" Margin="8,0,0,0"/>
+                            <Button Content="Exporter les _données…" Click="ExportPlotData" Margin="8,0,0,0"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="PlotLegend" Margin="0,2,0,8" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MkrMuted}"/>
+                        <local:SignalChart x:Name="Chart" Height="430"
+                                AutomationProperties.Name="Mesure observée, mesure prédite et résidus de l’essai sélectionné, en fonction du temps"
+                                AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                        <TextBlock x:Name="CursorText" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        <TextBlock Text="Le zoom modifie seulement l’affichage, jamais les données ou les paramètres de l’étude."
+                                   Foreground="{DynamicResource MkrMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="OpenLoopButton" Content="_Simuler en boucle ouverte…" Click="OpenLoop"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0" />
+                <Button x:Name="ReviewButton" Content="_Revue de l'étude…" Click="OpenReview"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        ToolTip="Calculé, vérifié, approuvé : décisions attribuées à l'identité de la session, règle des quatre yeux."/>
+                <Button x:Name="DriftButton" Content="_Vérifier le modèle sur un nouvel essai…" Click="CheckDrift"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        ToolTip="Choisissez le nouvel échelon en boucle ouverte dans la zone Validation, puis vérifiez si ce modèle accepté le décrit encore."/>
+                <Button x:Name="IntegratorButton" Content="Régler le procédé _intégrateur…" Click="OpenIntegrator"
+                        Visibility="Collapsed" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        ToolTip="PI par la règle SIMC des procédés intégrateurs, marges de la boucle nominale et valeurs du bloc PIDFF (non qualifiées)."/>
+                <GroupBox x:Name="TargetPanel" Header="Comportement souhaité" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Label Content="Réponse" Target="{Binding ElementName=ResponseProfile}"/>
+                            <ComboBox x:Name="ResponseProfile" SelectionChanged="ChangeResponseProfile" Width="180">
+                                <ComboBoxItem Content="SIMC · réponse rapide"/>
+                                <ComboBoxItem Content="Personnalisée"/>
+                            </ComboBox>
+                            <Label Content="Cible de calcul (s)" Target="{Binding ElementName=ResponseTarget}"/>
+                            <TextBox x:Name="ResponseTarget" TextChanged="ResponseTargetChanged" Width="100"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="TargetHelp" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox x:Name="SopdtPanel" Header="Réglage PID théorique · SIMC" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Button x:Name="CalculatePidButton" IsEnabled="False" Content="Calculer le PID SIMC" Click="CalculateSopdt" Margin="8,0,0,0"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="SopdtReport" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
+                    <StackPanel Margin="8">
+                        <WrapPanel>
+                            <Button x:Name="ComparePiButton" IsEnabled="False" Content="_Comparer Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
+                        </WrapPanel>
+                        <WrapPanel Margin="0,8,0,0">
+                            <Label Content="Réglages enregistrés" Target="{Binding ElementName=PiList}" />
+                            <ComboBox x:Name="PiList" Width="245" DisplayMemberPath="Label" SelectionChanged="ShowPi" />
+                            <Button x:Name="SimulateSavedPi" IsEnabled="False" Content="Simuler le réglage _enregistré…" Click="OpenSimulation" Margin="8,0,0,0" />
+                            <Button x:Name="PidffValues" IsEnabled="False" Content="_Valeurs du bloc PIDFF…" Click="ShowPidffValues" Margin="8,0,0,0"
+                                    ToolTip="Valeurs documentaires du bloc Schneider PIDFF (structure mixte). Non qualifiées."/>
+                            <Button x:Name="OtherBlocks" IsEnabled="False" Content="Blocs PID__INT et PID__Compact…" Click="ShowOtherBlocks" Margin="8,0,0,0"
+                                    ToolTip="Valeurs documentaires des blocs Schneider PID_INT et Siemens PID_Compact V2.x/V3.x. Non qualifiées."/>
+                        </WrapPanel>
+                        <TextBlock x:Name="PiReport" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

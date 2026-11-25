@@ -1,0 +1,698 @@
+{
+  "schemaVersion": 1,
+  "catalogueVersion": "2026-11-24.7",
+  "sources": [
+    {
+      "id": "SE-33002535-16",
+      "document": "33002535K01000",
+      "edition": "16",
+      "section": "Notice du manuel",
+      "date": "2020-09-06",
+      "url": "https://www.se.com/us/en/download/document/33002535K01000/",
+      "scope": "Manuel de la bibliothèque Control Expert. La version 16 désigne le document.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PREMIUM-2012",
+      "document": "Modicon Premium Automation Catalogue",
+      "edition": "2012",
+      "section": "Controllers, page 6/14",
+      "url": "https://iportal.se.com/Contents/docs/MODICON%20PREMIUM%20AUTOMATION%20CATALOGUE.PDF",
+      "scope": "Description des blocs du catalogue Premium.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PIDFF-AW",
+      "document": "FAQ000279186",
+      "edition": "2026-04-20",
+      "section": "Purpose of aw_type",
+      "url": "https://www.se.com/be/fr/faqs/FAQ000279186/",
+      "scope": "Paramètre aw_type du PIDFF dans Control Expert.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "SE-PIDFF-167",
+      "document": "33002535K01000",
+      "edition": "16",
+      "section": "PIDFF, Para_PIDFF, p. 167 et paramétrage, p. 172–173",
+      "date": "2020-09-06",
+      "url": "https://www.se.com/us/en/download/document/33002535K01000/",
+      "scope": "Types et rôle des paramètres de la bibliothèque Control. Le comportement sur une cible particulière reste à qualifier.",
+      "consultedOn": "2026-11-21"
+    },
+    {
+      "id": "CAPTURE-PIDFF-1",
+      "document": "Capture d’écran de l’aide du bloc PIDFF, fournie par le mainteneur",
+      "edition": "non identifiée",
+      "section": "Structure diagram — Parallel structure of the PIDFF controller",
+      "url": "urn:mkr:capture:pidff-structure-1",
+      "scope": "Transcription limitée aux noms et à l’ordre des blocs visibles. Aucune équation. Document d’origine, édition et version de bibliothèque à confirmer. L’image n’est pas redistribuée.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "CAPTURE-PIDFF-2",
+      "document": "Capture d’écran d’une instance PIDFF dans un programme du mainteneur",
+      "edition": "non identifiée",
+      "section": "Broches du bloc PIDFF",
+      "url": "urn:mkr:capture:pidff-pins-1",
+      "scope": "Noms des broches visibles seulement. Types, unités et comportement non établis.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "CAPTURE-PIDCOMPACT-1",
+      "document": "Capture d’écran d’une instance PID_Compact dans un programme du mainteneur",
+      "edition": "non identifiée",
+      "section": "Réseau « PID compact for Alkali dosing pump », DB d’instance %DB2",
+      "url": "urn:mkr:capture:pidcompact-instance-1",
+      "scope": "Broches visibles seulement ; la liste est tronquée par la flèche d’extension du bloc. Version du bloc non affichée.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FA410692",
+      "document": "FAQ Schneider FA410692 — What does PIDFF status 080 indicate in Control Expert?",
+      "edition": "non précisée",
+      "section": "Statut 080 du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FA410692/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FAQ000279181",
+      "document": "FAQ Schneider FAQ000279181 — What is the purpose for the 'ovs_att' PIDFF parameter.",
+      "edition": "non précisée",
+      "section": "Paramètre ovs_att du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FAQ000279181/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-FAQ-FAQ000256113",
+      "document": "FAQ Schneider FAQ000256113 — Structure diagram for the PIDFF mixed mode is missing from the help.",
+      "edition": "non précisée",
+      "section": "Structure mixte du PIDFF",
+      "url": "https://www.se.com/us/en/faqs/FAQ000256113/",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-DOC",
+      "document": "Siemens — PID control with PID_Compact (entrée 100746401, V2.0 et V3.0), Closed-Loop Control with PID_Compact V2.2 (entrée 79047707), SIMATIC S7-1200/S7-1500 PID control (entrée 108210036)",
+      "edition": "V2.0, V2.2, V3.0 (TIA Portal V17 pour le manuel V3.0)",
+      "section": "Principes de régulation et PID_Compact",
+      "url": "https://support.industry.siemens.com/cs/attachments/108210036/s71500_pid_control_function_manual_en-US_en-US.pdf",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision. Les équations de l’algorithme sont des images dans ces manuels : lecture humaine requise.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-FAQ-109481448",
+      "document": "Siemens FAQ 109481448 — migration PID S7-200 vers PID_Compact (S7-1200)",
+      "edition": "01/2016",
+      "section": "Différences de paramétrage",
+      "url": "https://support.industry.siemens.com/cs/attachments/109481448/109481448_S7200-S71200_PID_Compact_en.pdf",
+      "scope": "Contenu relayé par un moteur de recherche le 2026-11-24 (résumé de la page) : la page n’a pas pu être ouverte dans cette session (hôte hors de la liste réseau). À relire à la source avant toute décision.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-33002536K01000",
+      "document": "Schneider Electric — EcoStruxure Control Expert, Régulation, Bibliothèque de blocs (33002536)",
+      "edition": "09/2020 (33002536.16)",
+      "section": "Chapitre 17, PIDFF, pages 167 à 187",
+      "url": "https://www.se.com/fr/fr/download/document/33002536K01000/",
+      "scope": "Lu le 2026-11-24 dans le PDF fourni par le mainteneur. Les équations des pages 173, 177, 182 et 183 sont des images : transcrites à la lecture de ces images. Seule l'édition 09/2020 est lue : la version de Control Expert, le firmware et la CPU restent à identifier.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SE-33002520K01000",
+      "document": "Schneider Electric, EcoStruxure Control Expert - Bibliothèque de blocs standard, 33002520",
+      "edition": "09/2020 (33002520.20)",
+      "section": "Chapitre 30, PID_INT, pages 135 à 141",
+      "url": "https://www.se.com/fr/fr/download/document/33002520K01000/",
+      "scope": "Lu le 2026-11-24 dans le PDF fourni par le mainteneur. Les équations de la page 141 sont des images : transcrites à la lecture. Documentation brève : l'action dérivée Dt n'a aucune équation ; la version de Control Expert, le firmware et la CPU restent à identifier.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-V3",
+      "document": "Siemens — PID control with PID_Compact SIMATIC S7-1200 / S7-1500 + TIA Portal V17 (entrée 100746401, V3.0)",
+      "edition": "V3.0",
+      "section": "Documentation de la version 3",
+      "url": "https://cache.industry.siemens.com/dl/files/401/100746401/att_1124946/v2/100746401_S71x00_PidCompact_DOC_V3.0_en.pdf",
+      "scope": "Titre et existence relayés par un moteur de recherche le 2026-11-24 ; PDF non ouvert dans cette session. À relire à la source.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-PIDCOMPACT-V22",
+      "document": "Siemens — Closed-Loop Control with PID_Compact V2.2 (entrée 79047707)",
+      "edition": "V2.2",
+      "section": "Documentation de la version 2.2",
+      "url": "https://cache.industry.siemens.com/dl/files/707/79047707/att_915339/v2/79047707_PidCompactV2_2_DOC_V2_0_1_en.pdf",
+      "scope": "Titre et existence relayés par un moteur de recherche le 2026-11-24 ; PDF non ouvert dans cette session. À relire à la source.",
+      "consultedOn": "2026-11-24"
+    },
+    {
+      "id": "SIEMENS-FM-A5E35300227-AJ",
+      "document": "Siemens, PID control, Function Manual (SIMATIC S7-1200 / S7-1500, PID_Compact V1 à V3), A5E35300227-AJ",
+      "edition": "11/2025 (A5E35300227-AJ)",
+      "section": "Chapitre 6.2 (pages 88 à 93) et 11.1 (pages 245 à 271)",
+      "url": "https://support.industry.siemens.com/",
+      "scope": "Lu le 2026-11-24 dans le PDF fourni par le mainteneur. Les équations des pages 88 et 91 sont des images, lues sur ces images. Les versions de TIA Portal compatibles ne sont pas lues ici.",
+      "consultedOn": "2026-11-24"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "PIDFF",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": "Control",
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": "Structure mixte (mix_par = 0) : OUT = kp × [1 + 1/(ti·p) + td·p / (1 + (td/kd)·p)] × IN, avec IN = PV − SP en unités physiques. Structure parallèle (mix_par = 1) : OUT = [kp + α/(ti·p) + α·td·p / (1 + (td/kd)·p)] × IN, avec α = (out_sup − out_inf) / (pv_sup − pv_inf). Document 33002536, p. 173.",
+      "parameters": [
+        {
+          "name": "kp",
+          "iecType": "REAL",
+          "label": "coefficient proportionnel",
+          "unit": "Dépend des échelles du procédé et de la sortie",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "ti",
+          "iecType": "TIME",
+          "label": "temps intégral",
+          "unit": "Durée IEC",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "td",
+          "iecType": "TIME",
+          "label": "temps dérivé",
+          "unit": "Durée IEC",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "mix_par",
+          "iecType": "BOOL",
+          "label": "structure du régulateur",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "rev_dir",
+          "iecType": "BOOL",
+          "label": "sens d’action",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        },
+        {
+          "name": "en_rcpy",
+          "iecType": "BOOL",
+          "label": "utilisation du retour RCPY",
+          "unit": "Sans unité",
+          "source": "SE-PIDFF-167"
+        }
+      ],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SE-PREMIUM-2012",
+          "claim": "PID à structure parallèle ou mixte dans le catalogue Premium."
+        },
+        {
+          "source": "SE-PIDFF-AW",
+          "claim": "aw_type configure l’anti-windup du PIDFF."
+        },
+        {
+          "source": "SE-PIDFF-167",
+          "claim": "mix_par sélectionne la structure mixte (0) ou parallèle (1). En structure parallèle, les plages d’entrée et de sortie interviennent dans le calcul des actions intégrale et dérivée."
+        },
+        {
+          "source": "SE-PIDFF-167",
+          "claim": "Un temps intégral nul désactive l’action intégrale. Avec un temps intégral positif, le bloc calcule d’abord un incrément de sortie."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Structure parallèle : les actions proportionnelle (kp), intégrale (ti, K) et dérivée (td, kd, K) sont additionnées avant le sens d’action (rev_dir)."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "L’action proportionnelle reçoit un écart pondéré DEV_WGH issu d’une atténuation de dépassement (ovs_att) appliquée à la consigne ; l’action intégrale reçoit l’écart dev ; un sélecteur pv_dev précède l’action dérivée."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Un bloc à zone morte (dband, gain_kp) précède les actions proportionnelle et intégrale. Les plages pv_sup et pv_inf figurent sur les entrées SP et PV."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "Après la somme des actions : sens direct/inverse (rev_dir), addition de l’anticipation FF (bornes ff_sup, ff_inf, otff_sup, otff_inf ; out_ff) et d’un décalage outbias, limiteur de variation (outrate), limiteur out_min/out_max."
+        },
+        {
+          "source": "CAPTURE-PIDFF-1",
+          "claim": "La sortie OUT résulte d’une commutation MAN_AUTO et d’un suivi (TR_I, TR_S) avec un limiteur out_sup/out_inf."
+        },
+        {
+          "source": "CAPTURE-PIDFF-2",
+          "claim": "Broches d’entrée visibles : PV, SP, FF, RCPY, MAN_AUTO, PARA, TR_I, TR_S. Broches de sortie visibles : OUT, OUTD, MA_O, INFO, STATUS."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Statut 080 : si kp, dband ou gain_kp est négatif, le bloc substitue 0 à la valeur invalide et ne produit pas de sortie (OUT, OUTD, MA_O et INFO restent inchangées). Un kp négatif n’est donc pas accepté."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Si kd est inférieur à 1 alors que td est non nul, le bloc utilise 1 à la place de kd. Un ovs_att hors de [0, 1] est ramené à 0 ou à 1."
+        },
+        {
+          "source": "SE-FAQ-FA410692",
+          "claim": "Une erreur est signalée si pv_inf et pv_sup sont identiques, ou si une entrée n’est pas de type flottant."
+        },
+        {
+          "source": "SE-FAQ-FAQ000279181",
+          "claim": "ovs_att est le coefficient d’atténuation de dépassement, compris entre 0 (aucune atténuation) et 1 (atténuation maximale), qui réduit le dépassement lors d’un changement de consigne."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Le mainteneur désigne le document 33002536K01000 comme documentation officielle du PIDFF (équations et paramètres). Document non lu : aucune équation n'en est tirée."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Algorithme incrémental pour ti > 0 (p. 183, aw_type = 0) : OUTD = TermP + TermI + TermD + TermFF ; OUT = OUT(old) + OUTD (ou RCPY + OUTD avec en_rcpy = 1) ; TermP = sense × kp × Δ(DEV_WGH) ; TermI = sense × kp × (dt/ti) × dev ; TermD = Δ[sense × (td × TermD(old) + K × td × kd × (VAR(new) − VAR(old))) / (kd × dt + td)] ; Δ(x) = x(t) − x(t−1) ; dt est le temps écoulé depuis la dernière exécution du bloc."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Algorithme absolu pour ti = 0 (p. 182) : OUT = TermP + TermD + TermFF + outbias ; TermP = sense × kp × dev."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "dev = PV − SP (Info_PIDFF, p. 172). DEV_WGH = PV − (1 − ovs_att) × SP (p. 177) : ovs_att = 0 donne l'écart classique, ovs_att = 1 donne la mesure."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Sens d'action (p. 182) : sense = +1 pour rev_dir = 1, un écart positif (PV − SP) donnant une sortie supérieure ; sense = −1 pour rev_dir = 0, un écart positif donnant une sortie inférieure. VAR = PV si pv_dev = 0, VAR = dev si pv_dev = 1."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Incohérence de la documentation : la table des paramètres (p. 171) libelle rev_dir = 0 « action inverse » et rev_dir = 1 « action directe », alors que le tableau de la page 182 libelle rev_dir = 1 « inverse » et rev_dir = 0 « directe ». Les comportements décrits concordent (rev_dir = 1 : sortie supérieure pour PV − SP > 0). Le PI_B (p. 4805 du texte) numérote l'inverse de la table du PIDFF. À confirmer sur banc."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Structure mixte : le gain K des composantes vaut kp (p. 176). Structure parallèle : kp ne s'applique pas à I et D et K est le rapport sortie/gamme (p. 176), mais l'équation détaillée de TermI (p. 183) contient kp. Documentation non cohérente : aucune conversion parallèle n'est offerte."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Le filtre de dérivée est du premier ordre, de constante de temps td/kd (p. 173 et 178). Valeur, seuil et sortie sont en unités physiques (p. 168). Les temps ti et td sont de type TIME (p. 171)."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Limites : OUT est borné entre out_min et out_max en automatique, et entre out_inf et out_sup en manuel et en suivi (p. 179). outrate limite la pente de la sortie, en unités par seconde, avec une valeur ≥ 0 (p. 172). Si ff_sup = ff_inf, la composante d'anticipation est ignorée (p. 179)."
+        },
+        {
+          "source": "SE-33002536K01000",
+          "claim": "Modes (p. 180) : le mode Tracking (TR_S) est prioritaire sur MAN_AUTO. bump = 0 : passage en automatique sans à-coup ; bump = 1 : avec à-coup (p. 172 et 180)."
+        }
+      ]
+    },
+    {
+      "name": "PI_B",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SE-PREMIUM-2012",
+          "claim": "Régulateur PI de base à structure mixte dans le catalogue Premium."
+        }
+      ]
+    },
+    {
+      "name": "PIFINT",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": []
+    },
+    {
+      "name": "PID_INT",
+      "manufacturer": "Schneider Electric",
+      "software": "Control Expert",
+      "library": "Standard",
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": "Sans action intégrale (TI = 0) : OUT = KP·ε(t+Dt)/100 + 5000. Avec action intégrale : ΔOUT = KP·[Δε(t) + (TS/(10·TI))·ε(t) + ΔDt]/100 ; OUT = OUT + ΔOUT. ε = SP − PV (schéma p. 137 : consigne +, mesure −). Dt = « action dérivée » : aucune équation dans le document. Document 33002520, p. 141.",
+      "parameters": [
+        {
+          "name": "KP",
+          "iecType": "INT",
+          "label": "gain proportionnel ×100, signé",
+          "unit": "sans unité, entre −10000 et +10000 (PARA[2])",
+          "source": "SE-33002520K01000"
+        },
+        {
+          "name": "TI",
+          "iecType": "INT",
+          "label": "temps intégral",
+          "unit": "dixièmes de seconde, 0 à 20000 (PARA[3])",
+          "source": "SE-33002520K01000"
+        },
+        {
+          "name": "TD",
+          "iecType": "INT",
+          "label": "temps dérivé",
+          "unit": "dixièmes de seconde, 0 à 10000 (PARA[4])",
+          "source": "SE-33002520K01000"
+        },
+        {
+          "name": "TS",
+          "iecType": "INT",
+          "label": "période d'échantillonnage",
+          "unit": "centièmes de seconde, 1 à 32000 (PARA[5]) ; multiple de la période de tâche",
+          "source": "SE-33002520K01000"
+        },
+        {
+          "name": "PV_DEV",
+          "iecType": "BIT",
+          "label": "action dérivée : 0 sur mesure, 1 sur écart",
+          "unit": "PARA[8].0",
+          "source": "SE-33002520K01000"
+        }
+      ],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Entrées et sorties INT au format [0..10000] : mesure, consigne et sortie PID_Out."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Le signe de KP fixe le sens d'action (négatif : avant, positif : arrière). Avec ε = SP − PV, un KP positif relève la sortie quand la mesure baisse."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Avec TI = 0, un décalage de 5000 est ajouté à la sortie en automatique."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Le texte dit « TI < 0 » pour l'action intégrale : coquille probable pour TI > 0, non résolue par le document."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "La page 136 annonce « série / parallèle » mais aucun paramètre ne choisit la structure ; l'équation de la page 141 est de forme mixte."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "La page 136 cite l'échelle [0-1000], les paramètres [0-10000] : incohérence du document."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "La période réelle d'échantillonnage est le multiple de la période de tâche le plus proche de TS."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Redémarrage à froid : mode manuel, sortie à 0."
+        },
+        {
+          "source": "SE-33002520K01000",
+          "claim": "Aucune équation de l'action dérivée Dt n'est donnée : aucune conversion avec dérivée n'est établie."
+        }
+      ]
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": null,
+      "equation": null,
+      "parameters": [],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "CAPTURE-PIDCOMPACT-1",
+          "claim": "Instance dans le DB %DB2 (« PID_Compact_2 »). Broches d’entrée visibles : Setpoint, Input, Input_PER, ManualEnable, ManualValue. Broches de sortie visibles : Output, Output_PER, Output_PWM, State, Error, ErrorBits."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "Un gain proportionnel négatif n’est pas pris en charge. Pour qu’une sortie plus forte réduise la PV, la configuration coche « Invert control logic » et le gain est la valeur absolue du gain signé."
+        },
+        {
+          "source": "SIEMENS-FAQ-109481448",
+          "claim": "Tous les paramètres de temps de PID_Compact (Ti, Td) s’expriment en secondes ; le PID du S7-200 les exprimait en minutes."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "En mode manuel, une valeur de sortie hors des limites configurées est limitée dans la CPU à ces limites."
+        },
+        {
+          "source": "SIEMENS-PIDCOMPACT-DOC",
+          "claim": "Les documents de référence existent par version (V2.0, V2.2, V3.0). Les équations de l’algorithme y sont des images : la définition exacte des pondérations et du filtre de dérivée reste à relever par un humain."
+        }
+      ]
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": "V2.x",
+      "equation": "y = Kp · [ (b·w − x) + 1/(Ti·s)·(w − x) + Td·s/(a·Td·s + 1)·(c·w − x) ] ; b = PWeighting, c = DWeighting, a = TdFiltRatio (retard dérivé T1 = a·Td). Contrôleur PIDT1 avec anti-windup. Document A5E35300227-AJ, p. 88 (V2) et p. 91 (V3, zone morte désactivée).",
+      "parameters": [
+        {
+          "name": "Gain",
+          "iecType": "REAL",
+          "label": "gain proportionnel",
+          "unit": "≥ 0, sortie en % par unité de mesure (Retain.CtrlParams.Gain)",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Ti",
+          "iecType": "REAL",
+          "label": "temps intégral",
+          "unit": "secondes, 0 à 100000 ; 0 désactive l'intégrale",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Td",
+          "iecType": "REAL",
+          "label": "temps dérivé",
+          "unit": "secondes, 0 à 100000 ; 0 désactive la dérivée",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "TdFiltRatio",
+          "iecType": "REAL",
+          "label": "coefficient de retard de dérivée a",
+          "unit": "≥ 0 ; retard T1 = a × Td ; défaut 0,2",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "PWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action proportionnelle b",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action dérivée c",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Cycle",
+          "iecType": "REAL",
+          "label": "période d'échantillonnage de l'algorithme",
+          "unit": "secondes, > 0 ; multiple entier de CycleTime",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "InvertControl",
+          "iecType": "BOOL",
+          "label": "inversion du sens (Config.InvertControl)",
+          "unit": "TRUE : un écart croissant réduit la sortie",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        }
+      ],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SIEMENS-PIDCOMPACT-V22",
+          "claim": "Une documentation de PID_Compact V2.2 existe (« Closed-Loop Control with PID_Compact V2.2 »). Contenu non lu."
+        },
+        {
+          "source": "SIEMENS-FAQ-109481448",
+          "claim": "Ti et Td s'expriment en secondes (version 2.x)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "PID_Compact ne fonctionne pas avec un gain proportionnel négatif : le sens inverse passe par Config.InvertControl (p. 92, 270)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Sortie de l'algorithme en pourcentage (−100 à 100 %), limites Config.OutputLowerLimit / OutputUpperLimit (p. 245 ss, 12655)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Défauts : Gain 1,0 ; Ti 20,0 s ; Td 0,0 s ; TdFiltRatio 0,2 ; PWeighting 1,0 ; DWeighting 1,0 (p. 270-271)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Avec c = 0 la dérivée n'agit que sur la mesure x : c'est la forme de MKR."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "S7-1500 (micrologiciel 1.0 et plus) : V2.0 à V2.4 selon le micrologiciel ; S7-1200 à partir du micrologiciel 4.0 : V2.2, puis V2.3 à partir de 4.2 (p. 246-247)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V2.2 : première version utilisable sur S7-1200 (micrologiciel 4.0 et plus). V2.3 : IntegralResetMode = 4 par défaut. V2.4 : signe de la sortie modifié avec OverwriteInitialOutputValue et commande inversée."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "La fonction de transfert de V2 ne contient pas de zone morte."
+        }
+      ]
+    },
+    {
+      "name": "PID_Compact",
+      "manufacturer": "Siemens",
+      "software": "TIA Portal",
+      "library": null,
+      "cpu": null,
+      "firmware": null,
+      "softwareVersion": null,
+      "libraryVersion": "V3.x",
+      "equation": "y = Kp · [ (b·w − x) + 1/(Ti·s)·(w − x) + Td·s/(a·Td·s + 1)·(c·w − x) ] ; b = PWeighting, c = DWeighting, a = TdFiltRatio (retard dérivé T1 = a·Td). Contrôleur PIDT1 avec anti-windup. Document A5E35300227-AJ, p. 88 (V2) et p. 91 (V3, zone morte désactivée).",
+      "parameters": [
+        {
+          "name": "Gain",
+          "iecType": "REAL",
+          "label": "gain proportionnel",
+          "unit": "≥ 0, sortie en % par unité de mesure (Retain.CtrlParams.Gain)",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Ti",
+          "iecType": "REAL",
+          "label": "temps intégral",
+          "unit": "secondes, 0 à 100000 ; 0 désactive l'intégrale",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Td",
+          "iecType": "REAL",
+          "label": "temps dérivé",
+          "unit": "secondes, 0 à 100000 ; 0 désactive la dérivée",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "TdFiltRatio",
+          "iecType": "REAL",
+          "label": "coefficient de retard de dérivée a",
+          "unit": "≥ 0 ; retard T1 = a × Td ; défaut 0,2",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "PWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action proportionnelle b",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DWeighting",
+          "iecType": "REAL",
+          "label": "pondération de l'action dérivée c",
+          "unit": "0 à 1 ; défaut 1",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "Cycle",
+          "iecType": "REAL",
+          "label": "période d'échantillonnage de l'algorithme",
+          "unit": "secondes, > 0 ; multiple entier de CycleTime",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "InvertControl",
+          "iecType": "BOOL",
+          "label": "inversion du sens (Config.InvertControl)",
+          "unit": "TRUE : un écart croissant réduit la sortie",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        },
+        {
+          "name": "DeadZone",
+          "iecType": "REAL",
+          "label": "largeur de zone morte (V3)",
+          "unit": "à régler manuellement, jamais calculée par le réglage",
+          "source": "SIEMENS-FM-A5E35300227-AJ"
+        }
+      ],
+      "modes": [],
+      "status": "to_verify",
+      "facts": [
+        {
+          "source": "SIEMENS-PIDCOMPACT-V3",
+          "claim": "Une documentation de PID_Compact V3.0 existe, pour SIMATIC S7-1200 / S7-1500 avec TIA Portal V17. Contenu non lu."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "PID_Compact ne fonctionne pas avec un gain proportionnel négatif : le sens inverse passe par Config.InvertControl (p. 92, 270)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Sortie de l'algorithme en pourcentage (−100 à 100 %), limites Config.OutputLowerLimit / OutputUpperLimit (p. 245 ss, 12655)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Défauts : Gain 1,0 ; Ti 20,0 s ; Td 0,0 s ; TdFiltRatio 0,2 ; PWeighting 1,0 ; DWeighting 1,0 (p. 270-271)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Avec c = 0 la dérivée n'agit que sur la mesure x : c'est la forme de MKR."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V3.0 : S7-1500 à partir du micrologiciel 3.1 et S7-1200 G2 (toutes versions) ; les versions antérieures ne sont pas prises en charge sur S7-1200 G2 (p. 245-247)."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "V3.0 ajoute une zone morte (Retain.CtrlParams.DeadZone) et une limitation active de l'action intégrale ; l'équation indiquée vaut zone morte désactivée."
+        },
+        {
+          "source": "SIEMENS-FM-A5E35300227-AJ",
+          "claim": "Le transfert d'un programme S7-1200 vers S7-1200 G2 passe PID_Compact à V3.0 à la compilation suivante : à revoir selon les changements de comportement."
+        }
+      ]
+    }
+  ]
+}

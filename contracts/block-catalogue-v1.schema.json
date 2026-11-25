@@ -1,0 +1,236 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "catalogueVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "document": {
+            "type": "string",
+            "minLength": 1
+          },
+          "edition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "consultedOn": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "edition",
+          "section",
+          "url",
+          "scope",
+          "consultedOn"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "manufacturer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "software": {
+            "type": "string",
+            "minLength": 1
+          },
+          "library": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "cpu": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "firmware": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "softwareVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "libraryVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "equation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "unit": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "iecType": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "unit",
+                "source"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "status": {
+            "enum": [
+              "to_verify",
+              "verified",
+              "rejected"
+            ]
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "claim": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "source",
+                "claim"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "verifiedStrategies": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "P",
+                "PI",
+                "PID"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "verifiedFunctions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "name",
+          "manufacturer",
+          "software",
+          "library",
+          "cpu",
+          "firmware",
+          "softwareVersion",
+          "libraryVersion",
+          "equation",
+          "parameters",
+          "modes",
+          "status",
+          "facts"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "catalogueVersion",
+    "sources",
+    "blocks"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

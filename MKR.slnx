@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mkr.Core/Mkr.Core.csproj" />
+    <Project Path="src/Mkr.Infrastructure/Mkr.Infrastructure.csproj" />
+    <Project Path="src/Mkr.Desktop/Mkr.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mkr.Communication.Tests/Mkr.Communication.Tests.csproj" />
+    <Project Path="tests/Mkr.PhysicalLoop.Tests/Mkr.PhysicalLoop.Tests.csproj" />
+    <Project Path="tests/Mkr.Smoke/Mkr.Smoke.csproj" />
+  </Folder>
+</Solution>

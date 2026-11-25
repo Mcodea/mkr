@@ -1,0 +1,44 @@
+<Window x:Class="Mkr.Desktop.BlockCatalogueWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MKR — Catalogue des blocs" Width="940" Height="590"
+        MinWidth="700" MinHeight="420" WindowStartupLocation="CenterOwner">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="Catalogue des blocs" FontSize="26" FontWeight="SemiBold"/>
+        <DockPanel Grid.Row="1" Margin="0,14,0,14">
+            <Label Content="_Rechercher" Target="{Binding ElementName=Filter}" DockPanel.Dock="Left"/>
+            <TextBox x:Name="Filter" TextChanged="ApplyFilter" MinWidth="120"
+                     AutomationProperties.Name="Filtrer par bloc, constructeur ou logiciel"/>
+        </DockPanel>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="3*"/></Grid.ColumnDefinitions>
+            <ListBox x:Name="Blocks" SelectionChanged="ClearCopyStatus" DisplayMemberPath="Name" AutomationProperties.Name="Blocs du catalogue"
+                     Margin="0,0,16,0"/>
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel DataContext="{Binding SelectedItem, ElementName=Blocks}">
+                    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Target}" TextWrapping="Wrap" Margin="0,6,0,12"/>
+                    <TextBlock Text="{Binding Status}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="LoopContext" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                    <Button x:Name="CopySheet" Content="Copier le relevé de banc" Click="CopyBenchSheet"
+                            HorizontalAlignment="Left" Margin="0,10,0,0" Padding="8,4">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedItem, ElementName=Blocks}" Value="{x:Null}">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <TextBlock x:Name="CopyStatus" AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock x:Name="Evidence" Text="{Binding Evidence}" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>
