@@ -193,7 +193,8 @@ try {
         $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
         try { Press $ident 'Simuler le réglage enregistré…' } catch { }   # a button that opens a modal dialog may report a UIA error although it worked
         $sim = Find $root $name 'MKR — Simulation PI'
-        Press-Retry $sim 'Simuler et enregistrer'
+        foreach ($entry in @{Sample='1';Duration='120';Setpoint='1';Lower='-5';Upper='5';Disturbance='0';DisturbanceAt='0';ManualMv='0';SwitchTime='5'}.GetEnumerator()) { Fill $sim $entry.Key $entry.Value }
+        try { Press $sim 'Simuler et enregistrer' } catch { }
         $null = Find $sim $name 'Simulation enregistrée.'
         Start-Sleep -Milliseconds 1000
         Capture $sim '11-simulation'
