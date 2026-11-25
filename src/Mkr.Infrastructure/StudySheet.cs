@@ -89,7 +89,7 @@ public static class StudySheet
         Line($"Erreur = consigne − mesure. Cible de réponse {N(pi.Result.ResponseSeconds)} s.");
         Line("Les indicateurs ci-dessous sont SIMULÉS sur le modèle identifié ; ils ne sont pas des performances mesurées sur le procédé.");
         foreach (var (label, coefficients, result) in new[] {
-            ("IMC / Lambda", pi.Result.Imc, sim.Result.Imc), ("SIMC", pi.Result.Simc, sim.Result.Simc) })
+            ("Lambda (Dahlin)", pi.Result.Imc, sim.Result.Imc), ("SIMC", pi.Result.Simc, sim.Result.Simc) })
         {
             Line($"{label} · Kp {N(coefficients.Kp)} {model.MvUnit}/{model.PvUnit} · Ti {N(coefficients.TiSeconds)} s");
             Line(coefficients.Margins is { } margins

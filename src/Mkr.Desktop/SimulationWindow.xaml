@@ -44,7 +44,7 @@
                             <Label Content="Bascule (s)" Target="{Binding ElementName=SwitchTime}"/>
                             <TextBox x:Name="SwitchTime" Width="68"/>
                             <ComboBox x:Name="TransferTune" SelectedIndex="0" AutomationProperties.Name="Réglage de transfert" Margin="4">
-                                <ComboBoxItem Content="IMC / Lambda"/><ComboBoxItem Content="SIMC"/>
+                                <ComboBoxItem Content="Lambda (Dahlin)"/><ComboBoxItem Content="SIMC"/>
                             </ComboBox>
                             <Button Content="Tester le transfert" Click="RunTransfer"/>
                         </WrapPanel>

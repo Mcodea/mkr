@@ -2,6 +2,8 @@
 
 Après avoir enregistré une étude FOPDT, la sélectionner dans la fenêtre d’identification. Le panneau **Réglages PI théoriques** compare IMC/Lambda et SIMC avec le même temps de réponse choisi, en secondes. Les comparaisons et leurs versions restent attachées à l’étude du modèle et peuvent être rouvertes.
 
+> **Correction du 25/11/2026 (audit F-01).** La règle Kp = τ/[K(λ+θ)], Ti = τ, longtemps affichée « IMC/Lambda », est la règle **Lambda (Dahlin)** des industriels. Ce n'est pas le PI IMC publié par Rivera, Morari et Skogestad (1986), dont les expressions avec approximation de Padé sont Kc = (τ+θ/2)/[K(λ+θ/2)] et Ti = τ+θ/2. L'interface l'appelle désormais « Lambda (Dahlin) » ; la clé `imc` du contrat moteur est conservée pour compatibilité. Le PI IMC publié n'est pas encore proposé.
+
 ## Méthode 1.0.0
 
 Pour un procédé autorégulant stable `G(s) = K exp(−θs)/(τs+1)`, avec K non nul, τ strictement positif et θ positif ou nul, saisir une cible positive. Cette cible représente λ pour IMC/Lambda et τc pour SIMC. Ce sont des paramètres de calcul, sans mesure du temps de réponse réel.

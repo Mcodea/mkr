@@ -43,7 +43,7 @@ public static class StudyJourney
                     accepted ? $"{facts.AcceptedModels} modèle(s) accepté(s) sur un essai indépendant." :
                         "Les modèles identifiés n'ont pas passé la validation. Consultez les critères refusés ; il faut un essai de validation plus informatif ou un autre type de modèle."),
             new JourneyStep(6, Titles[5], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Choix de la méthode de réglage (IMC/Lambda ou SIMC) et du type de régulateur adapté au modèle accepté." : needModel),
+                accepted ? "Choix de la méthode de réglage (Lambda ou SIMC) et du type de régulateur adapté au modèle accepté." : needModel),
             new JourneyStep(7, Titles[6], accepted ? StepState.Ready : StepState.Blocked,
                 accepted ? "Catalogue Schneider et Siemens : les valeurs préparées restent « non qualifiées »." : needModel),
             new JourneyStep(8, Titles[7], accepted ? StepState.Ready : StepState.Blocked,

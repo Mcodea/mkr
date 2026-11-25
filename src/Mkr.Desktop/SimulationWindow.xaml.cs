@@ -80,7 +80,7 @@ public partial class SimulationWindow : Window
             var first = Array.FindIndex(transfer.Points, p => p.Mode == "automatic");
             var before = transfer.Points[first - 1];
             var after = transfer.Points[first];
-            string method = simc ? "SIMC" : "IMC / Lambda";
+            string method = simc ? "SIMC" : "Lambda (Dahlin)";
             string warnings = string.Join(", ", transfer.Warnings);
             Message.Text = $"Essai hors ligne {method} à {after.Seconds:G6} s · sortie manuelle demandée (écart) {manual:G6} {_model.MvUnit}\n" +
                 $"Sortie de commande appliquée avant → après : {before.Mv:G6} → {after.Mv:G6} {_model.MvUnit} · saut de commande : {transfer.TransferBumpMv:G6} {_model.MvUnit}\n" +
@@ -255,11 +255,11 @@ public partial class SimulationWindow : Window
         Report.Text = $"Simulation enregistrée {simulation.Id.ToString()[..8]} · durée {input.DurationSeconds:G6} s · " +
             $"Variation de consigne {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
             $"Méthode {result.AlgorithmVersion} · moteur {simulation.EngineVersion}\n" +
-            $"IMC/Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
+            $"Lambda : {Metrics(result.Imc)}\nSIMC : {Metrics(result.Simc)}\n" +
             $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
             $"{string.Join(" ", warnings)}";
-        Legend.Text = $"Mesure et consigne ({_model.PvUnit}) : bleu = IMC/Lambda, orange = SIMC, vert pointillé = consigne. " +
+        Legend.Text = $"Mesure et consigne ({_model.PvUnit}) : bleu = Lambda, orange = SIMC, vert pointillé = consigne. " +
             $"Commandes ({_model.MvUnit}) : pointillés = commande calculée, vert = commande appliquée, gris = limites ; violet = instant de perturbation.";
         if (simulation.Robustness?.Envelope is not null)
             Legend.Text += " Sur la piste de la mesure, zones translucides = enveloppes min/max de 27 simulations, sans garantie de stabilité.";
@@ -298,7 +298,7 @@ public partial class SimulationWindow : Window
         var pvTrack = new ChartTrack("Variation de consigne et mesure", _model.PvUnit, new[]
         {
             new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
-            new ChartSeries("Mesure IMC / Lambda", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
+            new ChartSeries("Mesure Lambda (Dahlin)", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
             new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
         }) { Weight = 2 };
         if (study.Robustness?.Envelope is { } envelope && envelope.Seconds.Length == seconds.Length &&
@@ -324,7 +324,7 @@ public partial class SimulationWindow : Window
         }
 
         Chart.XLabel = "Temps depuis le début du scénario (s)";
-        Chart.SetTracks(new[] { pvTrack, Commands("IMC / Lambda", "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
+        Chart.SetTracks(new[] { pvTrack, Commands("Lambda (Dahlin)", "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
         Chart.SetEvents(study.Scenario.Disturbance != 0 ? new[] { (study.Scenario.DisturbanceAtSeconds, "Perturbation") } : Array.Empty<(double, string)>());
     }
 

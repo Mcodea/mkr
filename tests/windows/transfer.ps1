@@ -184,7 +184,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if (!$transportTarget.Current.IsReadOnly -or [Math]::Abs([double]::Parse($transportTarget.Current.Value) - 2130) -ge 0.01) {
         throw "Cible SIMC attendue proche de 2130 secondes (retard de 34 minutes + intervalle d’échelon de 90 s)."
     }
-    Press $ident 'Comparer IMC/Lambda et SIMC'
+    Press $ident 'Comparer Lambda et SIMC'
     $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
     if (!(Find $ident $id 'PiReport').Current.Name.Contains('2130 s')) { throw 'Cible absente du résultat PI enregistré.' }
     # PID_INT and PID_Compact documentary values: nothing is pre-filled, nothing is qualified.
@@ -208,7 +208,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Fill $blocks 'Ts' '2'
     Press $blocks 'Calculer'
     $text = Wait-Values $blocks '*SIMC*'
-    if (!$text.Contains('IMC / Lambda') -or !($text.Contains('NON QUALIFIÉ') -or $text.Contains('plage documentée'))) {
+    if (!$text.Contains('Lambda (Dahlin)') -or !($text.Contains('NON QUALIFIÉ') -or $text.Contains('plage documentée'))) {
         throw "PID_INT : valeurs ou refus documenté attendus. $text"
     }
     Select-Option $blocks 'BlockChoice' 'PID_Compact'
@@ -340,7 +340,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $until = [DateTime]::UtcNow.AddSeconds(25)
     do {
         $message = $status.Current.Name
-        if ($message -like '*2 → 2 %*' -and $message -like '*saut de commande : 0 %*' -and $message -like '*IMC / Lambda*') { 
+        if ($message -like '*2 → 2 %*' -and $message -like '*saut de commande : 0 %*' -and $message -like '*Lambda (Dahlin)*') { 
             Write-Output 'Transfert manuel 9 %, sortie bornée 2 %, première commande automatique 2 %.'
             return
         }

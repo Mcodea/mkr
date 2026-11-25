@@ -553,7 +553,7 @@ public partial class IdentificationWindow : Window
         try
         {
             var sections = new List<string>();
-            foreach (var (simc, label) in new[] { (false, "IMC / Lambda"), (true, "SIMC") })
+            foreach (var (simc, label) in new[] { (false, "Lambda (Dahlin)"), (true, "SIMC") })
             {
                 var result = await _workspace.ConvertToPidffAsync(model, tuning, simc, token);
                 token.ThrowIfCancellationRequested();
@@ -647,7 +647,7 @@ public partial class IdentificationWindow : Window
         var tight = result.Warnings.Contains("tight_response")
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
         PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
-            $"IMC/Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
+            $"Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
             "Forme idéale continue, écart = consigne − mesure. Marges calculées sur le modèle nominal seul : elles ne remplacent pas l’analyse de sensibilité. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
 

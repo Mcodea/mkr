@@ -70,7 +70,7 @@ public partial class BlockTargetWindow : Window
         try
         {
             var sections = new List<string>();
-            foreach (var (simc, label) in new[] { (false, "IMC / Lambda"), (true, "SIMC") })
+            foreach (var (simc, label) in new[] { (false, "Lambda (Dahlin)"), (true, "SIMC") })
             {
                 var result = await _workspace.ConvertToBlockAsync(_model, _tuning, simc, block, installation, token);
                 token.ThrowIfCancellationRequested();

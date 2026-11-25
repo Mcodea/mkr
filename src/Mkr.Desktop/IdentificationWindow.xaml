@@ -185,7 +185,7 @@
                 <GroupBox x:Name="PiPanel" Header="Réglages PI théoriques" Visibility="Collapsed" Margin="0,8,0,0">
                     <StackPanel Margin="8">
                         <WrapPanel>
-                            <Button x:Name="ComparePiButton" IsEnabled="False" Content="_Comparer IMC/Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
+                            <Button x:Name="ComparePiButton" IsEnabled="False" Content="_Comparer Lambda et SIMC" Click="CalculatePi" Margin="8,0,0,0" />
                         </WrapPanel>
                         <WrapPanel Margin="0,8,0,0">
                             <Label Content="Réglages enregistrés" Target="{Binding ElementName=PiList}" />
