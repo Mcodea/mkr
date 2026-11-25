@@ -119,6 +119,7 @@ public partial class GuidedTuningView : UserControl, IStepView
     }
 
     private static string F(double value) => value.ToString("G5", CultureInfo.CurrentCulture);
+    private static string F3(double value) => value.ToString("G3", CultureInfo.CurrentCulture);
 
     private void Show(GuidedTuning tuning)
     {
@@ -250,15 +251,16 @@ public partial class GuidedTuningView : UserControl, IStepView
             if (c is null) return;
             rows.Add(new ComparisonRow
             {
-                Name = name, Kp = F(c.Kp), Ti = F(c.TiSeconds), Td = c.TdSeconds > 0 ? F(c.TdSeconds) : "—", Ms = ms is { } m ? F(m) : "—",
-                Iae = perf is null ? "—" : F(perf.SetpointStep.Iae), Overshoot = perf?.SetpointStep.OvershootPercent is { } o ? F(o) + " %" : "—",
-                LoadIae = perf is null ? "—" : F(perf.LoadDisturbanceStep.Iae), Noise = perf?.NoiseToControlGain is { } n ? F(n) : "—"
+                Name = name, Kp = F3(c.Kp), Ti = F3(c.TiSeconds), Td = c.TdSeconds > 0 ? F3(c.TdSeconds) : "—", Ms = ms is { } m ? F3(m) : "—",
+                Iae = perf is null ? "—" : F3(perf.SetpointStep.Iae), Overshoot = perf?.SetpointStep.OvershootPercent is { } o ? F3(o) + " %" : "—",
+                LoadIae = perf is null ? "—" : F3(perf.LoadDisturbanceStep.Iae), Noise = perf?.NoiseToControlGain is { } n ? F3(n) : "—"
             });
         }
         AddRow("Recommandé", tuning.Recommendation?.Controller, tuning.Recommendation?.WorstPeakSensitivity, tuning.Performance?.Recommended);
         AddRow("PI optimisé (rejet de perturbation)", tuning.Optimized?.Controller, tuning.Optimized?.WorstPeakSensitivity, tuning.Performance?.OptimizedPi);
         AddRow("PID optimisé", tuning.OptimizedPid?.Controller, tuning.OptimizedPid?.WorstPeakSensitivity, tuning.Performance?.OptimizedPid);
         Comparison.ItemsSource = rows;
+        ComparisonTitle.Text = "Comparaison des réglages · procédé nominal, échelon unitaire, sans limite d'actionneur · bruit = écart-type de la commande pour un bruit de mesure unitaire";
         ComparisonTitle.Visibility = Comparison.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         var lines = new List<string>();

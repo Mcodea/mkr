@@ -42,18 +42,18 @@
                 </Border>
                 <WrapPanel x:Name="Cards" Margin="0,0,0,12" Visibility="Collapsed"/>
                 <TextBlock x:Name="ComparisonTitle" Text="Comparaison des réglages · procédé nominal, échelon unitaire, sans limite d'actionneur" FontWeight="SemiBold" Margin="0,0,0,6" Visibility="Collapsed"/>
-                <DataGrid x:Name="Comparison" Visibility="Collapsed" RowHeight="30" ColumnHeaderHeight="30" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                <DataGrid x:Name="Comparison" Visibility="Collapsed" RowHeight="34" ColumnHeaderHeight="40" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
                           AutomationProperties.Name="Comparaison des réglages" Margin="0,0,0,12">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Réglage" Binding="{Binding Name}" Width="1.6*"/>
+                        <DataGridTextColumn Header="Réglage" Binding="{Binding Name}" Width="2.2*"/>
                         <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
                         <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
                         <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
                         <DataGridTextColumn Header="Ms" Binding="{Binding Ms}" Width="*"/>
-                        <DataGridTextColumn Header="IAE consigne" Binding="{Binding Iae}" Width="*"/>
+                        <DataGridTextColumn Header="IAE consigne"  Binding="{Binding Iae}" Width="*"/>
                         <DataGridTextColumn Header="Dépassement" Binding="{Binding Overshoot}" Width="*"/>
                         <DataGridTextColumn Header="IAE charge" Binding="{Binding LoadIae}" Width="*"/>
-                        <DataGridTextColumn Header="Bruit → commande" Binding="{Binding Noise}" Width="*"/>
+                        <DataGridTextColumn Header="Bruit" Binding="{Binding Noise}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
                 <StackPanel x:Name="CurveBar" Orientation="Horizontal" Margin="0,0,0,6" Visibility="Collapsed">
@@ -66,7 +66,7 @@
                 <TextBlock x:Name="Notes" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,12" Visibility="Collapsed"/>
                 <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="Résultat du réglage guidé (texte à copier)"/>
                 <TextBlock x:Name="AlternativesTitle" Text="Réglages voisins (vitesse contre robustesse)" FontWeight="SemiBold" Margin="0,12,0,6" Visibility="Collapsed"/>
-                <DataGrid x:Name="Alternatives" Visibility="Collapsed" RowHeight="28" ColumnHeaderHeight="28" AutomationProperties.Name="Réglages voisins">
+                <DataGrid x:Name="Alternatives" Visibility="Collapsed" RowHeight="34" ColumnHeaderHeight="40" AutomationProperties.Name="Réglages voisins">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Réponse τc (s)" Binding="{Binding Response}" Width="*"/>
                         <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
