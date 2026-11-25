@@ -159,10 +159,10 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     public IReadOnlyList<PiStudy> PiStudies(Guid modelId) => piStore.ListPi(project.Id, modelId);
 
     /// <summary>Guided tuning for a robustness objective on an accepted model (refused models never reach the engine).</summary>
-    public Task<GuidedTuning> RecommendTuningAsync(IdentificationStudy model, string objective, CancellationToken token)
+    public Task<GuidedTuning> RecommendTuningAsync(IdentificationStudy model, string objective, double? processVariationPercent, CancellationToken token)
     {
         model.RequireAcceptedForTuning();
-        return Traced(piEngine.RecommendTuningAsync(model.Family, model.Result, objective, token), "tuning.guided", Short(model.Id),
+        return Traced(piEngine.RecommendTuningAsync(model.Family, model.Result, objective, processVariationPercent, token), "tuning.guided", Short(model.Id),
             r => r.IsRecommended ? $"{objective} : τc = {r.Recommendation!.ResponseSeconds:G6} s, Ms pire cas {r.Recommendation.WorstPeakSensitivity:G4} (théorique)"
                                  : $"{objective} : refusé ({string.Join(", ", r.Reasons ?? [])})");
     }

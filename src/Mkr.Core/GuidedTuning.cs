@@ -15,7 +15,7 @@ public sealed record GuidedTuning(string AlgorithmVersion, string Decision, stri
     string? Structure = null, TuningCandidate? Recommendation = null, double? UncertaintyCoverageSigma = null, bool UncertaintyQuantified = false,
     double EffectiveDelaySeconds = 0, double SamplePeriodSeconds = 0, TuningCandidate[]? Alternatives = null, string[]? Warnings = null,
     string[]? Reasons = null, string[]? Actions = null, string Qualification = "none", TuningCandidate? ClosestTuning = null, string[]? References = null,
-    double? DerivativeFilterRatio = null)
+    double? DerivativeFilterRatio = null, double? ProcessVariationPercent = null)
 {
     public bool IsRecommended => Decision == "recommended";
 }

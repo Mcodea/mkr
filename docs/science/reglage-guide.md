@@ -10,6 +10,19 @@
 4bis. Filtre de la dérivée (PID) : Tf = Td/N, N = 10 par défaut (usuel : 2 à 20) ; il est inclus dans les marges évaluées sur chaque coin.
 5. Sortie : le réglage, ses marges au pire cas, les réglages voisins pour comparer vitesse et robustesse, les avertissements (`closed_loop_slower_than_the_process`, `uncertainty_not_quantified`…).
 
+## Variation du procédé sur la plage de fonctionnement
+Le champ facultatif « Variation attendue du procédé (%) » élargit la boîte d'incertitude à ±v % du gain, de la constante de temps et du retard (maximum entre cette valeur et ±2 erreurs-types). C'est le moyen de tenir compte d'un procédé dont la dynamique change avec le point de fonctionnement, sans modèle non linéaire.
+
+Mesure du 25/11/2026 (5 procédés synthétiques : débit, pression, température, dosage, chloration), réglage calculé **sans** variation déclarée, jugé ensuite sur le procédé dont gain, constante de temps et retard varient simultanément de ±30 % (huit coins, balayage fréquentiel indépendant) :
+
+| Objectif | Sensibilité maximale observée |
+|---|---|
+| Robuste (≤ 1,4) | 1,42 à 1,64 |
+| Équilibré (≤ 1,7) | 1,69 à 2,25 |
+| Performance (≤ 2,0) | 2,17 à 3,01 |
+
+Un réglage « performance » n'est donc pas robuste à une variation de 30 % du procédé ; déclarer la variation attendue rend MKR plus prudent (test `test_a_declared_process_variation_widens_the_uncertainty_box_and_is_met_on_the_true_corners`). Preuve sur données synthétiques uniquement.
+
 ## Refus
 MKR refuse, sans fournir de valeur, quand l'incertitude exclut le modèle (par exemple le signe du gain ou une constante de temps positive n'est plus établi) ou qu'aucun réglage de la grille ne respecte l'objectif sur l'ensemble d'incertitude. Le refus liste les raisons et les actions : essai plus long ou plus ample, objectif moins exigeant en connaissance du compromis, structure différente.
 

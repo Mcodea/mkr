@@ -16,7 +16,7 @@ References (all public):
 - M. Morari and E. Zafiriou, Robust Process Control (1989): robustness must be assessed on the model uncertainty set.
 Limits: the model is linear (FOPDT / SOPDT), the loop is the nominal ideal PI/PID (no actuator limits, no filter of the derivative
 is modelled), and the uncertainty set is the box of +/- two standard errors (about 95 % of a Gaussian estimate) of the identified
-parameters. This is a design aid, not a stability proof and not a qualification of a vendor block.
+parameters, widened to the process variation (percent of gain, time constant and delay) that the user declares for the operating range. This is a design aid, not a stability proof and not a qualification of a vendor block.
 """
 import itertools
 import math
@@ -49,21 +49,24 @@ def _simc(gain, tau1, delay, tauc, tau2=None, filter_ratio=DEFAULT_FILTER_RATIO)
     return dict(structure="PID", kp=kc * ti_ideal / ti, tiSeconds=ti_ideal, tdSeconds=td, filterSeconds=td / filter_ratio)
 
 
-def _corners(gain, tau1, delay, tau2, errors):
-    """Nominal plant plus the corners of the +/- COVERAGE sigma box (gain, slow time constant, delay)."""
+def _half_widths(gain, tau1, delay, errors, variation):
+    """Half-width of the uncertainty box per parameter: the larger of +/- COVERAGE standard errors and the declared process variation."""
+    sg, st, sd = (errors["gain"], errors["tauSeconds"], errors["delaySeconds"]) if errors is not None else (0.0, 0.0, 0.0)
+    fraction = 0.0 if variation is None else variation / 100.0
+    return (max(COVERAGE * sg, fraction * abs(gain)), max(COVERAGE * st, fraction * tau1), max(COVERAGE * sd, fraction * delay))
+
+
+def _corners(gain, tau1, delay, tau2, errors, variation=None):
+    """Nominal plant plus the corners of the uncertainty box (gain, slow time constant, delay)."""
     plants = [("nominal", gain, tau1, delay, tau2)]
-    if errors is None:
+    if errors is None and variation is None:
         return plants, False
-    sg, st, sd = (errors["gain"], errors["tauSeconds"], errors["delaySeconds"])
-    low_tau = tau1 - COVERAGE * st
-    if low_tau <= 0:
-        raise ValueError("recommend_uncertainty")
+    hg, ht, hd = _half_widths(gain, tau1, delay, errors, variation)
+    if tau1 - ht <= 0 or abs(gain) - hg <= 0:
+        raise ValueError("recommend_uncertainty")          # the gain sign or a positive time constant is no longer established
     for g, t, d in itertools.product((-1, 1), repeat=3):
-        k = gain + g * COVERAGE * sg
-        if k * gain <= 0:
-            raise ValueError("recommend_uncertainty")      # the gain sign itself is not established
         plants.append((f"gain{'+' if g > 0 else '-'},tau{'+' if t > 0 else '-'},delay{'+' if d > 0 else '-'}",
-                       k, tau1 + t * COVERAGE * st, max(delay + d * COVERAGE * sd, 0.0), tau2))
+                       gain + g * hg, tau1 + t * ht, max(delay + d * hd, 0.0), tau2))
     return plants, True
 
 
@@ -86,7 +89,8 @@ def _is_stable(rows):
 
 
 def calculate(payload):
-    required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective", "derivativeFilterRatio"}
+    required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective", "derivativeFilterRatio",
+                "processVariationPercent"}
     if not isinstance(payload, dict) or payload.keys() != required:
         raise ValueError("recommend_input")
     family, gain, tau, delay, second, sample = (payload[k] for k in ("family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds"))
@@ -95,6 +99,9 @@ def calculate(payload):
     if ratio is not None and (not _number(ratio) or not 2 <= ratio <= 100):
         raise ValueError("recommend_input")
     ratio = DEFAULT_FILTER_RATIO if ratio is None else float(ratio)
+    variation = payload["processVariationPercent"]
+    if variation is not None and (not _number(variation) or not 0 < variation <= 50):
+        raise ValueError("recommend_input")
     if family not in ("FOPDT", "SOPDT", "Integrateur") or objective not in OBJECTIVES:
         raise ValueError("recommend_input")
     if family == "Integrateur":
@@ -115,7 +122,7 @@ def calculate(payload):
 
     limit = OBJECTIVES[objective]
     if family == "Integrateur":
-        return _integrator(gain, delay, sample, errors, objective, limit)
+        return _integrator(gain, delay, sample, errors, objective, limit, variation)
     notes, tau1, tau2, theta = [], tau, None, delay
     if family == "SOPDT":
         if second > delay:
@@ -129,7 +136,7 @@ def calculate(payload):
     sampling_delay = sample / 2        # effective delay includes half the sampling period (Skogestad 2003)
     effective = theta + sampling_delay
     try:
-        plants, quantified = _corners(gain, tau1, theta, tau2, errors)
+        plants, quantified = _corners(gain, tau1, theta, tau2, errors, variation)
     except ValueError as error:
         return _refusal(family, objective, limit, ["parameter_uncertainty_excludes_the_model"] if str(error) == "recommend_uncertainty" else [str(error)],
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
@@ -178,8 +185,8 @@ def calculate(payload):
         warnings.append("closed_loop_slower_than_the_process")
     return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit,
                 family=family, structure=chosen["controller"]["structure"], recommendation=chosen,
-                uncertaintyCoverageSigma=COVERAGE if quantified else None, uncertaintyQuantified=quantified,
-                effectiveDelaySeconds=effective, samplePeriodSeconds=sample,
+                uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
+                processVariationPercent=variation, effectiveDelaySeconds=effective, samplePeriodSeconds=sample,
                 derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
                 alternatives=_alternatives(evaluated, chosen), warnings=warnings, qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control",
@@ -200,20 +207,22 @@ def _refusal(family, objective, limit, reasons, actions, notes, best=None, evalu
                 alternatives=[], recommendation=None)
 
 
-def _integrator(slope, delay, sample, errors, objective, limit):
+def _integrator(slope, delay, sample, errors, objective, limit, variation=None):
     """SIMC for an integrating process with dead time; corners on the slope and the delay (the only two parameters)."""
     sampling_delay = sample / 2
     effective = delay + sampling_delay
     notes = ["integrating_process_simc"]
     plants = [("nominal", slope, delay)]
-    quantified = errors is not None
+    quantified = errors is not None or variation is not None
     if quantified:
+        fraction = 0.0 if variation is None else variation / 100.0
+        hs = max(COVERAGE * (errors["gain"] if errors is not None else 0.0), fraction * abs(slope))
+        hd = max(COVERAGE * (errors["delaySeconds"] if errors is not None else 0.0), fraction * delay)
+        if abs(slope) - hs <= 0:
+            return _refusal("Integrateur", objective, limit, ["parameter_uncertainty_excludes_the_model"],
+                            ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude de la pente."], notes)
         for g, d in itertools.product((-1, 1), repeat=2):
-            k = slope + g * COVERAGE * errors["gain"]
-            if k * slope <= 0:
-                return _refusal("Integrateur", objective, limit, ["parameter_uncertainty_excludes_the_model"],
-                                ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude de la pente."], notes)
-            plants.append((f"slope{'+' if g > 0 else '-'},delay{'+' if d > 0 else '-'}", k, max(delay + d * COVERAGE * errors["delaySeconds"], 0.0)))
+            plants.append((f"slope{'+' if g > 0 else '-'},delay{'+' if d > 0 else '-'}", slope + g * hs, max(delay + d * hd, 0.0)))
     else:
         notes.append("uncertainty_not_quantified")
 
@@ -251,7 +260,7 @@ def _integrator(slope, delay, sample, errors, objective, limit):
                         notes, best, entries)
     chosen = next(e for e in entries if e["multipleOfEffectiveDelay"] == MULTIPLES[chosen_index])
     return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit, family="Integrateur",
-                structure="PI", recommendation=chosen, uncertaintyCoverageSigma=COVERAGE if quantified else None, uncertaintyQuantified=quantified,
-                effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
+                structure="PI", recommendation=chosen, uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
+                processVariationPercent=variation, effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
                 qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control"])

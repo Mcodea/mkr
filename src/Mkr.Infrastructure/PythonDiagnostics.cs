@@ -290,10 +290,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
-    public Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, CancellationToken token) =>
-        Guard(() => RecommendTuningAsyncCore(family, model, objective, token));
+    public Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token) =>
+        Guard(() => RecommendTuningAsyncCore(family, model, objective, processVariationPercent, token));
 
-    private async Task<GuidedTuning> RecommendTuningAsyncCore(ModelFamily family, IdentificationResult model, string objective, CancellationToken token)
+    private async Task<GuidedTuning> RecommendTuningAsyncCore(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token)
     {
         if (family is not (ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur))
             throw new InvalidOperationException("Le réglage guidé couvre les modèles FOPDT, SOPDT et intégrateur.");
@@ -308,7 +308,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
             tauSeconds = family == ModelFamily.Integrateur ? (double?)null : model.TauSeconds,
             delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
-            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null
+            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent
         };
         var (json, _) = await CallAsync("recommend_tuning", payload, token).ConfigureAwait(false);
         var tuning = json.Deserialize<GuidedTuning>(JsonOptions);

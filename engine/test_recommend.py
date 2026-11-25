@@ -10,7 +10,7 @@ from recommend import COVERAGE, OBJECTIVES, calculate
 
 
 def request(**changes):
-    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, derivativeFilterRatio=None,
+    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, derivativeFilterRatio=None, processVariationPercent=None,
                 standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=1.0), objective="balanced")
     base.update(changes)
     return base
@@ -149,6 +149,33 @@ class Robustness(unittest.TestCase):
         large = calculate(request(objective="robust", standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=4.0)))
         self.assertGreaterEqual(large["recommendation"]["responseSeconds"], small["recommendation"]["responseSeconds"])
 
+    def test_a_declared_process_variation_widens_the_uncertainty_box_and_is_met_on_the_true_corners(self):
+        plain = calculate(request(standardErrors=None))
+        varied = calculate(request(standardErrors=None, processVariationPercent=30.0))
+        self.assertGreaterEqual(varied["recommendation"]["responseSeconds"], plain["recommendation"]["responseSeconds"])
+        self.assertEqual(varied["processVariationPercent"], 30.0)
+        self.assertTrue(varied["uncertaintyQuantified"])
+        c = varied["recommendation"]["controller"]
+        for g in (0.7, 1.3):
+            for t in (0.7, 1.3):
+                for d in (0.7, 1.3):
+                    peak = sensitivity_peak(2.0 * g, [40.0 * t], 10.0 * d + 0.5, c["kp"], c["tiSeconds"], 0.0)
+                    self.assertLessEqual(peak, OBJECTIVES["balanced"] + 2e-3, (g, t, d, peak))
+
+    def test_the_largest_accepted_variation_still_gives_a_tuning(self):
+        self.assertEqual(calculate(request(standardErrors=None, processVariationPercent=50.0, tauSeconds=40.0))["decision"], "recommended")
+        refused = calculate(request(standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=1.0), processVariationPercent=50.0, gain=2.0))
+        self.assertEqual(refused["decision"], "recommended")        # +/-50 % keeps the sign and a positive time constant
+
+    def test_the_integrator_takes_the_process_variation_too(self):
+        plain = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
+                               standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None))
+        varied = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
+                                standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=30.0))
+        self.assertIn("uncertainty_not_quantified", plain["warnings"])
+        self.assertNotIn("uncertainty_not_quantified", varied["warnings"])
+        self.assertGreaterEqual(varied["recommendation"]["responseSeconds"], plain["recommendation"]["responseSeconds"])
+
     def test_a_more_demanding_objective_never_gives_a_slower_tuning(self):
         times = [calculate(request(objective=name))["recommendation"]["responseSeconds"] for name in ("robust", "balanced", "performance")]
         self.assertGreaterEqual(times[0], times[1])
@@ -182,7 +209,7 @@ class Refusals(unittest.TestCase):
 
     def test_integrator_uncertainty_uses_slope_and_delay_corners(self):
         result = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
-                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced", derivativeFilterRatio=None))
+                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced", derivativeFilterRatio=None, processVariationPercent=None))
         self.assertEqual(result["decision"], "recommended")
         self.assertTrue(result["uncertaintyQuantified"])
         self.assertLessEqual(result["recommendation"]["worstPeakSensitivity"], 1.7 + 1e-9)
@@ -191,7 +218,7 @@ class Refusals(unittest.TestCase):
         self.assertEqual(calculate(request())["qualification"], "model_based_unqualified")
 
     def test_hostile_inputs_are_rejected(self):
-        for changes in ({"derivativeFilterRatio": 0.5}, {"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},
+        for changes in ({"derivativeFilterRatio": 0.5}, {"processVariationPercent": 0}, {"processVariationPercent": 60}, {"processVariationPercent": "30"}, {"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},
                         {"objective": "fast"}, {"family": "ARX"}, {"family": "SOPDT"}, {"secondTauSeconds": 3.0},
                         {"family": "SOPDT", "secondTauSeconds": 80.0}, {"gain": "2"}, {"gain": True},
                         {"standardErrors": {"gain": -1, "tauSeconds": 1, "delaySeconds": 1}}, {"standardErrors": {"gain": 1}}):

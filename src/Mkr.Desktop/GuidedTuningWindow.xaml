@@ -24,6 +24,12 @@
                 </ComboBox>
                 <Button x:Name="Compute" Content="_Calculer le réglage guidé" Click="Calculate" Margin="10,0,0,0" Style="{StaticResource MkrPrimaryButton}"/>
             </WrapPanel>
+            <WrapPanel Margin="0,6,0,0">
+                <Label Content="_Variation attendue du procédé (%)" Target="{Binding ElementName=Variation}" VerticalAlignment="Center"/>
+                <TextBox x:Name="Variation" Width="70" AutomationProperties.Name="Variation attendue du procédé en pourcentage"
+                         ToolTip="Facultatif : écart attendu du gain, de la constante de temps et du retard sur la plage de fonctionnement (0 à 50 %). Élargit l'incertitude prise en compte."/>
+                <TextBlock Text="facultatif · élargit l'incertitude du modèle sur la plage de fonctionnement" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </WrapPanel>
             <TextBlock x:Name="ObjectiveHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,6,0,0"/>
             <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
         </StackPanel>

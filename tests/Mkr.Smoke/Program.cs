@@ -133,7 +133,7 @@ try
     Require(Math.Abs(fit.Gain + 3) < 1e-5 && fit.TauSeconds is { } firstTau && Math.Abs(firstTau - 4) < 1e-5 &&
         Math.Abs(fit.DelaySeconds - 2.5) < 1e-5 && fit.Validation.Rmse < 1e-6,
         "Analytic FOPDT parameters and holdout prediction agree through the process boundary.");
-    var guided = await engine.RecommendTuningAsync(ModelFamily.FOPDT, fit, DesignObjectives.Balanced, default);
+    var guided = await engine.RecommendTuningAsync(ModelFamily.FOPDT, fit, DesignObjectives.Balanced, null, default);
     Require(guided.IsRecommended && guided.Recommendation is { Controller: { Structure: "PI", Kp: < 0, TiSeconds: > 0 } } &&
             guided.Recommendation.WorstPeakSensitivity <= 1.7 + 1e-9 && guided.Qualification == "model_based_unqualified",
         "Guided tuning through the process boundary: a signed, bounded, unqualified PI for the balanced objective.");

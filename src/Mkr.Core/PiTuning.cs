@@ -59,7 +59,7 @@ public interface IPiEngine
     Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token);
 
     /// <summary>Guided tuning of an ACCEPTED model for a robustness objective (see <see cref="DesignObjectives"/>), with refusal when the data do not support one.</summary>
-    Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, CancellationToken token);
+    Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token);
 
     /// <summary>Documentary PIDFF conversion of a tuning (mixed structure). Never qualified, never ready to load.</summary>
     Task<BlockConversionResult> ConvertToPidffAsync(double kp, double tiSeconds, double tdSeconds,

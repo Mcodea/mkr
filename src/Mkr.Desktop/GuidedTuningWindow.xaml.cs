@@ -53,11 +53,21 @@ public partial class GuidedTuningWindow : Window
     private async void Calculate(object sender, RoutedEventArgs args)
     {
         var token = _lifetime.Token;
+        double? variation = null;
+        if (!string.IsNullOrWhiteSpace(Variation.Text))
+        {
+            if (!double.TryParse(Variation.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var percent) || !(percent > 0 && percent <= 50))
+            {
+                Status.Text = "La variation attendue est un pourcentage supérieur à 0 et au plus 50, ou laissez le champ vide.";
+                return;
+            }
+            variation = percent;
+        }
         Compute.IsEnabled = false;
         Status.Text = "Calcul en cours : recherche du réglage le plus rapide qui respecte l'objectif sur toute l'incertitude…";
         try
         {
-            var tuning = await _workspace.RecommendTuningAsync(_model, ObjectiveTag, token);
+            var tuning = await _workspace.RecommendTuningAsync(_model, ObjectiveTag, variation, token);
             token.ThrowIfCancellationRequested();
             Show(tuning);
         }
@@ -86,7 +96,8 @@ public partial class GuidedTuningWindow : Window
             text.AppendLine($"Constante de temps de boucle fermée visée τc = {F(rec.ResponseSeconds)} s (retard effectif {F(tuning.EffectiveDelaySeconds)} s)");
             text.AppendLine($"Sensibilité maximale au pire cas : {F(rec.WorstPeakSensitivity)} (limite {F(tuning.MaximumPeakSensitivity)}) · pire cas : {rec.WorstCase}");
             text.AppendLine(tuning.UncertaintyQuantified
-                ? $"Incertitude prise en compte : ±{tuning.UncertaintyCoverageSigma:G2} erreurs-types sur le gain, la constante de temps et le retard."
+                ? "Incertitude prise en compte : " + (tuning.UncertaintyCoverageSigma is { } sigma ? $"±{sigma:G2} erreurs-types sur le gain, la constante de temps et le retard" : "aucune erreur-type disponible") +
+                  (tuning.ProcessVariationPercent is { } v ? $" ; variation du procédé déclarée ±{v:G3} %." : ".")
                 : "Incertitude des paramètres non quantifiée : seule l'incertitude du retard est prise en compte.");
         }
         else
