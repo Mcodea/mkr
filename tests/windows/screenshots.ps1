@@ -207,7 +207,7 @@ try {
         Select-Option $ident 'ResponseProfile' 'Personnalisée'
         Fill $ident 'ResponseTarget' '12'
         try { Press $ident 'Comparer Lambda et SIMC' } catch { }
-        $null = Find $ident $name 'Réglages théoriques PI enregistrés.'
+        $null = Wait-Name $ident 'Message' 'Réglages théoriques PI enregistrés.' 60      # the engine call can be slow on a loaded runner (one light-theme run missed the default 15 s)
         try { Press $ident 'Simuler le réglage enregistré…' } catch { }   # a button that opens a modal dialog may report a UIA error although it worked
         $sim = Find $root $name 'MKR — Simulation PI'
         foreach ($entry in @{Sample='1';Duration='120';Setpoint='1';Lower='-5';Upper='5';Disturbance='0';DisturbanceAt='0';ManualMv='0';SwitchTime='5'}.GetEnumerator()) { Fill $sim $entry.Key $entry.Value }

@@ -265,21 +265,25 @@ public partial class WindowView : Window
         }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
         RibbonBar.MinHeight = RibbonCommands.Children.Count == 0 ? 0 : 78;      // a step shown by its own view has no command row: do not keep an empty band
+        // when the assisted banner already says the same thing about this very step, the note under the tabs would only repeat it
+        RibbonBar.Visibility = RibbonCommands.Children.Count == 0 && _assisted && StudyJourney.NextStep(_steps)?.Number == step.Number ? Visibility.Collapsed : Visibility.Visible;
         UpdateAssistBanner();
     }
 
     // ---------- step views hosted in the workspace ----------
     private string? _hostKey;
     private IStepView? _hosted;
+    private UIElement? _hostChild;           // what the guided tuning / simulation branch put into the host (its own view or a scroller around it)
 
     /// <summary>Releases the hosted view (cancels its pending calculations) and forgets it so that the next evaluation rebuilds it.</summary>
     private void ReleaseStepHost(bool keepIdentification = false)
     {
         _hosted?.Cancel();
         _hosted = null;
+        _hostChild = null;
         _hostKey = null;
         if (!keepIdentification && _identification is not null) { _identification.Cancel(); _identification = null; }
-        if (!keepIdentification && _data is not null) { _data.Cancel(); _data = null; }
+        if (!keepIdentification && _data is not null) { _data.Cancel(); _data = null; _dataHost = null; }
         StepHost.Child = null;
         StepHost.Visibility = Visibility.Collapsed;
     }
@@ -289,8 +293,16 @@ public partial class WindowView : Window
         Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(24, 20, 24, 0), FontSize = 15
     };
 
+    /// <summary>A view that needs more room than the workspace offers scrolls as a whole instead of squeezing its result areas.</summary>
+    private static ScrollViewer Scrolling(UserControl view, double minimumHeight)
+    {
+        view.MinHeight = minimumHeight;
+        return new ScrollViewer { Content = view, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    }
+
     private IdentificationView? _identification;
     private CsvView? _data;
+    private ScrollViewer? _dataHost;
 
     private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 4 or 7;
 
@@ -323,7 +335,8 @@ public partial class WindowView : Window
                     _data.IdentificationRequested += (_, _) => SelectTab(3);
                     _data.DataChanged += (_, _) => RefreshAfterChange();
                 }
-                if (!ReferenceEquals(StepHost.Child, _data)) StepHost.Child = _data;
+                if (_dataHost is null) _dataHost = Scrolling(_data, 720);
+                if (!ReferenceEquals(StepHost.Child, _dataHost)) StepHost.Child = _dataHost;
             }
             catch (Exception error)
             {
@@ -363,9 +376,10 @@ public partial class WindowView : Window
         if (_tab == 8 && selected is not null)
             tuning = _workspace.PiStudies(selected.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
         var key = $"{_tab}|{selected?.Id}|{selected?.IsAcceptedForTuning}|{tuning?.Id}|{open}";
-        if (key == _hostKey && ReferenceEquals(StepHost.Child, _hosted)) return;
+        if (key == _hostKey && _hostChild is not null && ReferenceEquals(StepHost.Child, _hostChild)) return;
         _hosted?.Cancel();
         _hosted = null;
+        _hostChild = null;
         _hostKey = key;
         StepHost.Visibility = Visibility.Visible;
         if (!open || selected is null || !selected.IsAcceptedForTuning)
@@ -381,7 +395,7 @@ public partial class WindowView : Window
             {
                 var view = new GuidedTuningView(_workspace, selected) { ShowClose = false };
                 _hosted = view;
-                StepHost.Child = view;
+                StepHost.Child = _hostChild = Scrolling(view, 720);
             }
             else if (tuning is null)
                 StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage, puis revenez ici.");
@@ -389,7 +403,7 @@ public partial class WindowView : Window
             {
                 var view = new SimulationView(_workspace, selected, tuning);
                 _hosted = view;
-                StepHost.Child = view;
+                StepHost.Child = _hostChild = view;
             }
         }
         catch (Exception error)
