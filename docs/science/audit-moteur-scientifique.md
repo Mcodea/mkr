@@ -44,6 +44,8 @@ Un test automatisé réussi ne vaut jamais le niveau 5 ou 6. **Aucune fonction n
 
 Critères d'acceptation fixés avant l'exécution (objectif « équilibré », Ms ≤ 1,7) : C1 modèle accepté, gain à 3 %, constante de temps lente à 10 % ; C2 une recommandation est rendue ; C3 la boucle vraie se stabilise (erreur finale < 2 % de l'échelon) ; C4 Ms vrai < 2,0 et ne dépasse pas de plus de 0,05 le pire cas annoncé par MKR.
 
+**Procédé à dynamique variable (ajouté le 25/11).** Vanne à caractéristique croissante (gain local de 1 à 2 sur la plage, identifié à 1,5 au point de fonctionnement) simulée par un code écrit dans le test. Critères fixés avant : avec une variation de 35 % **déclarée**, la boucle se stabilise à chaque point d'un balayage de six échelons de consigne sur toute la plage (erreur finale < 1 % de l'échelon) et son dépassement maximal n'excède pas celui du réglage calculé **sans** déclaration. Mesures : sans déclaration, dépassement maximal 28,5 % (gain local élevé) ; avec 35 % déclarés, 17 %. Un non-linéarité modérée, un seul modèle linéaire : ce n'est pas une preuve pour une non-linéarité forte (pH, par exemple).
+
 Résultats (8 procédés, tous conformes) : Ms vrai entre 1,33 et 1,58, toujours inférieur au pire cas annoncé (1,61 à 1,67).
 
 | Procédé | Famille | Réponse choisie | Pire Ms annoncé | Ms vrai |

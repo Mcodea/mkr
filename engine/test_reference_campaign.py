@@ -32,6 +32,48 @@ CASES = [
 ]
 
 
+def nonlinear_plant(kp, ti, sp_from, sp_to, theta, sampling, tau, horizon=1500.0):
+    """Control valve with a rising characteristic: y' = (g(u(t - theta)) - y)/tau, g(u) = u (1 + 0.25 u), local gain 1 + 0.5 u (1 to 2 on u in [0, 2]).
+    Written here, independent of the engine. Returns (final error, overshoot fraction) of a set-point step from sp_from to sp_to."""
+    def g(u):
+        return u * (1 + 0.25 * u)
+
+    dt = 0.25
+    buffer = [0.0] * (int(round((theta + sampling / 2) / dt)) + 1)
+    y, uss, integral, peak = g(sp_from), sp_from, 0.0, 0.0
+    for _ in range(int(horizon / dt)):
+        error = g(sp_to) - y
+        integral += error * dt
+        u = min(max(uss + kp * (error + integral / ti), 0.0), 2.0)
+        buffer.append(u)
+        y += dt * (g(buffer.pop(0)) - y) / tau
+        peak = max(peak, (y - g(sp_from)) / (g(sp_to) - g(sp_from)))
+    return abs(g(sp_to) - y), peak - 1.0
+
+
+class VariableDynamics(unittest.TestCase):
+    """A process whose gain varies by +/- 33 % around the identified operating point (u = 1, local gain 1.5).
+    Criteria fixed before the runs: with the variation DECLARED (35 %), the guided tuning settles at every operating point of a sweep of
+    set-point steps over the whole range (final error < 1 % of the step) and its worst overshoot is not larger than the worst overshoot of
+    the tuning computed WITHOUT the declaration."""
+
+    def test_a_declared_process_variation_keeps_the_loop_settled_and_calmer_across_the_range(self):
+        steps = ((0.2, 0.6), (0.6, 1.0), (1.0, 1.5), (1.4, 1.9), (1.9, 1.4), (1.5, 0.5))
+        worst = {}
+        for variation in (None, 35.0):
+            tuning = calculate(dict(family="FOPDT", gain=1.5, tauSeconds=30.0, delaySeconds=6.0, secondTauSeconds=None, sampleSeconds=1.0,
+                                    standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=variation, optimise=False))
+            c = tuning["recommendation"]["controller"]
+            overshoots = []
+            for start, end in steps:
+                final_error, overshoot = nonlinear_plant(c["kp"], c["tiSeconds"], start, end, 6.0, 1.0, 30.0)
+                step_size = abs(end * (1 + 0.25 * end) - start * (1 + 0.25 * start))
+                self.assertLess(final_error / step_size, 0.01, (variation, start, end, final_error))
+                overshoots.append(overshoot)
+            worst[variation] = max(overshoots)
+        self.assertLessEqual(worst[35.0], worst[None] + 1e-9)
+
+
 class ReferenceCampaign(unittest.TestCase):
     def test_each_reference_process_is_identified_tuned_and_judged_on_the_true_process(self):
         for name, family, response, truth, cadence, sigma in CASES:
