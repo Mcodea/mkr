@@ -86,6 +86,8 @@
                         <Button x:Name="SuggestCriteria" Content="_Proposer les critères" Click="ProposeCriteria" Margin="0,0,8,0"
                                 ToolTip="Calculés à partir du bruit mesuré sur les plateaux avant échelon, sans regarder l’ajustement"/>
                         <Button x:Name="CompareModels" Content="Comparer FOPDT et SOPDT" Click="Calculate"/>
+                        <Button x:Name="ArxButton" Content="Identifier par ARX / _OE" Click="IdentifyArx" Margin="8,0,0,0"
+                                ToolTip="Excitation quelconque, sans régime permanent initial ; essais en boucle ouverte, pas d'échantillonnage régulier. Résultat affiché, non enregistré."/>
                     </WrapPanel>
                     <CheckBox x:Name="Confirmed" Margin="0,2,0,8">
                         <TextBlock TextWrapping="Wrap" Text="Les deux essais ont été réalisés en boucle ouverte, sans saturation connue, avec les mêmes unités et dans des conditions comparables." />

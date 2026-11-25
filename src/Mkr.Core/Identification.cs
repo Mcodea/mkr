@@ -81,7 +81,30 @@ public sealed record ArxSelected(int Na, int Nb, int Nk, string Estimator, doubl
 
 /// <summary>Result of the ARX / output-error identification (arbitrary excitation, no steady-state start). Refusal carries reasons and actions.</summary>
 public sealed record ArxIdentification(string AlgorithmVersion, double SamplePeriodSeconds, string Decision, ArxSelected? Selected,
-    IReadOnlyList<ArxCandidate> Candidates, string[]? Reasons = null, string[]? Actions = null);
+    IReadOnlyList<ArxCandidate> Candidates, string[]? Reasons = null, string[]? Actions = null)
+{
+    /// <summary>Operator text: the decision with its evidence, never a tuning. A first-order equivalent is shown only when accepted.</summary>
+    public string Describe(string mvUnit, string pvUnit)
+    {
+        var text = new System.Text.StringBuilder();
+        text.AppendLine($"Identification ARX / sortie-erreur · pas d'échantillonnage {SamplePeriodSeconds:G5} s · {Candidates.Count} candidats jugés sur l'essai de validation indépendant.");
+        if (Selected is not { } chosen)
+        {
+            text.AppendLine("REFUS : aucun candidat ne satisfait les critères (" + string.Join(", ", Reasons ?? []) + ").");
+            foreach (var action in Actions ?? []) text.AppendLine("  · " + action);
+            return text.ToString();
+        }
+        text.AppendLine($"Modèle retenu : {chosen.Estimator} d'ordre ({chosen.Na},{chosen.Nb}), retard {chosen.Nk} pas ; erreur de simulation libre sur la validation {chosen.ValidationSimulationRmse:G4} {pvUnit}.");
+        if (chosen.FirstOrder is { } f)
+        {
+            text.AppendLine($"Équivalent du premier ordre (maintien d'ordre zéro) : K = {f.Gain:G5} {pvUnit}/{mvUnit} (± {f.StandardErrors.GetValueOrDefault("gain"):G2}) · τ = {f.TauSeconds:G5} s (± {f.StandardErrors.GetValueOrDefault("tauSeconds"):G2}) · θ = {f.DelaySeconds:G5} s (multiple du pas).");
+            text.AppendLine("Ces valeurs peuvent servir de point de départ à un réglage guidé ; elles ne sont pas enregistrées comme étude et le réglage reste théorique.");
+        }
+        else text.AppendLine("Second ordre : pas d'équivalent du premier ordre ; le réglage guidé de ce modèle n'est pas encore branché.");
+        text.AppendLine("Statut : calculé et vérifié sur données synthétiques ; non qualifié sur procédé réel.");
+        return text.ToString();
+    }
+}
 
 /// <summary>Holdout F-test of the validation mean square errors, FOPDT over SOPDT (audit NC-04).</summary>
 public sealed record HoldoutTest(double MseRatio, double Critical, double Level);

@@ -136,6 +136,14 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return engine.CompareAsync(train, check, mvTolerance, pvTolerance, maximumRmse, maximumLag, token);
     }
 
+    public Task<ArxIdentification> IdentifyArxAsync(ImportSummary training, StepColumns trainColumns,
+        ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
+        double mvTolerance, double maximumRmse, CancellationToken token, StepWindow? trainingWindow, StepWindow? validationWindow)
+    {
+        var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
+        return engine.IdentifyArxAsync(train, check, mvTolerance, maximumRmse, token);
+    }
+
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double pvTolerance, ComparisonCriteria criteria, CancellationToken token,

@@ -195,6 +195,39 @@ public partial class IdentificationWindow : Window
         finally { Form.IsEnabled = true; }
     }
 
+    private async void IdentifyArx(object sender, RoutedEventArgs args)
+    {
+        var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
+        var valColumns = ReadColumns(ValidationTime, ValidationMv, ValidationPv);
+        var mvUnit = MvUnit.Text.Trim();
+        var pvUnit = PvUnit.Text.Trim();
+        if (TrainingSource.SelectedItem is not ImportSummary training || ValidationSource.SelectedItem is not ImportSummary validation ||
+            trainColumns is null || valColumns is null || mvUnit.Length == 0 || pvUnit.Length == 0 ||
+            !ReadTolerance(MvTolerance, out var mvTolerance) || !ReadTolerance(MaximumRmse, out var rmse) || Confirmed.IsChecked != true)
+        {
+            Message.Text = "Indiquez deux imports, leurs colonnes, les unités, la tolérance de la commande, la RMSE maximale, puis confirmez les conditions d'essai (boucle ouverte).";
+            return;
+        }
+        if (TrialIndependence.Check(training, _trainingSelection?.Window, validation, _validationSelection?.Window) is { })
+        {
+            Message.Text = "Les essais d'estimation et de validation doivent être indépendants (imports ou plages distincts, sans ligne commune).";
+            return;
+        }
+        Form.IsEnabled = false;
+        Message.Text = "Identification ARX / sortie-erreur…";
+        var token = _lifetime.Token;
+        try
+        {
+            var result = await _workspace.IdentifyArxAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
+                mvTolerance, rmse, token, _trainingSelection?.Window, _validationSelection?.Window);
+            token.ThrowIfCancellationRequested();
+            Message.Text = result.Describe(mvUnit, pvUnit);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception error) { ShowError(error); }
+        finally { Form.IsEnabled = true; }
+    }
+
     private async void Calculate(object sender, RoutedEventArgs args)
     {
         var trainColumns = ReadColumns(TrainingTime, TrainingMv, TrainingPv);
@@ -732,6 +765,13 @@ public partial class IdentificationWindow : Window
             "preview_provenance" => "L’empreinte de la source ne correspond plus à l’import sélectionné.",
             "fit_same_source_window" => "Deux essais d’un même enregistrement exigent deux plages explicites (bouton « Rechercher les essais »).",
             "fit_same_source_overlap" => "Les deux plages d’un même enregistrement se recouvrent : choisissez deux échelons distincts.",
+            "arx_mapping" => "Colonnes, plage de lignes ou tolérances invalides pour l'identification ARX / OE.",
+            "arx_time" => "Horodatages invalides, non croissants, ou moins de 40 échantillons dans un essai.",
+            "arx_sampling" => "Pas d'échantillonnage irrégulier : MKR n'interpole jamais les mesures. Rééchantillonnez l'enregistrement à pas fixe à la source.",
+            "arx_excitation" => "La commande est quasi constante sur un essai : il n'y a pas d'information sur la dynamique.",
+            "arx_ill_conditioned" => "Estimation mal conditionnée : excitation insuffisante ou signaux redondants.",
+            "arx_data" => "Pas assez d'échantillons pour estimer un modèle ARX / OE.",
+            "arx_closed_loop" => "Les essais en boucle fermée ne se traitent pas par ARX : utilisez l'identification en boucle fermée.",
             "fit_window" => "La plage sélectionnée est invalide ou ne couvre pas suffisamment l'essai. Vérifiez les points avant/après l'échelon.",
             "fit_duplicate_source" => "Les deux imports contiennent exactement les mêmes octets. Choisissez un essai de validation acquis séparément.",
             "fit_independence" => "Les périodes des deux essais se recouvrent en UTC. Vérifiez les horodatages et les plages sélectionnées, puis choisissez deux essais disjoints. Deux segments consécutifs d’un historique se recouvrent volontairement : raccourcissez la fin de la première plage pour qu’elle précède le début de la seconde.",
