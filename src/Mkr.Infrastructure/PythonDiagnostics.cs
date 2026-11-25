@@ -346,6 +346,15 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         if (tuning.Optimized is { } o && (!double.IsFinite(o.Controller.Kp) || o.Controller.Kp == 0 || Math.Sign(o.Controller.Kp) != Math.Sign(model.Gain) || !(o.Controller.TiSeconds > 0) ||
             !double.IsFinite(o.IntegralGain) || o.IntegralGain <= 0 || !(o.WorstPeakSensitivity <= limit + 1e-9) || !double.IsFinite(o.NominalOvershootPercent) || o.NominalOvershootPercent < 0))
             throw new InvalidDataException("Réglage optimisé incompatible avec le contrat.");
+        if (tuning.OptimizedPid is { } p && (p.Controller.Structure != "PID" || !double.IsFinite(p.Controller.Kp) || p.Controller.Kp == 0 || Math.Sign(p.Controller.Kp) != Math.Sign(model.Gain) ||
+            !(p.Controller.TiSeconds > 0) || !(p.Controller.TdSeconds > 0) || !(p.Controller.FilterSeconds > 0) || !double.IsFinite(p.IntegralGain) || p.IntegralGain <= 0 ||
+            !(p.WorstPeakSensitivity <= limit + 1e-9) ||
+            (tuning.Optimized is { } pi && p.PidNotBetterThanPi is { } flag && flag != (p.IntegralGain <= pi.IntegralGain))))
+            throw new InvalidDataException("PID optimisé incompatible avec le contrat.");
+        static bool Good(LoopPerformance? l) => l is null || (new[] { l.SetpointStep.Iae, l.SetpointStep.Ise, l.SetpointStep.Itae, l.LoadDisturbanceStep.Iae, l.LoadDisturbanceStep.Ise,
+            l.LoadDisturbanceStep.Itae, l.HighFrequencyGain }.All(v => double.IsFinite(v) && v >= 0));
+        if (tuning.Performance is { } perf && !(Good(perf.Recommended) && Good(perf.OptimizedPi) && Good(perf.OptimizedPid)))
+            throw new InvalidDataException("Critères de performance incompatibles avec le contrat.");
         return tuning;
     }
 
@@ -747,7 +756,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         cancellationToken.ThrowIfCancellationRequested();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(operation.StartsWith("identify_", StringComparison.Ordinal) ||
-            operation is "assess_model" or "compare_models" or "suggest_criteria" or "find_steps" or "check_model_drift" ? 30 : 10));
+            operation is "recommend_tuning" or "assess_model" or "compare_models" or "suggest_criteria" or "find_steps" or "check_model_drift" ? 30 : 10));
         var token = deadline.Token;
         var utf8 = new UTF8Encoding(false, true);
         var start = new ProcessStartInfo(interpreter)

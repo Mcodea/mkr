@@ -10,6 +10,15 @@ public sealed record TuningCandidate(double ResponseSeconds, TuningController Co
 /// <summary>PI that maximises the integral gain (load-disturbance rejection) under the same sensitivity constraint on every corner.</summary>
 public sealed record OptimizedTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double NominalOvershootPercent, double IntegralGainRatio);
 
+/// <summary>PID that maximises the integral gain under the same constraint; compared with the optimal PI so that a PID is never presumed better.</summary>
+public sealed record OptimizedPidTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double DerivativeToIntegralTimeRatio,
+    double? IntegralGainRatioToOptimalPi = null, bool? PidNotBetterThanPi = null);
+
+/// <summary>Nominal closed-loop criteria from a time simulation (no actuator limit): set-point step (P, I on the error, D on the measurement) and load step at the plant input.</summary>
+public sealed record StepCriteria(double Iae, double Ise, double Itae, double? OvershootPercent = null, double? SettlingSeconds = null);
+public sealed record LoopPerformance(StepCriteria SetpointStep, StepCriteria LoadDisturbanceStep, double HighFrequencyGain);
+public sealed record TuningPerformance(LoopPerformance? Recommended = null, LoopPerformance? OptimizedPi = null, LoopPerformance? OptimizedPid = null);
+
 /// <summary>
 /// Result of the guided tuning (engine/recommend.py). The user states a robustness objective, never a response time.
 /// <see cref="Decision"/> is "recommended" or "refused"; a refusal carries reasons and the actions that would allow a recommendation.
@@ -18,7 +27,8 @@ public sealed record GuidedTuning(string AlgorithmVersion, string Decision, stri
     string? Structure = null, TuningCandidate? Recommendation = null, double? UncertaintyCoverageSigma = null, bool UncertaintyQuantified = false,
     double EffectiveDelaySeconds = 0, double SamplePeriodSeconds = 0, TuningCandidate[]? Alternatives = null, string[]? Warnings = null,
     string[]? Reasons = null, string[]? Actions = null, string Qualification = "none", TuningCandidate? ClosestTuning = null, string[]? References = null,
-    double? DerivativeFilterRatio = null, double? ProcessVariationPercent = null, OptimizedTuning? Optimized = null)
+    double? DerivativeFilterRatio = null, double? ProcessVariationPercent = null, OptimizedTuning? Optimized = null,
+    OptimizedPidTuning? OptimizedPid = null, TuningPerformance? Performance = null)
 {
     public bool IsRecommended => Decision == "recommended";
 }

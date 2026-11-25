@@ -6,6 +6,7 @@ import unittest
 
 import numpy as np
 
+import recommend
 from recommend import COVERAGE, OBJECTIVES, calculate
 
 
@@ -30,6 +31,8 @@ def sensitivity_peak(gain, taus, delay, kp, ti, td, tf=0.0):
 def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
     """Explicit time-domain simulation (Euler, delay buffer) of a unit set-point step; returns the final error and the overshoot."""
     dt = (min(min(taus), max(delay, 1e-3)) if taus else max(delay, 1e-3)) / 12
+    if tf > 0:
+        dt = min(dt, tf / 5)                                          # explicit Euler of the derivative filter needs dt well below Tf
     steps = int(horizon / dt)
     lag = int(round(delay / dt))
     buffer = [0.0] * (lag + 1)
@@ -245,13 +248,89 @@ class Optimisation(unittest.TestCase):
                         settles(family, plants, scaled_kp, scaled_ti, 0.5 * sample, horizon) > 0.02
                     self.assertTrue(violated, f"{label} must break the constraint if the integral gain is maximal")
 
-    def test_the_optimisation_is_off_by_default_and_only_for_pi(self):
-        self.assertIsNone(calculate(request())["optimized"])
+    def test_the_optimisation_is_off_by_default_and_the_second_order_model_gets_a_pid_only(self):
+        off = calculate(request())
+        self.assertIsNone(off["optimized"])
+        self.assertIsNone(off["optimizedPid"])
+        self.assertIsNone(off["performance"])
         pid = calculate(request(family="SOPDT", secondTauSeconds=15.0, optimise=True))
-        self.assertIsNone(pid["optimized"])
-        self.assertIn("optimisation_covers_pi_only", pid["warnings"])
+        self.assertIsNone(pid["optimized"])                          # the PI search does not apply when the second pole is cancelled
+        self.assertIsNotNone(pid["optimizedPid"])
         with self.assertRaises(ValueError):
             calculate(request(optimise="yes"))
+
+    def test_the_pid_optimum_respects_the_limit_on_the_corners_and_settles_judged_by_independent_oracles(self):
+        family, kwargs, plants, sample, horizon = self.CASES[0]
+        result = self.run_case(family, kwargs)
+        pid = result["optimizedPid"]
+        self.assertIsNotNone(pid)
+        c = pid["controller"]
+        self.assertEqual(c["structure"], "PID")
+        for gain, tau, delay in plants:
+            peak = sensitivity_peak(gain, [tau], delay + 0.5 * sample, c["kp"], c["tiSeconds"], c["tdSeconds"], c["filterSeconds"])
+            self.assertLessEqual(peak, OBJECTIVES["balanced"] + 5e-3)
+            error, _ = closed_loop_settles(gain, [tau], delay + 0.5 * sample, c["kp"], c["tiSeconds"], c["tdSeconds"], horizon, c["filterSeconds"])
+            self.assertLess(abs(error), 0.02)
+
+    def test_a_pid_is_never_presumed_better_than_a_pi_and_the_claim_matches_the_numbers(self):
+        for family, kwargs, plants, sample, horizon in self.CASES[:1]:
+            result = self.run_case(family, kwargs)
+            pid, pi = result["optimizedPid"], result["optimized"]
+            self.assertEqual(pid["pidNotBetterThanPi"], pid["integralGain"] <= pi["integralGain"])
+            self.assertAlmostEqual(pid["integralGainRatioToOptimalPi"], pid["integralGain"] / pi["integralGain"], places=12)
+            hf = result["performance"]["optimizedPid"]["highFrequencyGain"]          # the price of the derivative term is published too
+            self.assertGreater(hf, result["performance"]["optimizedPi"]["highFrequencyGain"])
+
+
+class Serialisation(unittest.TestCase):
+    def test_every_result_is_plain_json_the_bridge_can_carry(self):        # numpy scalars once surfaced as "engine_non_finite" through the bridge
+        import json
+        cases = (dict(), dict(family="SOPDT", secondTauSeconds=15.0), dict(family="Integrateur", tauSeconds=None, gain=0.02, delaySeconds=5.0, standardErrors=None))
+        for extra in cases:
+            with self.subTest(extra=extra):
+                result = calculate(request(optimise=True, **extra))
+                json.dumps(result, allow_nan=False)
+                self.assertNotIn("numpy", repr(result))
+
+
+class ClosedLoopPerformance(unittest.TestCase):
+    """Oracle: PI with Ti = tau on a dead-time-free first-order plant is an integrator loop L = a / (tau s), a = Kp K:
+    set-point error e(t) = exp(-t / T), T = tau / a  ->  IAE = T, ISE = T / 2, ITAE = T^2, no overshoot, 2 % settling at 3.912 T;
+    load step at the plant input: y(t) = K / (a - 1) (exp(-t / tau) - exp(-a t / tau))  ->  IAE = K tau / a."""
+
+    def test_closed_form_values(self):
+        gain, tau, a = 2.0, 30.0, 3.0
+        kp = a / gain
+        result = recommend.closed_loop_performance(gain, tau, None, 0.0, dict(kp=kp, tiSeconds=tau, tdSeconds=0.0, filterSeconds=0.0))
+        T = tau / a
+        step, load = result["setpointStep"], result["loadDisturbanceStep"]
+        self.assertAlmostEqual(step["iae"], T, delta=0.015 * T)          # explicit Euler: first-order accurate, see the convergence test
+        self.assertAlmostEqual(step["ise"], T / 2, delta=0.015 * T / 2)
+        self.assertAlmostEqual(step["itae"], T * T, delta=0.015 * T * T)
+        self.assertLess(step["overshootPercent"], 0.05)
+        self.assertAlmostEqual(step["settlingSeconds"], T * math.log(50), delta=0.03 * T * math.log(50))
+        self.assertAlmostEqual(load["iae"], gain * tau / a, delta=0.01 * gain * tau / a)
+        self.assertEqual(result["highFrequencyGain"], kp)
+
+    def test_the_error_against_the_closed_form_halves_when_the_step_is_halved(self):
+        gain, tau, a = 2.0, 30.0, 3.0
+        T = tau / a
+        errors = []
+        for resolution in (400.0, 800.0, 1600.0):
+            result = recommend.closed_loop_performance(gain, tau, None, 0.0, dict(kp=a / gain, tiSeconds=tau, tdSeconds=0.0, filterSeconds=0.0), resolution=resolution)
+            errors.append(abs(result["setpointStep"]["iae"] - T))
+        self.assertAlmostEqual(errors[0] / errors[1], 2.0, delta=0.15)
+        self.assertAlmostEqual(errors[1] / errors[2], 2.0, delta=0.15)
+        self.assertLess(errors[2], 0.003 * T)
+
+    def test_a_negative_gain_gives_the_same_criteria(self):
+        positive = recommend.closed_loop_performance(2.0, 30.0, None, 0.0, dict(kp=1.5, tiSeconds=30.0, tdSeconds=0.0, filterSeconds=0.0))
+        negative = recommend.closed_loop_performance(-2.0, 30.0, None, 0.0, dict(kp=-1.5, tiSeconds=30.0, tdSeconds=0.0, filterSeconds=0.0))
+        self.assertAlmostEqual(positive["setpointStep"]["iae"], negative["setpointStep"]["iae"], places=9)
+
+    def test_an_unstable_loop_is_reported_not_returned(self):
+        with self.assertRaisesRegex(ValueError, "recommend_simulation_diverged"):
+            recommend.closed_loop_performance(1.0, 10.0, None, 20.0, dict(kp=50.0, tiSeconds=10.0, tdSeconds=0.0, filterSeconds=0.0))
 
 
 class Refusals(unittest.TestCase):

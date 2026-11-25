@@ -119,6 +119,31 @@ public partial class GuidedTuningWindow : Window
             text.AppendLine($"  Sensibilité au pire cas {F(opt.WorstPeakSensitivity)} · dépassement nominal sur un échelon de consigne : {opt.NominalOvershootPercent:G3} %.");
             text.AppendLine("  Compromis : intégrale plus vive, donc davantage de dépassement en suivi de consigne.");
         }
+        if (tuning.OptimizedPid is { } pid)
+        {
+            text.AppendLine();
+            text.AppendLine("PID optimisé sous la même contrainte (recherche sur Td/Ti ∈ {0,05 … 0,25} et Ti ; le PID n'est jamais présumé meilleur que le PI) :");
+            text.AppendLine($"  Kp = {F(pid.Controller.Kp)} {mv}/{pv}   Ti = {F(pid.Controller.TiSeconds)} s   Td = {F(pid.Controller.TdSeconds)} s   Tf = {F(pid.Controller.FilterSeconds)} s   Ki = {F(pid.IntegralGain)}");
+            text.AppendLine($"  Sensibilité au pire cas {F(pid.WorstPeakSensitivity)}." +
+                (pid.IntegralGainRatioToOptimalPi is { } ratio ? $" Gain intégral ×{ratio:G3} par rapport au PI optimisé." : ""));
+            if (pid.PidNotBetterThanPi == true)
+                text.AppendLine("  Sur ce modèle, le PID n'apporte pas de gain intégral par rapport au PI : garder le PI (moins sensible au bruit de mesure).");
+            else if (pid.PidNotBetterThanPi == false)
+                text.AppendLine("  Gain obtenu au prix d'une amplification du bruit de mesure plus forte (gain haute fréquence ci-dessous) : à décider selon la qualité du capteur.");
+        }
+        if (tuning.Performance is { } perf)
+        {
+            text.AppendLine();
+            text.AppendLine("Performances nominales simulées (échelon unitaire, sans limite d'actionneur ; IAE = intégrale de la valeur absolue de l'erreur) :");
+            void Line(string name, LoopPerformance? l)
+            {
+                if (l is null) return;
+                text.AppendLine($"  {name} : consigne IAE {F(l.SetpointStep.Iae)}, dépassement {F(l.SetpointStep.OvershootPercent ?? 0)} %, établissement à 2 % {F(l.SetpointStep.SettlingSeconds ?? 0)} s · perturbation de charge IAE {F(l.LoadDisturbanceStep.Iae)} · gain haute fréquence {F(l.HighFrequencyGain)}");
+            }
+            Line("Recommandé", perf.Recommended);
+            Line("PI optimisé", perf.OptimizedPi);
+            Line("PID optimisé", perf.OptimizedPid);
+        }
         if (tuning.Warnings is { Length: > 0 })
         {
             text.AppendLine();
@@ -150,7 +175,7 @@ public partial class GuidedTuningWindow : Window
         "uncertainty_not_quantified" => "incertitude des paramètres non quantifiée (erreurs-types indisponibles pour ce modèle).",
         "closed_loop_slower_than_the_process" => "la boucle fermée visée est plus lente que le procédé lui-même : l'incertitude impose beaucoup de marge.",
         "pid_second_pole_exceeds_delay" => "second pôle supérieur au retard : un PID est justifié (règle SIMC) ; la dérivée est filtrée (Tf = Td/10 par défaut, plage usuelle 2 à 20) et ce filtre fait partie de la boucle jugée.",
-        "optimisation_covers_pi_only" => "l'optimisation du gain intégral ne couvre pas le PID.",
+        "performance_is_nominal_without_actuator_limits" => "performances calculées sur le procédé nominal, sans limite ni vitesse d'actionneur : à confirmer avec le scénario complet de la simulation.",
         "second_pole_uncertainty_not_propagated" => "l'incertitude du second pôle n'est pas propagée (gain, constante lente et retard le sont).",
         "half_rule_second_pole_not_above_delay" => "second pôle non supérieur au retard : règle de la moitié, puis PI.",
         "first_order_model_pi_is_the_rule" => "modèle du premier ordre : le PI est la règle SIMC.",

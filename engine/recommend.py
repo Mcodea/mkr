@@ -24,7 +24,7 @@ import math
 from pi_tuning_integrator import loop_margins
 from stability_margins import analyze
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -32,6 +32,15 @@ DEFAULT_FILTER_RATIO = 10.0
 COVERAGE = 2.0                      # +/- 2 standard errors: ~95 % of a Gaussian parameter estimate
 # Closed-loop time constant tauc searched as multiples of the effective delay (SIMC: tauc = theta is "tight", larger = smoother).
 MULTIPLES = [0.25 * 1.25 ** i for i in range(0, 25)]          # 0.25 ... about 53 effective delays, 25 steps
+
+
+def _plain(value):
+    """numpy scalars -> Python scalars (the JSON bridge accepts nothing else)."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    return value.item() if hasattr(value, "item") and not isinstance(value, (int, float, str)) else value
 
 
 def _number(x):
@@ -192,16 +201,29 @@ def calculate(payload):
         if optimized is not None:
             c = chosen["controller"]
             optimized["integralGainRatio"] = optimized["integralGain"] / (abs(c["kp"]) / c["tiSeconds"])
-    elif optimise:
-        warnings.append("optimisation_covers_pi_only")
-    return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit,
+    optimized_pid, performance = None, None
+    if optimise:
+        optimized_pid = optimise_pid(gain, tau1, tau2, effective, plants, limit, sampling_delay, ratio)
+        if optimized_pid is not None and optimized is not None:
+            optimized_pid["integralGainRatioToOptimalPi"] = optimized_pid["integralGain"] / optimized["integralGain"]
+            optimized_pid["pidNotBetterThanPi"] = optimized_pid["integralGain"] <= optimized["integralGain"]
+        performance = {}
+        for name, controller in (("recommended", chosen["controller"]), ("optimizedPi", optimized and optimized["controller"]),
+                                 ("optimizedPid", optimized_pid and optimized_pid["controller"])):
+            if controller is not None:
+                try:
+                    performance[name] = closed_loop_performance(gain, tau1, tau2, effective, controller)
+                except ValueError:
+                    warnings.append("performance_simulation_failed_" + name)
+        warnings.append("performance_is_nominal_without_actuator_limits")
+    return _plain(dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit,
                 family=family, structure=chosen["controller"]["structure"], recommendation=chosen,
                 uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
                 processVariationPercent=variation, effectiveDelaySeconds=effective, samplePeriodSeconds=sample,
-                optimized=optimized, derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
+                optimized=optimized, optimizedPid=optimized_pid, performance=performance, derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
                 alternatives=_alternatives(evaluated, chosen), warnings=warnings, qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control",
-                            "Morari & Zafiriou 1989, Robust Process Control"])
+                            "Morari & Zafiriou 1989, Robust Process Control"]))
 
 
 def _alternatives(evaluated, chosen):
@@ -403,3 +425,161 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
                         nominalOvershootPercent=_nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating))
         kp *= 0.995
     return None
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Constrained PID optimisation and closed-loop performance criteria.
+# Same principle as optimise_pi (maximise Ki = Kp / Ti under Ms <= limit on EVERY corner), with the derivative term Td = r * Ti
+# (search grid r in PID_TD_RATIOS: the usual range of Ti / Td for PID loops, Astrom & Hagglund 2006) filtered by Tf = Td / N.
+# The grid is a SEARCH choice, not a claim: every candidate is judged by its measured sensitivity peak on the corners, and the result
+# is compared with the optimal PI so that a PID is never presumed better. The constraint check uses an exact continuous phase
+# (the controller real part is positive, so its phase is atan(Im/Re) without unwrapping) and requires |L| < 1 at each -pi crossing
+# (sufficient for a stable open loop; conservative), then the winner is re-verified with the module's full-resolution margins.
+# ---------------------------------------------------------------------------------------------------------------------------------
+PID_TD_RATIOS = (0.05, 0.1, 0.15, 0.2, 0.25)
+PID_SEARCH_POINTS = dict(frequencies=1000, gains=48, integral_times=10, bisections=16)
+
+
+class _Process:
+    """Frequency response of every plant on a fixed grid, computed once: only the controller changes during the search."""
+
+    def __init__(self, w, plants):
+        self.w = w
+        self.magnitude = np.empty((len(plants), len(w)))
+        self.phase = np.empty((len(plants), len(w)))
+        for row, (_, gain, tau1, delay, tau2) in enumerate(plants):
+            magnitude = np.full(len(w), abs(gain))
+            phase = -w * delay
+            for tau in ([tau1] if tau2 is None else [tau1, tau2]):
+                magnitude = magnitude / np.sqrt(1 + (tau * w) ** 2)
+                phase = phase - np.arctan(tau * w)
+            self.magnitude[row], self.phase[row] = magnitude, phase
+
+
+def _pid_feasible(kp, ti, td, tf, process, limit):
+    """Stable (|L| < 1 at every -pi phase crossing, exact continuous phase) with peak sensitivity <= limit on every plant."""
+    w = process.w
+    re = 1 + (td * tf * w ** 2) / (1 + (tf * w) ** 2)
+    im = -1 / (ti * w) + td * w / (1 + (tf * w) ** 2)          # the controller real part is positive: its phase needs no unwrapping
+    magnitude = kp * np.hypot(re, im)[None, :] * process.magnitude
+    phase = np.arctan2(im, re)[None, :] + process.phase
+    loop = magnitude * np.exp(1j * phase)
+    if float((1 / np.abs(1 + loop)).max()) > limit:
+        return False
+    for row in range(loop.shape[0]):
+        if phase[row, 0] <= -math.pi and magnitude[row, 0] >= 1:
+            return False
+        crossing = np.flatnonzero((phase[row, :-1] > -math.pi) != (phase[row, 1:] > -math.pi))
+        if len(crossing) and float(magnitude[row, crossing].max()) >= 1:
+            return False
+    return True
+
+
+def _max_kp_pid(ti, td, tf, process, scale, limit, x_grid):
+    feasible = [bool(_pid_feasible(x * scale, ti, td, tf, process, limit)) for x in x_grid]
+    indices = [i for i, ok in enumerate(feasible) if ok]
+    if not indices or indices[-1] == len(x_grid) - 1:
+        return 0.0
+    low, high = x_grid[indices[-1]] * scale, x_grid[indices[-1] + 1] * scale
+    for _ in range(PID_SEARCH_POINTS["bisections"]):
+        mid = (low + high) / 2
+        low, high = (mid, high) if _pid_feasible(mid, ti, td, tf, process, limit) else (low, mid)
+    return float(low)
+
+
+def optimise_pid(gain, tau1, tau2, theta_total, plants, limit, sampling_delay, filter_ratio):
+    """Best PID (largest Ki) over the Td/Ti search grid and Ti, or None. Plants use positive gains; delays include the sampling delay."""
+    scaled = [(n, abs(k), t1, d + sampling_delay, t2) for n, k, t1, d, t2 in plants]
+    scale = max(theta_total, 1e-9)
+    w = np.logspace(math.log10(1e-3 / max(tau1, scale)), math.log10(300 / scale), PID_SEARCH_POINTS["frequencies"])
+    process = _Process(w, scaled)
+    gain_scale = 1.0 / max(scaled[0][1], 1e-300)
+    x_grid = np.geomspace(1e-3, 20 * max(1.0, tau1 / scale), PID_SEARCH_POINTS["gains"])
+    ti_grid = np.geomspace(0.1 * tau1, 3 * tau1, PID_SEARCH_POINTS["integral_times"])
+    best = None
+    for ratio in PID_TD_RATIOS:
+        for ti in ti_grid:
+            td = ratio * ti
+            kp = _max_kp_pid(ti, td, td / filter_ratio, process, gain_scale, limit, x_grid)
+            if kp > 0 and (best is None or kp / ti > best[0]):
+                best = (kp / ti, kp, ti, ratio)
+    if best is None:
+        return None
+    for factor in np.geomspace(0.8, 1.25, 7):
+        ti = best[2] * factor
+        td = best[3] * ti
+        kp = _max_kp_pid(ti, td, td / filter_ratio, process, gain_scale, limit, x_grid)
+        if kp > 0 and kp / ti > best[0]:
+            best = (kp / ti, kp, ti, best[3])
+    _, kp, ti, ratio = best
+    td, tf = ratio * ti, ratio * ti / filter_ratio
+    fine = _Process(np.logspace(math.log10(1e-4 / max(tau1, scale)), math.log10(3000 / scale), 40000), scaled)   # 40 x finer than the search
+    for _ in range(60):                       # verification on the fine grid; back off on the coarse-grid error
+        if _pid_feasible(kp, ti, td, tf, fine, limit):
+            peak = _pid_peak(kp, ti, td, tf, fine)
+            return dict(controller=dict(structure="PID", kp=math.copysign(kp, gain), tiSeconds=ti, tdSeconds=td, filterSeconds=tf),
+                        integralGain=kp / ti, worstPeakSensitivity=peak, derivativeToIntegralTimeRatio=ratio)
+        kp *= 0.995
+    return None
+
+
+def _pid_peak(kp, ti, td, tf, process):
+    w = process.w
+    re = 1 + (td * tf * w ** 2) / (1 + (tf * w) ** 2)
+    im = -1 / (ti * w) + td * w / (1 + (tf * w) ** 2)
+    loop = kp * np.hypot(re, im)[None, :] * process.magnitude * np.exp(1j * (np.arctan2(im, re)[None, :] + process.phase))
+    return float((1 / np.abs(1 + loop)).max())
+
+
+def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multiple=40.0, resolution=400.0):
+    """Nominal closed-loop criteria from an explicit time simulation (Euler, delay buffer, no actuator limit):
+    set-point step (unit, P and I on the error, D on the measurement) and load-disturbance step at the plant input (unit, set-point 0).
+    Returns IAE, ISE, ITAE, overshoot (percent of the step), 2 % settling time, and the high-frequency controller gain Kp (1 + Td / Tf)."""
+    kp, ti, td, tf = controller["kp"], controller["tiSeconds"], controller["tdSeconds"], controller["filterSeconds"]
+    lags = [tau1] + ([tau2] if tau2 else [])
+    scale = max(ti, delay, tau1)
+    dt = min(scale / resolution, min(lags) / 10.0, (delay / 20.0) if delay > 0 else scale, (tf / 5.0) if tf > 0 else scale)
+    horizon = horizon_multiple * scale
+    steps = int(min(horizon / dt, 1.5e6))
+    dt = horizon / steps if steps == int(horizon / dt) else dt
+
+    def run(setpoint, load):
+        n_delay = int(round(delay / dt))
+        buffer = [0.0] * (n_delay + 1)
+        head = 0
+        states = [0.0] * len(lags)
+        integral = yf = 0.0
+        iae = ise = itae = peak = 0.0
+        last_outside = 0.0
+        y = 0.0
+        for i in range(steps):
+            t = i * dt
+            error = setpoint - y
+            integral += kp / ti * error * dt
+            derivative = -kp * td * (y - yf) / tf if tf > 0 and td > 0 else 0.0
+            u = kp * error + integral + derivative
+            if tf > 0:
+                yf += dt * (y - yf) / tf
+            buffer[head] = u + load
+            head = (head + 1) % len(buffer)
+            delayed = buffer[head]                        # sample written n_delay steps ago (ring of length n_delay + 1)
+            states[0] += dt * (gain * delayed - states[0]) / lags[0]
+            for j in range(1, len(lags)):
+                states[j] += dt * (states[j - 1] - states[j]) / lags[j]
+            y = states[-1]
+            e = abs(setpoint - y)
+            iae += e * dt
+            ise += e * e * dt
+            itae += t * e * dt
+            peak = max(peak, y if setpoint else -y * (1 if gain > 0 else 1))
+            if setpoint and e > 0.02 * abs(setpoint):
+                last_outside = t
+            if not math.isfinite(y) or abs(y) > 1e6:
+                raise ValueError("recommend_simulation_diverged")
+        return iae, ise, itae, peak, last_outside
+
+    iae, ise, itae, peak, settle = run(1.0, 0.0)
+    l_iae, l_ise, l_itae, _, _ = run(0.0, 1.0)
+    return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle),
+                loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae),
+                highFrequencyGain=abs(kp) * (1 + (td / tf if tf > 0 else 0.0)), horizonSeconds=horizon, stepSeconds=dt)
