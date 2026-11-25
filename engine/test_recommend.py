@@ -282,6 +282,48 @@ class Optimisation(unittest.TestCase):
             self.assertGreater(hf, result["performance"]["optimizedPi"]["highFrequencyGain"])
 
 
+class IntegratorPid(unittest.TestCase):
+    CASE = dict(gain=0.02, tauSeconds=None, delaySeconds=5.0, standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3))
+    PLANTS = [(0.02 + g * 0.002, 5.0 + d * 0.6) for g in (-1, 1) for d in (-1, 1)] + [(0.02, 5.0)]
+
+    def result(self):
+        return calculate(request(family="Integrateur", objective="balanced", optimise=True, **self.CASE))
+
+    def test_the_integrator_pid_respects_the_limit_on_the_corners_and_settles_independent_oracles(self):
+        c = self.result()["optimizedPid"]["controller"]
+        self.assertEqual(c["structure"], "PID")
+        w = np.logspace(-5, 2, 40000)
+        s = 1j * w
+        for k, delay in self.PLANTS:
+            loop = c["kp"] * (1 + 1 / (c["tiSeconds"] * s) + c["tdSeconds"] * s / (c["filterSeconds"] * s + 1)) * k * np.exp(-s * (delay + 0.5)) / s
+            self.assertLessEqual(float(np.max(1 / np.abs(1 + loop))), OBJECTIVES["balanced"] + 5e-3)
+            error, _ = closed_loop_settles(k, [], delay + 0.5, c["kp"], c["tiSeconds"], c["tdSeconds"], 1500.0, c["filterSeconds"])
+            self.assertLess(abs(error), 0.02)
+
+    def test_the_pid_is_compared_with_the_pi_and_the_claim_matches_the_numbers(self):
+        result = self.result()
+        pid, pi = result["optimizedPid"], result["optimized"]
+        self.assertEqual(pid["pidNotBetterThanPi"], pid["integralGain"] <= pi["integralGain"])
+        self.assertGreater(result["performance"]["optimizedPid"]["highFrequencyGain"], result["performance"]["optimizedPi"]["highFrequencyGain"])
+        import json
+        json.dumps(result, allow_nan=False)
+
+    def test_integrating_performance_criteria_match_scipy_on_the_closed_form_loop(self):
+        """Delay-free integrator K/s with PI: y/r = (a s + a/Ti) / (s^2 + a s + a/Ti), a = Kp K. Oracle: scipy's step response, integrated."""
+        from scipy import signal
+        gain, kp, ti = 0.02, 50.0, 8.0                       # a = 1 per second, overdamped (zeta = 1.41)
+        a = kp * gain
+        t = np.linspace(0, 400, 400001)
+        _, y = signal.step(signal.lti([a, a / ti], [1.0, a, a / ti]), T=t)
+        _, load = signal.step(signal.lti([gain, 0.0], [1.0, a, a / ti]), T=t)          # transfer function y/d = K s / (s^2 + a s + a / Ti)
+        expected_iae = float(np.trapezoid(np.abs(1 - y), t))
+        result = recommend.closed_loop_performance(gain, 1.0, None, 0.0, dict(kp=kp, tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0), integrating=True)
+        self.assertAlmostEqual(result["setpointStep"]["iae"], expected_iae, delta=0.015 * expected_iae)
+        self.assertAlmostEqual(result["loadDisturbanceStep"]["iae"], float(np.trapezoid(np.abs(load), t)), delta=0.015 * ti / kp)
+        self.assertAlmostEqual(result["loadDisturbanceStep"]["iae"], ti / kp, delta=0.015 * ti / kp)      # overdamped: IAE = Ti / Kp exactly
+        self.assertAlmostEqual(result["setpointStep"]["overshootPercent"], 100 * (float(y.max()) - 1), delta=0.3)      # the PI zero makes the set-point response overshoot although the poles are real
+
+
 class Serialisation(unittest.TestCase):
     def test_every_result_is_plain_json_the_bridge_can_carry(self):        # numpy scalars once surfaced as "engine_non_finite" through the bridge
         import json

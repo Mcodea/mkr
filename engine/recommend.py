@@ -134,7 +134,7 @@ def calculate(payload):
 
     limit = OBJECTIVES[objective]
     if family == "Integrateur":
-        return _integrator(gain, delay, sample, errors, objective, limit, variation, optimise)
+        return _integrator(gain, delay, sample, errors, objective, limit, variation, optimise, ratio)
     notes, tau1, tau2, theta = [], tau, None, delay
     if family == "SOPDT":
         if second > delay:
@@ -240,7 +240,7 @@ def _refusal(family, objective, limit, reasons, actions, notes, best=None, evalu
                 alternatives=[], recommendation=None, optimized=None)
 
 
-def _integrator(slope, delay, sample, errors, objective, limit, variation=None, optimise=False):
+def _integrator(slope, delay, sample, errors, objective, limit, variation=None, optimise=False, filter_ratio=DEFAULT_FILTER_RATIO):
     """SIMC for an integrating process with dead time; corners on the slope and the delay (the only two parameters)."""
     sampling_delay = sample / 2
     effective = delay + sampling_delay
@@ -297,11 +297,27 @@ def _integrator(slope, delay, sample, errors, objective, limit, variation=None, 
         optimized = optimise_pi("Integrateur", slope, 1.0, effective, [(n, k, 1.0, d, None) for n, k, d in plants], limit, sampling_delay)
         if optimized is not None:
             optimized["integralGainRatio"] = optimized["integralGain"] / (abs(chosen["controller"]["kp"]) / chosen["controller"]["tiSeconds"])
-    return dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit, family="Integrateur",
+    optimized_pid, performance = None, None
+    if optimise:
+        optimized_pid = optimise_pid(slope, 1.0, None, effective, [(n, k, 1.0, d, None) for n, k, d in plants], limit, sampling_delay, filter_ratio, integrating=True)
+        if optimized_pid is not None and optimized is not None:
+            optimized_pid["integralGainRatioToOptimalPi"] = optimized_pid["integralGain"] / optimized["integralGain"]
+            optimized_pid["pidNotBetterThanPi"] = optimized_pid["integralGain"] <= optimized["integralGain"]
+        performance = {}
+        for name, controller in (("recommended", chosen["controller"]), ("optimizedPi", optimized and optimized["controller"]),
+                                 ("optimizedPid", optimized_pid and optimized_pid["controller"])):
+            if controller is not None:
+                try:
+                    performance[name] = closed_loop_performance(slope, 1.0, None, effective, controller, integrating=True)
+                except ValueError:
+                    notes.append("performance_simulation_failed_" + name)
+        notes.append("performance_is_nominal_without_actuator_limits")
+    return _plain(dict(algorithmVersion=VERSION, decision="recommended", objective=objective, maximumPeakSensitivity=limit, family="Integrateur",
                 structure="PI", recommendation=chosen, uncertaintyCoverageSigma=COVERAGE if errors is not None else None, uncertaintyQuantified=quantified,
-                processVariationPercent=variation, optimized=optimized, effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
+                processVariationPercent=variation, optimized=optimized, optimizedPid=optimized_pid, performance=performance,
+                effectiveDelaySeconds=effective, samplePeriodSeconds=sample, alternatives=_alternatives(entries, chosen), warnings=notes,
                 qualification="model_based_unqualified",
-                references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control"])
+                references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control"]))
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -443,14 +459,17 @@ PID_SEARCH_POINTS = dict(frequencies=1000, gains=48, integral_times=10, bisectio
 class _Process:
     """Frequency response of every plant on a fixed grid, computed once: only the controller changes during the search."""
 
-    def __init__(self, w, plants):
+    def __init__(self, w, plants, integrating=False):
         self.w = w
         self.magnitude = np.empty((len(plants), len(w)))
         self.phase = np.empty((len(plants), len(w)))
         for row, (_, gain, tau1, delay, tau2) in enumerate(plants):
             magnitude = np.full(len(w), abs(gain))
             phase = -w * delay
-            for tau in ([tau1] if tau2 is None else [tau1, tau2]):
+            if integrating:                              # K e^{-theta s} / s: no lag, a pure integrator (slope K)
+                magnitude = magnitude / w
+                phase = phase - math.pi / 2
+            for tau in ([] if integrating else [tau1] if tau2 is None else [tau1, tau2]):
                 magnitude = magnitude / np.sqrt(1 + (tau * w) ** 2)
                 phase = phase - np.arctan(tau * w)
             self.magnitude[row], self.phase[row] = magnitude, phase
@@ -487,15 +506,17 @@ def _max_kp_pid(ti, td, tf, process, scale, limit, x_grid):
     return float(low)
 
 
-def optimise_pid(gain, tau1, tau2, theta_total, plants, limit, sampling_delay, filter_ratio):
+def optimise_pid(gain, tau1, tau2, theta_total, plants, limit, sampling_delay, filter_ratio, integrating=False):
     """Best PID (largest Ki) over the Td/Ti search grid and Ti, or None. Plants use positive gains; delays include the sampling delay."""
     scaled = [(n, abs(k), t1, d + sampling_delay, t2) for n, k, t1, d, t2 in plants]
     scale = max(theta_total, 1e-9)
-    w = np.logspace(math.log10(1e-3 / max(tau1, scale)), math.log10(300 / scale), PID_SEARCH_POINTS["frequencies"])
-    process = _Process(w, scaled)
+    w = np.logspace(math.log10(1e-3 / max(20 * scale if integrating else tau1, scale)), math.log10(300 / scale), PID_SEARCH_POINTS["frequencies"])
+    process = _Process(w, scaled, integrating)
     gain_scale = 1.0 / max(scaled[0][1], 1e-300)
-    x_grid = np.geomspace(1e-3, 20 * max(1.0, tau1 / scale), PID_SEARCH_POINTS["gains"])
-    ti_grid = np.geomspace(0.1 * tau1, 3 * tau1, PID_SEARCH_POINTS["integral_times"])
+    x_grid = (np.geomspace(1e-3 / scale, 20 / scale, PID_SEARCH_POINTS["gains"]) if integrating
+              else np.geomspace(1e-3, 20 * max(1.0, tau1 / scale), PID_SEARCH_POINTS["gains"]))
+    ti_grid = (np.geomspace(0.5 * scale, 400 * scale, PID_SEARCH_POINTS["integral_times"]) if integrating
+               else np.geomspace(0.1 * tau1, 3 * tau1, PID_SEARCH_POINTS["integral_times"]))
     best = None
     for ratio in PID_TD_RATIOS:
         for ti in ti_grid:
@@ -513,7 +534,7 @@ def optimise_pid(gain, tau1, tau2, theta_total, plants, limit, sampling_delay, f
             best = (kp / ti, kp, ti, best[3])
     _, kp, ti, ratio = best
     td, tf = ratio * ti, ratio * ti / filter_ratio
-    fine = _Process(np.logspace(math.log10(1e-4 / max(tau1, scale)), math.log10(3000 / scale), 40000), scaled)   # 40 x finer than the search
+    fine = _Process(np.logspace(math.log10(1e-4 / max(20 * scale if integrating else tau1, scale)), math.log10(3000 / scale), 40000), scaled, integrating)   # 40 x finer than the search
     for _ in range(60):                       # verification on the fine grid; back off on the coarse-grid error
         if _pid_feasible(kp, ti, td, tf, fine, limit):
             peak = _pid_peak(kp, ti, td, tf, fine)
@@ -531,14 +552,14 @@ def _pid_peak(kp, ti, td, tf, process):
     return float((1 / np.abs(1 + loop)).max())
 
 
-def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multiple=40.0, resolution=400.0):
+def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multiple=40.0, resolution=400.0, integrating=False):
     """Nominal closed-loop criteria from an explicit time simulation (Euler, delay buffer, no actuator limit):
     set-point step (unit, P and I on the error, D on the measurement) and load-disturbance step at the plant input (unit, set-point 0).
     Returns IAE, ISE, ITAE, overshoot (percent of the step), 2 % settling time, and the high-frequency controller gain Kp (1 + Td / Tf)."""
     kp, ti, td, tf = controller["kp"], controller["tiSeconds"], controller["tdSeconds"], controller["filterSeconds"]
-    lags = [tau1] + ([tau2] if tau2 else [])
-    scale = max(ti, delay, tau1)
-    dt = min(scale / resolution, min(lags) / 10.0, (delay / 20.0) if delay > 0 else scale, (tf / 5.0) if tf > 0 else scale)
+    lags = [] if integrating else [tau1] + ([tau2] if tau2 else [])
+    scale = max(ti, delay, 0.0 if integrating else tau1)
+    dt = min(scale / resolution, (min(lags) / 10.0) if lags else scale, (delay / 20.0) if delay > 0 else scale, (tf / 5.0) if tf > 0 else scale)
     horizon = horizon_multiple * scale
     steps = int(min(horizon / dt, 1.5e6))
     dt = horizon / steps if steps == int(horizon / dt) else dt
@@ -547,7 +568,7 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         n_delay = int(round(delay / dt))
         buffer = [0.0] * (n_delay + 1)
         head = 0
-        states = [0.0] * len(lags)
+        states = [0.0] * max(len(lags), 1)
         integral = yf = 0.0
         iae = ise = itae = peak = 0.0
         last_outside = 0.0
@@ -563,9 +584,12 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             buffer[head] = u + load
             head = (head + 1) % len(buffer)
             delayed = buffer[head]                        # sample written n_delay steps ago (ring of length n_delay + 1)
-            states[0] += dt * (gain * delayed - states[0]) / lags[0]
-            for j in range(1, len(lags)):
-                states[j] += dt * (states[j - 1] - states[j]) / lags[j]
+            if integrating:
+                states[0] += dt * gain * delayed
+            else:
+                states[0] += dt * (gain * delayed - states[0]) / lags[0]
+                for j in range(1, len(lags)):
+                    states[j] += dt * (states[j - 1] - states[j]) / lags[j]
             y = states[-1]
             e = abs(setpoint - y)
             iae += e * dt
