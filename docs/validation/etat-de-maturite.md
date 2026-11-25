@@ -1,6 +1,6 @@
 # État de maturité de MKR
 
-Relevé du 24/11/2026. Il sépare ce qui est **prouvé**, ce qui est **seulement simulé** et ce qui est **non éprouvé**, fonction par fonction. Aucune fonction n'est « qualifiée industriellement ». Aucun accès à un automate ni à un procédé réel n'était disponible pour ce relevé : tout ce qui suit a été vérifié sur simulations, fixtures, serveurs de référence et un jeu de mesures réelles publiées (TCLab).
+Relevé du 24/11/2026 (complété le 25/11 : voir docs/science/audit-moteur-scientifique.md pour l'état du moteur). Il sépare ce qui est **prouvé**, ce qui est **seulement simulé** et ce qui est **non éprouvé**, fonction par fonction. Aucune fonction n'est « qualifiée industriellement ». Aucun accès à un automate ni à un procédé réel n'était disponible pour ce relevé : tout ce qui suit a été vérifié sur simulations, fixtures, serveurs de référence et un jeu de mesures réelles publiées (TCLab).
 
 Niveaux : **P** prouvé par test automatisé et CI ; **S** simulé seulement ; **N** non éprouvé ; **R** une preuve sur donnée réelle existe mais très limitée.
 
