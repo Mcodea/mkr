@@ -25,7 +25,7 @@
                     </ComboBox.ItemContainerStyle>
                 </ComboBox>
                 <Button Content="_Estimer et enregistrer" Click="Calculate" Margin="12,0,0,0" Style="{StaticResource MkrPrimaryButton}" VerticalAlignment="Center"/>
-                <Button Content="Es_sais et critères…" Click="ToggleTrials" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="Afficher ou masquer le choix des essais d'estimation et de validation et leurs critères"/>
+                <Button Content="Es_sais et critères…" Click="ToggleTrials" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="Ouvrir la page « Essais et actions » : choix des essais d'estimation et de validation, critères, réglage"/>
             </WrapPanel>
         </Border>
         <Grid Grid.Row="1" Margin="0,6,0,0">
@@ -62,11 +62,22 @@
                 <TextBlock x:Name="PlotLegend" Grid.Row="2" Margin="2,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
-            <ScrollViewer x:Name="PanelScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel>
+            <Grid x:Name="PanelScroll" Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,3" Margin="0,0,0,4">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="PageResults" GroupName="IdentPage" IsChecked="True" Content="Résultats" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageResults"/>
+                        <RadioButton x:Name="PageSetup" GroupName="IdentPage" Content="Essais et actions" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageSetup"/>
+                    </StackPanel>
+                </Border>
+                <ScrollViewer x:Name="ResultsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
                     <Expander Style="{StaticResource MkrPanel}" Header="Modèle identifié">
                         <StackPanel Margin="10,8">
-                            <TextBlock x:Name="Formula" FontSize="15" FontFamily="Cambria Math, Segoe UI" TextWrapping="Wrap" TextAlignment="Center" Margin="0,4"/>
+                            <StackPanel x:Name="FormulaHost" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4"/>
                             <TextBlock x:Name="FormulaFamily" Foreground="{DynamicResource MkrMuted}" TextAlignment="Center"/>
                         </StackPanel>
                     </Expander>
@@ -106,6 +117,10 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+                <ScrollViewer x:Name="SetupPage" Grid.Row="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
                     <Expander x:Name="TrialsPanel" Style="{StaticResource MkrPanel}" Header="Essais d'identification (estimation et validation)">
                         <StackPanel x:Name="Form" Margin="10,8">
                     <GroupBox Header="Estimation" Margin="0,0,0,8">
@@ -250,8 +265,9 @@
                             <TextBlock x:Name="FitReport" TextWrapping="Wrap" />
                         </StackPanel>
                     </Expander>
-                </StackPanel>
-            </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
         </Grid>
         <TextBlock x:Name="Message" Grid.Row="2" Margin="2,4,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
     </Grid>

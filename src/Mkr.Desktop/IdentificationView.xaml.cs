@@ -753,10 +753,42 @@ public partial class IdentificationView : UserControl, IStepView
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
-    private void ToggleTrials(object sender, RoutedEventArgs args)
+    private void ToggleTrials(object sender, RoutedEventArgs args) => PageSetup.IsChecked = true;
+
+    private void PageChanged(object sender, RoutedEventArgs args)
     {
-        TrialsPanel.IsExpanded = !TrialsPanel.IsExpanded;
-        if (TrialsPanel.IsExpanded) TrialsPanel.BringIntoView();
+        if (ResultsPage is null || SetupPage is null) return;
+        var setup = PageSetup.IsChecked == true;
+        ResultsPage.Visibility = setup ? Visibility.Collapsed : Visibility.Visible;
+        SetupPage.Visibility = setup ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Gp(s) as a typeset fraction: numerator over denominator with a rule, exponent as a superscript.</summary>
+    private void BuildFormula(ModelFamily family)
+    {
+        FormulaHost.Children.Clear();
+        TextBlock Part(string text, double size = 16, bool italic = false) => new()
+        {
+            Text = text, FontFamily = new FontFamily("Cambria Math, Segoe UI"), FontSize = size, FontStyle = italic ? FontStyles.Italic : FontStyles.Normal,
+            VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("MkrText")
+        };
+        FormulaHost.Children.Add(Part("Gp(s) = "));
+        var numerator = new TextBlock { FontFamily = new FontFamily("Cambria Math, Segoe UI"), FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, Foreground = (Brush)FindResource("MkrText") };
+        numerator.Inlines.Add(new System.Windows.Documents.Run(family == ModelFamily.Integrateur ? "k′ e" : "K e"));
+        numerator.Inlines.Add(new System.Windows.Documents.Run("−θs") { BaselineAlignment = BaselineAlignment.Superscript, FontSize = 11 });
+        var denominatorText = family switch
+        {
+            ModelFamily.SOPDT => "(1 + τ₁s)(1 + τ₂s)",
+            ModelFamily.Integrateur => "s",
+            _ => "1 + τs"
+        };
+        var denominator = new TextBlock { Text = denominatorText, FontFamily = new FontFamily("Cambria Math, Segoe UI"), FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, Foreground = (Brush)FindResource("MkrText") };
+        var rule = new Border { Height = 1, Background = (Brush)FindResource("MkrText"), Margin = new Thickness(0, 1, 0, 1) };
+        var fraction = new StackPanel();
+        fraction.Children.Add(numerator);
+        fraction.Children.Add(rule);
+        fraction.Children.Add(denominator);
+        FormulaHost.Children.Add(fraction);
     }
 
     private (double From, double To)? _window;
@@ -837,18 +869,19 @@ public partial class IdentificationView : UserControl, IStepView
         QualityTable.Children.Clear();
         if (_shown is not { } study)
         {
-            Formula.Text = "";
+            FormulaHost.Children.Clear();
             FormulaFamily.Text = "Aucune étude sélectionnée";
             ModelTable.ItemsSource = null;
             return;
         }
         var result = study.Result;
         var gainUnit = study.Family == ModelFamily.Integrateur ? $"{study.PvUnit}/({study.MvUnit}·s)" : $"{study.PvUnit}/{study.MvUnit}";
-        (Formula.Text, FormulaFamily.Text) = study.Family switch
+        BuildFormula(study.Family);
+        FormulaFamily.Text = study.Family switch
         {
-            ModelFamily.SOPDT => ("Gp(s) = K · e^(−θ·s) / [(1 + τ₁·s)(1 + τ₂·s)]", "SOPDT (2ᵉ ordre + temps mort)"),
-            ModelFamily.Integrateur => ("Gp(s) = k′ · e^(−θ·s) / s", "Intégrateur + temps mort"),
-            _ => ("Gp(s) = K · e^(−θ·s) / (1 + τ·s)", "FOPDT (1er ordre + temps mort)")
+            ModelFamily.SOPDT => "SOPDT (2e ordre + temps mort)",
+            ModelFamily.Integrateur => "Intégrateur + temps mort",
+            _ => "FOPDT (1er ordre + temps mort)"
         };
         ParameterTable.Children.Add(KeyValue(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain du procédé K", result.Gain.ToString("G5", CultureInfo.CurrentCulture), gainUnit));
         if (result.TauSeconds is { } tau) ParameterTable.Children.Add(KeyValue(result.SecondTauSeconds is null ? "Constante de temps τ" : "Constante lente τ₁", tau.ToString("G5", CultureInfo.CurrentCulture), "s"));

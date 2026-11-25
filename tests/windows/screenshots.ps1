@@ -73,6 +73,12 @@ function Go-Tab($window, $number) {
     $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Milliseconds 700
 }
+function Show-Page($window, $pageId) {
+    # The identification workspace has two right-hand pages: results (PageResults) and trials/actions (PageSetup); only the selected one is in the UI tree.
+    $radio = Find $window $id $pageId
+    $radio.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 500
+}
 function Go-Home($window) {
     Go-Tab $window 1
     Press $window 'Accueil'
@@ -188,9 +194,11 @@ try {
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'
     $ident = $main        # single window: the identification is the « Identification » tab
+    Show-Page $ident 'PageResults'
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
+    Show-Page $ident 'PageSetup'
     Step '04b-courbes' {
         Select-Option $ident 'TrainingSource' '*'
         Start-Sleep -Milliseconds 500
@@ -286,6 +294,7 @@ try {
         $tab = Find $main $id 'Step4'
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 500
+        Show-Page $main 'PageResults'
         Capture $main '10b-onglet-identification'
         foreach ($entry in @(@('Step2','10d-onglet-donnees'), @('Step3','10g-onglet-diagnostic'), @('Step5','10e-onglet-validation'), @('Step8','10f-onglet-reglage'))) {
             $other = Find $main $id $entry[0]
@@ -326,6 +335,7 @@ try {
         Close-Others $root $main
         $tab = Find $main $id 'Step4'
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Show-Page $main 'PageResults'
         $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
         foreach ($size in @(@(1920,1080), @(1366,768))) {
             Set-Resolution $size[0] $size[1]

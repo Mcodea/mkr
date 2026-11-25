@@ -67,6 +67,12 @@ function Go-Tab($window, $number) {
     $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Milliseconds 700
 }
+function Show-Page($window, $pageId) {
+    # The identification workspace has two right-hand pages: results (PageResults) and trials/actions (PageSetup); only the selected one is in the UI tree.
+    $radio = Find $window $id $pageId
+    $radio.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 500
+}
 function Go-Home($window) {
     Go-Tab $window 1
     Press $window 'Accueil'
@@ -89,6 +95,7 @@ try {
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'
     $ident = $main        # single window: the identification is the « Identification » tab
+    Show-Page $ident 'PageSetup'
 
     Select-Option $ident 'TrainingSource' 'historique-long.csv*'
     Select-Option $ident 'TrainingMv' 'mv'

@@ -68,6 +68,12 @@ function Go-Tab($window, $number) {
     $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Start-Sleep -Milliseconds 700
 }
+function Show-Page($window, $pageId) {
+    # The identification workspace has two right-hand pages: results (PageResults) and trials/actions (PageSetup); only the selected one is in the UI tree.
+    $radio = Find $window $id $pageId
+    $radio.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 500
+}
 function Go-Home($window) {
     Go-Tab $window 1
     Press $window 'Accueil'
@@ -119,6 +125,7 @@ try {
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'
     $ident = $main        # single window: the identification is the « Identification » tab
+    Show-Page $ident 'PageSetup'
     Select-Option $ident 'TrainingSource' 'essai-1.csv*'
     Select-Option $ident 'ValidationSource' 'essai-2.csv*'
     foreach ($prefix in @('Training', 'Validation')) {
@@ -200,6 +207,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'
     $ident = $main
+    Show-Page $ident 'PageSetup'
     $after = @(Study-Labels $ident)
     if ($before.Count -ne $after.Count -or (Compare-Object $before $after)) {
         throw 'Les études enregistrées ont changé après le refus.'

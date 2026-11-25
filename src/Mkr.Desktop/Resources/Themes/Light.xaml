@@ -2,19 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- MKR design system · colour tokens · thème clair. Semantic names only: windows never use a literal colour.
          Every text/background pair is checked against WCAG 2.1 AA (4.5:1) by tests/test_theme_contrast.py. -->
-    <SolidColorBrush x:Key="MkrNavy" Color="#0F1E33"/>
-    <SolidColorBrush x:Key="MkrNavySoft" Color="#1B2F4A"/>
-    <SolidColorBrush x:Key="MkrNavyText" Color="#E8EEF5"/>
-    <SolidColorBrush x:Key="MkrNavyMuted" Color="#A9BBD0"/>
-    <SolidColorBrush x:Key="MkrCanvas" Color="#F4F6F9"/>
+    <SolidColorBrush x:Key="MkrNavy" Color="#1F4A7A"/>
+    <SolidColorBrush x:Key="MkrNavySoft" Color="#2B5C94"/>
+    <SolidColorBrush x:Key="MkrNavyText" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="MkrNavyMuted" Color="#C3D3E6"/>
+    <SolidColorBrush x:Key="MkrCanvas" Color="#EEF1F5"/>
     <SolidColorBrush x:Key="MkrSurface" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="MkrSurfaceAlt" Color="#EEF2F6"/>
-    <SolidColorBrush x:Key="MkrBorder" Color="#D5DDE6"/>
+    <SolidColorBrush x:Key="MkrSurfaceAlt" Color="#F0F2F5"/>
+    <SolidColorBrush x:Key="MkrBorder" Color="#D3DAE3"/>
     <SolidColorBrush x:Key="MkrBorderStrong" Color="#76859A"/>
     <SolidColorBrush x:Key="MkrText" Color="#17212F"/>
     <SolidColorBrush x:Key="MkrMuted" Color="#4E5F73"/>
-    <SolidColorBrush x:Key="MkrAccent" Color="#0B6E7F"/>
-    <SolidColorBrush x:Key="MkrAccentPale" Color="#E3F2F4"/>
+    <SolidColorBrush x:Key="MkrAccent" Color="#1B5599"/>
+    <SolidColorBrush x:Key="MkrAccentPale" Color="#E4EDF8"/>
     <SolidColorBrush x:Key="MkrOnAccent" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="MkrSuccess" Color="#1B7F4B"/>
     <SolidColorBrush x:Key="MkrSuccessPale" Color="#E8F5EE"/>

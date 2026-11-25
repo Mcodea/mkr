@@ -136,16 +136,17 @@
             <StackPanel x:Name="Toolbar" Orientation="Horizontal"/>
         </Border>
         <!-- En-tête : produit, projet, étude -->
-        <Border Grid.Row="2" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1" Padding="16,8">
+        <Border Grid.Row="2" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1" Padding="14,3">
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="{DynamicResource MkrNavy}" CornerRadius="6" Padding="10,4" VerticalAlignment="Center">
-                        <TextBlock Text="MKR" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource MkrNavyText}"/>
-                    </Border>
-                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="Ingénierie de régulation" FontSize="12" Foreground="{DynamicResource MkrMuted}"/>
-                    </StackPanel>
+                    <Grid VerticalAlignment="Center" AutomationProperties.Name="MKR, Make Régulation">
+                        <Path Data="M0,20 C8,26 24,24 34,6" Stroke="{DynamicResource MkrAccent}" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                        <StackPanel Margin="22,0,0,0">
+                            <TextBlock Text="MKR" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource MkrNavy}" LineHeight="26" LineStackingStrategy="BlockLineHeight"/>
+                            <TextBlock Text="Make Régulation" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrNavy}" Margin="0,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
                     <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="18,2,18,2"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -261,10 +262,10 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Grid x:Name="TitleBar" Grid.Row="0" Margin="16,10,12,8">
+                <Grid x:Name="TitleBar" Grid.Row="0" Margin="14,6,10,4">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <TextBlock x:Name="ScreenTitle" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,24,0" AutomationProperties.LiveSetting="Polite"/>
+                    <TextBlock x:Name="ScreenTitle" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,24,0" AutomationProperties.LiveSetting="Polite"/>
                     <Grid x:Name="Stages" Grid.Column="1" Height="34" HorizontalAlignment="Stretch"/>
                 </Grid>
                 <Border x:Name="RibbonHost" Grid.Row="1" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,1" Padding="10,4" Visibility="Collapsed">
