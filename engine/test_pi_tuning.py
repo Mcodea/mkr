@@ -1,4 +1,6 @@
 import math
+
+import numpy as np
 import unittest
 
 from pi_tuning import calculate
@@ -37,6 +39,30 @@ class PiTuningTests(unittest.TestCase):
             plant = 2 / (5 * s + 1)
             pi = settings["kp"] * (1 + 1 / (settings["tiSeconds"] * s))
             self.assertAlmostEqual(pi * plant / (1 + pi * plant), 1 / (7 * s + 1))
+
+    def test_published_imc_pi_is_the_pade_internal_model_controller_without_its_derivative_term(self):
+        """Independent derivation (not the module's code). IMC filter 1/(lambda s+1), plant model K exp(-theta s)/(tau s+1) with the first-order
+        Pade exp(-theta s) ~ (1 - theta s/2)/(1 + theta s/2): Q = (tau s+1)(1+theta s/2) / (K (lambda s+1)), C = Q / (1 - P Q)
+        = (tau s+1)(1+theta s/2) / (K (lambda+theta/2) s), an ideal PID with Kp = (tau+theta/2)/(K(lambda+theta/2)), Ti = tau+theta/2,
+        Td = tau theta/(2 tau+theta). The published PI keeps Kp and Ti."""
+        gain, tau, theta, lam = -2.5, 40.0, 10.0, 12.0
+        result = calculate({"gain": gain, "tauSeconds": tau, "delaySeconds": theta, "responseSeconds": lam})["imcPublished"]
+        w = np.logspace(-4, 0, 200)
+        s = 1j * w
+        controller = (tau * s + 1) * (1 + theta * s / 2) / (gain * (lam + theta / 2) * s)               # exact IMC controller
+        pade_plant = gain * (1 - theta * s / 2) / ((1 + theta * s / 2) * (tau * s + 1))
+        loop = controller * pade_plant
+        target = (1 - theta * s / 2) / (lam * s + 1)                                                        # IMC closed loop P Q
+        np.testing.assert_allclose(loop / (1 + loop), target, rtol=1e-9, atol=1e-12)
+        kp = (tau + theta / 2) / (gain * (lam + theta / 2))
+        ti = tau + theta / 2
+        td = tau * theta / (2 * tau + theta)
+        ideal = kp * (1 + 1 / (ti * s) + td * s)
+        np.testing.assert_allclose(controller, ideal, rtol=1e-9)                                           # the PID expansion
+        self.assertAlmostEqual(result["kp"], kp, places=12)
+        self.assertAlmostEqual(result["tiSeconds"], ti, places=12)
+        self.assertLess(result["kp"], 0)                                                                    # sign follows the gain
+        self.assertIsNotNone(result["margins"])
 
     def test_invalid_and_unrepresentable_inputs(self):
         valid = dict(gain=2, tauSeconds=10, delaySeconds=0, responseSeconds=3)

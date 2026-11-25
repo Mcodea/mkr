@@ -23,13 +23,19 @@ def calculate(payload):
     if response < delay:
         warnings.append("tight_response")
 
-    def with_margins(ti):
+    def with_margins(ti, proportional=None):
         # Nominal-model margins of the loop this tuning closes on the identified FOPDT (audit NC-17).
         try:
-            return analyze(gain, [tau], delay, kp, ti, 0.0)
+            return analyze(gain, [tau], delay, kp if proportional is None else proportional, ti, 0.0)
         except ValueError:
             return None
 
-    return dict(algorithmVersion="1.1.0", responseSeconds=response, warnings=warnings,
+    # Published IMC-PI (Rivera, Morari and Skogestad 1986): IMC filter 1/(lambda s + 1) with a first-order Pade approximation of the delay,
+    # lambda = response. Kc = (tau + theta/2) / (K (lambda + theta/2)), Ti = tau + theta/2. Not the Lambda rule above (Ti = tau, no theta/2).
+    kp_imc = (tau + delay / 2) / ((response + delay / 2) * gain)
+    ti_imc = tau + delay / 2
+    return dict(algorithmVersion="1.2.0", responseSeconds=response, warnings=warnings,
+                imcPublished=dict(kp=kp_imc, tiSeconds=ti_imc, parallelKi=kp_imc / ti_imc, margins=with_margins(ti_imc, kp_imc),
+                                  reference="Rivera, Morari & Skogestad, Ind. Eng. Chem. Process Des. Dev. 25 (1986) 252-265"),
                 imc=dict(kp=kp, tiSeconds=tau, parallelKi=kp / tau, margins=with_margins(tau)),
                 simc=dict(kp=kp, tiSeconds=ti_simc, parallelKi=kp / ti_simc, margins=with_margins(ti_simc)))
