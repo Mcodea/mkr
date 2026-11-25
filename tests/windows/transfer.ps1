@@ -153,13 +153,13 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $until = [DateTime]::UtcNow.AddSeconds(40)
     do {
         $arx = $status.Current.Name
-        if ($arx -match 'Identification ARX|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { break }
+        if ($arx -match 'Étude ARX enregistrée|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { break }
         Start-Sleep -Milliseconds 250
     } while ([DateTime]::UtcNow -lt $until)
     Write-Host "ARX : $($arx -replace '\s+', ' ')"
-    if ($arx -notmatch 'Identification ARX|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { throw "Réponse ARX absente ou brute : $arx" }
+    if ($arx -notmatch 'Étude ARX enregistrée|ARX / OE|échantillonnage|excitation|conditionnée|boucle fermée|Pas assez|Horodatages') { throw "Réponse ARX absente ou brute : $arx" }
     if ($arx -match 'Exception|System\.|Traceback|engine_') { throw "Erreur ARX non traduite : $arx" }
-    if ($arx -match 'Identification ARX' -and $arx -notmatch 'Étude ARX enregistrée \([0-9a-f]{8}\)') { throw "Étude ARX non enregistrée : $arx" }
+    if ($arx -match 'Identification ARX / sortie-erreur · pas' -and $arx -notmatch 'Étude ARX enregistrée \([0-9a-f]{8}\)') { throw "Étude ARX non enregistrée : $arx" }
     # The holdout now follows an integrating process, unlike the training trace.
     Select-Option $ident 'ValidationSource' 'essai-6.csv*'
     Select-Option $ident 'ValidationTime' 'timestamp'
