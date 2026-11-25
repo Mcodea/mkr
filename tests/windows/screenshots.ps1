@@ -254,7 +254,7 @@ try {
         $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 500
         Capture $main '10b-onglet-identification'
-        foreach ($entry in @(@('Step2','10d-onglet-donnees'), @('Step5','10e-onglet-validation'), @('Step8','10f-onglet-reglage'))) {
+        foreach ($entry in @(@('Step2','10d-onglet-donnees'), @('Step3','10g-onglet-diagnostic'), @('Step5','10e-onglet-validation'), @('Step8','10f-onglet-reglage'))) {
             $other = Find $main $id $entry[0]
             $other.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
             Start-Sleep -Milliseconds 700

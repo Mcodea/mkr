@@ -261,8 +261,9 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="16,10,12,8">
+                <Grid x:Name="TitleBar" Grid.Row="0" Margin="16,10,12,8">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <TextBlock x:Name="ScreenTitle" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,24,0" AutomationProperties.LiveSetting="Polite"/>
                     <Grid x:Name="Stages" Grid.Column="1" Height="34" HorizontalAlignment="Stretch"/>
                 </Grid>
@@ -283,7 +284,7 @@
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition x:Name="ValuesColumn" Width="320"/>
+                        <ColumnDefinition x:Name="ValuesColumn" Width="300"/>
                     </Grid.ColumnDefinitions>
                     <Grid Grid.Column="0" Margin="10,8,10,6">
                         <Grid.RowDefinitions>

@@ -24,7 +24,7 @@ public sealed class StudyRow
 public partial class WindowView : Window
 {
     private static readonly string[] ShortTitles =
-        { "Projet", "Données", "Signaux", "Identification", "Validation", "Stratégie", "Bloc", "Réglage", "Simulation", "Rapport" };
+        { "Projet", "Données", "Diagnostic", "Identification", "Validation", "Réglage PID", "Bloc", "Paramètres PI", "Simulation", "Rapport" };
 
     private readonly IImportStore _store;
     private readonly ICsvEngine _engine;
@@ -47,7 +47,18 @@ public partial class WindowView : Window
         var version = typeof(WindowView).Assembly.GetName().Version;
         VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
+        TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
         ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
+    }
+
+    /// <summary>Narrow windows put the stage chevrons on their own line under the title instead of clipping their labels.</summary>
+    private void LayoutTitle(double width)
+    {
+        var narrow = width < 1250;
+        Grid.SetRow(Stages, narrow ? 1 : 0);
+        Grid.SetColumn(Stages, narrow ? 0 : 1);
+        Grid.SetColumnSpan(Stages, narrow ? 2 : 1);
+        Stages.Margin = new Thickness(0, narrow ? 8 : 0, 0, 0);
     }
 
     private bool _assisted = true;
@@ -266,8 +277,8 @@ public partial class WindowView : Window
     /// <summary>The seven stages of a regulation study as chevrons, like the reference screens: done, current, ahead.</summary>
     private static readonly (string Title, int[] Steps, int Tab)[] StageMap =
     {
-        ("Données", new[] { 0, 1 }, 1), ("Diagnostic", new[] { 2 }, 2), ("Identification", new[] { 3, 4 }, 3), ("Stratégie", new[] { 5 }, 5),
-        ("Réglage", new[] { 6, 7 }, 7), ("Simulation", new[] { 8 }, 8), ("Rapport", new[] { 9 }, 9)
+        ("Données", new[] { 0, 1 }, 1), ("Diagnostic", new[] { 2 }, 2), ("Identification", new[] { 3 }, 3), ("Validation", new[] { 4 }, 4),
+        ("Réglage", new[] { 5, 6, 7 }, 5), ("Simulation", new[] { 8 }, 8), ("Rapport", new[] { 9 }, 9)
     };
 
     private void BuildStages()
@@ -325,7 +336,7 @@ public partial class WindowView : Window
         RibbonCommands.Children.Clear();
         if (_steps.Count == 0) return;
         var step = _steps[_tab];
-        ScreenTitle.Text = step.Title;
+        ScreenTitle.Text = _tab == 5 ? "Réglage PID" : _tab == 2 ? "Diagnostic des données" : step.Title;
         BuildStages();
         var open = step.State != StepState.Blocked;
         var selected = (StudyGrid.SelectedItem as StudyRow)?.Study;
@@ -411,7 +422,7 @@ public partial class WindowView : Window
     private bool _openLoop;                   // simulation tab: the open-loop response instead of the closed-loop PI comparison
     private ScrollViewer? _dataHost;
 
-    private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 4 or 7;
+    private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 7;
 
     /// <summary>
     /// Shows the step view belonging to the selected tab inside the workspace: the identification view (signals, identification, validation and PI tunings,
@@ -620,7 +631,7 @@ public partial class WindowView : Window
     private void ToggleChartFocus()
     {
         _focusChart = !_focusChart;
-        ValuesColumn.Width = new GridLength(_focusChart ? 0 : 320);
+        ValuesColumn.Width = new GridLength(_focusChart ? 0 : 300);
         ValuesPanel.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         TableToggle.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         if (_focusChart) StudyGrid.Visibility = Visibility.Collapsed;
