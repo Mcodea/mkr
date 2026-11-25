@@ -32,7 +32,7 @@ public partial class PidPrototypeWindow : Window
             $"{model.PvUnit}/{model.MvUnit} · τ {model.Result.TauSeconds:G6} s · " +
             $"θ {model.Result.DelaySeconds:G6} s · h {scenario.SampleSeconds:G6} s · " +
             $"horizon {scenario.DurationSeconds:G6} s. " +
-            "La référence est le réglage PI IMC enregistré, recalculé sur le même scénario.";
+            "La référence est le réglage PI Lambda enregistré, recalculé sur le même scénario.";
         Status.Text = "Saisissez Kp, Ti, Td et Tf puis lancez l'essai hors ligne.";
         Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
@@ -77,7 +77,7 @@ public partial class PidPrototypeWindow : Window
             Metrics.ItemsSource = new[]
             {
                 new {
-                    Method = "PI IMC",
+                    Method = "PI Lambda",
                     _pi.Iae, _pi.Ise, _pi.FinalError,
                     Saturation = _pi.SaturationSeconds,
                     RateLimited = _pi.RateLimitedSeconds,
@@ -97,7 +97,7 @@ public partial class PidPrototypeWindow : Window
                 "Résultats calculés sur le même procédé et le même scénario ; " +
                 "aucun réglage n'est sauvegardé ni transféré.";
             Legend.Text =
-                $"Courbes : PI IMC de référence, PID manuel, consigne (la légende du graphique les distingue aussi par leur trait). " +
+                $"Courbes : PI Lambda de référence, PID manuel, consigne (la légende du graphique les distingue aussi par leur trait). " +
                 $"Piste 1 : mesure ({_model.PvUnit}) · piste 2 : sortie de commande appliquée ({_model.MvUnit}) · " +
                 $"piste 3 : dérivée filtrée PID ({_model.MvUnit}).";
             ResultsPanel.Visibility = PlotPanel.Visibility = Visibility.Visible;
@@ -140,12 +140,12 @@ public partial class PidPrototypeWindow : Window
             new ChartTrack("Mesure et consigne", _model.PvUnit, new[]
             {
                 new ChartSeries("Consigne", "MkrSignal3", span, new[] { _scenario.Setpoint, _scenario.Setpoint }),
-                new ChartSeries("PI IMC (référence)", "MkrSignal1", seconds, pi.Select(p => p.Pv).ToArray()),
+                new ChartSeries("PI Lambda (référence)", "MkrSignal1", seconds, pi.Select(p => p.Pv).ToArray()),
                 new ChartSeries("PID manuel", "MkrSignal2", pid.Select(p => p.Seconds).ToArray(), pid.Select(p => p.Pv).ToArray())
             }) { Weight = 2 },
             new ChartTrack("Sortie de commande appliquée", _model.MvUnit, new[]
             {
-                new ChartSeries("PI IMC", "MkrSignal1", mvPi.Select(p => p.Seconds).ToArray(), mvPi.Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries("PI Lambda", "MkrSignal1", mvPi.Select(p => p.Seconds).ToArray(), mvPi.Select(p => p.Mv!.Value).ToArray()),
                 new ChartSeries("PID manuel", "MkrSignal2", mvPid.Select(p => p.Seconds).ToArray(), mvPid.Select(p => p.Mv!.Value).ToArray()),
                 new ChartSeries("Limite basse", "MkrPlotAxis", span, new[] { _scenario.MinimumMv, _scenario.MinimumMv }),
                 new ChartSeries("Limite haute", "MkrPlotAxis", span, new[] { _scenario.MaximumMv, _scenario.MaximumMv })
