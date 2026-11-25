@@ -151,7 +151,7 @@ class Robustness(unittest.TestCase):
 
     def test_a_declared_process_variation_widens_the_uncertainty_box_and_is_met_on_the_true_corners(self):
         plain = calculate(request(standardErrors=None))
-        varied = calculate(request(standardErrors=None, processVariationPercent=30.0))
+        varied = calculate(request(standardErrors=None, processVariationPercent=30.0, optimise=False))
         self.assertGreaterEqual(varied["recommendation"]["responseSeconds"], plain["recommendation"]["responseSeconds"])
         self.assertEqual(varied["processVariationPercent"], 30.0)
         self.assertTrue(varied["uncertaintyQuantified"])
@@ -171,7 +171,7 @@ class Robustness(unittest.TestCase):
         plain = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
                                standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
         varied = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
-                                standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=30.0))
+                                standardErrors=None, objective="balanced", derivativeFilterRatio=None, processVariationPercent=30.0, optimise=False))
         self.assertIn("uncertainty_not_quantified", plain["warnings"])
         self.assertNotIn("uncertainty_not_quantified", varied["warnings"])
         self.assertGreaterEqual(varied["recommendation"]["responseSeconds"], plain["recommendation"]["responseSeconds"])
