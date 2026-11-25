@@ -1,6 +1,6 @@
 # État de maturité de MKR
 
-Relevé du 24/11/2026 (complété le 25/11 : voir docs/science/audit-moteur-scientifique.md pour l'état du moteur). Il sépare ce qui est **prouvé**, ce qui est **seulement simulé** et ce qui est **non éprouvé**, fonction par fonction. Aucune fonction n'est « qualifiée industriellement ». Aucun accès à un automate ni à un procédé réel n'était disponible pour ce relevé : tout ce qui suit a été vérifié sur simulations, fixtures, serveurs de référence et un jeu de mesures réelles publiées (TCLab).
+Relevé du 24/11/2026, complété le 25/11/2026 (SHA vérifié en CI Windows : `397f187`, run 247, vert ; commits suivants en cours de vérification). Détail du moteur : [audit scientifique](../science/audit-moteur-scientifique.md). Il sépare ce qui est **prouvé**, ce qui est **seulement simulé** et ce qui est **non éprouvé**, fonction par fonction. Aucune fonction n'est « qualifiée industriellement ». Aucun accès à un automate ni à un procédé réel n'était disponible pour ce relevé : tout ce qui suit a été vérifié sur simulations, fixtures, serveurs de référence et un jeu de mesures réelles publiées (TCLab).
 
 Niveaux : **P** prouvé par test automatisé et CI ; **S** simulé seulement ; **N** non éprouvé ; **R** une preuve sur donnée réelle existe mais très limitée.
 
@@ -15,6 +15,9 @@ Niveaux : **P** prouvé par test automatisé et CI ; **S** simulé seulement ; *
 | Porte de validation | S | Critères fixés avant ajustement ; refus testés | Taux de fausses acceptations sur données réelles |
 | Réglages IMC / SIMC / SIMC intégrateur | S | Simulations en boucle fermée, marges | Réponse mesurée d'une boucle réelle |
 | Marges de stabilité | S | Comparaison à la simulation | Idem |
+| Réglage guidé : objectif de robustesse, incertitude, refus expliqué, PI et PID optimisés, critères simulés | S | Oracles écrits dans les tests (balayage fréquentiel, simulation temporelle, forme fermée) ; campagne de 9 procédés synthétiques à critères fixés d'avance ; capture Windows de l'écran | Procédés réels (vannes, non-linéarités fortes) ; limites d'actionneur dans le jugement ; PID pour intégrateurs |
+| Identification ARX / sortie-erreur (excitation quelconque) | S | Vérité synthétique exacte, refus, fenêtres de lignes ; bouton dans l'interface (affichage seulement) | Données réelles avec plusieurs variations de la commande ; enregistrement de l'étude (schéma SQLite : décision en attente) |
+| Simulateurs PI, PID filtré, transfert manuel/auto, boucle ouverte | S | Seconde implémentation indépendante (ZOH exact, retards fractionnaires, saturation, vitesse limitée, anti-windup conditionnel) et fonctions de transfert discrètes ; invariants d'actionneur sur scénarios aléatoires | Comparaison à un simulateur ou un procédé tiers ; la convention d'anti-windup n'est pas qualifiée |
 | Valeurs de blocs PIDFF / PID_INT / PID_Compact | N | Équations lues dans les documents officiels ; équivalence de forme à un oracle | **Essai sur le bloc réel** (protocole E0–E7). Statut non qualifié maintenu |
 | Contrôle de dérive d'un modèle | S | Simulations, calibrage Monte Carlo des erreurs | Dérives réelles |
 | Identification en boucle fermée | S (expérimental) | Simulations ; refus ; dispersion publiée sous-estimée d'environ 30 % | Enregistrement réel comparé à un essai en boucle ouverte |
