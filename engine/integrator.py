@@ -64,6 +64,11 @@ def identify(payload):
     train_fit = diagnostics(training, gain, np.maximum(training.times - delay, 0))
     if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > residual_lag_bound(len(training.times)):
         warnings.append("correlated_residuals")
+    errors = None
+    if set(warnings) - {"delay_onset_uncertainty"} == set() and train_fit["residualLagOne"] is not None:
+        from model_drift import numerical_errors
+        errors = numerical_errors(training, ("gain", "delaySeconds"), dict(gain=gain, delaySeconds=delay),
+                                  lambda v: np.maximum(training.times - v[1], 0))
     return dict(algorithmVersion="1.1.0", gain=gain, delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training),
-                delayUpperSeconds=horizon / 2, warnings=warnings,
+                standardErrors=errors, delayUpperSeconds=horizon / 2, warnings=warnings,
                 training=train_fit, validation=diagnostics(validation, gain, np.maximum(validation.times - delay, 0)))

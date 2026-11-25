@@ -157,6 +157,17 @@ class Refusals(unittest.TestCase):
         self.assertEqual(result["decision"], "recommended")
         self.assertIn("closed_loop_slower_than_the_process", result["warnings"])
 
+    def test_second_order_uncertainty_is_flagged_as_partly_propagated(self):
+        result = calculate(request(family="SOPDT", secondTauSeconds=3.0))
+        self.assertIn("second_pole_uncertainty_not_propagated", result["warnings"])
+
+    def test_integrator_uncertainty_uses_slope_and_delay_corners(self):
+        result = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
+                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced"))
+        self.assertEqual(result["decision"], "recommended")
+        self.assertTrue(result["uncertaintyQuantified"])
+        self.assertLessEqual(result["recommendation"]["worstPeakSensitivity"], 1.7 + 1e-9)
+
     def test_the_result_is_always_marked_unqualified(self):
         self.assertEqual(calculate(request())["qualification"], "model_based_unqualified")
 

@@ -69,7 +69,15 @@ def identify(payload):
     train_fit = diagnostics(training, gain, basis(training.times, slow, fast, delay))
     if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > residual_lag_bound(len(training.times)):
         warnings.append("correlated_residuals")
-    return dict(algorithmVersion="1.1.0", gain=gain, tauSeconds=slow, secondTauSeconds=fast,
+    errors = None
+    if set(warnings) - {"delay_onset_uncertainty"} == set() and train_fit["residualLagOne"] is not None:
+        # Local standard errors from the numerical Jacobian, conditional on the measured baseline and input (same method as the
+        # drift check); published only for a well-conditioned fit with white residuals, otherwise None: no meaningless number.
+        from model_drift import numerical_errors
+        fitted = dict(gain=gain, tauSeconds=slow, secondTauSeconds=fast, delaySeconds=delay)
+        errors = numerical_errors(training, ("gain", "tauSeconds", "secondTauSeconds", "delaySeconds"), fitted,
+                                  lambda v: basis(training.times, v[1], v[2], v[3]))
+    return dict(algorithmVersion="1.1.0", gain=gain, tauSeconds=slow, secondTauSeconds=fast, standardErrors=errors,
                 delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training), tauLowerSeconds=low, tauUpperSeconds=horizon,
                 delayUpperSeconds=horizon / 2, warnings=warnings, training=train_fit,
                 validation=diagnostics(validation, gain, basis(validation.times, slow, fast, delay)))

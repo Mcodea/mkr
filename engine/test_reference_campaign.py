@@ -49,8 +49,11 @@ class ReferenceCampaign(unittest.TestCase):
                                delaySeconds=float(interval[1] if interval else report["delaySeconds"]),
                                secondTauSeconds=float(report["secondTauSeconds"]) if family == "SOPDT" else None,
                                sampleSeconds=cadence, objective="balanced",
-                               standardErrors=None if family == "Integrateur" or not report.get("standardErrors")
-                               else {key: float(value) for key, value in report["standardErrors"].items()})
+                               # the application's contract: gain, slow time constant and delay errors; no time constant for the integrator
+                               standardErrors=None if not report.get("standardErrors") else dict(
+                                   gain=float(report["standardErrors"]["gain"]),
+                                   tauSeconds=0 if family == "Integrateur" else float(report["standardErrors"]["tauSeconds"]),
+                                   delaySeconds=float(report["standardErrors"]["delaySeconds"])))
                 recommendation = calculate(payload)
                 self.assertEqual(recommendation["decision"], "recommended", recommendation.get("reasons"))             # C2
                 rec = recommendation["recommendation"]

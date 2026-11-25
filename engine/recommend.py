@@ -127,6 +127,8 @@ def calculate(payload):
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
     if not quantified:
         notes.append("uncertainty_not_quantified")
+    elif family == "SOPDT":
+        notes.append("second_pole_uncertainty_not_propagated")
 
     # Phase 1: the fastest grid point that is stable with Ms within the limit on every corner (rejecting early on the first violation).
     chosen_index = None

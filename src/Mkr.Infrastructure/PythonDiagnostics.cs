@@ -300,9 +300,9 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var limit = DesignObjectives.MaximumPeakSensitivity(objective);
         // Mean sampling period of the identification data: the loop adds half of it to the delay (Skogestad 2003).
         var sample = model.Training.HorizonSeconds / Math.Max(model.Training.Samples - 1, 1);
-        object? errors = family == ModelFamily.FOPDT && model.StandardErrors is { } e
-            ? new { gain = e.Gain, tauSeconds = e.TauSeconds, delaySeconds = e.DelaySeconds } : null;
-        if (family == ModelFamily.Integrateur && model.StandardErrors is null) errors = null;
+        // The integrator has no time constant: its error is zero by construction (the engine requires it).
+        object? errors = model.StandardErrors is { } e
+            ? new { gain = e.Gain, tauSeconds = family == ModelFamily.Integrateur ? 0.0 : e.TauSeconds, delaySeconds = e.DelaySeconds } : null;
         var payload = new
         {
             family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
