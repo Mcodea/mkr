@@ -53,13 +53,16 @@
                         <Button Style="{StaticResource MkrToolButton}" Click="ExportPlotData" ToolTip="Exporter les courbes affichées en CSV" AutomationProperties.Name="Exporter les données"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
                         <Button Style="{StaticResource MkrToolButton}" Click="ToggleChartOnly" ToolTip="Donner toute la largeur au graphique, ou rétablir les panneaux" AutomationProperties.Name="Plein écran du graphique"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
                         <Button Style="{StaticResource MkrToolButton}" Click="ClearWindow" ToolTip="Effacer la plage A–B (sélection : glisser avec le bouton gauche sur le graphique)" AutomationProperties.Name="Effacer la plage A–B"><TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <TextBlock x:Name="CursorText" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+                        
                     </StackPanel>
                 </Border>
                 <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ShowValueBoxes="False" SelectionEnabled="True"
                         AutomationProperties.Name="Mesure observée, mesure prédite, commande et résidus de l’essai sélectionné, en fonction du temps"
                         AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                <TextBlock x:Name="PlotLegend" Grid.Row="2" Margin="2,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
+                <Grid Grid.Row="2" Margin="2,3,0,0" MinHeight="30">
+                    <TextBlock x:Name="PlotLegend" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
+                    <TextBlock x:Name="CursorText" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11"/>
+                </Grid>
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
             <Grid x:Name="PanelScroll" Grid.Column="2">
@@ -75,7 +78,7 @@
                 </Border>
                 <ScrollViewer x:Name="ResultsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Modèle identifié">
+                    <Expander x:Name="ModelPanel" Style="{StaticResource MkrPanel}" Header="Modèle identifié">
                         <StackPanel Margin="10,8">
                             <StackPanel x:Name="FormulaHost" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4"/>
                             <TextBlock x:Name="FormulaFamily" Foreground="{DynamicResource MkrMuted}" TextAlignment="Center"/>
@@ -97,7 +100,7 @@
                             <TextBlock x:Name="VerdictTitle" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
                         </Border>
                         <StackPanel Grid.Column="1">
-                            <TextBlock x:Name="VerdictDetail" TextWrapping="Wrap" FontSize="11"/>
+                            <TextBlock x:Name="VerdictDetail" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11"/>
                             <WrapPanel x:Name="VerdictMetrics" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Grid>

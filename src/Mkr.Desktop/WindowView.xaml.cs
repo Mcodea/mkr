@@ -48,13 +48,14 @@ public partial class WindowView : Window
         VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
+        SizeChanged += (_, e) => ToolbarBand.Visibility = e.NewSize.Height < 820 ? Visibility.Collapsed : Visibility.Visible;     // low screens: the toolbar only repeats the navigation
         ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
     }
 
     /// <summary>Narrow windows put the stage chevrons on their own line under the title instead of clipping their labels.</summary>
     private void LayoutTitle(double width)
     {
-        var narrow = width < 1250;
+        var narrow = width < 1000;
         Grid.SetRow(Stages, narrow ? 1 : 0);
         Grid.SetColumn(Stages, narrow ? 0 : 1);
         Grid.SetColumnSpan(Stages, narrow ? 2 : 1);

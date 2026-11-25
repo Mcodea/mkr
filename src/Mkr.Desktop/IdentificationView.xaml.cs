@@ -27,7 +27,13 @@ public partial class IdentificationView : UserControl, IStepView
         _workspace = workspace;
         InitializeComponent();
         Chart.RangeSelected += (from, to) => { _window = from < to ? (from, to) : (to, from); DrawPlot(); };
-        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
+        Chart.CursorTextChanged += text =>
+        {
+            CursorText.Text = text;
+            CursorText.Visibility = text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;     // the cursor values replace the legend line while hovering
+            PlotLegend.Visibility = text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        };
+        SizeChanged += (_, e) => { if (e.PreviousSize.Height == 0 || (e.PreviousSize.Height >= 620) != (e.NewSize.Height >= 620)) ModelPanel.IsExpanded = e.NewSize.Height >= 620; };
         FamilyChoice.ItemsSource = Enum.GetValues<ModelFamily>();
         FamilyChoice.SelectedItem = ModelFamily.FOPDT;
         _sources = _workspace.Sources();
@@ -509,6 +515,7 @@ public partial class IdentificationView : UserControl, IStepView
         if (study.Assessment is { } decision && result.Validation is { } validation)
             VerdictMetrics.Children.Add(Tile("Erreur de validation", $"{validation.Rmse:G3} / {decision.Criteria.MaximumRmse:G3} {study.PvUnit}"));
         VerdictMetrics.Visibility = Visibility.Collapsed;          // the parameter table already lists these values
+        VerdictCard.ToolTip = VerdictDetail.Text;
         VerdictCard.Visibility = Visibility.Visible;                      // the decision is the first thing to read after choosing a study
     }
 

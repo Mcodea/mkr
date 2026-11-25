@@ -132,7 +132,7 @@
             </MenuItem>
         </Menu>
         <!-- Barre d'outils : accès direct aux grandes étapes -->
-        <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,1" Padding="6,2">
+        <Border x:Name="ToolbarBand" Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,1" Padding="6,2">
             <StackPanel x:Name="Toolbar" Orientation="Horizontal"/>
         </Border>
         <!-- En-tête : produit, projet, étude -->
@@ -141,10 +141,10 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Grid VerticalAlignment="Center" AutomationProperties.Name="MKR, Make Régulation">
-                        <Path Data="M0,20 C8,26 24,24 34,6" Stroke="{DynamicResource MkrAccent}" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                        <StackPanel Margin="22,0,0,0">
-                            <TextBlock Text="MKR" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource MkrNavy}" LineHeight="26" LineStackingStrategy="BlockLineHeight"/>
-                            <TextBlock Text="Make Régulation" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrNavy}" Margin="0,0,0,0"/>
+                        <Path Data="M0,22 C8,28 24,26 34,8" Stroke="{DynamicResource MkrAccent}" StrokeThickness="5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,0,0"/>
+                        <StackPanel Margin="44,0,0,0">
+                            <TextBlock Text="MKR" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource MkrBrand}" LineHeight="26" LineStackingStrategy="BlockLineHeight"/>
+                            <TextBlock Text="Make Régulation" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrBrand}" Margin="0,0,0,0"/>
                         </StackPanel>
                     </Grid>
                     <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="18,2,18,2"/>
