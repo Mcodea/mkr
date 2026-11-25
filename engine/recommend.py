@@ -589,6 +589,8 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         integral = yf = 0.0
         iae = ise = itae = peak = peak_mv = 0.0
         last_outside = 0.0
+        trace_t, trace_y, trace_u = [], [], []
+        stride = max(1, steps // 4000)
         y = 0.0
         for i in range(steps):
             t = i * dt
@@ -597,6 +599,8 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             derivative = -kp * td * (y - yf) / tf if tf > 0 and td > 0 else 0.0
             u = kp * error + integral + derivative
             peak_mv = max(peak_mv, abs(u))
+            if i % stride == 0:
+                trace_t.append(t); trace_y.append(y); trace_u.append(u)
             if tf > 0:
                 yf += dt * (y - yf) / tf
             buffer[head] = u + load
@@ -618,11 +622,22 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
                 last_outside = t
             if not math.isfinite(y) or abs(y) > 1e6:
                 raise ValueError("recommend_simulation_diverged")
-        return iae, ise, itae, peak, last_outside, peak_mv
+        return iae, ise, itae, peak, last_outside, peak_mv, (trace_t, trace_y, trace_u)
 
-    iae, ise, itae, peak, settle, peak_mv = run(1.0, 0.0)
-    l_iae, l_ise, l_itae, _, _, load_peak_mv = run(0.0, 1.0)
+    iae, ise, itae, peak, settle, peak_mv, trace = run(1.0, 0.0)
+    l_iae, l_ise, l_itae, _, _, load_peak_mv, load_trace = run(0.0, 1.0)
+
+    def curve(raw, until):
+        """Display window [0, until] resampled to at most 240 points (plain floats: the bridge carries nothing else)."""
+        t, y, u = raw
+        keep = [k for k, value in enumerate(t) if value <= until] or [0]
+        step = max(1, len(keep) // 240)
+        picked = keep[::step]
+        return dict(seconds=[float(t[k]) for k in picked], pv=[float(y[k]) for k in picked], mv=[float(u[k]) for k in picked])
+
+    window = min(horizon, max(8.0 * scale, 1.6 * settle))
     return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle,
                                   peakMv=peak_mv, initialMvStep=abs(kp)),
                 loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae, peakMv=load_peak_mv),
-                highFrequencyGain=abs(kp) * (1 + (td / tf if tf > 0 else 0.0)), horizonSeconds=horizon, stepSeconds=dt)
+                highFrequencyGain=abs(kp) * (1 + (td / tf if tf > 0 else 0.0)), horizonSeconds=horizon, stepSeconds=dt,
+                curves=dict(setpoint=curve(trace, window), load=curve(load_trace, window)))

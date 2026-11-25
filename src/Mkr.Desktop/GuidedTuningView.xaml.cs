@@ -22,6 +22,21 @@ public partial class GuidedTuningView : UserControl, IStepView
     public void Cancel() => _lifetime.Cancel();
     private void CloseView(object sender, RoutedEventArgs args) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
+    public sealed class ComparisonRow
+    {
+        public string Name { get; init; } = "";
+        public string Kp { get; init; } = "";
+        public string Ti { get; init; } = "";
+        public string Td { get; init; } = "";
+        public string Ms { get; init; } = "";
+        public string Iae { get; init; } = "";
+        public string Overshoot { get; init; } = "";
+        public string LoadIae { get; init; } = "";
+        public string Noise { get; init; } = "";
+    }
+
+    private GuidedTuning? _last;
+
     public sealed class Row
     {
         public string Response { get; init; } = "";
@@ -107,7 +122,7 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     private void Show(GuidedTuning tuning)
     {
-        Verdict.Visibility = Result.Visibility = Visibility.Visible;
+        Verdict.Visibility = Visibility.Visible;
         CopyButton.IsEnabled = true;
         Verdict.Background = (Brush)FindResource(tuning.IsRecommended ? "MkrSuccess" : "MkrDanger");
         VerdictText.Text = tuning.IsRecommended ? "RÉGLAGE RECOMMANDÉ (théorique)" : "RÉGLAGE REFUSÉ : les données ne le permettent pas";
@@ -184,6 +199,8 @@ public partial class GuidedTuningView : UserControl, IStepView
         }
         text.AppendLine("  · résultat théorique : limites et vitesse de l'actionneur, filtre de la dérivée et bloc réel non évalués. Qualification sur installation requise.");
         Result.Text = text.ToString();
+        _last = tuning;
+        Present(tuning);
         var rows = (tuning.Alternatives ?? []).Select(a => new Row
         {
             Response = F(a.ResponseSeconds), Kp = F(a.Controller.Kp), Ti = F(a.Controller.TiSeconds), Td = a.Controller.TdSeconds > 0 ? F(a.Controller.TdSeconds) : "—",
@@ -193,6 +210,86 @@ public partial class GuidedTuningView : UserControl, IStepView
         Alternatives.ItemsSource = rows;
         AlternativesTitle.Visibility = Alternatives.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         Status.Text = tuning.IsRecommended ? "Réglage calculé." : "Aucun réglage recommandé.";
+    }
+
+    private Border Card(string caption, string value, string? note = null)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = caption.ToUpperInvariant(), FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("MkrMuted") });
+        stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 0) });
+        if (note is not null) stack.Children.Add(new TextBlock { Text = note, FontSize = 11, Foreground = (Brush)FindResource("MkrMuted"), Margin = new Thickness(0, 2, 0, 0) });
+        return new Border
+        {
+            Child = stack, MinWidth = 130, Padding = new Thickness(14, 10, 14, 10), Margin = new Thickness(0, 0, 10, 10), CornerRadius = new CornerRadius(8),
+            Background = (Brush)FindResource("MkrSurface"), BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(1)
+        };
+    }
+
+    /// <summary>Structured view of the result: key values as cards, the three tunings side by side, and their simulated responses.</summary>
+    private void Present(GuidedTuning tuning)
+    {
+        Cards.Children.Clear();
+        var mv = _mvUnit;
+        var pv = _pvUnit;
+        var has = tuning.Recommendation is not null;
+        Cards.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+        if (tuning.Recommendation is { } rec)
+        {
+            var c = rec.Controller;
+            Cards.Children.Add(Card("Structure", c.Structure, "forme idéale"));
+            Cards.Children.Add(Card("Gain Kp", F(c.Kp), $"{mv}/{pv}"));
+            Cards.Children.Add(Card("Temps intégral Ti", F(c.TiSeconds) + " s"));
+            if (c.TdSeconds > 0) Cards.Children.Add(Card("Temps dérivé Td", F(c.TdSeconds) + " s", $"filtre Tf = {F(c.FilterSeconds)} s"));
+            Cards.Children.Add(Card("Sensibilité maximale Ms", F(rec.WorstPeakSensitivity), $"limite {F(tuning.MaximumPeakSensitivity)} · pire cas : {rec.WorstCase}"));
+            Cards.Children.Add(Card("Boucle fermée visée", F(rec.ResponseSeconds) + " s", $"retard effectif {F(tuning.EffectiveDelaySeconds)} s"));
+        }
+
+        var rows = new List<ComparisonRow>();
+        void AddRow(string name, TuningController? c, double? ms, LoopPerformance? perf)
+        {
+            if (c is null) return;
+            rows.Add(new ComparisonRow
+            {
+                Name = name, Kp = F(c.Kp), Ti = F(c.TiSeconds), Td = c.TdSeconds > 0 ? F(c.TdSeconds) : "—", Ms = ms is { } m ? F(m) : "—",
+                Iae = perf is null ? "—" : F(perf.SetpointStep.Iae), Overshoot = perf?.SetpointStep.OvershootPercent is { } o ? F(o) + " %" : "—",
+                LoadIae = perf is null ? "—" : F(perf.LoadDisturbanceStep.Iae), Noise = perf?.NoiseToControlGain is { } n ? F(n) : "—"
+            });
+        }
+        AddRow("Recommandé", tuning.Recommendation?.Controller, tuning.Recommendation?.WorstPeakSensitivity, tuning.Performance?.Recommended);
+        AddRow("PI optimisé (rejet de perturbation)", tuning.Optimized?.Controller, tuning.Optimized?.WorstPeakSensitivity, tuning.Performance?.OptimizedPi);
+        AddRow("PID optimisé", tuning.OptimizedPid?.Controller, tuning.OptimizedPid?.WorstPeakSensitivity, tuning.Performance?.OptimizedPid);
+        Comparison.ItemsSource = rows;
+        ComparisonTitle.Visibility = Comparison.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        var lines = new List<string>();
+        if (tuning.OptimizedPid is { PidNotBetterThanPi: true }) lines.Add("Sur ce modèle le PID n'apporte pas de gain intégral par rapport au PI : garder le PI (moins sensible au bruit de mesure).");
+        else if (tuning.OptimizedPid is { PidNotBetterThanPi: false }) lines.Add("Le PID rejette mieux les perturbations mais amplifie davantage le bruit de mesure (colonne « Bruit → commande ») : à décider selon la qualité du capteur.");
+        if (tuning.Warnings is { Length: > 0 }) lines.AddRange(tuning.Warnings.Select(w => Warning(w)));
+        lines.Add("Résultat théorique : limites et vitesse de l'actionneur, filtre de la dérivée du bloc réel et comportement sur l'installation non évalués. Qualification sur installation requise.");
+        Notes.Text = string.Join("\n", lines.Select(l => "· " + l));
+        Notes.Visibility = Visibility.Visible;
+        DrawCurves();
+    }
+
+    private void CurveChanged(object sender, RoutedEventArgs args) { if (IsLoaded && _last is not null) DrawCurves(); }
+
+    private void DrawCurves()
+    {
+        var performance = _last?.Performance;
+        var entries = new[] { ("Recommandé", performance?.Recommended, "MkrSignal1"), ("PI optimisé", performance?.OptimizedPi, "MkrSignal2"), ("PID optimisé", performance?.OptimizedPid, "MkrSignal3") }
+            .Where(e => e.Item2?.Curves is not null).ToArray();
+        CurveBar.Visibility = Chart.Visibility = entries.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (entries.Length == 0) return;
+        var load = ShowLoad.IsChecked == true;
+        ResponseCurve Pick(LoopPerformance l) => load ? l.Curves!.Load : l.Curves!.Setpoint;
+        Chart.XLabel = "Temps (s)";
+        var measure = entries.Select(e => new ChartSeries(e.Item1, e.Item3, Pick(e.Item2!).Seconds, Pick(e.Item2!).Pv)).ToList();
+        var command = entries.Select(e => new ChartSeries(e.Item1, e.Item3, Pick(e.Item2!).Seconds, Pick(e.Item2!).Mv)).ToList();
+        Chart.SetTracks(new[]
+        {
+            new ChartTrack(load ? "Mesure : réponse à un échelon de perturbation de charge" : "Mesure : réponse à un échelon de consigne unitaire", _pvUnit, measure) { Weight = 2 },
+            new ChartTrack("Sortie de commande", _mvUnit, command)
+        });
     }
 
     private static string Reason(string code) => code switch

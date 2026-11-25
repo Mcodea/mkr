@@ -277,6 +277,13 @@ try {
         $null = Wait-Name $main 'Status' '*.'
         Start-Sleep -Milliseconds 800
         Capture $main '14-reglage-guide'
+        # the rest of the result (comparison table, curves, notes) is below the fold: scroll the page like a user would
+        foreach ($page in 1..2) {
+            try { $main.SetFocus() } catch { }
+            [System.Windows.Forms.SendKeys]::SendWait('{PGDN}')
+            Start-Sleep -Milliseconds 700
+            Capture $main "14$([char](97 + $page))-reglage-guide-suite$page"
+        }
         $step9 = Find $main $id 'Step9'
         $step9.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 1200

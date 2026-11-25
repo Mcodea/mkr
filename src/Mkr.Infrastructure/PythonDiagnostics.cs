@@ -358,6 +358,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             throw new InvalidDataException("PID optimisé incompatible avec le contrat.");
         static bool Good(LoopPerformance? l) => l is null || (new[] { l.SetpointStep.Iae, l.SetpointStep.Ise, l.SetpointStep.Itae, l.LoadDisturbanceStep.Iae, l.LoadDisturbanceStep.Ise,
             l.LoadDisturbanceStep.Itae, l.HighFrequencyGain, l.NoiseToControlGain ?? 0, l.SetpointStep.PeakMv ?? 0 }.All(v => double.IsFinite(v) && v >= 0));
+        static bool GoodCurve(ResponseCurve? c) => c is null || (c.Seconds.Length is >= 2 and <= 300 && c.Pv.Length == c.Seconds.Length && c.Mv.Length == c.Seconds.Length &&
+            c.Seconds.Concat(c.Pv).Concat(c.Mv).All(double.IsFinite) && c.Seconds[0] == 0 && c.Seconds.Zip(c.Seconds.Skip(1), (a, b) => b > a).All(ok => ok));
+        if (tuning.Performance is { } curves && !new[] { curves.Recommended, curves.OptimizedPi, curves.OptimizedPid }.All(l => l?.Curves is null || (GoodCurve(l.Curves.Setpoint) && GoodCurve(l.Curves.Load))))
+            throw new InvalidDataException("Courbes de réponse incompatibles avec le contrat.");
         if (tuning.Performance is { } perf && !(Good(perf.Recommended) && Good(perf.OptimizedPi) && Good(perf.OptimizedPid)))
             throw new InvalidDataException("Critères de performance incompatibles avec le contrat.");
         return tuning;

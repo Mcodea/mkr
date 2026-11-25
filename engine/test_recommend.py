@@ -376,6 +376,27 @@ class NoiseSensitivity(unittest.TestCase):
             self.assertGreaterEqual(entry["setpointStep"]["peakMv"], entry["setpointStep"]["initialMvStep"] - 1e-9)
 
 
+class Curves(unittest.TestCase):
+    def test_the_response_curves_start_at_zero_end_at_the_setpoint_and_are_plain_floats(self):
+        import json
+        p = dict(family="FOPDT", gain=-1.5, tauSeconds=40.0, delaySeconds=15.0, secondTauSeconds=None, sampleSeconds=1.0, standardErrors=None,
+                 objective="balanced", derivativeFilterRatio=None, processVariationPercent=None, optimise=True)
+        result = calculate(p)
+        json.dumps(result, allow_nan=False)
+        for name, entry in result["performance"].items():
+            with self.subTest(controller=name):
+                curve = entry["curves"]["setpoint"]
+                self.assertLessEqual(len(curve["seconds"]), 300)
+                self.assertEqual(len(curve["seconds"]), len(curve["pv"]))
+                self.assertEqual(len(curve["seconds"]), len(curve["mv"]))
+                self.assertEqual(curve["seconds"][0], 0.0)
+                self.assertEqual(curve["pv"][0], 0.0)                              # the loop starts at rest
+                self.assertAlmostEqual(curve["pv"][-1], 1.0, delta=0.02)           # unit set-point step: settled at the end of the displayed window
+                load = entry["curves"]["load"]
+                self.assertAlmostEqual(load["pv"][-1], 0.0, delta=0.02)            # a load step is rejected by the integral action
+                self.assertGreater(max(abs(v) for v in load["pv"]), 0)
+
+
 class Serialisation(unittest.TestCase):
     def test_every_result_is_plain_json_the_bridge_can_carry(self):        # numpy scalars once surfaced as "engine_non_finite" through the bridge
         import json

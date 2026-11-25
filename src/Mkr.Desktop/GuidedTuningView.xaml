@@ -9,10 +9,12 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
-            <TextBlock TextWrapping="Wrap"
-                       Text="Vous choisissez un objectif de robustesse, pas un temps de réponse. MKR cherche le réglage le plus rapide qui reste robuste sur le modèle identifié et sur l'incertitude de ses paramètres (règles SIMC, Skogestad 2003 ; sensibilité maximale Ms, Åström et Hägglund 2006). Si les données ne permettent pas d'en garantir un, MKR refuse et dit quoi faire. Résultat théorique, jamais qualifié sur installation."/>
-        </Border>
+        <Expander Header="Comment le réglage est choisi" Margin="0,0,0,10" IsExpanded="False" FontWeight="SemiBold">
+            <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,6,0,0">
+                <TextBlock TextWrapping="Wrap" FontWeight="Normal"
+                           Text="Vous choisissez un objectif de robustesse, pas un temps de réponse. MKR cherche le réglage le plus rapide qui reste robuste sur le modèle identifié et sur l'incertitude de ses paramètres (règles SIMC, Skogestad 2003 ; sensibilité maximale Ms, Åström et Hägglund 2006). Si les données ne permettent pas d'en garantir un, MKR refuse et dit quoi faire. Résultat théorique, jamais qualifié sur installation."/>
+            </Border>
+        </Expander>
         <StackPanel Grid.Row="1">
             <TextBlock x:Name="ModelLine" TextWrapping="Wrap" FontWeight="SemiBold"/>
             <WrapPanel Margin="0,8,0,0">
@@ -38,8 +40,31 @@
                 <Border x:Name="Verdict" Visibility="Collapsed" CornerRadius="6" Padding="14,10" Margin="0,0,0,10">
                     <TextBlock x:Name="VerdictText" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource MkrOnStatus}"/>
                 </Border>
-                <TextBox x:Name="Result" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" FontFamily="Consolas" Visibility="Collapsed"
-                         AutomationProperties.Name="Résultat du réglage guidé"/>
+                <WrapPanel x:Name="Cards" Margin="0,0,0,12" Visibility="Collapsed"/>
+                <TextBlock x:Name="ComparisonTitle" Text="Comparaison des réglages · procédé nominal, échelon unitaire, sans limite d'actionneur" FontWeight="SemiBold" Margin="0,0,0,6" Visibility="Collapsed"/>
+                <DataGrid x:Name="Comparison" Visibility="Collapsed" RowHeight="30" ColumnHeaderHeight="30" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                          AutomationProperties.Name="Comparaison des réglages" Margin="0,0,0,12">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Réglage" Binding="{Binding Name}" Width="1.6*"/>
+                        <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
+                        <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
+                        <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
+                        <DataGridTextColumn Header="Ms" Binding="{Binding Ms}" Width="*"/>
+                        <DataGridTextColumn Header="IAE consigne" Binding="{Binding Iae}" Width="*"/>
+                        <DataGridTextColumn Header="Dépassement" Binding="{Binding Overshoot}" Width="*"/>
+                        <DataGridTextColumn Header="IAE charge" Binding="{Binding LoadIae}" Width="*"/>
+                        <DataGridTextColumn Header="Bruit → commande" Binding="{Binding Noise}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel x:Name="CurveBar" Orientation="Horizontal" Margin="0,0,0,6" Visibility="Collapsed">
+                    <TextBlock Text="Courbes" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <RadioButton x:Name="ShowSetpoint" Content="Échelon de consigne" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                    <RadioButton x:Name="ShowLoad" Content="Perturbation de charge" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
+                </StackPanel>
+                <local:SignalChart x:Name="Chart" Height="340" Visibility="Collapsed" Margin="0,0,0,12"
+                                   AutomationProperties.Name="Réponses simulées des réglages comparés"/>
+                <TextBlock x:Name="Notes" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,12" Visibility="Collapsed"/>
+                <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="Résultat du réglage guidé (texte à copier)"/>
                 <TextBlock x:Name="AlternativesTitle" Text="Réglages voisins (vitesse contre robustesse)" FontWeight="SemiBold" Margin="0,12,0,6" Visibility="Collapsed"/>
                 <DataGrid x:Name="Alternatives" Visibility="Collapsed" RowHeight="28" ColumnHeaderHeight="28" AutomationProperties.Name="Réglages voisins">
                     <DataGrid.Columns>

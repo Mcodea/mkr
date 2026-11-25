@@ -17,7 +17,10 @@ public sealed record OptimizedPidTuning(TuningController Controller, double Inte
 /// <summary>Nominal closed-loop criteria from a time simulation (no actuator limit): set-point step (P, I on the error, D on the measurement) and load step at the plant input.</summary>
 public sealed record StepCriteria(double Iae, double Ise, double Itae, double? OvershootPercent = null, double? SettlingSeconds = null, double? PeakMv = null, double? InitialMvStep = null);
 /// <summary>NoiseToControlGain: RMS gain from white measurement noise to the controller output over 0..pi/Ts (output std is about sigma times it).</summary>
-public sealed record LoopPerformance(StepCriteria SetpointStep, StepCriteria LoadDisturbanceStep, double HighFrequencyGain, double? NoiseToControlGain = null);
+/// <summary>Resampled nominal response to a unit step (at most 240 points): process variable and controller output against time.</summary>
+public sealed record ResponseCurve(double[] Seconds, double[] Pv, double[] Mv);
+public sealed record LoopCurves(ResponseCurve Setpoint, ResponseCurve Load);
+public sealed record LoopPerformance(StepCriteria SetpointStep, StepCriteria LoadDisturbanceStep, double HighFrequencyGain, double? NoiseToControlGain = null, LoopCurves? Curves = null);
 public sealed record TuningPerformance(LoopPerformance? Recommended = null, LoopPerformance? OptimizedPi = null, LoopPerformance? OptimizedPid = null);
 
 /// <summary>
