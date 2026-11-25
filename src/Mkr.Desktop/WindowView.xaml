@@ -282,26 +282,10 @@
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="ValuesColumn" Width="218"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition x:Name="ValuesColumn" Width="320"/>
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="ValuesPanel" Grid.Column="0" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,1,0">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="14,12,12,10">
-                                <TextBlock Text="VALEURS DU MODÈLE" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold"/>
-                                <Border x:Name="Verdict" CornerRadius="4" Padding="8,3" Margin="0,8,0,10" HorizontalAlignment="Left" Background="{DynamicResource MkrBorderStrong}">
-                                    <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" FontSize="11" Foreground="{DynamicResource MkrOnStatus}"/>
-                                </Border>
-                                <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
-                                <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" Margin="0,0,0,10" AutomationProperties.Name="Étude affichée"/>
-                                <TextBlock x:Name="ValuesText" TextWrapping="Wrap" FontFamily="{DynamicResource MkrMono}" LineHeight="22"/>
-                                <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"/>
-                                <TextBlock Text="PROJET" Foreground="{DynamicResource MkrAccent}" FontSize="11" FontWeight="SemiBold" Margin="0,18,0,6"/>
-                                <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Border>
-                    <Grid Grid.Column="1" Margin="10,8,10,6">
+                    <Grid Grid.Column="0" Margin="10,8,10,6">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
@@ -315,8 +299,28 @@
                             AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
                         <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                     </Grid>
+                    <ScrollViewer x:Name="ValuesPanel" Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="0,8,10,6">
+                        <StackPanel>
+                            <Expander Style="{StaticResource MkrPanel}" Header="Validation du modèle">
+                                <StackPanel Margin="10,8">
+                                    <Border x:Name="Verdict" CornerRadius="3" Padding="10,5" Margin="0,0,0,8" Background="{DynamicResource MkrBorderStrong}">
+                                        <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
+                                    </Border>
+                                    <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
+                                    <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" AutomationProperties.Name="Étude affichée"/>
+                                    <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Expander>
+                            <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du modèle">
+                                <TextBlock x:Name="ValuesText" TextWrapping="Wrap" Margin="10,8" LineHeight="22"/>
+                            </Expander>
+                            <Expander Style="{StaticResource MkrPanel}" Header="Projet">
+                                <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Margin="10,8" Foreground="{DynamicResource MkrMuted}"/>
+                            </Expander>
+                        </StackPanel>
+                    </ScrollViewer>
                     <!-- Contenu de l'étape affiché dans la fenêtre (réglage guidé, simulation…) : recouvre le graphique quand l'étape a sa propre vue -->
-                    <Border x:Name="StepHost" Grid.Column="1" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
+                    <Border x:Name="StepHost" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Collapsed" Background="{DynamicResource MkrCanvas}"/>
                 </Grid>
                 <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
                     <Grid Margin="10,6,10,6">

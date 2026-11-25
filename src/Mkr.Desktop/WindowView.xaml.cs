@@ -620,7 +620,7 @@ public partial class WindowView : Window
     private void ToggleChartFocus()
     {
         _focusChart = !_focusChart;
-        ValuesColumn.Width = new GridLength(_focusChart ? 0 : 218);
+        ValuesColumn.Width = new GridLength(_focusChart ? 0 : 320);
         ValuesPanel.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         TableToggle.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         if (_focusChart) StudyGrid.Visibility = Visibility.Collapsed;
