@@ -15,7 +15,7 @@
                 <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
                 <StackPanel x:Name="ScenarioForm">
                     <TextBlock Text="01  ·  Paramètres du scénario" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <Expander x:Name="ScenarioFields" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8">
+                    <Expander x:Name="ScenarioFields" Foreground="{DynamicResource MkrText}" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8">
                     <StackPanel>
                     <WrapPanel Margin="0,0,0,6">
                         <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
