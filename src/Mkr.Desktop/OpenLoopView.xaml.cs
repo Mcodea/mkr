@@ -9,14 +9,16 @@ using Mkr.Core;
 
 namespace Mkr.Desktop;
 
-public partial class OpenLoopWindow : Window
+public partial class OpenLoopView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
     private readonly IdentificationStudy _model;
     private readonly CancellationTokenSource _lifetime = new();
+
+    public void Cancel() { _lifetime.Cancel(); _lifetime.Dispose(); }
     private OpenLoopResult? _shown;
 
-    internal OpenLoopWindow(IdentificationWorkspace workspace, IdentificationStudy model)
+    internal OpenLoopView(IdentificationWorkspace workspace, IdentificationStudy model)
     {
         _workspace = workspace;
         _model = model;
@@ -24,7 +26,6 @@ public partial class OpenLoopWindow : Window
         RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
         Units.Text = $"Étude FOPDT {model.Label}\n" +
             $"Écarts autour du point initial. Écarts de la sortie de commande en {model.MvUnit}, de la mesure en {model.PvUnit}.";
-        Closed += (_, _) => { _lifetime.Cancel(); _lifetime.Dispose(); };
     }
 
     private async void Run(object sender, RoutedEventArgs args)
@@ -114,7 +115,7 @@ public partial class OpenLoopWindow : Window
         if (_shown is not { } simulation)
             return;
         var dialog = new SaveFileDialog { FileName = "mkr-boucle-ouverte.csv", Filter = "CSV (*.csv)|*.csv" };
-        if (dialog.ShowDialog(this) != true)
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         try
         {

@@ -6,7 +6,7 @@ using Mkr.Core;
 namespace Mkr.Desktop;
 
 /// <summary>Collects the installation values a PID_INT or PID_Compact conversion needs. Nothing is pre-filled or guessed.</summary>
-public partial class BlockTargetWindow : Window
+public partial class BlockTargetView : UserControl, IStepView
 {
     private static readonly string[] CompactVersions = { "V2.0", "V2.1", "V2.2", "V2.3", "V2.4", "V3.0" };
     private readonly IdentificationWorkspace _workspace;
@@ -14,14 +14,18 @@ public partial class BlockTargetWindow : Window
     private readonly PiStudy _tuning;
     private readonly CancellationTokenSource _lifetime = new();
 
-    internal BlockTargetWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
+    public event EventHandler? CloseRequested;
+    public bool ShowClose { set => CloseButton.Visibility = value ? Visibility.Visible : Visibility.Collapsed; }
+    public void Cancel() => _lifetime.Cancel();
+    private void CloseView(object sender, RoutedEventArgs args) => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    internal BlockTargetView(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
         InitializeComponent();
         _workspace = workspace;
         _model = model;
         _tuning = tuning;
         foreach (var version in CompactVersions) Version.Items.Add(version);
-        Closed += (_, _) => _lifetime.Cancel();
     }
 
     private string? Block => (BlockChoice.SelectedItem as ComboBoxItem)?.Tag as string;

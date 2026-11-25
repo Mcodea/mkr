@@ -240,14 +240,13 @@ public partial class WindowView : Window
                 break;                      // the guided tuning is shown in the workspace itself (UpdateStepHost)
             case 6:
                 RibbonCommands.Children.Add(Command("\uE8F1", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
-                RibbonCommands.Children.Add(Command("\uE8C8", "Valeurs du bloc", "Valeurs documentaires du bloc choisi, toujours non qualifiées. Demande un réglage PI enregistré.", () => OpenWithTuning(tuning => new BlockTargetWindow(_workspace!, selected!, tuning)), open && selected is not null));
                 break;
             case 7:
                 if (selected is { Family: ModelFamily.Integrateur })
                     RibbonCommands.Children.Add(Command("\uE9D2", "Réglage intégrateur", "Règle SIMC des procédés intégrateurs", () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
                 break;
             case 8:
-                RibbonCommands.Children.Add(Command("\uE916", "Boucle ouverte", "Réponse du modèle à un échelon, sans régulateur", () => OpenWindow(() => new OpenLoopWindow(_workspace!, selected!)), open && selected is not null));
+                RibbonCommands.Children.Add(Command("\uE916", _openLoop ? "Boucle fermée" : "Boucle ouverte", _openLoop ? "Revenir à la comparaison PI en boucle fermée" : "Réponse du modèle à un échelon, sans régulateur", () => { _openLoop = !_openLoop; BuildRibbon(); }, open && selected is not null));
                 break;
             case 9:
                 RibbonCommands.Children.Add(Command("\uE749", "Fiche d'étude PDF", "Depuis la fenêtre de simulation : « Fiche de mise au point (PDF) »", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
@@ -282,6 +281,7 @@ public partial class WindowView : Window
         _hosted = null;
         _hostChild = null;
         _hostKey = null;
+        _openLoop = false;
         if (!keepIdentification && _identification is not null) { _identification.Cancel(); _identification = null; }
         if (!keepIdentification && _data is not null) { _data.Cancel(); _data = null; _dataHost = null; }
         StepHost.Child = null;
@@ -302,6 +302,7 @@ public partial class WindowView : Window
 
     private IdentificationView? _identification;
     private CsvView? _data;
+    private bool _openLoop;                   // simulation tab: the open-loop response instead of the closed-loop PI comparison
     private ScrollViewer? _dataHost;
 
     private static bool IsIdentificationTab(int tab) => tab is 2 or 3 or 4 or 7;
@@ -313,7 +314,7 @@ public partial class WindowView : Window
     /// </summary>
     private void UpdateStepHost(IdentificationStudy? selected, bool open)
     {
-        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 5 or 8))
+        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 5 or 6 or 8))
         {
             if (StepHost.Visibility == Visibility.Visible) { StepHost.Child = null; StepHost.Visibility = Visibility.Collapsed; }
             _hosted?.Cancel();
@@ -373,9 +374,9 @@ public partial class WindowView : Window
             return;
         }
         PiStudy? tuning = null;
-        if (_tab == 8 && selected is not null)
+        if (_tab is 6 or 8 && selected is not null)
             tuning = _workspace.PiStudies(selected.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
-        var key = $"{_tab}|{selected?.Id}|{selected?.IsAcceptedForTuning}|{tuning?.Id}|{open}";
+        var key = $"{_tab}|{selected?.Id}|{selected?.IsAcceptedForTuning}|{tuning?.Id}|{open}|{_openLoop}";
         if (key == _hostKey && _hostChild is not null && ReferenceEquals(StepHost.Child, _hostChild)) return;
         _hosted?.Cancel();
         _hosted = null;
@@ -397,8 +398,25 @@ public partial class WindowView : Window
                 _hosted = view;
                 StepHost.Child = _hostChild = Scrolling(view, 720);
             }
+            else if (_tab == 8 && _openLoop)
+            {
+                if (selected.Family != ModelFamily.FOPDT)
+                    StepHost.Child = Placeholder("La simulation en boucle ouverte porte sur un modèle du premier ordre avec retard (FOPDT).");
+                else
+                {
+                    var view = new OpenLoopView(_workspace, selected);
+                    _hosted = view;
+                    StepHost.Child = _hostChild = view;
+                }
+            }
             else if (tuning is null)
                 StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage, puis revenez ici.");
+            else if (_tab == 6)
+            {
+                var view = new BlockTargetView(_workspace, selected, tuning) { ShowClose = false };
+                _hosted = view;
+                StepHost.Child = _hostChild = Scrolling(view, 760);
+            }
             else
             {
                 var view = new SimulationView(_workspace, selected, tuning);
