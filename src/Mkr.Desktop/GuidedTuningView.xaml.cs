@@ -209,21 +209,38 @@ public partial class GuidedTuningView : UserControl, IStepView
             Verdict = !a.StableOnAllCorners ? "instable" : a.WorstPeakSensitivity <= tuning.MaximumPeakSensitivity + 1e-9 ? "respecte l'objectif" : "trop sensible"
         }).ToList();
         Alternatives.ItemsSource = rows;
-        AlternativesTitle.Visibility = Alternatives.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        AltPanel.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         Status.Text = tuning.IsRecommended ? "Réglage calculé." : "Aucun réglage recommandé.";
     }
 
-    private Border Card(string caption, string value, string? note = null)
+    private UIElement Card(string caption, string value, string? note = null)
     {
-        var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = caption.ToUpperInvariant(), FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("MkrMuted") });
-        stack.Children.Add(new TextBlock { Text = value, FontSize = 22, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 0) });
-        if (note is not null) stack.Children.Add(new TextBlock { Text = note, FontSize = 11, Foreground = (Brush)FindResource("MkrMuted"), Margin = new Thickness(0, 2, 0, 0) });
-        return new Border
+        var grid = new Grid { Margin = new Thickness(0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var label = new StackPanel { Margin = new Thickness(10, 5, 8, 5) };
+        label.Children.Add(new TextBlock { Text = caption, TextWrapping = TextWrapping.Wrap });
+        if (note is not null) label.Children.Add(new TextBlock { Text = note, FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("MkrMuted") });
+        grid.Children.Add(label);
+        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(8, 5, 10, 5), VerticalAlignment = VerticalAlignment.Top };
+        Grid.SetColumn(val, 1);
+        grid.Children.Add(val);
+        return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
+    }
+
+    private TextBlock Cell(string text, int row, int column, bool header = false, bool emphasis = false)
+    {
+        var cell = new TextBlock
         {
-            Child = stack, MinWidth = 130, Padding = new Thickness(14, 10, 14, 10), Margin = new Thickness(0, 0, 10, 10), CornerRadius = new CornerRadius(8),
-            Background = (Brush)FindResource("MkrSurface"), BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(1)
+            Text = text, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(8, 5, 8, 5), VerticalAlignment = VerticalAlignment.Center,
+            FontWeight = header || column == 0 ? FontWeights.SemiBold : FontWeights.Normal,
+            TextAlignment = column == 0 ? TextAlignment.Left : TextAlignment.Right
         };
+        if (header) cell.Background = (Brush)FindResource("MkrSurfaceAlt");
+        else if (emphasis) cell.Background = (Brush)FindResource("MkrAccentPale");
+        Grid.SetRow(cell, row);
+        Grid.SetColumn(cell, column);
+        return cell;
     }
 
     /// <summary>Structured view of the result: key values as cards, the three tunings side by side, and their simulated responses.</summary>
@@ -233,7 +250,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         var mv = _mvUnit;
         var pv = _pvUnit;
         var has = tuning.Recommendation is not null;
-        Cards.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+        ParamPanel.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
         if (tuning.Recommendation is { } rec)
         {
             var c = rec.Controller;
@@ -259,9 +276,30 @@ public partial class GuidedTuningView : UserControl, IStepView
         AddRow("Recommandé", tuning.Recommendation?.Controller, tuning.Recommendation?.WorstPeakSensitivity, tuning.Performance?.Recommended);
         AddRow("PI optimisé (rejet de perturbation)", tuning.Optimized?.Controller, tuning.Optimized?.WorstPeakSensitivity, tuning.Performance?.OptimizedPi);
         AddRow("PID optimisé", tuning.OptimizedPid?.Controller, tuning.OptimizedPid?.WorstPeakSensitivity, tuning.Performance?.OptimizedPid);
-        Comparison.ItemsSource = rows;
-        ComparisonTitle.Text = "Comparaison des réglages · procédé nominal, échelon unitaire, sans limite d'actionneur · bruit = écart-type de la commande pour un bruit de mesure unitaire";
-        ComparisonTitle.Visibility = Comparison.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        CompareGrid.Children.Clear();
+        CompareGrid.RowDefinitions.Clear();
+        CompareGrid.ColumnDefinitions.Clear();
+        ComparePanel.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (rows.Count > 0)
+        {
+            CompareGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.4, GridUnitType.Star) });
+            foreach (var _ in rows) CompareGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            var lineSpecs = new (string Label, Func<ComparisonRow, string> Get)[]
+            {
+                ("Kp", r => r.Kp), ("Ti (s)", r => r.Ti), ("Td (s)", r => r.Td), ("Ms pire cas", r => r.Ms),
+                ("Dépassement", r => r.Overshoot), ("IAE consigne", r => r.Iae), ("IAE charge", r => r.LoadIae), ("Bruit → commande", r => r.Noise)
+            };
+            for (var i = 0; i <= lineSpecs.Length; i++) CompareGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            CompareGrid.Children.Add(Cell("Critère", 0, 0, header: true));
+            for (var column = 0; column < rows.Count; column++)
+                CompareGrid.Children.Add(Cell(rows[column].Name.Replace(" (rejet de perturbation)", ""), 0, column + 1, header: true));
+            for (var line = 0; line < lineSpecs.Length; line++)
+            {
+                CompareGrid.Children.Add(Cell(lineSpecs[line].Label, line + 1, 0));
+                for (var column = 0; column < rows.Count; column++)
+                    CompareGrid.Children.Add(Cell(lineSpecs[line].Get(rows[column]), line + 1, column + 1, emphasis: column == 0));
+            }
+        }
 
         var lines = new List<string>();
         if (tuning.OptimizedPid is { PidNotBetterThanPi: true }) lines.Add("Sur ce modèle le PID n'apporte pas de gain intégral par rapport au PI : garder le PI (moins sensible au bruit de mesure).");
@@ -281,6 +319,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         var entries = new[] { ("Recommandé", performance?.Recommended, "MkrSignal1"), ("PI optimisé", performance?.OptimizedPi, "MkrSignal2"), ("PID optimisé", performance?.OptimizedPid, "MkrSignal3") }
             .Where(e => e.Item2?.Curves is not null).ToArray();
         CurveBar.Visibility = Chart.Visibility = entries.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ChartEmpty.Visibility = entries.Length > 0 ? Visibility.Collapsed : Visibility.Visible;
         if (entries.Length == 0) return;
         var load = ShowLoad.IsChecked == true;
         ResponseCurve Pick(LoopPerformance l) => load ? l.Curves!.Load : l.Curves!.Setpoint;

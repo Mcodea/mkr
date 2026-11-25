@@ -2,85 +2,91 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Mkr.Desktop">
-    <Grid Margin="24,18,24,18">
+    <Grid Margin="14,10,14,10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Expander Header="Comment le réglage est choisi" Margin="0,0,0,10" IsExpanded="False" FontWeight="SemiBold">
-            <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,6,0,0">
-                <TextBlock TextWrapping="Wrap" FontWeight="Normal"
-                           Text="Vous choisissez un objectif de robustesse, pas un temps de réponse. MKR cherche le réglage le plus rapide qui reste robuste sur le modèle identifié et sur l'incertitude de ses paramètres (règles SIMC, Skogestad 2003 ; sensibilité maximale Ms, Åström et Hägglund 2006). Si les données ne permettent pas d'en garantir un, MKR refuse et dit quoi faire. Résultat théorique, jamais qualifié sur installation."/>
-            </Border>
-        </Expander>
-        <StackPanel Grid.Row="1">
-            <TextBlock x:Name="ModelLine" TextWrapping="Wrap" FontWeight="SemiBold"/>
-            <WrapPanel Margin="0,8,0,0">
-                <Label Content="_Objectif" Target="{Binding ElementName=Objective}" VerticalAlignment="Center"/>
-                <ComboBox x:Name="Objective" Width="330" SelectedIndex="1" SelectionChanged="ObjectiveChanged" AutomationProperties.Name="Objectif de robustesse">
-                    <ComboBoxItem Tag="robust" Content="Robuste · Ms ≤ 1,4 (marge élevée)"/>
-                    <ComboBoxItem Tag="balanced" Content="Équilibré · Ms ≤ 1,7"/>
-                    <ComboBoxItem Tag="performance" Content="Performance · Ms ≤ 2,0 (plus rapide)"/>
-                </ComboBox>
-                <Button x:Name="Compute" Content="_Calculer le réglage guidé" Click="Calculate" Margin="10,0,0,0" Style="{StaticResource MkrPrimaryButton}"/>
-            </WrapPanel>
-            <WrapPanel Margin="0,6,0,0">
-                <Label Content="_Variation attendue du procédé (%)" Target="{Binding ElementName=Variation}" VerticalAlignment="Center"/>
-                <TextBox x:Name="Variation" Width="70" AutomationProperties.Name="Variation attendue du procédé en pourcentage"
-                         ToolTip="Facultatif : écart attendu du gain, de la constante de temps et du retard sur la plage de fonctionnement (0 à 50 %). Élargit l'incertitude prise en compte."/>
-                <TextBlock Text="facultatif · élargit l'incertitude du modèle sur la plage de fonctionnement" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-            </WrapPanel>
-            <TextBlock x:Name="ObjectiveHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,6,0,0"/>
-            <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
-        </StackPanel>
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+        <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
             <StackPanel>
-                <Border x:Name="Verdict" Visibility="Collapsed" CornerRadius="6" Padding="14,10" Margin="0,0,0,10">
-                    <TextBlock x:Name="VerdictText" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource MkrOnStatus}"/>
-                </Border>
-                <WrapPanel x:Name="Cards" Margin="0,0,0,12" Visibility="Collapsed"/>
-                <TextBlock x:Name="ComparisonTitle" Text="Comparaison des réglages · procédé nominal, échelon unitaire, sans limite d'actionneur" FontWeight="SemiBold" Margin="0,0,0,6" Visibility="Collapsed"/>
-                <DataGrid x:Name="Comparison" Visibility="Collapsed" RowHeight="34" ColumnHeaderHeight="40" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
-                          AutomationProperties.Name="Comparaison des réglages" Margin="0,0,0,12">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Réglage" Binding="{Binding Name}" Width="2.2*"/>
-                        <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
-                        <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
-                        <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
-                        <DataGridTextColumn Header="Ms" Binding="{Binding Ms}" Width="*"/>
-                        <DataGridTextColumn Header="IAE consigne"  Binding="{Binding Iae}" Width="*"/>
-                        <DataGridTextColumn Header="Dépassement" Binding="{Binding Overshoot}" Width="*"/>
-                        <DataGridTextColumn Header="IAE charge" Binding="{Binding LoadIae}" Width="*"/>
-                        <DataGridTextColumn Header="Bruit" Binding="{Binding Noise}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <StackPanel x:Name="CurveBar" Orientation="Horizontal" Margin="0,0,0,6" Visibility="Collapsed">
+                <TextBlock x:Name="ModelLine" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <WrapPanel>
+                    <Label Content="_Objectif" Target="{Binding ElementName=Objective}" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="Objective" Width="300" SelectedIndex="1" SelectionChanged="ObjectiveChanged" AutomationProperties.Name="Objectif de robustesse" VerticalAlignment="Center">
+                        <ComboBoxItem Tag="robust" Content="Robuste · Ms ≤ 1,4 (marge élevée)"/>
+                        <ComboBoxItem Tag="balanced" Content="Équilibré · Ms ≤ 1,7"/>
+                        <ComboBoxItem Tag="performance" Content="Performance · Ms ≤ 2,0 (plus rapide)"/>
+                    </ComboBox>
+                    <Label Content="_Variation du procédé (%)" Target="{Binding ElementName=Variation}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <TextBox x:Name="Variation" Width="60" VerticalAlignment="Center" AutomationProperties.Name="Variation attendue du procédé en pourcentage"
+                             ToolTip="Facultatif : écart attendu du gain, de la constante de temps et du retard sur la plage de fonctionnement (0 à 50 %). Élargit l'incertitude prise en compte."/>
+                    <Button x:Name="Compute" Content="_Calculer le réglage guidé" Click="Calculate" Margin="14,0,0,0" Style="{StaticResource MkrPrimaryButton}" VerticalAlignment="Center"/>
+                    <Button x:Name="CopyButton" Content="Co_pier le résultat" IsEnabled="False" Click="Copy" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <Button x:Name="CloseButton" Content="_Fermer" Click="CloseView" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                </WrapPanel>
+                <TextBlock x:Name="ObjectiveHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+        <StackPanel Grid.Row="1" Margin="0,6,0,0">
+            <Border x:Name="Verdict" Visibility="Collapsed" Padding="12,6" Margin="0,0,0,4">
+                <TextBlock x:Name="VerdictText" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource MkrOnStatus}"/>
+            </Border>
+            <TextBlock x:Name="Status" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+        </StackPanel>
+        <Grid Grid.Row="2" Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="320"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="400" MinWidth="260" MaxWidth="640"/>
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel x:Name="CurveBar" Orientation="Horizontal" Margin="4,0,0,4" Visibility="Collapsed">
                     <TextBlock Text="Courbes" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,14,0"/>
                     <RadioButton x:Name="ShowSetpoint" Content="Échelon de consigne" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,16,0" VerticalAlignment="Center"/>
                     <RadioButton x:Name="ShowLoad" Content="Perturbation de charge" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
                 </StackPanel>
-                <local:SignalChart x:Name="Chart" Height="340" Visibility="Collapsed" Margin="0,0,0,12"
+                <local:SignalChart x:Name="Chart" Grid.Row="1" Visibility="Collapsed" MinHeight="260"
                                    AutomationProperties.Name="Réponses simulées des réglages comparés"/>
-                <TextBlock x:Name="Notes" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,0,0,12" Visibility="Collapsed"/>
-                <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="Résultat du réglage guidé (texte à copier)"/>
-                <TextBlock x:Name="AlternativesTitle" Text="Réglages voisins (vitesse contre robustesse)" FontWeight="SemiBold" Margin="0,12,0,6" Visibility="Collapsed"/>
-                <DataGrid x:Name="Alternatives" Visibility="Collapsed" RowHeight="34" ColumnHeaderHeight="40" AutomationProperties.Name="Réglages voisins">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Réponse τc (s)" Binding="{Binding Response}" Width="*"/>
-                        <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
-                        <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
-                        <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
-                        <DataGridTextColumn Header="Ms au pire cas" Binding="{Binding Ms}" Width="*"/>
-                        <DataGridTextColumn Header="Verdict" Binding="{Binding Verdict}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </StackPanel>
-        </ScrollViewer>
-        <WrapPanel Grid.Row="3" Margin="0,12,0,0">
-            <Button x:Name="CopyButton" Content="Co_pier le résultat" IsEnabled="False" Click="Copy" Margin="0,0,8,0"/>
-            <Button x:Name="CloseButton" Content="_Fermer" Click="CloseView"/>
-        </WrapPanel>
+                <TextBlock x:Name="ChartEmpty" Grid.Row="1" Text="Les réponses simulées des réglages apparaîtront ici après le calcul." Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Expander x:Name="ParamPanel" Style="{StaticResource MkrPanel}" Header="Réglage recommandé" Visibility="Collapsed">
+                        <StackPanel x:Name="Cards"/>
+                    </Expander>
+                    <Expander x:Name="ComparePanel" Style="{StaticResource MkrPanel}" Header="Comparaison des réglages (nominal, échelon unitaire)" Visibility="Collapsed">
+                        <Grid x:Name="CompareGrid" Margin="0"/>
+                    </Expander>
+                    <Expander x:Name="AltPanel" Style="{StaticResource MkrPanel}" Header="Réglages voisins (vitesse contre robustesse)" Visibility="Collapsed" IsExpanded="False">
+                        <DataGrid x:Name="Alternatives" RowHeight="30" ColumnHeaderHeight="40" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                                  AutomationProperties.Name="Réglages voisins">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="τc (s)" Binding="{Binding Response}" Width="*"/>
+                                <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
+                                <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
+                                <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
+                                <DataGridTextColumn Header="Ms pire cas" Binding="{Binding Ms}" Width="*"/>
+                                <DataGridTextColumn Header="Verdict" Binding="{Binding Verdict}" Width="1.6*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Expander>
+                    <Expander Style="{StaticResource MkrPanel}" Header="Notes et réserves">
+                        <StackPanel Margin="10,8">
+                            <TextBlock x:Name="Notes" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
+                            <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="Normal"
+                                       Text="Vous choisissez un objectif de robustesse, pas un temps de réponse. MKR cherche le réglage le plus rapide qui reste robuste sur le modèle identifié et sur l'incertitude de ses paramètres (règles SIMC, Skogestad 2003 ; sensibilité maximale Ms, Åström et Hägglund 2006). Si les données ne permettent pas d'en garantir un, MKR refuse et dit quoi faire. Résultat théorique, jamais qualifié sur installation."/>
+                        </StackPanel>
+                    </Expander>
+                    <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="Résultat du réglage guidé (texte à copier)"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>
