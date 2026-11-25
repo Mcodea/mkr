@@ -289,6 +289,9 @@ try
     Require((pi.Imc with { Margins = null }) == new PiCoefficients(-10, 100, -0.1) &&
         (pi.Simc with { Margins = null }) == new PiCoefficients(-10, 20, -0.5) &&
         pi.Warnings.Contains("tight_response"), "PI settings match the signed analytical case.");
+    // Published IMC-PI (Rivera, Morari and Skogestad 1986): Kc = (tau + theta/2) / (K (lambda + theta/2)), Ti = tau + theta/2, here (101.5) / (3.5 * -2).
+    Require(pi.ImcPublished is { } published && Math.Abs(published.Kp - (101.5 / (3.5 * -2))) < 1e-9 && Math.Abs(published.TiSeconds - 101.5) < 1e-9 &&
+        Math.Abs(published.ParallelKi - published.Kp / 101.5) < 1e-12, "The published IMC-PI travels through the process boundary with the signed analytical values.");
     // NC-17: the margins of the nominal loop travel with each tuning and with the SOPDT PID.
     Require(pi.Simc.Margins is { PhaseMarginDegrees: > 0, GainMargin: > 1, PeakSensitivity: >= 1 } simcMargins &&
         pi.Imc.Margins is { PhaseMarginDegrees: > 0 } && simcMargins.Describe().Contains("marge de phase"),

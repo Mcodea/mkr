@@ -681,6 +681,7 @@ public partial class IdentificationWindow : Window
             ? "\nLe temps choisi est inférieur au retard estimé. Examinez la robustesse." : "";
         PiReport.Text = $"Réglage enregistré pour la simulation · cible {result.ResponseSeconds:G5} s · méthode {result.AlgorithmVersion} · moteur {pi.EngineVersion}\n" +
             $"Lambda : {Format(result.Imc)}\nSIMC : {Format(result.Simc)}\n" +
+            (result.ImcPublished is { } published ? $"IMC publié (Rivera, Morari et Skogestad 1986, Padé du premier ordre) : {Format(published)}\n" : "") +
             "Forme idéale continue, écart = consigne − mesure. Marges calculées sur le modèle nominal seul : elles ne remplacent pas l’analyse de sensibilité. Modèle exploratoire et contraintes d’actionneur à vérifier." + tight;
     }
 

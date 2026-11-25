@@ -30,8 +30,9 @@ public sealed record LoopMargins(string AlgorithmVersion, double? GainCrossoverR
 }
 
 public sealed record PiCoefficients(double Kp, double TiSeconds, double ParallelKi, LoopMargins? Margins = null);
+/// <summary>ImcPublished: PI IMC of Rivera, Morari and Skogestad (1986), first-order Padé of the delay. Absent in studies saved before engine 1.2.0.</summary>
 public sealed record PiComparison(string AlgorithmVersion, double ResponseSeconds, string[] Warnings,
-    PiCoefficients Imc, PiCoefficients Simc);
+    PiCoefficients Imc, PiCoefficients Simc, PiCoefficients? ImcPublished = null);
 
 public sealed record PiStudy(Guid Id, Guid ModelId, DateTimeOffset CalculatedAt, string EngineVersion, PiComparison Result)
 {

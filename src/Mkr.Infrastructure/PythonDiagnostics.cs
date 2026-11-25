@@ -434,7 +434,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         var comparison = result.Deserialize<PiComparison>(JsonOptions);
         if (comparison is null || string.IsNullOrEmpty(comparison.AlgorithmVersion) ||
             comparison.ResponseSeconds != responseSeconds || comparison.Warnings is null ||
-            !Valid(comparison.Imc) || !Valid(comparison.Simc))
+            !Valid(comparison.Imc) || !Valid(comparison.Simc) ||
+            (comparison.ImcPublished is { } published && (!Valid(published) || Math.Sign(published.Kp) != Math.Sign(comparison.Simc.Kp))))
             throw new InvalidDataException("Résultat PI incompatible avec le contrat.");
         return (comparison, version);
 
