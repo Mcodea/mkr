@@ -10,36 +10,41 @@ from recommend import COVERAGE, OBJECTIVES, calculate
 
 
 def request(**changes):
-    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0,
+    base = dict(family="FOPDT", gain=2.0, tauSeconds=40.0, delaySeconds=10.0, secondTauSeconds=None, sampleSeconds=1.0, derivativeFilterRatio=None,
                 standardErrors=dict(gain=0.05, tauSeconds=2.0, delaySeconds=1.0), objective="balanced")
     base.update(changes)
     return base
 
 
-def sensitivity_peak(gain, taus, delay, kp, ti, td):
+def sensitivity_peak(gain, taus, delay, kp, ti, td, tf=0.0):
     """Max |1/(1+L)| on a dense logarithmic grid: written here, independent of stability_margins."""
     w = np.logspace(-4, 2, 30000)
     s = 1j * w
     plant = gain * np.exp(-s * delay)
     for tau in taus:
         plant = plant / (tau * s + 1)
-    controller = kp * (1 + 1 / (ti * s) + td * s)
+    controller = kp * (1 + 1 / (ti * s) + td * s / (tf * s + 1))
     return float(np.max(1 / np.abs(1 + controller * plant)))
 
 
-def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon):
+def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
     """Explicit time-domain simulation (Euler, delay buffer) of a unit set-point step; returns the final error and the overshoot."""
     dt = (min(min(taus), max(delay, 1e-3)) if taus else max(delay, 1e-3)) / 12
     steps = int(horizon / dt)
     lag = int(round(delay / dt))
     buffer = [0.0] * (lag + 1)
     states = [0.0] * len(taus)
-    integral, previous_error, output = 0.0, 1.0, 0.0
+    integral, previous_error, output, filtered = 0.0, 1.0, 0.0, 0.0
     peak = 0.0
     for _ in range(steps):
         error = 1.0 - output
         integral += error * dt
-        u = kp * (error + integral / ti + td * (error - previous_error) / dt)
+        if tf > 0:                                                    # filtered derivative Td s / (Tf s + 1)
+            filtered += dt * (error - filtered) / tf
+            derivative = td * (error - filtered) / tf
+        else:
+            derivative = td * (error - previous_error) / dt
+        u = kp * (error + integral / ti + derivative)
         previous_error = error
         buffer.append(u)
         delayed = buffer.pop(0)
@@ -86,6 +91,20 @@ class Equations(unittest.TestCase):
         series = kc * (1 + 1 / (tau_i * s)) * (1 + tau_d * s)
         ideal = controller["kp"] * (1 + 1 / (controller["tiSeconds"] * s) + controller["tdSeconds"] * s)
         self.assertLess(float(np.max(np.abs(series - ideal) / np.abs(series))), 1e-12)
+
+    def test_the_pid_derivative_is_filtered_with_the_declared_ratio_and_the_filter_is_part_of_the_judged_loop(self):
+        for ratio, expected in ((None, 10.0), (4.0, 4.0)):
+            result = calculate(request(family="SOPDT", secondTauSeconds=15.0, derivativeFilterRatio=ratio))
+            c = result["recommendation"]["controller"]
+            self.assertAlmostEqual(c["filterSeconds"], c["tdSeconds"] / expected, places=12)
+            self.assertEqual(result["derivativeFilterRatio"], expected)
+            for gain_sign, tau_sign, delay_sign in ((-1, -1, 1), (1, 1, 1), (-1, 1, 1)):
+                k, tau, delay = 2.0 + gain_sign * 0.1, 40.0 + tau_sign * 4.0, 10.5 + delay_sign * 2.0
+                peak = sensitivity_peak(k, [tau, 15.0], delay, c["kp"], c["tiSeconds"], c["tdSeconds"], c["filterSeconds"])
+                self.assertLessEqual(peak, OBJECTIVES["balanced"] + 2e-3)
+        for bad in (1.0, 200.0, "10", True):
+            with self.assertRaises(ValueError):
+                calculate(request(derivativeFilterRatio=bad))
 
 
 class Robustness(unittest.TestCase):
@@ -163,7 +182,7 @@ class Refusals(unittest.TestCase):
 
     def test_integrator_uncertainty_uses_slope_and_delay_corners(self):
         result = calculate(dict(family="Integrateur", gain=0.02, tauSeconds=None, delaySeconds=5.0, secondTauSeconds=None, sampleSeconds=1.0,
-                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced"))
+                                standardErrors=dict(gain=0.001, tauSeconds=0, delaySeconds=0.3), objective="balanced", derivativeFilterRatio=None))
         self.assertEqual(result["decision"], "recommended")
         self.assertTrue(result["uncertaintyQuantified"])
         self.assertLessEqual(result["recommendation"]["worstPeakSensitivity"], 1.7 + 1e-9)
@@ -172,7 +191,7 @@ class Refusals(unittest.TestCase):
         self.assertEqual(calculate(request())["qualification"], "model_based_unqualified")
 
     def test_hostile_inputs_are_rejected(self):
-        for changes in ({"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},
+        for changes in ({"derivativeFilterRatio": 0.5}, {"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},
                         {"objective": "fast"}, {"family": "ARX"}, {"family": "SOPDT"}, {"secondTauSeconds": 3.0},
                         {"family": "SOPDT", "secondTauSeconds": 80.0}, {"gain": "2"}, {"gain": True},
                         {"standardErrors": {"gain": -1, "tauSeconds": 1, "delaySeconds": 1}}, {"standardErrors": {"gain": 1}}):

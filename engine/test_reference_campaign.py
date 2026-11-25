@@ -48,7 +48,7 @@ class ReferenceCampaign(unittest.TestCase):
                                tauSeconds=None if family == "Integrateur" else float(report["tauSeconds"]),
                                delaySeconds=float(interval[1] if interval else report["delaySeconds"]),
                                secondTauSeconds=float(report["secondTauSeconds"]) if family == "SOPDT" else None,
-                               sampleSeconds=cadence, objective="balanced",
+                               sampleSeconds=cadence, objective="balanced", derivativeFilterRatio=None,
                                # the application's contract: gain, slow time constant and delay errors; no time constant for the integrator
                                standardErrors=None if not report.get("standardErrors") else dict(
                                    gain=float(report["standardErrors"]["gain"]),
@@ -66,9 +66,9 @@ class ReferenceCampaign(unittest.TestCase):
                     peak = float(np.max(1 / np.abs(1 + loop)))
                     horizon = 40 * (rec["responseSeconds"] + recommendation["effectiveDelaySeconds"])
                 else:
-                    peak = sensitivity_peak(abs(truth["k"]), truth["taus"], truth["d"] + sampling, abs(c["kp"]), c["tiSeconds"], c["tdSeconds"])
+                    peak = sensitivity_peak(abs(truth["k"]), truth["taus"], truth["d"] + sampling, abs(c["kp"]), c["tiSeconds"], c["tdSeconds"], c["filterSeconds"])
                     horizon = 12 * (rec["responseSeconds"] + recommendation["effectiveDelaySeconds"]) + 8 * max(truth["taus"])
-                final_error, _ = closed_loop_settles(abs(truth["k"]), truth["taus"], truth["d"] + sampling, abs(c["kp"]), c["tiSeconds"], c["tdSeconds"], horizon)
+                final_error, _ = closed_loop_settles(abs(truth["k"]), truth["taus"], truth["d"] + sampling, abs(c["kp"]), c["tiSeconds"], c["tdSeconds"], horizon, c["filterSeconds"])
                 self.assertLess(final_error, 0.02, (name, final_error))                                               # C3
                 self.assertLess(peak, 2.0, (name, peak))                                                              # C4
                 self.assertLessEqual(peak, rec["worstPeakSensitivity"] + 0.05, (name, peak, rec["worstPeakSensitivity"]))

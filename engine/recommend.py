@@ -9,6 +9,7 @@ References (all public):
 - S. Skogestad, "Simple analytic rules for model reduction and PID controller tuning", J. Process Control 13 (2003) 291-309.
   SIMC rules: Kc = tau1 / (K (tauc + theta)), tauI = min(tau1, 4 (tauc + theta)), tauD = tau2; half rule for the
   second time constant when tau2 <= theta; the effective delay includes half the sampling period.
+  Derivative filter: Tf = Td / N, N = 10 by default (usual range 2-20), included in the margins of the loop that is judged.
 - K. J. Astrom and T. Hagglund, Advanced PID Control, ISA (2006): the maximum sensitivity Ms is the robustness measure of a
   PID design; values between about 1.2 and 2.0 are the usual design range (lower = more robust).
   Integrating processes: Kc = 1 / (k' (tauc + theta)), tauI = 4 (tauc + theta).
@@ -26,6 +27,8 @@ from stability_margins import analyze
 VERSION = "1.0.0"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
+# Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
+DEFAULT_FILTER_RATIO = 10.0
 COVERAGE = 2.0                      # +/- 2 standard errors: ~95 % of a Gaussian parameter estimate
 # Closed-loop time constant tauc searched as multiples of the effective delay (SIMC: tauc = theta is "tight", larger = smoother).
 MULTIPLES = [0.25 * 1.25 ** i for i in range(0, 25)]          # 0.25 ... about 53 effective delays, 25 steps
@@ -35,14 +38,15 @@ def _number(x):
     return type(x) in (int, float) and math.isfinite(x) and abs(x) <= 1e100
 
 
-def _simc(gain, tau1, delay, tauc, tau2=None):
+def _simc(gain, tau1, delay, tauc, tau2=None, filter_ratio=DEFAULT_FILTER_RATIO):
     """SIMC ideal-form coefficients; tau2 given -> PID (series form converted to ideal), otherwise PI."""
     kc = tau1 / (gain * (tauc + delay))
     ti = min(tau1, 4 * (tauc + delay))
     if tau2 is None:
-        return dict(structure="PI", kp=kc, tiSeconds=ti, tdSeconds=0.0)
+        return dict(structure="PI", kp=kc, tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0)
     ti_ideal = ti + tau2
-    return dict(structure="PID", kp=kc * ti_ideal / ti, tiSeconds=ti_ideal, tdSeconds=ti * tau2 / ti_ideal)
+    td = ti * tau2 / ti_ideal
+    return dict(structure="PID", kp=kc * ti_ideal / ti, tiSeconds=ti_ideal, tdSeconds=td, filterSeconds=td / filter_ratio)
 
 
 def _corners(gain, tau1, delay, tau2, errors):
@@ -68,7 +72,7 @@ def _evaluate(controller, plants, sampling_delay, stop_above=None):
     rows, worst = [], None
     for name, k, t1, d, t2 in plants:
         taus = [t1] if t2 is None else [t1, t2]
-        margins = analyze(k, taus, d + sampling_delay, controller["kp"], controller["tiSeconds"], controller["tdSeconds"], 0.0)
+        margins = analyze(k, taus, d + sampling_delay, controller["kp"], controller["tiSeconds"], controller["tdSeconds"], controller["filterSeconds"])
         rows.append((name, margins))
         if worst is None or margins["peakSensitivity"] > worst[1]["peakSensitivity"]:
             worst = (name, margins)
@@ -82,11 +86,15 @@ def _is_stable(rows):
 
 
 def calculate(payload):
-    required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective"}
+    required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective", "derivativeFilterRatio"}
     if not isinstance(payload, dict) or payload.keys() != required:
         raise ValueError("recommend_input")
     family, gain, tau, delay, second, sample = (payload[k] for k in ("family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds"))
     errors, objective = payload["standardErrors"], payload["objective"]
+    ratio = payload["derivativeFilterRatio"]
+    if ratio is not None and (not _number(ratio) or not 2 <= ratio <= 100):
+        raise ValueError("recommend_input")
+    ratio = DEFAULT_FILTER_RATIO if ratio is None else float(ratio)
     if family not in ("FOPDT", "SOPDT", "Integrateur") or objective not in OBJECTIVES:
         raise ValueError("recommend_input")
     if family == "Integrateur":
@@ -133,7 +141,7 @@ def calculate(payload):
     # Phase 1: the fastest grid point that is stable with Ms within the limit on every corner (rejecting early on the first violation).
     chosen_index = None
     for index, multiple in enumerate(MULTIPLES):
-        controller = _simc(gain, tau1, effective, multiple * effective, tau2)
+        controller = _simc(gain, tau1, effective, multiple * effective, tau2, ratio)
         try:
             rows, worst = _evaluate(controller, plants, sampling_delay, stop_above=limit)
         except ValueError:
@@ -147,7 +155,7 @@ def calculate(payload):
     for index in window:
         multiple = MULTIPLES[index]
         tauc = multiple * effective
-        controller = _simc(gain, tau1, effective, tauc, tau2)
+        controller = _simc(gain, tau1, effective, tauc, tau2, ratio)
         try:
             rows, worst = _evaluate(controller, plants, sampling_delay)
         except ValueError:
@@ -172,6 +180,7 @@ def calculate(payload):
                 family=family, structure=chosen["controller"]["structure"], recommendation=chosen,
                 uncertaintyCoverageSigma=COVERAGE if quantified else None, uncertaintyQuantified=quantified,
                 effectiveDelaySeconds=effective, samplePeriodSeconds=sample,
+                derivativeFilterRatio=ratio if chosen["controller"]["tdSeconds"] > 0 else None,
                 alternatives=_alternatives(evaluated, chosen), warnings=warnings, qualification="model_based_unqualified",
                 references=["Skogestad 2003, doi:10.1016/S0959-1524(02)00062-8", "Astrom & Hagglund 2006, Advanced PID Control",
                             "Morari & Zafiriou 1989, Robust Process Control"])
@@ -233,7 +242,7 @@ def _integrator(slope, delay, sample, errors, objective, limit):
         tauc = MULTIPLES[index] * effective
         kp, ti, worst, stable = evaluate(tauc)
         entries.append(dict(responseSeconds=tauc, multipleOfEffectiveDelay=MULTIPLES[index],
-                            controller=dict(structure="PI", kp=kp, tiSeconds=ti, tdSeconds=0.0), stableOnAllCorners=stable,
+                            controller=dict(structure="PI", kp=kp, tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0), stableOnAllCorners=stable,
                             worstPeakSensitivity=worst[1], worstCase=worst[0]))
     if chosen_index is None:
         best = min(entries, key=lambda e: e["worstPeakSensitivity"])

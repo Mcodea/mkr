@@ -82,7 +82,7 @@ public partial class GuidedTuningWindow : Window
         {
             var c = rec.Controller;
             text.AppendLine($"Structure : {c.Structure} (forme idéale, erreur = consigne − mesure)");
-            text.AppendLine($"Kp = {F(c.Kp)} {mv}/{pv}   Ti = {F(c.TiSeconds)} s" + (c.TdSeconds > 0 ? $"   Td = {F(c.TdSeconds)} s" : ""));
+            text.AppendLine($"Kp = {F(c.Kp)} {mv}/{pv}   Ti = {F(c.TiSeconds)} s" + (c.TdSeconds > 0 ? $"   Td = {F(c.TdSeconds)} s   Tf = {F(c.FilterSeconds)} s (filtre de la dérivée, Td/{F(tuning.DerivativeFilterRatio ?? 0)})" : ""));
             text.AppendLine($"Constante de temps de boucle fermée visée τc = {F(rec.ResponseSeconds)} s (retard effectif {F(tuning.EffectiveDelaySeconds)} s)");
             text.AppendLine($"Sensibilité maximale au pire cas : {F(rec.WorstPeakSensitivity)} (limite {F(tuning.MaximumPeakSensitivity)}) · pire cas : {rec.WorstCase}");
             text.AppendLine(tuning.UncertaintyQuantified
@@ -129,7 +129,8 @@ public partial class GuidedTuningWindow : Window
     {
         "uncertainty_not_quantified" => "incertitude des paramètres non quantifiée (erreurs-types indisponibles pour ce modèle).",
         "closed_loop_slower_than_the_process" => "la boucle fermée visée est plus lente que le procédé lui-même : l'incertitude impose beaucoup de marge.",
-        "pid_second_pole_exceeds_delay" => "second pôle supérieur au retard : un PID est justifié (règle SIMC).",
+        "pid_second_pole_exceeds_delay" => "second pôle supérieur au retard : un PID est justifié (règle SIMC) ; la dérivée est filtrée (Tf = Td/10 par défaut, plage usuelle 2 à 20) et ce filtre fait partie de la boucle jugée.",
+        "second_pole_uncertainty_not_propagated" => "l'incertitude du second pôle n'est pas propagée (gain, constante lente et retard le sont).",
         "half_rule_second_pole_not_above_delay" => "second pôle non supérieur au retard : règle de la moitié, puis PI.",
         "first_order_model_pi_is_the_rule" => "modèle du premier ordre : le PI est la règle SIMC.",
         "integrating_process_simc" => "règle SIMC des procédés intégrateurs.",

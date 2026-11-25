@@ -308,12 +308,12 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
             tauSeconds = family == ModelFamily.Integrateur ? (double?)null : model.TauSeconds,
             delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
-            sampleSeconds = sample, standardErrors = errors, objective
+            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null
         };
         var (json, _) = await CallAsync("recommend_tuning", payload, token).ConfigureAwait(false);
         var tuning = json.Deserialize<GuidedTuning>(JsonOptions);
         static bool Finite(TuningCandidate? c) => c is { Controller: { } k } && double.IsFinite(k.Kp) && k.Kp != 0 && double.IsFinite(k.TiSeconds) && k.TiSeconds > 0 &&
-            double.IsFinite(k.TdSeconds) && k.TdSeconds >= 0 && double.IsFinite(c.ResponseSeconds) && c.ResponseSeconds > 0 && double.IsFinite(c.WorstPeakSensitivity);
+            double.IsFinite(k.TdSeconds) && k.TdSeconds >= 0 && double.IsFinite(k.FilterSeconds) && k.FilterSeconds >= 0 && (k.TdSeconds == 0 || k.FilterSeconds > 0) && double.IsFinite(c.ResponseSeconds) && c.ResponseSeconds > 0 && double.IsFinite(c.WorstPeakSensitivity);
         // Contract: a recommendation always carries a finite, correctly signed, unqualified controller that respects the objective; a refusal carries reasons.
         if (tuning is null || string.IsNullOrWhiteSpace(tuning.AlgorithmVersion) || tuning.Objective != objective || Math.Abs(tuning.MaximumPeakSensitivity - limit) > 1e-9 ||
             tuning.Decision is not ("recommended" or "refused") ||

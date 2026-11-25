@@ -7,6 +7,7 @@
 2. Retard effectif : retard prudent du modèle + ½ période d'échantillonnage (Skogestad, 2003).
 3. Structure : modèle du premier ordre → PI ; second ordre avec second pôle supérieur au retard → PID (règle SIMC, forme série convertie en forme idéale) ; second pôle ≤ retard → règle de la moitié, puis PI ; intégrateur → PI (SIMC intégrateur).
 4. Recherche : constante de temps de boucle fermée τc sur une grille de 0,25 à environ 53 retards effectifs. MKR retient la **plus petite** τc (réglage le plus rapide) pour laquelle la boucle est stable et Ms ≤ limite **sur le modèle nominal et sur les huit coins** de l'incertitude (±2 erreurs-types : gain, constante de temps lente, retard).
+4bis. Filtre de la dérivée (PID) : Tf = Td/N, N = 10 par défaut (usuel : 2 à 20) ; il est inclus dans les marges évaluées sur chaque coin.
 5. Sortie : le réglage, ses marges au pire cas, les réglages voisins pour comparer vitesse et robustesse, les avertissements (`closed_loop_slower_than_the_process`, `uncertainty_not_quantified`…).
 
 ## Refus
