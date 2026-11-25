@@ -97,6 +97,16 @@ def read_step(source, input_tolerance, output_tolerance):
 # eight orders of magnitude below any sensor resolution: its autocorrelation carries no information.
 ROUND_OFF_RELATIVE = 1e-9
 
+# Whiteness bound of the residual autocorrelation (Ljung, System Identification, 2nd ed., 1999, residual analysis): under a
+# structurally adequate model with independent noise, the lag-one sample autocorrelation of N residuals lies within
+# +/- 2.576 / sqrt(N) with 99 % probability. It replaces the former fixed 0.3 and 0.5 thresholds, which ignored N.
+LJUNG_Z_99 = 2.576
+
+
+def residual_lag_bound(samples):
+    """Largest lag-one residual autocorrelation compatible with white residuals of `samples` points (99 % level)."""
+    return min(1.0, LJUNG_Z_99 / math.sqrt(max(samples, 1)))
+
 
 def is_round_off(rmse, scale):
     return rmse <= ROUND_OFF_RELATIVE * scale
@@ -188,7 +198,7 @@ def diagnostics(step, gain, response):
 def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
     """Local iid residual error, conditional on the measured baselines and input."""
     correlation = diagnostics["residualLagOne"]
-    if correlation is not None and abs(correlation) > 0.3:
+    if correlation is not None and abs(correlation) > residual_lag_bound(len(step.times)):
         warnings.append("correlated_residuals")
     # The onset interval is an exogenous uncertainty published as delayIntervalSeconds; it does not
     # invalidate the local residual errors, which stay conditional on the measured step instant.

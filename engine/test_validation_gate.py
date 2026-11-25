@@ -111,7 +111,9 @@ class CriteriaFromNoiseTests(unittest.TestCase):
         floor = trials["pvTolerance"] / 2
         self.assertAlmostEqual(result["maximumRmse"], max(2 * result["baselineNoise"], floor))
         self.assertEqual(result["basis"], "noise" if 2 * result["baselineNoise"] >= floor else "pv_tolerance")
-        self.assertEqual(result["maximumResidualLagOne"], 0.5)
+        # Ljung 99 % whiteness bound for the 580 post-step validation samples (no fixed number): 2.576 / sqrt(N).
+        self.assertAlmostEqual(result["maximumResidualLagOne"], 2.576 / math.sqrt(580), places=9)
+        self.assertEqual(result["lagBasis"], "ljung_white_residuals_99")
         # A tighter declared tolerance lets the measured noise set the threshold.
         tight = suggest({**trials, "pvTolerance": 0.05})
         self.assertEqual(tight["basis"], "noise")

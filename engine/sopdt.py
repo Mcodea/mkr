@@ -4,7 +4,7 @@ import math
 import numpy as np
 from scipy.optimize import least_squares
 
-from fopdt import delay_interval, delay_warnings, diagnostics, read_trials
+from fopdt import delay_interval, delay_warnings, diagnostics, read_trials, residual_lag_bound
 
 
 def basis(times, tau_slow, tau_fast, delay):
@@ -67,7 +67,7 @@ def identify(payload):
     if fast / slow >= 0.95:
         warnings.append("close_poles")
     train_fit = diagnostics(training, gain, basis(training.times, slow, fast, delay))
-    if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > 0.3:
+    if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > residual_lag_bound(len(training.times)):
         warnings.append("correlated_residuals")
     return dict(algorithmVersion="1.1.0", gain=gain, tauSeconds=slow, secondTauSeconds=fast,
                 delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training), tauLowerSeconds=low, tauUpperSeconds=horizon,

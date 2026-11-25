@@ -7,13 +7,12 @@ import math
 
 from scipy.stats import f as fisher
 
-from fopdt import is_round_off
+from fopdt import is_round_off, residual_lag_bound
 
 VERSION = "1.1.0"
 # Default acceptance criteria are derived from the measured pre-step noise only (never from a fit),
 # so that thresholds are fixed before the model is seen.
 NOISE_MULTIPLE = 2.0          # RMSE of a correct model on white noise is close to sigma.
-DEFAULT_MAXIMUM_LAG = 0.5     # Lag-one residual correlation tolerated for a structurally adequate model.
 SIGNIFICANCE = 0.99           # Holdout F-test level for preferring the second-order model.
 # Estimation warnings that make the parameters unusable for tuning.
 BLOCKING_WARNINGS = {
@@ -82,7 +81,8 @@ def suggest(payload):
     tolerance = payload["pvTolerance"]
     maximum_rmse = max(NOISE_MULTIPLE * sigma, tolerance / 2)
     return dict(algorithmVersion=VERSION, baselineNoise=sigma, maximumRmse=maximum_rmse,
-                maximumResidualLagOne=DEFAULT_MAXIMUM_LAG,
+                maximumResidualLagOne=residual_lag_bound(len(validation.times)),
+                lagBasis="ljung_white_residuals_99",
                 basis="noise" if NOISE_MULTIPLE * sigma >= tolerance / 2 else "pv_tolerance",
                 noiseMultiple=NOISE_MULTIPLE, trainingNoise=training.baseline_noise,
                 validationNoise=validation.baseline_noise)

@@ -12,7 +12,7 @@ import math
 
 import numpy as np
 
-from fopdt import basis, diagnostics, delay_warnings, estimate, read_step
+from fopdt import basis, diagnostics, delay_warnings, estimate, read_step, residual_lag_bound
 from validation_gate import reasons
 
 VERSION = "0.2.0"
@@ -101,7 +101,7 @@ def _refit(family, step):
         warnings = list(delay_warnings(delay, step))
         fitted = dict(gain=gain, tauSeconds=tau, delaySeconds=delay)
         lag = diagnostics(step, gain, basis(step.times, tau, delay))["residualLagOne"]
-        if lag is not None and abs(lag) > 0.3:
+        if lag is not None and abs(lag) > residual_lag_bound(len(step.times)):
             warnings.append("correlated_residuals")
         errors = numerical_errors(step, ("gain", "tauSeconds", "delaySeconds"), fitted, lambda v: basis(step.times, v[1], v[2]))
         return fitted, errors, warnings

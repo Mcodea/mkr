@@ -94,9 +94,12 @@ class StructuresAreTold(unittest.TestCase):
                 self.assertFalse(refused["assessment"]["accepted"])
                 self.assertIn("validation_residuals", refused["assessment"]["reasons"])
                 self.assertTrue(judge("SOPDT", response, 1.0, sigma, post=250)["assessment"]["accepted"])
-        # Under heavier noise (0.5 % of the response) a first-order model predicts the validation trial as well as the
-        # noise allows: the gate judges predictive adequacy, not the true structure, and says nothing more than the data support.
-        self.assertTrue(judge("FOPDT", response, 1.0, 0.02, post=250)["assessment"]["accepted"])
+        # With the sample-size dependent whiteness bound (Ljung, 99 %), 250 samples are enough to see the unmodelled
+        # second pole even under heavier noise (1 % of the response): the first-order model is refused, the second-order one accepted.
+        heavy = judge("FOPDT", response, 1.0, 0.02, post=250)
+        self.assertFalse(heavy["assessment"]["accepted"])
+        self.assertIn("validation_residuals", heavy["assessment"]["reasons"])
+        self.assertTrue(judge("SOPDT", response, 1.0, 0.02, post=250)["assessment"]["accepted"])
 
     def test_noise_that_hides_the_response_is_refused_not_fitted(self):
         with self.assertRaisesRegex(ValueError, "fit_response"):

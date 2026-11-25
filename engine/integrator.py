@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from fopdt import delay_interval, delay_warnings, diagnostics, read_trials
+from fopdt import delay_interval, delay_warnings, diagnostics, read_trials, residual_lag_bound
 
 
 def profile_delay(times, observed):
@@ -62,7 +62,7 @@ def identify(payload):
     if math.copysign(1, gain * validation.amplitude) * tail_change(validation) <= 4 * payload["pvTolerance"]:
         warnings.append("integrator_validation_tail")
     train_fit = diagnostics(training, gain, np.maximum(training.times - delay, 0))
-    if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > 0.3:
+    if train_fit["residualLagOne"] is not None and abs(train_fit["residualLagOne"]) > residual_lag_bound(len(training.times)):
         warnings.append("correlated_residuals")
     return dict(algorithmVersion="1.1.0", gain=gain, delaySeconds=delay, delayIntervalSeconds=delay_interval(delay, training),
                 delayUpperSeconds=horizon / 2, warnings=warnings,
