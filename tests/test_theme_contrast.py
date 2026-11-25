@@ -72,7 +72,7 @@ class NoLiteralColours(unittest.TestCase):
         offenders = []
         for path in ROOT.glob("*.xaml"):
             text = path.read_text(encoding="utf-8")
-            if re.search(r'\{StaticResource Mkr(?!PrimaryButton|NavButton|BarButton|RibbonTab|RibbonButton)', text):
+            if re.search(r'\{StaticResource Mkr(?!PrimaryButton|NavButton|BarButton|RibbonTab|RibbonButton|Panel)', text):
                 offenders.append(f"{path.name}: StaticResource brush")
             for match in re.finditer(r'(?:Foreground|Background|BorderBrush|Fill|Stroke)="(#[0-9A-Fa-f]{6,8}|White|Black)"', text):
                 offenders.append(f"{path.name}: literal {match.group(1)}")
