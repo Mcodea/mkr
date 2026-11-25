@@ -63,6 +63,12 @@ def respond(raw):
             return {**response, "result": compare(request["payload"])}
         except ValueError as error:
             code = str(error)
+    elif request["operation"] == "recommend_tuning":
+        from recommend import calculate as recommend
+        try:
+            return {**response, "result": recommend(request["payload"])}
+        except ValueError as error:
+            code = str(error) if str(error).startswith("recommend_") else "recommend_input"
     elif request["operation"] == "check_model_drift":
         from model_drift import check
         try:
