@@ -38,6 +38,10 @@ internal sealed class ChartTrack(string title, string unit, IEnumerable<ChartSer
     public List<ChartBand> Bands { get; } = new();
     /// <summary>Share of the chart height (default 1; a main signal track can use 2).</summary>
     public double Weight { get; init; } = 1;
+    /// <summary>Rotated label of the vertical axis in the reference layout, for example « Pression (bar) ». Defaults to the unit.</summary>
+    public string YLabel { get; init; } = "";
+    /// <summary>Boxed legend inside the plot (reference layout) even for a single curve.</summary>
+    public bool ShowLegend { get; init; }
 }
 
 /// <summary>
@@ -48,7 +52,11 @@ internal sealed class ChartTrack(string title, string unit, IEnumerable<ChartSer
 /// </summary>
 internal sealed class SignalChart : FrameworkElement
 {
-    private const double LeftMargin = 74, RightMargin = 14, TopMargin = 6, BottomMargin = 40, TrackGap = 30, LegendHeight = 22;
+    private const double RightMargin = 14, TopMargin = 6, TrackGap = 30;
+    // The reference layout (see docs/ui) puts the title above the plot, a rotated axis label on the left and a boxed legend inside the plot.
+    private double LeftMargin => ReferenceStyle ? 70 : 74;
+    private double BottomMargin => ReferenceStyle ? 44 : 40;
+    private double LegendHeight => ReferenceStyle ? 26 : 22;
     private static readonly DashStyle[] Dashes = { DashStyles.Solid, new DashStyle(new double[] { 6, 3 }, 0), new DashStyle(new double[] { 1.5, 3 }, 0), new DashStyle(new double[] { 6, 3, 1.5, 3 }, 0) };
 
     private IReadOnlyList<ChartTrack> _tracks = Array.Empty<ChartTrack>();
@@ -69,6 +77,8 @@ internal sealed class SignalChart : FrameworkElement
 
     public string XLabel { get; set; } = "Temps (s)";
     public bool SelectionEnabled { get; set; }
+    /// <summary>Reference layout: centred title, rotated axis label, boxed legend inside the plot, lettered range markers.</summary>
+    public bool ReferenceStyle { get; set; }
     /// <summary>Per-track value boxes next to the cursor. Off where a compact readout elsewhere on screen already gives the values (no stacked boxes).</summary>
     public bool ShowValueBoxes { get; set; } = true;
     public bool HasData => _tracks.Any(t => t.Series.Any(s => s.X.Length > 1));
@@ -96,6 +106,28 @@ internal sealed class SignalChart : FrameworkElement
     public void SetEvents(IEnumerable<(double X, string Label)> events) { _events = events.ToList(); InvalidateVisual(); }
 
     public void SetHighlight(double? from, double? to) { _highlightFrom = from; _highlightTo = to; InvalidateVisual(); }
+
+    /// <summary>Sets the displayed time window without raising <see cref="ViewChanged"/> (used to keep several charts on the same time axis).</summary>
+    public void SetView(double from, double to)
+    {
+        if (!HasData || !(to > from)) return;
+        _lo = Math.Max(_fullLo, from); _hi = Math.Min(_fullHi, to);
+        if (!(_hi > _lo)) { _lo = _fullLo; _hi = _fullHi; }
+        InvalidateVisual();
+    }
+
+    public void ZoomBy(double factor)
+    {
+        if (!HasData) return;
+        (_lo, _hi) = ChartMath.Zoom(_lo, _hi, (_lo + _hi) / 2, factor, _fullLo, _fullHi);
+        ViewChanged?.Invoke();
+        InvalidateVisual();
+    }
+
+    /// <summary>Mirrors the cursor of another chart (time axis units) without raising <see cref="CursorMoved"/>.</summary>
+    public void SetExternalCursor(double? x) { _cursor = x; InvalidateVisual(); }
+
+    public event Action<double?>? CursorMoved;
 
     public void ResetView() { _lo = _fullLo; _hi = _fullHi; InvalidateVisual(); ViewChanged?.Invoke(); }
 
@@ -180,6 +212,13 @@ internal sealed class SignalChart : FrameworkElement
             var (ymin, ymax) = YRange(track);
             double Y(double v) => top + (ymax - v) / (ymax - ymin) * height;
 
+            if (ReferenceStyle)
+            {
+                var refTitle = Text(track.Title, 13, Theme("MkrText"), true);
+                dc.DrawText(refTitle, new Point(LeftMargin + PlotWidth / 2 - refTitle.Width / 2, top - LegendHeight + 2));
+            }
+            else
+            {
             // legend: swatch with the curve's dash pattern + name; click toggles the curve
             var legendX = LeftMargin;
             var title = Text($"{track.Title}{(track.Unit.Length > 0 ? $" ({track.Unit})" : "")}", 13, Theme("MkrText"), true);
@@ -197,6 +236,7 @@ internal sealed class SignalChart : FrameworkElement
                 if (!series.Visible) dc.DrawLine(new Pen(labelBrush, 1), new Point(legendX + 36, top - LegendHeight / 2 - 1), new Point(legendX + 36 + label.Width, top - LegendHeight / 2 - 1));
                 _legend.Add((box, series));
                 legendX += 44 + label.Width + 8;
+            }
             }
 
             // grid + y labels
@@ -217,7 +257,7 @@ internal sealed class SignalChart : FrameworkElement
             {
                 var x0 = Math.Max(LeftMargin, XToPixel(hf));
                 var x1 = Math.Min(LeftMargin + PlotWidth, XToPixel(ht));
-                if (x1 > x0) dc.DrawRectangle(new SolidColorBrush(((SolidColorBrush)Theme("MkrAccent")).Color) { Opacity = 0.16 }, null, new Rect(x0, top, x1 - x0, height));
+                if (x1 > x0) dc.DrawRectangle(new SolidColorBrush(((SolidColorBrush)Theme("MkrAccent")).Color) { Opacity = ReferenceStyle ? 0.10 : 0.16 }, null, new Rect(x0, top, x1 - x0, height));
             }
 
             // curves (clipped, decimated)
@@ -257,6 +297,35 @@ internal sealed class SignalChart : FrameworkElement
                 dc.DrawGeometry(null, pen, geometry);
             }
             dc.Pop();
+            if (ReferenceStyle)
+            {
+                var yText = track.YLabel.Length > 0 ? track.YLabel : (track.Unit.Length > 0 ? track.Unit : track.Title);
+                var yl = Text(yText, 12, labelBrush);
+                dc.PushTransform(new RotateTransform(-90, 12, top + height / 2));
+                dc.DrawText(yl, new Point(12 - yl.Width / 2, top + height / 2 - yl.Height / 2));
+                dc.Pop();
+                if (track.Series.Count > 1 || track.ShowLegend)
+                {
+                    var rows = track.Series.Select(si => Text(si.Name, 12, si.Visible ? Theme("MkrText") : Theme("MkrPlotLabel"))).ToList();
+                    var boxWidth = 20 + 34 + rows.Max(r => r.Width) + 12;
+                    var rowHeight = 18.0;
+                    var boxHeight = rows.Count * rowHeight + 10;
+                    if (boxHeight < height - 8 && boxWidth < PlotWidth - 8)
+                    {
+                        var legendBox = new Rect(LeftMargin + PlotWidth - boxWidth - 8, top + height - boxHeight - 8, boxWidth, boxHeight);
+                        dc.DrawRectangle(Faded(Theme("MkrSurface"), 0.94), new Pen(Theme("MkrBorderStrong"), 1), legendBox);
+                        for (var si = 0; si < track.Series.Count; si++)
+                        {
+                            var series = track.Series[si];
+                            var color = Theme(series.ColorKey);
+                            var ly = legendBox.Y + 5 + si * rowHeight;
+                            dc.DrawLine(new Pen(series.Visible ? color : Faded(color, 0.35), 2.4) { DashStyle = Dashes[si % Dashes.Length] }, new Point(legendBox.X + 10, ly + rowHeight / 2), new Point(legendBox.X + 40, ly + rowHeight / 2));
+                            dc.DrawText(rows[si], new Point(legendBox.X + 48, ly + (rowHeight - rows[si].Height) / 2));
+                            _legend.Add((new Rect(legendBox.X, ly, boxWidth, rowHeight), series));
+                        }
+                    }
+                }
+            }
         }
 
         // shared time axis
@@ -265,6 +334,16 @@ internal sealed class SignalChart : FrameworkElement
         {
             if (ex < _lo || ex > _hi) continue;
             var px = XToPixel(ex);
+            if (ReferenceStyle)
+            {
+                var accent = Theme("MkrAccent");
+                dc.DrawLine(new Pen(accent, 1.2) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) }, new Point(px, TrackTop(0)), new Point(px, bottom));
+                var letter = Text(label, 12, Theme("MkrOnAccent"), true);
+                var square = new Rect(px - 9, TrackTop(0) + 2, 18, 18);
+                dc.DrawRectangle(accent, null, square);
+                dc.DrawText(letter, new Point(square.X + (18 - letter.Width) / 2, square.Y + (18 - letter.Height) / 2));
+                continue;
+            }
             dc.DrawLine(new Pen(Theme("MkrSignal4"), 1.4) { DashStyle = new DashStyle(new double[] { 1.5, 3 }, 0) }, new Point(px, TrackTop(0)), new Point(px, bottom));
             var text = Text(label, 12, Theme("MkrSignal4"), true);
             dc.DrawText(text, new Point(Math.Min(px + 4, LeftMargin + PlotWidth - text.Width), TrackTop(0) + 3));
@@ -336,6 +415,7 @@ internal sealed class SignalChart : FrameworkElement
         if (_selectOrigin is not null) _selectCurrent = Math.Clamp(PixelToX(p.X), _fullLo, _fullHi);
         _cursor = InPlot(p) && HasData ? PixelToX(p.X) : null;
         CursorTextChanged?.Invoke(DescribeCursor());
+        CursorMoved?.Invoke(_cursor);
         Cursor = _legend.Any(l => l.Box.Contains(p)) ? Cursors.Hand : Cursors.Arrow;
         InvalidateVisual();
     }
@@ -346,6 +426,7 @@ internal sealed class SignalChart : FrameworkElement
         if (_panOrigin is not null || _selectOrigin is not null) return;
         _cursor = null;
         CursorTextChanged?.Invoke("");
+        CursorMoved?.Invoke(null);
         InvalidateVisual();
     }
 
@@ -420,6 +501,19 @@ internal sealed class SignalChart : FrameworkElement
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var file = File.Create(path);
         encoder.Save(file);
+    }
+
+    /// <summary>One CSV for several charts that share a time axis (long format, same columns as <see cref="ExportCsv"/>).</summary>
+    public static void ExportCsv(string path, params SignalChart[] charts)
+    {
+        var text = new StringBuilder("piste;courbe;unite;temps_s;valeur\n");
+        foreach (var chart in charts)
+            foreach (var track in chart._tracks)
+                foreach (var s in track.Series)
+                    for (var i = 0; i < s.X.Length; i++)
+                        text.Append(track.Title).Append(';').Append(s.Name).Append(';').Append(track.Unit).Append(';')
+                            .Append(s.X[i].ToString("R", CultureInfo.InvariantCulture)).Append(';').Append(s.Y[i].ToString("R", CultureInfo.InvariantCulture)).Append('\n');
+        File.WriteAllText(path, text.ToString(), new UTF8Encoding(true));
     }
 
     /// <summary>All samples of every series (not only the visible window), long format with units, invariant culture.</summary>

@@ -62,6 +62,14 @@ public partial class WindowView : Window
         Stages.Margin = new Thickness(0, narrow ? 8 : 0, 0, 0);
     }
 
+    private string _defaultFacts = "";
+
+    /// <summary>The status bar carries the facts of the screen shown (identification: trial, points, window, fit), the project counts elsewhere.</summary>
+    private void ApplyFacts()
+    {
+        StatusFacts.Text = _tab == 3 && _identification is { Facts.Length: > 0 } view ? view.Facts : _defaultFacts;
+    }
+
     private bool _assisted = true;
 
     private void ReflectTheme()
@@ -213,7 +221,8 @@ public partial class WindowView : Window
             var accepted = studies.Count(study => study.IsAcceptedForTuning);
             var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
             _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
-            StatusFacts.Text = $"Enregistrements : {imports}   ·   Études : {studies.Count}   ·   Modèles acceptés : {accepted}";
+            _defaultFacts = $"Enregistrements : {imports}   ·   Études : {studies.Count}   ·   Modèles acceptés : {accepted}";
+            StatusFacts.Text = _defaultFacts;
             InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}" +
                 (StudyJourney.NextStep(_steps) is { } next ? $"\n\nProchaine étape : {next.Number}. {next.Title}\n{next.Detail}" : "");
             var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
@@ -385,6 +394,7 @@ public partial class WindowView : Window
         }
         RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
         RibbonHost.Visibility = RibbonCommands.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;     // no empty command band
+        ApplyFacts();
         UpdateNext();
     }
 
@@ -502,6 +512,7 @@ public partial class WindowView : Window
                 {
                     _identification = new IdentificationView(_workspace, selected);
                     _identification.StudiesChanged += (_, _) => RefreshAfterChange();
+                    _identification.FactsChanged += (_, _) => ApplyFacts();
                 }
                 if (!ReferenceEquals(StepHost.Child, _identification)) StepHost.Child = _identification;
             }

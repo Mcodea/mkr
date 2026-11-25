@@ -32,36 +32,59 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="360"/>
                 <ColumnDefinition Width="6"/>
-                <ColumnDefinition x:Name="PanelColumn" Width="360" MinWidth="260" MaxWidth="640"/>
+                <ColumnDefinition x:Name="PanelColumn" Width="0.38*" MinWidth="300" MaxWidth="600"/>
             </Grid.ColumnDefinitions>
-            <Grid>
+            <Grid x:Name="ChartArea">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition x:Name="MainRow" Height="5*" MinHeight="150"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition x:Name="SideRow" Height="3*" MinHeight="110"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1,1,1,0" Padding="4,2">
+                <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,2" Margin="0,0,0,4">
                     <StackPanel Orientation="Horizontal">
-                        <Label Content="_Essai affiché" Target="{Binding ElementName=PlotSource}" VerticalAlignment="Center" Padding="4,0"/>
-                        <ComboBox x:Name="PlotSource" Width="120" SelectedIndex="1" SelectionChanged="ChangePlotSource" VerticalAlignment="Center" MinHeight="26" Padding="6,1">
+                        <Button Style="{StaticResource MkrToolButton}" Click="FocusChart" ToolTip="Sélection : glisser avec le bouton gauche sur un graphique pour choisir la plage A–B" AutomationProperties.Name="Sélectionner une plage A–B"><TextBlock Text="&#xE8B3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ResetPlotZoom" ToolTip="Ajuster : revenir à tout l’essai affiché (double-clic)" AutomationProperties.Name="Ajuster à tout l’essai"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ClearWindow" ToolTip="Effacer la plage A–B" AutomationProperties.Name="Effacer la plage A–B"><TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="6,3"/>
+                        <Label Content="_Essai" Target="{Binding ElementName=PlotSource}" VerticalAlignment="Center" Padding="2,0"/>
+                        <ComboBox x:Name="PlotSource" Width="110" SelectedIndex="1" SelectionChanged="ChangePlotSource" VerticalAlignment="Center" MinHeight="24" Padding="6,1" AutomationProperties.Name="Essai affiché">
                             <ComboBoxItem Content="Estimation"/>
                             <ComboBoxItem Content="Validation"/>
                         </ComboBox>
-                        <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="8,3"/>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ResetPlotZoom" ToolTip="Vue complète : revenir à tout l’essai affiché" AutomationProperties.Name="Vue complète"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ExportPlotImage" ToolTip="Exporter le graphique en image PNG" AutomationProperties.Name="Exporter l’image"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ExportPlotData" ToolTip="Exporter les courbes affichées en CSV" AutomationProperties.Name="Exporter les données"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ToggleChartOnly" ToolTip="Donner toute la largeur au graphique, ou rétablir les panneaux" AutomationProperties.Name="Plein écran du graphique"><TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ClearWindow" ToolTip="Effacer la plage A–B (sélection : glisser avec le bouton gauche sur le graphique)" AutomationProperties.Name="Effacer la plage A–B"><TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        
+                        <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="6,3"/>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportPlotImage" ToolTip="Exporter les trois graphiques en image PNG" AutomationProperties.Name="Exporter l’image"><TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportPlotData" ToolTip="Exporter les courbes affichées en CSV" AutomationProperties.Name="Exporter les données"><TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ToggleChartOnly" ToolTip="Donner toute la largeur aux graphiques, ou rétablir les panneaux" AutomationProperties.Name="Plein écran du graphique"><TextBlock Text="&#xE740;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
                     </StackPanel>
                 </Border>
-                <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ShowValueBoxes="False" SelectionEnabled="True"
-                        AutomationProperties.Name="Mesure observée, mesure prédite, commande et résidus de l’essai sélectionné, en fonction du temps"
-                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                <Grid Grid.Row="2" Margin="2,3,0,0" MinHeight="30">
-                    <TextBlock x:Name="PlotLegend" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
-                    <TextBlock x:Name="CursorText" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11"/>
+                <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
+                    <local:SignalChart x:Name="Chart" ReferenceStyle="True" ShowValueBoxes="False" SelectionEnabled="True" MinHeight="120"
+                        AutomationProperties.Name="Réponse du procédé : mesure observée et modèle identifié, en fonction du temps"
+                        AutomationProperties.HelpText="Glisser pour choisir la plage A–B. Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète."/>
+                </Border>
+                <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" ResizeDirection="Rows" AutomationProperties.Name="Redimensionner les graphiques"/>
+                <Grid Grid.Row="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="5"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
+                        <local:SignalChart x:Name="CommandChart" ReferenceStyle="True" ShowValueBoxes="False" SelectionEnabled="True" MinHeight="90"
+                            AutomationProperties.Name="Commande de l’essai, en fonction du temps"/>
+                    </Border>
+                    <Border Grid.Column="2" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
+                        <local:SignalChart x:Name="ResidualChart" ReferenceStyle="True" ShowValueBoxes="False" SelectionEnabled="True" MinHeight="90"
+                            AutomationProperties.Name="Résidus (mesure moins modèle), en fonction du temps"/>
+                    </Border>
+                </Grid>
+                <Grid Grid.Row="4" Margin="2,3,0,0" MinHeight="18">
+                    <TextBlock x:Name="PlotLegend" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MkrMuted}" FontSize="11"/>
+                    <TextBlock x:Name="CursorText" Visibility="Collapsed" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="11"/>
                 </Grid>
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>

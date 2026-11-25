@@ -26,14 +26,28 @@ public partial class IdentificationView : UserControl, IStepView
     {
         _workspace = workspace;
         InitializeComponent();
-        Chart.RangeSelected += (from, to) => { _window = from < to ? (from, to) : (to, from); DrawPlot(); };
-        Chart.CursorTextChanged += text =>
+        var charts = new[] { Chart, CommandChart, ResidualChart };
+        foreach (var chart in charts)
         {
-            CursorText.Text = text;
-            CursorText.Visibility = text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;     // the cursor values replace the legend line while hovering
-            PlotLegend.Visibility = text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        };
-        SizeChanged += (_, e) => { if (e.PreviousSize.Height == 0 || (e.PreviousSize.Height >= 620) != (e.NewSize.Height >= 620)) ModelPanel.IsExpanded = e.NewSize.Height >= 620; };
+            var self = chart;
+            self.RangeSelected += (from, to) => { _window = from < to ? (from, to) : (to, from); DrawPlot(); };
+            // the three charts share one time axis and one cursor
+            self.ViewChanged += () =>
+            {
+                if (_syncing) return;
+                _syncing = true;
+                foreach (var other in charts.Where(other => !ReferenceEquals(other, self))) other.SetView(self.View.From, self.View.To);
+                _syncing = false;
+            };
+            self.CursorMoved += x => { foreach (var other in charts.Where(other => !ReferenceEquals(other, self))) other.SetExternalCursor(x); };
+            self.CursorTextChanged += text =>
+            {
+                CursorText.Text = text;
+                CursorText.Visibility = text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;     // the cursor values replace the legend line while hovering
+                PlotLegend.Visibility = text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            };
+        }
+        SizeChanged += (_, e) => { if (e.PreviousSize.Height == 0 || (e.PreviousSize.Height >= 620) != (e.NewSize.Height >= 620)) ModelPanel.IsExpanded = true; };
         FamilyChoice.ItemsSource = Enum.GetValues<ModelFamily>();
         FamilyChoice.SelectedItem = ModelFamily.FOPDT;
         _sources = _workspace.Sources();
@@ -414,7 +428,7 @@ public partial class IdentificationView : UserControl, IStepView
         {
             FitReport.Text = PlotLegend.Text = "";
             VerdictCard.Visibility = Visibility.Collapsed;
-            Chart.SetTracks(Array.Empty<ChartTrack>());
+            ClearCharts();
             RefreshSidePanels();
             return;
         }
@@ -740,13 +754,36 @@ public partial class IdentificationView : UserControl, IStepView
 
     private void ChangePlotSource(object sender, SelectionChangedEventArgs args) => DrawPlot();
 
-    private void ResetPlotZoom(object sender, RoutedEventArgs args) => Chart.ResetView();
+    private void ExportChartsPng(string path)
+    {
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(ChartArea);
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(ChartArea.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(ChartArea.ActualHeight * dpi.DpiScaleY),
+            96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(ChartArea);
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using var file = System.IO.File.Create(path);
+        encoder.Save(file);
+    }
+
+    private void ResetPlotZoom(object sender, RoutedEventArgs args)
+    {
+        _syncing = true;
+        foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.ResetView();
+        _syncing = false;
+    }
+
+    private void ZoomIn(object sender, RoutedEventArgs args) => Chart.ZoomBy(0.7);
+
+    private void ZoomOut(object sender, RoutedEventArgs args) => Chart.ZoomBy(1 / 0.7);
+
+    private void FocusChart(object sender, RoutedEventArgs args) => Chart.Focus();
 
     private void ExportPlotImage(object sender, RoutedEventArgs args)
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "diagnostic-modele.png" };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-        try { Chart.ExportPng(dialog.FileName); Message.Text = "Image exportée."; }
+        try { ExportChartsPng(dialog.FileName); Message.Text = "Image exportée."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
@@ -755,7 +792,7 @@ public partial class IdentificationView : UserControl, IStepView
     {
         var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "diagnostic-modele.csv" };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-        try { Chart.ExportCsv(dialog.FileName); Message.Text = "Données exportées."; }
+        try { SignalChart.ExportCsv(dialog.FileName, Chart, CommandChart, ResidualChart); Message.Text = "Données exportées."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
@@ -798,6 +835,11 @@ public partial class IdentificationView : UserControl, IStepView
         FormulaHost.Children.Add(fraction);
     }
 
+    /// <summary>Facts of the displayed trial for the status bar: trial, points, A–B window and fit.</summary>
+    public string Facts { get; private set; } = "";
+    public event EventHandler? FactsChanged;
+
+    private bool _syncing;
     private (double From, double To)? _window;
 
     private void ClearWindow(object sender, RoutedEventArgs args) { _window = null; DrawPlot(); }
@@ -807,8 +849,8 @@ public partial class IdentificationView : UserControl, IStepView
     private void ToggleChartOnly(object sender, RoutedEventArgs args)
     {
         _chartOnly = !_chartOnly;
-        PanelColumn.MinWidth = _chartOnly ? 0 : 260;
-        PanelColumn.Width = _chartOnly ? new GridLength(0) : new GridLength(360);
+        PanelColumn.MinWidth = _chartOnly ? 0 : 300;
+        PanelColumn.Width = _chartOnly ? new GridLength(0) : new GridLength(0.38, GridUnitType.Star);
         PanelScroll.Visibility = _chartOnly ? Visibility.Collapsed : Visibility.Visible;
     }
 
@@ -935,53 +977,72 @@ public partial class IdentificationView : UserControl, IStepView
         _tableSync = false;
     }
 
+    private void ClearCharts()
+    {
+        foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.SetTracks(Array.Empty<ChartTrack>());
+    }
+
     private void DrawPlot()
     {
-        if (Chart is null || PlotSource is null)
+        if (Chart is null || CommandChart is null || ResidualChart is null || PlotSource is null)
             return;
         var fit = DisplayedDiagnostics();
         var category = PlotSource.SelectedIndex == 0 ? "Estimation" : "Validation indépendante";
         PlotLegend.Text = fit is null ? "" : $"{category} · {fit.Points.Length} points enregistrés, affichés sans modification.";
         if (fit is null || _shown is not { } study)
         {
-            Chart.SetTracks(Array.Empty<ChartTrack>());
+            ClearCharts();
             return;
         }
         var points = fit.Points.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
         var seconds = points.Select(p => p.Seconds).ToArray();
-        Chart.XLabel = "Temps après l'échelon (s)";
+        foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.XLabel = "Temps après l'échelon (s)";
         var horizon = seconds.Length > 0 ? seconds[^1] : 1;
         var first = seconds.Length > 0 ? seconds[0] : 0;
         Chart.SetTracks(new[]
         {
-            new ChartTrack("Mesure et modèle identifié", study.PvUnit, new[]
+            new ChartTrack("Réponse du procédé et modèle identifié", study.PvUnit, new[]
             {
                 new ChartSeries("Mesure observée", "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
                 new ChartSeries("Modèle identifié", "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
-            }) { Weight = 3 },
-            new ChartTrack("Commande (écart appliqué)", study.MvUnit, new[]
+            }) { YLabel = $"Mesure ({study.PvUnit})" }
+        });
+        CommandChart.SetTracks(new[]
+        {
+            new ChartTrack("Commande (MV)", study.MvUnit, new[]
             {
                 new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { first, 0, 0, horizon }, new[] { 0, 0, fit.InputStep, fit.InputStep })
-            }) { Weight = 1 },
+            }) { YLabel = $"MV ({study.MvUnit})" }
+        });
+        ResidualChart.SetTracks(new[]
+        {
             new ChartTrack("Résidus (mesure − modèle)", study.PvUnit, new[]
             {
                 new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())
-            }) { Weight = 1 }
+            }) { YLabel = $"Résidu ({study.PvUnit})" }
         });
         // A and B are the bounds the user selected by dragging on the chart (left button); the shading is that range. Nothing is shown until then.
         if (_window is { } range)
         {
             Chart.SetEvents(new[] { (range.From, "A"), (range.To, "B") });
             Chart.SetHighlight(range.From, range.To);
+            CommandChart.SetHighlight(range.From, range.To);
+            ResidualChart.SetHighlight(range.From, range.To);
             PlotLegend.Text += $" · plage A–B : de {range.From:G4} s à {range.To:G4} s (indicateurs recalculés sur cette plage, sans nouvelle estimation).";
         }
         else
         {
             Chart.SetEvents(Array.Empty<(double, string)>());
-            Chart.SetHighlight(null, null);
+            foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.SetHighlight(null, null);
             PlotLegend.Text += " · glissez sur le graphique pour choisir une plage A–B.";
         }
         RefreshSidePanels();
+        var shownPoints = _window is { } w ? points.Count(p => p.Seconds >= w.From && p.Seconds <= w.To) : points.Length;
+        var fitText = FitPercent(_window is { } w2 ? points.Where(p => p.Seconds >= w2.From && p.Seconds <= w2.To).ToArray() : points) is { } fv ? $"   ·   FIT : {fv.ToString("F1", CultureInfo.CurrentCulture)} %" : "";
+        Facts = $"Essai : {category.ToLowerInvariant()}   ·   Durée : {horizon.ToString("G5", CultureInfo.CurrentCulture)} s   ·   Fenêtre : " +
+                (_window is { } w3 ? $"{w3.From.ToString("G4", CultureInfo.CurrentCulture)} – {w3.To.ToString("G4", CultureInfo.CurrentCulture)} s" : "essai complet") +
+                $"   ·   Points : {shownPoints.ToString("N0", CultureInfo.CurrentCulture)}{fitText}";
+        FactsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private static StepColumns? ReadColumns(ComboBox time, ComboBox mv, ComboBox pv) =>
