@@ -499,7 +499,7 @@ public partial class WindowView : Window
             {
                 if (_identification is null)
                 {
-                    _identification = new IdentificationView(_workspace);
+                    _identification = new IdentificationView(_workspace, selected);
                     _identification.StudiesChanged += (_, _) => RefreshAfterChange();
                 }
                 if (!ReferenceEquals(StepHost.Child, _identification)) StepHost.Child = _identification;

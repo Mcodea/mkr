@@ -104,6 +104,39 @@ function Capture($window, $label) {
         Write-Host "##CAPTURE-END $label"
     } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
 }
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class MkrDisplay {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct DEVMODE {
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmDeviceName;
+        public short dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra;
+        public int dmFields, dmPositionX, dmPositionY, dmDisplayOrientation, dmDisplayFixedOutput;
+        public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string dmFormName;
+        public short dmLogPixels;
+        public int dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency, dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight;
+    }
+    [DllImport("user32.dll", CharSet = CharSet.Ansi)] public static extern bool EnumDisplaySettings(string device, int mode, ref DEVMODE dm);
+    [DllImport("user32.dll", CharSet = CharSet.Ansi)] public static extern int ChangeDisplaySettings(ref DEVMODE dm, int flags);
+    public static int Set(int width, int height) {
+        DEVMODE dm = new DEVMODE();
+        dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+        EnumDisplaySettings(null, -1, ref dm);
+        dm.dmPelsWidth = width; dm.dmPelsHeight = height; dm.dmFields = 0x80000 | 0x100000;
+        return ChangeDisplaySettings(ref dm, 0);
+    }
+}
+"@
+function Set-Resolution($width, $height) {
+    # 0 = success. The achieved size is logged: a runner without a display driver may refuse, and then the capture says so instead of pretending.
+    $code = [MkrDisplay]::Set($width, $height)
+    Start-Sleep -Milliseconds 2500
+    $actual = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
+    Write-Host "##RESOLUTION requested ${width}x${height} code $code actual $($actual.Width)x$($actual.Height)"
+}
 function Press-Retry($parent, $caption) {
     for ($attempt = 1; $attempt -le 4; $attempt++) {
         try { Press $parent $caption; return } catch { Start-Sleep -Milliseconds 800 }
@@ -288,6 +321,18 @@ try {
         $step9.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 1200
         Capture $main '15-simulation-integree'
+    }
+    Step '10h-identification-resolutions' {
+        Close-Others $root $main
+        $tab = Find $main $id 'Step4'
+        $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
+        foreach ($size in @(@(1920,1080), @(1366,768))) {
+            Set-Resolution $size[0] $size[1]
+            Start-Sleep -Milliseconds 1500
+            Capture $main ("20-identification-{0}x{1}" -f $size[0], $size[1])
+        }
+        Set-Resolution $original.Width $original.Height
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"

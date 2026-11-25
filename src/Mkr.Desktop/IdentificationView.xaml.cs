@@ -22,7 +22,7 @@ public partial class IdentificationView : UserControl, IStepView
     private WindowChoice? _validationSelection;
     private readonly IReadOnlyList<ImportSummary> _sources;
 
-    internal IdentificationView(IdentificationWorkspace workspace)
+    internal IdentificationView(IdentificationWorkspace workspace, IdentificationStudy? initial = null)
     {
         _workspace = workspace;
         InitializeComponent();
@@ -31,7 +31,13 @@ public partial class IdentificationView : UserControl, IStepView
         FamilyChoice.SelectedItem = ModelFamily.FOPDT;
         _sources = _workspace.Sources();
         TrainingSource.ItemsSource = ValidationSource.ItemsSource = _sources;
-        StudyList.ItemsSource = _workspace.Studies();
+        var studies = _workspace.Studies();
+        StudyList.ItemsSource = studies;
+        // The active study is shown at once: the one selected in the workspace, else the most recent accepted one, else the most recent.
+        var first = initial is null ? null : studies.FirstOrDefault(item => item.Id == initial.Id);
+        first ??= studies.FirstOrDefault(item => item.IsAcceptedForTuning) ?? studies.FirstOrDefault();
+        if (first is not null) StudyList.SelectedItem = first;
+        TrialsPanel.IsExpanded = studies.Count == 0;
         if (_sources.Count < 2)
             Message.Text = "Importez deux essais CSV dans ce projet.";
     }
@@ -401,6 +407,7 @@ public partial class IdentificationView : UserControl, IStepView
             FitReport.Text = PlotLegend.Text = "";
             VerdictCard.Visibility = Visibility.Collapsed;
             Chart.SetTracks(Array.Empty<ChartTrack>());
+            RefreshSidePanels();
             return;
         }
         var result = study.Result;
@@ -744,6 +751,129 @@ public partial class IdentificationView : UserControl, IStepView
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
+    private void ToggleTrials(object sender, RoutedEventArgs args)
+    {
+        TrialsPanel.IsExpanded = !TrialsPanel.IsExpanded;
+        if (TrialsPanel.IsExpanded) TrialsPanel.BringIntoView();
+    }
+
+    private bool _chartOnly;
+
+    private void ToggleChartOnly(object sender, RoutedEventArgs args)
+    {
+        _chartOnly = !_chartOnly;
+        PanelColumn.MinWidth = _chartOnly ? 0 : 260;
+        PanelColumn.Width = _chartOnly ? new GridLength(0) : new GridLength(360);
+        PanelScroll.Visibility = _chartOnly ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private bool _tableSync;
+
+    public sealed class ModelRow
+    {
+        public IdentificationStudy Study { get; init; } = null!;
+        public string Family { get; init; } = "";
+        public string Fit { get; init; } = "";
+        public string Rmse { get; init; } = "";
+        public string Decision { get; init; } = "";
+    }
+
+    private void ModelTableChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (_tableSync || ModelTable.SelectedItem is not ModelRow row) return;
+        StudyList.SelectedItem = (StudyList.ItemsSource as IEnumerable<IdentificationStudy>)?.FirstOrDefault(item => item.Id == row.Study.Id);
+    }
+
+    /// <summary>FIT = 100 · (1 − ‖y − ŷ‖ / ‖y − mean(y)‖), the normalised-RMSE fit of the plotted trial (a display metric, not an acceptance criterion).</summary>
+    private static double? FitPercent(FitDiagnostics? fit)
+    {
+        if (fit is null) return null;
+        var points = fit.Points.Where(p => double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+        if (points.Length < 3) return null;
+        var mean = points.Average(p => p.Observed);
+        var denominator = Math.Sqrt(points.Sum(p => (p.Observed - mean) * (p.Observed - mean)));
+        if (denominator <= 0) return null;
+        return 100 * (1 - Math.Sqrt(points.Sum(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted))) / denominator);
+    }
+
+    private static double? Iae(FitDiagnostics? fit)
+    {
+        if (fit is null) return null;
+        var points = fit.Points.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
+        if (points.Length < 2) return null;
+        var total = 0.0;
+        for (var i = 1; i < points.Length; i++)
+            total += 0.5 * (Math.Abs(points[i].Observed - points[i].Predicted) + Math.Abs(points[i - 1].Observed - points[i - 1].Predicted)) * (points[i].Seconds - points[i - 1].Seconds);
+        return total;
+    }
+
+    private UIElement KeyValue(string label, string value, string unit = "")
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
+        grid.Children.Add(new TextBlock { Text = label, Margin = new Thickness(10, 4, 6, 4), TextWrapping = TextWrapping.Wrap });
+        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 4, 4, 4), TextAlignment = TextAlignment.Right };
+        Grid.SetColumn(val, 1);
+        grid.Children.Add(val);
+        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 4, 8, 4), Foreground = (Brush)FindResource("MkrMuted") };
+        Grid.SetColumn(u, 2);
+        grid.Children.Add(u);
+        return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
+    }
+
+    private void RefreshSidePanels()
+    {
+        ParameterTable.Children.Clear();
+        QualityTable.Children.Clear();
+        if (_shown is not { } study)
+        {
+            Formula.Text = "";
+            FormulaFamily.Text = "Aucune étude sélectionnée";
+            ModelTable.ItemsSource = null;
+            return;
+        }
+        var result = study.Result;
+        var gainUnit = study.Family == ModelFamily.Integrateur ? $"{study.PvUnit}/({study.MvUnit}·s)" : $"{study.PvUnit}/{study.MvUnit}";
+        (Formula.Text, FormulaFamily.Text) = study.Family switch
+        {
+            ModelFamily.SOPDT => ("Gp(s) = K · e^(−θ·s) / [(1 + τ₁·s)(1 + τ₂·s)]", "SOPDT (2ᵉ ordre + temps mort)"),
+            ModelFamily.Integrateur => ("Gp(s) = k′ · e^(−θ·s) / s", "Intégrateur + temps mort"),
+            _ => ("Gp(s) = K · e^(−θ·s) / (1 + τ·s)", "FOPDT (1er ordre + temps mort)")
+        };
+        ParameterTable.Children.Add(KeyValue(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain du procédé K", result.Gain.ToString("G5", CultureInfo.CurrentCulture), gainUnit));
+        if (result.TauSeconds is { } tau) ParameterTable.Children.Add(KeyValue(result.SecondTauSeconds is null ? "Constante de temps τ" : "Constante lente τ₁", tau.ToString("G5", CultureInfo.CurrentCulture), "s"));
+        if (result.SecondTauSeconds is { } fast) ParameterTable.Children.Add(KeyValue("Constante rapide τ₂", fast.ToString("G5", CultureInfo.CurrentCulture), "s"));
+        ParameterTable.Children.Add(KeyValue("Temps mort θ", result.DelaySeconds.ToString("G5", CultureInfo.CurrentCulture), "s"));
+        ParameterTable.Children.Add(KeyValue("Temps mort prudent (réglage)", result.TuningDelaySeconds.ToString("G5", CultureInfo.CurrentCulture), "s"));
+
+        var shown = DisplayedDiagnostics();
+        var label = PlotSource.SelectedIndex == 0 ? "estimation" : "validation";
+        if (FitPercent(shown) is { } fitValue) QualityTable.Children.Add(KeyValue($"FIT ({label}, NRMSE)", fitValue.ToString("F1", CultureInfo.CurrentCulture), "%"));
+        if (shown is not null)
+        {
+            QualityTable.Children.Add(KeyValue($"RMSE ({label})", shown.Rmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
+            if (shown.RSquared is { } r2) QualityTable.Children.Add(KeyValue($"R² ({label})", r2.ToString("F3", CultureInfo.CurrentCulture)));
+            if (Iae(shown) is { } iae) QualityTable.Children.Add(KeyValue($"IAE ({label})", iae.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit + "·s"));
+        }
+        if (study.Assessment is { } decision)
+            QualityTable.Children.Add(KeyValue("Seuil de RMSE (validation)", decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
+
+        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).Select(item => new ModelRow
+        {
+            Study = item,
+            Family = item.Family == ModelFamily.Integrateur ? "Intégrateur" : item.Family.ToString(),
+            Fit = FitPercent(item.Result.Validation) is { } f ? f.ToString("F1", CultureInfo.CurrentCulture) : "—",
+            Rmse = item.Result.Validation.Rmse.ToString("G3", CultureInfo.CurrentCulture),
+            Decision = item.Assessment is { Accepted: true } ? "accepté" : item.Assessment is not null ? "refusé" : "non décidé"
+        }).ToList();
+        _tableSync = true;
+        ModelTable.ItemsSource = rows;
+        ModelTable.SelectedItem = rows.FirstOrDefault(row => row.Study.Id == study.Id);
+        _tableSync = false;
+    }
+
     private void DrawPlot()
     {
         if (Chart is null || PlotSource is null)
@@ -759,18 +889,32 @@ public partial class IdentificationView : UserControl, IStepView
         var points = fit.Points.Where(p => double.IsFinite(p.Seconds) && double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
         var seconds = points.Select(p => p.Seconds).ToArray();
         Chart.XLabel = "Temps après l'échelon (s)";
+        var horizon = seconds.Length > 0 ? seconds[^1] : 1;
+        var first = seconds.Length > 0 ? seconds[0] : 0;
         Chart.SetTracks(new[]
         {
-            new ChartTrack("Mesure", study.PvUnit, new[]
+            new ChartTrack("Mesure et modèle identifié", study.PvUnit, new[]
             {
-                new ChartSeries("Observée", "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
-                new ChartSeries("Prédite par le modèle", "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
-            }) { Weight = 2 },
-            new ChartTrack("Résidu (observée − prédite)", study.PvUnit, new[]
+                new ChartSeries("Mesure observée", "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
+                new ChartSeries("Modèle identifié", "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
+            }) { Weight = 3 },
+            new ChartTrack("Commande (écart appliqué)", study.MvUnit, new[]
+            {
+                new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { first, 0, 0, horizon }, new[] { 0, 0, fit.InputStep, fit.InputStep })
+            }) { Weight = 1 },
+            new ChartTrack("Résidus (mesure − modèle)", study.PvUnit, new[]
             {
                 new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())
-            })
+            }) { Weight = 1 }
         });
+        // A and B bound the segment of this trial that the fit covers; the shading is that segment.
+        if (seconds.Length > 1)
+        {
+            Chart.SetEvents(new[] { (first, "A"), (horizon, "B") });
+            Chart.SetHighlight(first, horizon);
+            PlotLegend.Text += $" · A–B : fenêtre d'ajustement, de {first:G4} s à {horizon:G4} s après l'échelon.";
+        }
+        RefreshSidePanels();
     }
 
     private static StepColumns? ReadColumns(ComboBox time, ComboBox mv, ComboBox pv) =>
