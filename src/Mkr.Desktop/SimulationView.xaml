@@ -2,18 +2,75 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Mkr.Desktop">
-    <DockPanel Margin="18">
-        <TextBlock DockPanel.Dock="Bottom" x:Name="Message" TextWrapping="Wrap" Margin="0,10,0,0"
-                   AutomationProperties.LiveSetting="Polite" />
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid Margin="14,10,14,10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
             <StackPanel>
-                <TextBlock Text="MKR  /  RÉGLAGE  /  SIMULATION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}" />
-                <TextBlock FontSize="27" FontWeight="SemiBold" Text="Comparaison des réglages PI" Margin="0,6,0,0" />
-                <TextBlock x:Name="Units" TextWrapping="Wrap" Margin="0,6,0,10" />
-                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
+                <TextBlock x:Name="Units" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <WrapPanel Margin="0">
+                        <Button Content="_Simuler et enregistrer" Click="Run" />
+                        <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>
+                        <TextBox x:Name="Variation" Width="62" Text="20"
+                                 ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
+                        <Button Content="_Comparer la robustesse" Click="RunRobustness"
+                                Style="{StaticResource MkrPrimaryButton}" Margin="8,0,0,0"
+                                ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
+                        <Button Content="Analyser 27 _combinaisons" Click="RunCombined"
+                                Margin="8,0,0,0"
+                                ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
+                        <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
+                                Margin="8,0,0,0"
+                                ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
+                        <Label Content="Simulation à exporter" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
+                        <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
+                        <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="8,0,0,0"/>
+                        <Button x:Name="ExportButton" Content="_Exporter les séries enregistrées…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
+                    </WrapPanel>
+            </StackPanel>
+        </Border>
+        <Grid Grid.Row="1" Margin="0,6,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="320"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="440" MinWidth="280" MaxWidth="720"/>
+            </Grid.ColumnDefinitions>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel>
+                    <WrapPanel Margin="0,0,0,4">
+                        <Button x:Name="ResetZoomButton" Content="_Réinitialiser le zoom" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation" Margin="0,0,12,0"/>
+                        <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource MkrMuted}"/>
+                </StackPanel>
+                <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300"
+                        AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
+                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                <StackPanel Grid.Row="2">
+                    <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Background="{DynamicResource MkrCanvas}" Padding="10,6" Margin="0,4,0,0">
+                        <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré." Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                    </Border>
+                    <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
+                               Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="ScenarioForm">
-                    <TextBlock Text="01  ·  Paramètres du scénario" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <Expander x:Name="ScenarioFields" Foreground="{DynamicResource MkrText}" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8">
+                    <Expander Style="{StaticResource MkrPanel}" Header="Indicateurs de comparaison">
+                        <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,8"/>
+                    </Expander>
+                    <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du scénario">
+                        <StackPanel Margin="10,8">
+                    <Expander x:Name="ScenarioFields" Foreground="{DynamicResource MkrText}" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8" Style="{x:Null}">
                     <StackPanel>
                     <WrapPanel Margin="0,0,0,6">
                         <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
@@ -51,73 +108,14 @@
                     </GroupBox>
                     </StackPanel>
                     </Expander>
-                    <WrapPanel Margin="0,0,0,8">
-                        <Button Content="_Simuler et enregistrer" Click="Run" />
-                        <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>
-                        <TextBox x:Name="Variation" Width="62" Text="20"
-                                 ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
-                        <Button Content="_Comparer la robustesse" Click="RunRobustness"
-                                Style="{StaticResource MkrPrimaryButton}" Margin="8,0,0,0"
-                                ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
-                        <Button Content="Analyser 27 _combinaisons" Click="RunCombined"
-                                Margin="8,0,0,0"
-                                ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
-                        <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
-                                Margin="8,0,0,0"
-                                ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
-                        <Label Content="Simulation à exporter" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
-                        <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
-                        <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="8,0,0,0"/>
-                        <Button x:Name="ExportButton" Content="_Exporter les séries enregistrées…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
-                    </WrapPanel>
-                </StackPanel>
-                </Border>
-                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
-                        BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="02  ·  Analyse temporelle" FontSize="16"
-                                   FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Foreground="{DynamicResource MkrMuted}"/>
-                        <WrapPanel Margin="0,0,0,10">
-                            <Button x:Name="ResetZoomButton" Content="_Réinitialiser le zoom"
-                                    Click="ResetZoom"
-                                    ToolTip="Revenir à toute la durée de la simulation" Margin="0,0,12,0"/>
-                            <TextBlock x:Name="ZoomStatus" Text="Horizon complet"
-                                       Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"/>
-                        </WrapPanel>
-                        <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
-                                Background="{DynamicResource MkrCanvas}" CornerRadius="4"
-                                Padding="10,8" Margin="0,0,0,10">
-                            <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré."
-                                       Foreground="{DynamicResource MkrText}" TextWrapping="Wrap"
-                                       AutomationProperties.LiveSetting="Polite"/>
-                        </Border>
-                        <local:SignalChart x:Name="Chart" Height="700"
-                                AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
-                                AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                        <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
-                                   Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,8,0,0"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-                <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="03  ·  Indicateurs de comparaison" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                        <TextBlock x:Name="Report" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-                <Border x:Name="RobustnessPanel" Visibility="Collapsed"
-                        Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}"
-                        BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock Text="04  ·  Sensibilité des réglages PI"
-                                   FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,10"
-                                   Foreground="{DynamicResource MkrMuted}"/>
+                        </StackPanel>
+                    </Expander>
+                    <Expander x:Name="RobustnessPanel" Style="{StaticResource MkrPanel}" Header="Sensibilité des réglages PI" Visibility="Collapsed">
+                        <StackPanel Margin="10,8">
+                            <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MkrMuted}"/>
                         <DataGrid x:Name="RobustnessGrid" HeadersVisibility="Column"
                                   AutoGenerateColumns="False" IsReadOnly="True"
-                                  CanUserAddRows="False" MaxHeight="340"
+                                  CanUserAddRows="False" MaxHeight="300"
                                   AutomationProperties.Name="Résultats de sensibilité IMC et SIMC">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Cas" Binding="{Binding Name}" Width="170"/>
@@ -133,9 +131,11 @@
                         <TextBlock Text="Étude exploratoire, un paramètre varie à la fois. Les coefficients PI restent fixes. Ne constitue pas une preuve de stabilité ni un intervalle de confiance."
                                    FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
                                    Margin="0,10,0,0"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
-    </DockPanel>
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+        <TextBlock Grid.Row="2" x:Name="Message" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
+    </Grid>
 </UserControl>
