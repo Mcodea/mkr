@@ -196,3 +196,98 @@ class IndependentOracle(unittest.TestCase):
         _, other = self.responses(gain=2.0, tau=4.0, h=0.05, delay_steps=5, kp=0.5, ti=4.0, td=0.8, tf=0.15, n=300, setpoint=1.0, disturbance=0.0, event=0)
         self.assertGreater(float(np.max(np.abs(mine - other))), 1e-4)
 
+
+class NonlinearReference(unittest.TestCase):
+    """Second implementation of the filtered PID with saturation, rate limit and conditional integration (written from the documented
+    convention), with the process advanced by scipy's exact zero-order-hold discretisation (first order, or the two-lag cascade).
+    Delays are whole sample counts here (audit F-10). The convention is shared with the simulator; this checks its implementation."""
+
+    @staticmethod
+    def reference(gain, slow, fast, h, delay_steps, kp, ti, td, tf, n, setpoint, lower, upper, rate, event, disturbance, noise):
+        import numpy as np
+        from scipy import signal
+        if fast is None:
+            system = (np.array([[-1.0 / slow]]), np.array([[gain / slow]]), np.array([[1.0]]), np.array([[0.0]]))
+        else:
+            system = (np.array([[-1.0 / slow, 0.0], [1.0 / fast, -1.0 / fast]]), np.array([[gain / slow], [0.0]]), np.array([[0.0, 1.0]]), np.array([[0.0]]))
+        a, b, c, _, _ = signal.cont2discrete(system, h, method="zoh")
+        state = np.zeros(a.shape[0])
+        decay, change = (tf / (tf + h), kp * td / (tf + h)) if td > 0 else (0.0, 0.0)
+        integral = derivative = previous_measured = previous_mv = 0.0
+        pv, mv, history = [], [], []
+        for k in range(n + 1):
+            y = float((c @ state)[0])
+            pv.append(y)
+            if k == n:
+                break
+            measured = y + (noise[k] if noise is not None else 0.0)
+            error = setpoint - measured
+            derivative = decay * derivative - change * (measured - previous_measured)
+            previous_measured = measured
+            raw = kp * error + integral + derivative
+            low, high = max(lower, previous_mv - rate * h), min(upper, previous_mv + rate * h)
+            out = min(max(min(max(raw, lower), upper), low), high)
+            increment = kp * h / ti * error
+            if not ((raw >= high and increment > 0) or (raw <= low and increment < 0)):
+                integral += increment
+            previous_mv = out
+            mv.append(out)
+            history.append(out + (disturbance if k >= event else 0.0))
+            applied = history[k - delay_steps] if k - delay_steps >= 0 else 0.0
+            state = a @ state + (b[:, 0] * applied)
+        return np.array(pv), np.array(mv)
+
+    def check(self, gain, slow, fast, h, delay_steps, controller, n, setpoint, lower, upper, rate, event, disturbance, noise=None):
+        import math
+        import numpy as np
+        request = case(gain=gain, tauSeconds=slow, delaySeconds=delay_steps * h, controller=controller, sampleSeconds=h, durationSeconds=n * h,
+                       setpoint=setpoint, minimumMv=lower, maximumMv=upper, disturbance=disturbance, disturbanceAtSeconds=event * h)
+        if fast is not None:
+            request["secondTauSeconds"] = fast
+        if rate != math.inf:
+            request["maximumMvRate"] = rate
+        if noise is not None:
+            request["measurementNoise"] = list(noise)
+        result = calculate(request)
+        pv, mv = self.reference(gain, slow, fast, h, delay_steps, controller["kp"], controller["tiSeconds"], controller["tdSeconds"],
+                                controller["filterSeconds"], n, setpoint, lower, upper, rate, event, disturbance, noise)
+        got_pv = np.array([p["pv"] for p in result["points"]])
+        got_mv = np.array([p["mv"] for p in result["points"][:-1]])
+        self.assertLess(float(np.max(np.abs(got_pv - pv))), 1e-8)
+        self.assertLess(float(np.max(np.abs(got_mv - mv))), 1e-10)
+        return result, mv
+
+    def test_scenarios_with_saturation_rate_limit_noise_and_a_second_lag(self):
+        import math
+        controller = dict(kp=1.6, tiSeconds=5.0, tdSeconds=0.8, filterSeconds=0.2)
+        noise = [0.02 * math.sin(0.7 * k) for k in range(300)]
+        scenarios = (
+            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay_steps=5, controller=controller, n=300, setpoint=3.0, lower=-1.0, upper=2.0, rate=math.inf, event=200, disturbance=0.0),
+            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay_steps=5, controller=controller, n=300, setpoint=1.0, lower=-1.5, upper=2.5, rate=0.6, event=150, disturbance=-0.7),
+            dict(gain=2.0, slow=6.0, fast=2.0, h=0.2, delay_steps=4, controller=controller, n=300, setpoint=2.0, lower=-1.0, upper=1.5, rate=0.8, event=100, disturbance=0.5),
+            dict(gain=-1.5, slow=8.0, fast=None, h=0.25, delay_steps=3, controller=dict(kp=-1.2, tiSeconds=6.0, tdSeconds=1.0, filterSeconds=0.25), n=300,
+                 setpoint=-2.0, lower=-2.0, upper=2.0, rate=0.5, event=120, disturbance=0.4, noise=noise),
+        )
+        for scenario in scenarios:
+            with self.subTest(scenario={k: v for k, v in scenario.items() if k != "noise"}):
+                result, _ = self.check(**scenario)
+                self.assertGreater(result["saturationSeconds"] + result["rateLimitedSeconds"], 0)
+
+    def test_random_scenarios_keep_the_actuator_invariants(self):
+        import math
+        import random
+        rng = random.Random(11)
+        for _ in range(30):
+            gain = rng.choice([-1, 1]) * rng.uniform(0.3, 4)
+            h = rng.choice([0.1, 0.25, 0.5])
+            controller = dict(kp=math.copysign(rng.uniform(0.05, 1.2) / abs(gain), gain), tiSeconds=rng.uniform(2, 40), tdSeconds=rng.uniform(0, 4))
+            controller["filterSeconds"] = controller["tdSeconds"] / rng.uniform(3, 20) if controller["tdSeconds"] > 0 else 0.0
+            lower, upper = -rng.uniform(0.2, 3), rng.uniform(0.2, 3)
+            rate = rng.choice([math.inf, rng.uniform(0.05, 1.0)])
+            _, mv = self.check(gain=gain, slow=rng.uniform(4, 40), fast=None, h=h, delay_steps=rng.randint(0, 12), controller=controller, n=300,
+                               setpoint=rng.uniform(-5, 5), lower=lower, upper=upper, rate=rate, event=rng.randint(0, 100), disturbance=rng.uniform(-1, 1))
+            self.assertLessEqual(float(mv.max()), upper + 1e-12)
+            self.assertGreaterEqual(float(mv.min()), lower - 1e-12)
+            if rate != math.inf:
+                self.assertLessEqual(max(abs(b - a) for a, b in zip([0.0] + list(mv[:-1]), mv)), rate * h + 1e-12)
+
