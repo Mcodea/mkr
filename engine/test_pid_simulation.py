@@ -200,18 +200,38 @@ class IndependentOracle(unittest.TestCase):
 class NonlinearReference(unittest.TestCase):
     """Second implementation of the filtered PID with saturation, rate limit and conditional integration (written from the documented
     convention), with the process advanced by scipy's exact zero-order-hold discretisation (first order, or the two-lag cascade).
-    Delays are whole sample counts here (audit F-10). The convention is shared with the simulator; this checks its implementation."""
+    Delays are arbitrary (fractional in samples): the reference splits each sample interval where the delayed input changes and applies the exact zero-order-hold step to each piece (audit F-10). The convention is shared with the simulator; this checks its implementation."""
 
     @staticmethod
-    def reference(gain, slow, fast, h, delay_steps, kp, ti, td, tf, n, setpoint, lower, upper, rate, event, disturbance, noise):
+    def reference(gain, slow, fast, h, delay, kp, ti, td, tf, n, setpoint, lower, upper, rate, event, disturbance, noise):
+        import math
         import numpy as np
         from scipy import signal
         if fast is None:
             system = (np.array([[-1.0 / slow]]), np.array([[gain / slow]]), np.array([[1.0]]), np.array([[0.0]]))
         else:
             system = (np.array([[-1.0 / slow, 0.0], [1.0 / fast, -1.0 / fast]]), np.array([[gain / slow], [0.0]]), np.array([[0.0, 1.0]]), np.array([[0.0]]))
-        a, b, c, _, _ = signal.cont2discrete(system, h, method="zoh")
-        state = np.zeros(a.shape[0])
+        c = system[2]
+        state = np.zeros(system[0].shape[0])
+        cache = {}
+
+        def advance_exact(state, k, history):
+            """Exact response over [k h, (k + 1) h): the input applied at time t is u[floor((t - delay) / h)] (zero before the first sample);
+            it changes at k h + (delay mod h), so the sample interval is split there and each piece is a zero-order-hold step."""
+            r = delay % h if delay % h > 1e-12 else 0.0
+            pieces = [(0.0, h)] if r == 0.0 else [(0.0, r), (r, h)]
+            for start, stop in pieces:
+                middle = k * h + (start + stop) / 2
+                j = math.floor((middle - delay) / h + 1e-9)
+                u = history[j] if 0 <= j < len(history) else 0.0
+                duration = stop - start
+                if duration not in cache:
+                    ad, bd, _, _, _ = signal.cont2discrete(system, duration, method="zoh")
+                    cache[duration] = (ad, bd[:, 0])
+                ad, bd = cache[duration]
+                state = ad @ state + bd * u
+            return state
+
         decay, change = (tf / (tf + h), kp * td / (tf + h)) if td > 0 else (0.0, 0.0)
         integral = derivative = previous_measured = previous_mv = 0.0
         pv, mv, history = [], [], []
@@ -233,14 +253,13 @@ class NonlinearReference(unittest.TestCase):
             previous_mv = out
             mv.append(out)
             history.append(out + (disturbance if k >= event else 0.0))
-            applied = history[k - delay_steps] if k - delay_steps >= 0 else 0.0
-            state = a @ state + (b[:, 0] * applied)
+            state = advance_exact(state, k, history)
         return np.array(pv), np.array(mv)
 
-    def check(self, gain, slow, fast, h, delay_steps, controller, n, setpoint, lower, upper, rate, event, disturbance, noise=None):
+    def check(self, gain, slow, fast, h, delay, controller, n, setpoint, lower, upper, rate, event, disturbance, noise=None):
         import math
         import numpy as np
-        request = case(gain=gain, tauSeconds=slow, delaySeconds=delay_steps * h, controller=controller, sampleSeconds=h, durationSeconds=n * h,
+        request = case(gain=gain, tauSeconds=slow, delaySeconds=delay, controller=controller, sampleSeconds=h, durationSeconds=n * h,
                        setpoint=setpoint, minimumMv=lower, maximumMv=upper, disturbance=disturbance, disturbanceAtSeconds=event * h)
         if fast is not None:
             request["secondTauSeconds"] = fast
@@ -249,7 +268,7 @@ class NonlinearReference(unittest.TestCase):
         if noise is not None:
             request["measurementNoise"] = list(noise)
         result = calculate(request)
-        pv, mv = self.reference(gain, slow, fast, h, delay_steps, controller["kp"], controller["tiSeconds"], controller["tdSeconds"],
+        pv, mv = self.reference(gain, slow, fast, h, delay, controller["kp"], controller["tiSeconds"], controller["tdSeconds"],
                                 controller["filterSeconds"], n, setpoint, lower, upper, rate, event, disturbance, noise)
         got_pv = np.array([p["pv"] for p in result["points"]])
         got_mv = np.array([p["mv"] for p in result["points"][:-1]])
@@ -262,10 +281,10 @@ class NonlinearReference(unittest.TestCase):
         controller = dict(kp=1.6, tiSeconds=5.0, tdSeconds=0.8, filterSeconds=0.2)
         noise = [0.02 * math.sin(0.7 * k) for k in range(300)]
         scenarios = (
-            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay_steps=5, controller=controller, n=300, setpoint=3.0, lower=-1.0, upper=2.0, rate=math.inf, event=200, disturbance=0.0),
-            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay_steps=5, controller=controller, n=300, setpoint=1.0, lower=-1.5, upper=2.5, rate=0.6, event=150, disturbance=-0.7),
-            dict(gain=2.0, slow=6.0, fast=2.0, h=0.2, delay_steps=4, controller=controller, n=300, setpoint=2.0, lower=-1.0, upper=1.5, rate=0.8, event=100, disturbance=0.5),
-            dict(gain=-1.5, slow=8.0, fast=None, h=0.25, delay_steps=3, controller=dict(kp=-1.2, tiSeconds=6.0, tdSeconds=1.0, filterSeconds=0.25), n=300,
+            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay=1.0, controller=controller, n=300, setpoint=3.0, lower=-1.0, upper=2.0, rate=math.inf, event=200, disturbance=0.0),
+            dict(gain=2.0, slow=6.0, fast=None, h=0.2, delay=1.07, controller=controller, n=300, setpoint=1.0, lower=-1.5, upper=2.5, rate=0.6, event=150, disturbance=-0.7),
+            dict(gain=2.0, slow=6.0, fast=2.0, h=0.2, delay=0.93, controller=controller, n=300, setpoint=2.0, lower=-1.0, upper=1.5, rate=0.8, event=100, disturbance=0.5),
+            dict(gain=-1.5, slow=8.0, fast=None, h=0.25, delay=0.625, controller=dict(kp=-1.2, tiSeconds=6.0, tdSeconds=1.0, filterSeconds=0.25), n=300,
                  setpoint=-2.0, lower=-2.0, upper=2.0, rate=0.5, event=120, disturbance=0.4, noise=noise),
         )
         for scenario in scenarios:
@@ -284,7 +303,7 @@ class NonlinearReference(unittest.TestCase):
             controller["filterSeconds"] = controller["tdSeconds"] / rng.uniform(3, 20) if controller["tdSeconds"] > 0 else 0.0
             lower, upper = -rng.uniform(0.2, 3), rng.uniform(0.2, 3)
             rate = rng.choice([math.inf, rng.uniform(0.05, 1.0)])
-            _, mv = self.check(gain=gain, slow=rng.uniform(4, 40), fast=None, h=h, delay_steps=rng.randint(0, 12), controller=controller, n=300,
+            _, mv = self.check(gain=gain, slow=rng.uniform(4, 40), fast=None, h=h, delay=rng.uniform(0, 12) * h, controller=controller, n=300,
                                setpoint=rng.uniform(-5, 5), lower=lower, upper=upper, rate=rate, event=rng.randint(0, 100), disturbance=rng.uniform(-1, 1))
             self.assertLessEqual(float(mv.max()), upper + 1e-12)
             self.assertGreaterEqual(float(mv.min()), lower - 1e-12)
