@@ -127,6 +127,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
             case 8:
             case 9:
             case 10:
+            case 11:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -135,6 +136,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         transaction.Commit();
         MigrateToVersion9(path);
         MigrateToVersion10(path);
+        MigrateToVersion11(path);
     }
 
     /// <summary>
@@ -221,6 +223,74 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
             """;
         command.ExecuteNonQuery();
         transaction.Commit();
+    }
+
+    /// <summary>
+    /// Migration 11 (ADR 0007): additive table of saved ARX / output-error runs, same independence rule as the identification studies.
+    /// No existing table is modified. Rollback: restore the project database backup; an older MKR refuses user_version 11.
+    /// </summary>
+    private static void MigrateToVersion11(string path)
+    {
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = true }.ToString();
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version";
+        if ((long)command.ExecuteScalar()! != 10)
+            return;
+        command.CommandText = """
+            CREATE TABLE arx_studies (
+                id TEXT PRIMARY KEY NOT NULL,
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                training_id TEXT NOT NULL REFERENCES csv_imports(id),
+                validation_id TEXT NOT NULL REFERENCES csv_imports(id),
+                created_at TEXT NOT NULL,
+                metadata TEXT NOT NULL,
+                CHECK(training_id <> validation_id OR (
+                    json_extract(metadata, '$.TrainingWindow') IS NOT NULL
+                    AND json_extract(metadata, '$.ValidationWindow') IS NOT NULL
+                    AND json_extract(metadata, '$.TrainingWindow') <> json_extract(metadata, '$.ValidationWindow')))
+            );
+            CREATE INDEX arx_studies_project ON arx_studies(project_id, created_at, id);
+            PRAGMA user_version = 11;
+            """;
+        command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
+    public IReadOnlyList<ArxStudy> ListArxStudies(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT metadata FROM arx_studies WHERE project_id = $project ORDER BY created_at DESC, id";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        using var reader = command.ExecuteReader();
+        var studies = new List<ArxStudy>();
+        while (reader.Read())
+            studies.Add(JsonSerializer.Deserialize<ArxStudy>(reader.GetString(0)) ?? throw new InvalidDataException("Étude ARX illisible."));
+        return studies;
+    }
+
+    public void SaveArxStudy(Guid projectId, ArxStudy study)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO arx_studies (id, project_id, training_id, validation_id, created_at, metadata)
+            SELECT $id, $project, $training, $validation, $created, $metadata
+            WHERE EXISTS (SELECT 1 FROM csv_imports WHERE id = $training AND project_id = $project)
+              AND EXISTS (SELECT 1 FROM csv_imports WHERE id = $validation AND project_id = $project)
+            """;
+        command.Parameters.AddWithValue("$id", study.Id.ToString());
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$training", study.TrainingId.ToString());
+        command.Parameters.AddWithValue("$validation", study.ValidationId.ToString());
+        command.Parameters.AddWithValue("$created", study.CalculatedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(study));
+        if (command.ExecuteNonQuery() != 1)
+            throw new InvalidDataException("Les deux imports doivent appartenir au projet.");
     }
 
     public AuditEntry Record(Guid projectId, string actor, string action, string subject, string detail)

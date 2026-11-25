@@ -136,13 +136,23 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         return engine.CompareAsync(train, check, mvTolerance, pvTolerance, maximumRmse, maximumLag, token);
     }
 
-    public Task<ArxIdentification> IdentifyArxAsync(ImportSummary training, StepColumns trainColumns,
+    /// <summary>Runs the ARX / OE identification and saves the run, refusals included (ADR 0007). The saved study is never a tuning.</summary>
+    public async Task<ArxStudy> IdentifyArxAsync(ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,
         double mvTolerance, double maximumRmse, CancellationToken token, StepWindow? trainingWindow, StepWindow? validationWindow)
     {
         var (train, check) = ReadTrials(training, trainColumns, validation, valColumns, mvUnit, pvUnit, trainingWindow, validationWindow);
-        return engine.IdentifyArxAsync(train, check, mvTolerance, maximumRmse, token);
+        var result = await engine.IdentifyArxAsync(train, check, mvTolerance, maximumRmse, token);
+        token.ThrowIfCancellationRequested();
+        var study = new ArxStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns, mvUnit, pvUnit, mvTolerance, maximumRmse,
+            DateTimeOffset.UtcNow, result.AlgorithmVersion, result, trainingWindow, validationWindow);
+        studies.SaveArxStudy(project.Id, study);
+        Audit("arx.saved", Short(study.Id),
+            $"ARX/OE sur {training.FileName} / {validation.FileName} : " + (study.IsAccepted ? "accepté" : "REFUSÉ (" + string.Join(", ", result.Reasons ?? []) + ")"));
+        return study;
     }
+
+    public IReadOnlyList<ArxStudy> ArxStudies() => studies.ListArxStudies(project.Id);
 
     public async Task<IdentificationStudy> CalculateAsync(ModelFamily family, ImportSummary training, StepColumns trainColumns,
         ImportSummary validation, StepColumns valColumns, string mvUnit, string pvUnit,

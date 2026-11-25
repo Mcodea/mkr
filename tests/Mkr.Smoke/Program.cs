@@ -162,6 +162,7 @@ try
             ALTER TABLE projects DROP COLUMN loop_tag;
             ALTER TABLE projects DROP COLUMN controlled_quantity;
             ALTER TABLE projects DROP COLUMN operating_point;
+            DROP TABLE arx_studies;
             DROP TABLE audit_events;
             ALTER TABLE projects DROP COLUMN control_objective;
             DROP TABLE study_reviews;
@@ -577,7 +578,7 @@ try
             verify.Open();
             using var query = verify.CreateCommand();
             query.CommandText = "PRAGMA user_version";
-            Require((long)query.ExecuteScalar()! == 10, "The database was migrated to version 10 (study table of version 9, audit log of version 10).");
+            Require((long)query.ExecuteScalar()! == 11, "The database was migrated to version 11 (study table of version 9, audit log of version 10, ARX studies of version 11).");
             query.CommandText = "PRAGMA foreign_key_check";
             using var violations = query.ExecuteReader();
             Require(!violations.Read(), "The migrated database has no orphan reference.");
@@ -585,6 +586,19 @@ try
         // Defense in depth: even bypassing the application rule, the database refuses one source with identical or missing ranges.
         Throws<SqliteException>(() => restored.SaveStudy(project.Id, fromHistory with { Id = Guid.NewGuid(), ValidationWindow = fromHistory.TrainingWindow }));
         Throws<SqliteException>(() => restored.SaveStudy(project.Id, fromHistory with { Id = Guid.NewGuid(), TrainingWindow = null }));
+        // ARX studies (migration 11, ADR 0007): round trip, refusals kept, same independence rule enforced by the database itself.
+        var arxResult = new ArxIdentification("1.0.0", 1.0, "refused", null,
+            [new ArxCandidate(1, 1, 2, 3, "OE", 0.4, 0.1, ["validation_residuals"], false)], ["validation_residuals"], ["Prévoir un essai de validation plus informatif."]);
+        var arxStudy = new ArxStudy(Guid.NewGuid(), fromHistory.TrainingId, fromHistory.ValidationId, columns, columns, "%", "bar", 0.01, 0.1,
+            DateTimeOffset.UtcNow, "1.0.0", arxResult, fromHistory.TrainingWindow, fromHistory.ValidationWindow);
+        restored.SaveArxStudy(project.Id, arxStudy);
+        var arxBack = restored.ListArxStudies(project.Id).Single(item => item.Id == arxStudy.Id);
+        Require(!arxBack.IsAccepted && arxBack.Result.Reasons is { Length: 1 } && arxBack.Result.Candidates[0].Estimator == "OE" &&
+                arxBack.TrainingWindow == arxStudy.TrainingWindow && arxBack.MaximumRmse == 0.1, "A refused ARX study is saved and read back whole.");
+        Throws<SqliteException>(() => restored.SaveArxStudy(project.Id, arxStudy with { Id = Guid.NewGuid(), ValidationWindow = arxStudy.TrainingWindow }));
+        Throws<SqliteException>(() => restored.SaveArxStudy(project.Id, arxStudy with { Id = Guid.NewGuid(), TrainingWindow = null }));
+        Throws<InvalidDataException>(() => restored.SaveArxStudy(Guid.NewGuid(), arxStudy with { Id = Guid.NewGuid() }));
+        Require(restored.ListArxStudies(project.Id).Count == 1, "Rejected ARX studies leave no trace.");
         Throws<CsvInputException>(() => gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns, "%", "bar",
             0.01, 0.01, new ComparisonCriteria(0.01, 0.5), default).GetAwaiter().GetResult());
         var overlapping = pair.FirstWindow with { RowEnd = pair.SecondWindow.RowStart + 3 };

@@ -98,12 +98,20 @@ public sealed record ArxIdentification(string AlgorithmVersion, double SamplePer
         if (chosen.FirstOrder is { } f)
         {
             text.AppendLine($"Équivalent du premier ordre (maintien d'ordre zéro) : K = {f.Gain:G5} {pvUnit}/{mvUnit} (± {f.StandardErrors.GetValueOrDefault("gain"):G2}) · τ = {f.TauSeconds:G5} s (± {f.StandardErrors.GetValueOrDefault("tauSeconds"):G2}) · θ = {f.DelaySeconds:G5} s (multiple du pas).");
-            text.AppendLine("Ces valeurs peuvent servir de point de départ à un réglage guidé ; elles ne sont pas enregistrées comme étude et le réglage reste théorique.");
+            text.AppendLine("La course est enregistrée comme étude ARX (ADR 0007) ; elle n'alimente pas encore le réglage guidé, qui demande une étude validée.");
         }
         else text.AppendLine("Second ordre : pas d'équivalent du premier ordre ; le réglage guidé de ce modèle n'est pas encore branché.");
         text.AppendLine("Statut : calculé et vérifié sur données synthétiques ; non qualifié sur procédé réel.");
         return text.ToString();
     }
+}
+
+/// <summary>A saved ARX / OE run (ADR 0007): inputs, engine version and the full decision, refusals included. Never a tuning.</summary>
+public sealed record ArxStudy(Guid Id, Guid TrainingId, Guid ValidationId, StepColumns TrainingColumns, StepColumns ValidationColumns, string MvUnit, string PvUnit,
+    double MvTolerance, double MaximumRmse, DateTimeOffset CalculatedAt, string EngineVersion, ArxIdentification Result,
+    StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null)
+{
+    public bool IsAccepted => Result.Decision == "accepted";
 }
 
 /// <summary>Holdout F-test of the validation mean square errors, FOPDT over SOPDT (audit NC-04).</summary>
@@ -206,4 +214,6 @@ public interface IIdentificationStore
 {
     IReadOnlyList<IdentificationStudy> ListStudies(Guid projectId);
     void SaveStudy(Guid projectId, IdentificationStudy study);
+    IReadOnlyList<ArxStudy> ListArxStudies(Guid projectId);
+    void SaveArxStudy(Guid projectId, ArxStudy study);
 }

@@ -1,6 +1,6 @@
 # Identification ARX / sortie-erreur avec excitation quelconque
 
-`engine/arx.py`, opération `identify_arx`. Complète l'identification par échelons (FOPDT, SOPDT, intégrateur) : elle accepte des essais **sans régime permanent initial** et une excitation **quelconque** (échelons, impulsions, séquence pseudo-aléatoire). **Statut : implémentée, vérifiée sur données synthétiques ; pas encore exposée dans l'interface.**
+`engine/arx.py`, opération `identify_arx`. Complète l'identification par échelons (FOPDT, SOPDT, intégrateur) : elle accepte des essais **sans régime permanent initial** et une excitation **quelconque** (échelons, impulsions, séquence pseudo-aléatoire). **Statut : implémentée, vérifiée sur données synthétiques ; exposée dans l'écran d'identification (bouton « Identifier par ARX / OE ») ; chaque exécution, refus compris, est enregistrée comme étude ARX ([ADR 0007](../adr/0007-etude-arx-enregistree.md), migration SQLite 11). Elle n'alimente pas encore le réglage guidé.**
 
 ## Modèle et méthodes (Ljung, *System Identification: Theory for the User*, 2ᵉ éd., 1999)
 Équation aux différences à pas d'échantillonnage régulier Ts :

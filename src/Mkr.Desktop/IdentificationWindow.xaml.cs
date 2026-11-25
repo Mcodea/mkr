@@ -218,10 +218,10 @@ public partial class IdentificationWindow : Window
         var token = _lifetime.Token;
         try
         {
-            var result = await _workspace.IdentifyArxAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
+            var saved = await _workspace.IdentifyArxAsync(training, trainColumns, validation, valColumns, mvUnit, pvUnit,
                 mvTolerance, rmse, token, _trainingSelection?.Window, _validationSelection?.Window);
             token.ThrowIfCancellationRequested();
-            Message.Text = result.Describe(mvUnit, pvUnit);
+            Message.Text = saved.Result.Describe(mvUnit, pvUnit) + $"Étude ARX enregistrée ({saved.Id.ToString()[..8]}), {(saved.IsAccepted ? "acceptée" : "refusée : aucun réglage ne peut en être déduit")}.";
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
