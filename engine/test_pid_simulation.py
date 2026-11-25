@@ -4,6 +4,7 @@ import json
 from mkr_engine import respond
 
 from pid_simulation import calculate
+from test_support_plant import cascade, first_order, stepper
 from pi_simulation import calculate as pi_calculate
 from test_pi_simulation import payload as pi_payload
 
@@ -207,36 +208,13 @@ class NonlinearReference(unittest.TestCase):
         import math
         import numpy as np
         from scipy import signal
-        if fast is None:
-            system = (np.array([[-1.0 / slow]]), np.array([[gain / slow]]), np.array([[1.0]]), np.array([[0.0]]))
-        else:
-            system = (np.array([[-1.0 / slow, 0.0], [1.0 / fast, -1.0 / fast]]), np.array([[gain / slow], [0.0]]), np.array([[0.0, 1.0]]), np.array([[0.0]]))
-        c = system[2]
-        state = np.zeros(system[0].shape[0])
-        cache = {}
-
-        def advance_exact(state, k, history):
-            """Exact response over [k h, (k + 1) h): the input applied at time t is u[floor((t - delay) / h)] (zero before the first sample);
-            it changes at k h + (delay mod h), so the sample interval is split there and each piece is a zero-order-hold step."""
-            r = delay % h if delay % h > 1e-12 else 0.0
-            pieces = [(0.0, h)] if r == 0.0 else [(0.0, r), (r, h)]
-            for start, stop in pieces:
-                middle = k * h + (start + stop) / 2
-                j = math.floor((middle - delay) / h + 1e-9)
-                u = history[j] if 0 <= j < len(history) else 0.0
-                duration = stop - start
-                if duration not in cache:
-                    ad, bd, _, _, _ = signal.cont2discrete(system, duration, method="zoh")
-                    cache[duration] = (ad, bd[:, 0])
-                ad, bd = cache[duration]
-                state = ad @ state + bd * u
-            return state
-
+        system = first_order(gain, slow) if fast is None else cascade(gain, slow, fast)
+        state, output, advance_exact = stepper(system, h, delay)
         decay, change = (tf / (tf + h), kp * td / (tf + h)) if td > 0 else (0.0, 0.0)
         integral = derivative = previous_measured = previous_mv = 0.0
         pv, mv, history = [], [], []
         for k in range(n + 1):
-            y = float((c @ state)[0])
+            y = output(state)
             pv.append(y)
             if k == n:
                 break
