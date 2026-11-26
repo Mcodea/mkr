@@ -17,7 +17,7 @@ public partial class ReviewWindow : Window
         InitializeComponent();
         _workspace = workspace;
         _runId = runId;
-        Title = $"MKR — Revue de l'étude";
+        Title = $"ORIAS — Revue de l'étude";
         Identity.Text = $"Étude {label} · identité de la session : {CurrentUser.Get().Label}";
         Stage.ItemsSource = Enum.GetValues<ReviewStage>();
         Stage.SelectedItem = ReviewStage.Model;

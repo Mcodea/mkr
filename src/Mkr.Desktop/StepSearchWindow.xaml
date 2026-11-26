@@ -1,11 +1,11 @@
 <Window x:Class="Mkr.Desktop.StepSearchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MKR — Essais détectés" Width="1000" Height="760" MinWidth="720" MinHeight="520"
+        Title="ORIAS — Essais détectés" Width="1000" Height="760" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24,18,24,18">
-            <TextBlock Text="MKR  /  IDENTIFICATION  /  ESSAIS DÉTECTÉS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
+            <TextBlock Text="ORIAS  /  IDENTIFICATION  /  ESSAIS DÉTECTÉS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
             <TextBlock Text="Essais exploitables de l’enregistrement" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
             <TextBlock x:Name="Summary" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
 

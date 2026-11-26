@@ -86,7 +86,7 @@ $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
-    $main = Find $root $name 'MKR — Espace projets'
+    $main = Find $root $name 'ORIAS — Espace projets'
     $grid = Find $main $id 'ProjectList'
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
@@ -111,7 +111,7 @@ try {
         if ($value -ne $entry.Value) { throw "Fiche de boucle incorrecte après réouverture : $($entry.Key)" }
     }
     Press $project 'Préparer les essais sur banc…'
-    $bench = Find $root $name 'MKR — Catalogue des blocs'
+    $bench = Find $root $name 'ORIAS — Catalogue des blocs'
     Fill $bench 'Filter' 'PIDFF'
     $null = Find $bench $name 'Compatibilité à vérifier'
     $context = (Find $bench $id 'LoopContext').Current.Name
@@ -231,7 +231,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     if (!(Find $ident $id 'PiReport').Current.Name.Contains('2130 s')) { throw 'Cible absente du résultat PI enregistré.' }
     # PID_INT and PID_Compact documentary values: nothing is pre-filled, nothing is qualified.
     Press $ident 'Blocs PID_INT et PID_Compact…'
-    $blocks = Find $root $name 'MKR — Valeurs des blocs PID_INT et PID_Compact (non qualifiées)'
+    $blocks = Find $root $name 'ORIAS — Valeurs des blocs PID_INT et PID_Compact (non qualifiées)'
     if ((Find $blocks $id 'Compute').Current.IsEnabled) { throw 'Calcul actif sans bloc choisi.' }
     function Wait-Values($window, $pattern) {
         $until = [DateTime]::UtcNow.AddSeconds(25)
@@ -275,7 +275,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     Select-Option $ident 'ResponseProfile' 'Personnalisée'
     Fill $ident 'ResponseTarget' '3000'
     Press $ident 'Simuler le réglage enregistré…'
-    $savedSimulation = Find $root $name 'MKR — Simulation PI'
+    $savedSimulation = Find $root $name 'ORIAS — Simulation PI'
     $units = (Find $savedSimulation $id 'Units').Current.Name
     if (!$units.Contains('2130 s') -or $units.Contains('3000 s')) {
         throw "La simulation doit reprendre le réglage enregistré. $units"
@@ -333,7 +333,7 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     $option.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     $studies.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse()
     Press $ident 'Simuler le réglage enregistré…'
-    $sim = Find $root $name 'MKR — Simulation PI'
+    $sim = Find $root $name 'ORIAS — Simulation PI'
     foreach ($entry in @{Sample='1';Duration='10';Setpoint='1';Lower='-2';Upper='2';Disturbance='0';DisturbanceAt='0';Rate='';ManualMv='9';SwitchTime='4'}.GetEnumerator()) {
         Fill $sim $entry.Key $entry.Value
     }

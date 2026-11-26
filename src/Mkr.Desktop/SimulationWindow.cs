@@ -8,7 +8,7 @@ internal sealed class SimulationWindow : Window
 {
     internal SimulationWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
-        Title = "MKR — Simulation PI";
+        Title = "ORIAS — Simulation PI";
         Width = 1140; Height = 850; MinWidth = 760; MinHeight = 580;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var view = new SimulationView(workspace, model, tuning);

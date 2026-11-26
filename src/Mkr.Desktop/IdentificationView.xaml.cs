@@ -650,7 +650,7 @@ public partial class IdentificationView : UserControl, IStepView
                     ? conversion.Describe(label, model.MvUnit, model.PvUnit)
                     : $"{label} : {result.RefusalText}");
             }
-            new BlockValuesWindow("MKR — Valeurs du bloc PIDFF (non qualifiées)", string.Join("\n──────────\n\n", sections)) { Owner = Window.GetWindow(this) }.ShowDialog();
+            new BlockValuesWindow("ORIAS — Valeurs du bloc PIDFF (non qualifiées)", string.Join("\n──────────\n\n", sections)) { Owner = Window.GetWindow(this) }.ShowDialog();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -692,7 +692,7 @@ public partial class IdentificationView : UserControl, IStepView
                 mvTolerance, pvTolerance, _validationSelection?.Window, token);
             token.ThrowIfCancellationRequested();
             Message.Text = "Contrôle de dérive terminé.";
-            MessageBox.Show(Window.GetWindow(this), report.Describe(MvUnit.Text.Trim(), PvUnit.Text.Trim()), "MKR — Contrôle de dérive du modèle");
+            MessageBox.Show(Window.GetWindow(this), report.Describe(MvUnit.Text.Trim(), PvUnit.Text.Trim()), "ORIAS — Contrôle de dérive du modèle");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }

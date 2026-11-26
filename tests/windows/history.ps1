@@ -85,7 +85,7 @@ $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
-    $main = Find $root $name 'MKR — Espace projets'
+    $main = Find $root $name 'ORIAS — Espace projets'
     $grid = Find $main $id 'ProjectList'
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
@@ -110,7 +110,7 @@ try {
     $null = Wait-Text $ident 'Message' '*plages distinctes du même enregistrement*'
 
     Press $ident 'Rechercher les essais exploitables dans cet enregistrement…'
-    $search = Find $root $name 'MKR — Essais détectés'
+    $search = Find $root $name 'ORIAS — Essais détectés'
     $summary = Wait-Text $search 'Summary' '*2 échelon(s) exploitable(s)*'
     $pairs = Find $search $id 'Pairs'
     $pair = Find $pairs $type ([System.Windows.Automation.ControlType]::DataItem)

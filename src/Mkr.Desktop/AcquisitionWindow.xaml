@@ -1,14 +1,14 @@
 <Window x:Class="Mkr.Desktop.AcquisitionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MKR — Acquisition en lecture seule" Width="920" Height="820" MinWidth="640" MinHeight="520"
+        Title="ORIAS — Acquisition en lecture seule" Width="920" Height="820" MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,18,24,18">
-      <TextBlock Text="MKR  /  DONNÉES  /  ACQUISITION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
+      <TextBlock Text="ORIAS  /  DONNÉES  /  ACQUISITION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
       <TextBlock Text="Acquisition sur banc" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
       <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
-                 Text="Lecture seule : MKR n’émet que des requêtes de lecture (Modbus 03/04, S7 « read var »). Aucune écriture, aucun forçage, aucune commande. Utilisez uniquement un banc autorisé."/>
+                 Text="Lecture seule : ORIAS n’émet que des requêtes de lecture (Modbus 03/04, S7 « read var »). Aucune écriture, aucun forçage, aucune commande. Utilisez uniquement un banc autorisé."/>
 
       <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,14,0,10">
         <StackPanel x:Name="Settings">

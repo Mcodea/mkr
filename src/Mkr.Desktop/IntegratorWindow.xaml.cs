@@ -92,7 +92,7 @@ public partial class IntegratorWindow : Window
             var text = result.Conversion is { } conversion
                 ? conversion.Describe("SIMC intégrateur", _model.MvUnit, _model.PvUnit)
                 : "Conversion refusée : " + result.RefusalText;
-            new BlockValuesWindow("MKR — Valeurs du bloc PIDFF (non qualifiées)", text) { Owner = this }.ShowDialog();
+            new BlockValuesWindow("ORIAS — Valeurs du bloc PIDFF (non qualifiées)", text) { Owner = this }.ShowDialog();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }

@@ -21,7 +21,7 @@ $process = Start-Process -FilePath $exe.Path -PassThru
 try {
     $nameProperty = [System.Windows.Automation.AutomationElement]::NameProperty
     $idProperty = [System.Windows.Automation.AutomationElement]::AutomationIdProperty
-    try { $main = Wait-Element $root $nameProperty 'MKR — Espace projets' }
+    try { $main = Wait-Element $root $nameProperty 'ORIAS — Espace projets' }
     catch {
         # Diagnostic only: say whether the application is still alive and what the runtime reported, instead of a bare « introuvable ».
         Write-Host "##DIAG exited=$($process.HasExited) exitcode=$(if ($process.HasExited) { $process.ExitCode })"
@@ -36,7 +36,7 @@ try {
     }
     $button = Wait-Element $main $nameProperty 'Ouvrir le catalogue des blocs'
     $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    $catalogue = Wait-Element $root $nameProperty 'MKR — Catalogue des blocs'
+    $catalogue = Wait-Element $root $nameProperty 'ORIAS — Catalogue des blocs'
     $filter = Wait-Element $catalogue $idProperty 'Filter'
     $filter.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('PIDFF')
     $list = Wait-Element $catalogue $idProperty 'Blocks'

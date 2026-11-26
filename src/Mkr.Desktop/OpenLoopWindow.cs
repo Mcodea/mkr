@@ -8,7 +8,7 @@ internal sealed class OpenLoopWindow : Window
 {
     internal OpenLoopWindow(IdentificationWorkspace workspace, IdentificationStudy model)
     {
-        Title = "MKR — Simulation en boucle ouverte";
+        Title = "ORIAS — Simulation en boucle ouverte";
         Width = 900; Height = 720; MinWidth = 540; MinHeight = 390;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var view = new OpenLoopView(workspace, model);

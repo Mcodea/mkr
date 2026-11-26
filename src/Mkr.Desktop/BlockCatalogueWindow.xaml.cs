@@ -20,7 +20,7 @@ public partial class BlockCatalogueWindow : Window
         catch (Exception error)
         {
             System.Diagnostics.Trace.TraceError("catalogue.open {0}", error.GetType().Name);
-            MessageBox.Show(owner, "Impossible de lire le catalogue installé.", "MKR",
+            MessageBox.Show(owner, "Impossible de lire le catalogue installé.", "ORIAS",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -67,7 +67,7 @@ public partial class BlockCatalogueWindow : Window
             var evidence = string.Join("\n\n", parameters.Concat(facts));
             var sheet = new List<string>
             {
-                $"MKR — Relevé de banc · {Read("name")}",
+                $"ORIAS — Relevé de banc · {Read("name")}",
                 $"Catalogue : {root.GetProperty("catalogueVersion").GetString()}",
                 $"Constructeur : {Read("manufacturer")} · Logiciel : {Read("software")}",
                 "Statut initial : essai à réaliser",

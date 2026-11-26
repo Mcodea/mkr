@@ -46,8 +46,9 @@ public partial class WindowView : Window
         InitializeComponent();
         ReflectTheme();       // Initialize() ran at startup: reflect the active choice in the menu
         BuildToolbar();
-        var version = typeof(WindowView).Assembly.GetName().Version;
-        VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
+        var (versionNumber, _) = ProductIdentity.VersionOf(typeof(WindowView).Assembly);
+        VersionText.Text = $"{ProductIdentity.CommercialName} {versionNumber} · application Windows";
+        HomeTagline.Text = ProductIdentity.Tagline;
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
         StateChanged += (_, _) => ReflectWindowState();
@@ -176,6 +177,8 @@ public partial class WindowView : Window
     }
 
     private void OpenHelp(object sender, RoutedEventArgs args) => new HelpWindow { Owner = this }.ShowDialog();
+
+    private void OpenAbout(object sender, RoutedEventArgs args) => new AboutWindow { Owner = this }.ShowDialog();
     private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this, _csv is null ? null : _csv.ReadLoopBrief);
 
     // ---------- home ----------
@@ -206,7 +209,7 @@ public partial class WindowView : Window
         HomeView.Visibility = Visibility.Collapsed;
         StudyView.Visibility = Visibility.Visible;
         SetToolbarEnabled(true);
-        Title = $"MKR — {project.Name}";
+        Title = $"ORIAS — {project.Name}";
         LoadStudy();
     }
 
@@ -217,7 +220,7 @@ public partial class WindowView : Window
         SetToolbarEnabled(false);
         NextButton.Visibility = Visibility.Collapsed;
         HomeView.Visibility = Visibility.Visible;
-        Title = "MKR — Espace projets";
+        Title = "ORIAS — Espace projets";
     }
 
     private static string StateGlyph(StepState state) => state switch { StepState.Done => "", StepState.Ready => "", _ => "" };

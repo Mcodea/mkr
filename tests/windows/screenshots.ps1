@@ -161,7 +161,7 @@ function Close-Others($rootElement, $mainWindow) {
                  @($mainWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants, $windowType))
         $mainHandle = $mainWindow.Current.NativeWindowHandle
         # the main window is identified by its handle: in the workspace its title is the project's, not « Espace projets »
-        $others = @($found | Where-Object { $_.Current.Name -like 'MKR — *' -and $_.Current.NativeWindowHandle -ne $mainHandle })
+        $others = @($found | Where-Object { $_.Current.Name -like 'ORIAS — *' -and $_.Current.NativeWindowHandle -ne $mainHandle })
         if ($others.Count -eq 0) { return }
         foreach ($other in $others) {
             try { $other.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch { }
@@ -278,7 +278,7 @@ $start.EnvironmentVariables['MKR_CULTURE'] = 'fr-FR'      # captures show the Fr
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
-    $main = Find $root $name 'MKR — Espace projets'
+    $main = Find $root $name 'ORIAS — Espace projets'
     Capture $main '01-espace-projets'
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
@@ -287,7 +287,7 @@ try {
     $project = $main      # single window: the project's data are the « Données » tab of the workspace
     Capture $project '02-projet'
     Press $project 'Préparer les essais sur banc…'
-    $catalogue = Find $root $name 'MKR — Catalogue des blocs'
+    $catalogue = Find $root $name 'ORIAS — Catalogue des blocs'
     Fill $catalogue 'Filter' 'PIDFF'
     $null = Find $catalogue $name 'Compatibilité à vérifier'
     Capture $catalogue '03-catalogue-blocs'
@@ -304,14 +304,14 @@ try {
         Select-Option $ident 'TrainingSource' '*'
         Start-Sleep -Milliseconds 500
         Press-Retry $ident 'Afficher les courbes brutes (estimation)…'
-        $preview = Find $root $name 'MKR — Prévisualisation des signaux'
+        $preview = Find $root $name 'ORIAS — Prévisualisation des signaux'
         Start-Sleep -Milliseconds 900
         Capture $preview '04b-courbes-sources'
         Close-Window $preview
     }
     Step '05-revue' {
         try { Press $ident "Revue de l'étude…" } catch { }
-        $review = Find $root $name "MKR — Revue de l'étude"
+        $review = Find $root $name "ORIAS — Revue de l'étude"
         Fill $review 'Reason' 'Identification terminée'
         Fill $review 'Evidence' 'essai-7 / essai-8'
         # the click is applied even when UI Automation reports 'Unrecognized error' (the window is busy); the state line is the proof
@@ -324,13 +324,13 @@ try {
         $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
         Select-Option $ident 'StudyList' "*$integratorId"
         Press-Retry $ident 'Régler le procédé intégrateur…'
-        $tuning = Find $root $name "MKR — Réglage d'un procédé intégrateur"
+        $tuning = Find $root $name "ORIAS — Réglage d'un procédé intégrateur"
         Fill $tuning 'ResponseSeconds' '8'
         Press-Retry $tuning 'Calculer'
         $null = Wait-Value $tuning 'Result' '*SIMC_integrating*'
         Capture $tuning '06-reglage-integrateur'
         Press-Retry $tuning 'Valeurs du bloc PIDFF…'
-        $values = Find $root $name 'MKR — Valeurs du bloc PIDFF (non qualifiées)'
+        $values = Find $root $name 'ORIAS — Valeurs du bloc PIDFF (non qualifiées)'
         $null = Wait-Value $values 'Values' '*NON QUALIFIÉ*'
         Capture $values '07-valeurs-bloc-pidff'
         Close-Window $values
@@ -339,7 +339,7 @@ try {
     Step '09-acquisition' {
         Go-Tab $main 2
         Press-Retry $project 'Acquisition automate…'
-        $acq = Find $root $name 'MKR — Acquisition en lecture seule'
+        $acq = Find $root $name 'ORIAS — Acquisition en lecture seule'
         Capture $acq '09-acquisition'
         Close-Window $acq
         Go-Tab $main 4
@@ -351,7 +351,7 @@ try {
         try { Press $ident 'Comparer Lambda et SIMC' } catch { }
         $null = Wait-Name $ident 'Message' 'Réglages théoriques PI enregistrés.' 60      # the engine call can be slow on a loaded runner (one light-theme run missed the default 15 s)
         try { Press $ident 'Simuler le réglage enregistré…' } catch { }   # a button that opens a modal dialog may report a UIA error although it worked
-        $sim = Find $root $name 'MKR — Simulation PI'
+        $sim = Find $root $name 'ORIAS — Simulation PI'
         foreach ($entry in @{Sample='1';Duration='120';Setpoint='1';Lower='-5';Upper='5';Disturbance='0';DisturbanceAt='0';ManualMv='0';SwitchTime='5'}.GetEnumerator()) { Fill $sim $entry.Key $entry.Value }
         try { Press $sim 'Simuler et enregistrer' } catch { }
         $null = Find $sim $name 'Simulation enregistrée.'
@@ -359,7 +359,7 @@ try {
         Capture $sim '11-simulation'
         Step '12-prototype-pid' {
             try { Press $sim 'Essai PID manuel…' } catch { }
-            $proto = Find $root $name 'MKR — Laboratoire PID hors ligne'
+            $proto = Find $root $name 'ORIAS — Laboratoire PID hors ligne'
             Press-Retry $proto 'Comparer PID / PI'
             Start-Sleep -Milliseconds 2500
             Capture $proto '12-prototype-pid'
@@ -369,7 +369,7 @@ try {
     }
     Step '13-boucle-ouverte' {
         Press-Retry $ident 'Simuler en boucle ouverte…'
-        $open = Find $root $name 'MKR — Simulation en boucle ouverte'
+        $open = Find $root $name 'ORIAS — Simulation en boucle ouverte'
         foreach ($entry in @{Sample='1';Duration='100';StepAt='0';StepMv='2';Lower='-5';Upper='5'}.GetEnumerator()) { Fill $open $entry.Key $entry.Value }
         Press-Retry $open 'Simuler'
         Start-Sleep -Milliseconds 2000
@@ -379,7 +379,7 @@ try {
     Step '08-audit' {
         Go-Tab $main 2
         Press-Retry $project "Journal d'audit…"
-        $audit = Find $root $name "MKR — Journal d'audit"
+        $audit = Find $root $name "ORIAS — Journal d'audit"
         Start-Sleep -Milliseconds 800
         Capture $audit '08-journal-audit'
         Close-Window $audit

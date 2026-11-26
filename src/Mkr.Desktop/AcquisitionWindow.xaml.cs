@@ -320,7 +320,7 @@ public partial class AcquisitionWindow : Window
         if (result.SegmentsSaved > 0 && !_lifetime.IsCancellationRequested)
         {
             MessageBox.Show(this, summary + "\n\nRetrouvez les essais dans « Identification » avec « Rechercher les essais exploitables ».",
-                "MKR — Enregistrement continu terminé", MessageBoxButton.OK, MessageBoxImage.Information);
+                "ORIAS — Enregistrement continu terminé", MessageBoxButton.OK, MessageBoxImage.Information);
             DialogResult = true;
         }
     }

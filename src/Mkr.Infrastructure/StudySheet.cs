@@ -21,11 +21,19 @@ public static class StudySheet
         SimulationExportValidation.CheckSeries(sim);
         if (OperatingSystem.IsWindows()) GlobalFontSettings.UseWindowsFontsUnderWindows = true;
         var doc = new Document();
-        doc.Info.Title = "MKR — Fiche de mise au point";
+        doc.Info.Title = ProductIdentity.Title("Fiche de mise au point");
         doc.Styles["Normal"]!.Font.Name = "Arial";
         var section = doc.AddSection();
         section.PageSetup.PageFormat = PageFormat.A4;
-        section.Headers.Primary.AddParagraph("MKR   /   ÉTUDE DE RÉGULATION");
+        var header = section.Headers.Primary;
+        using (var logo = typeof(StudySheet).Assembly.GetManifestResourceStream("orias-logo-mono.png"))
+        if (logo is not null)
+        {
+            using var copy = new MemoryStream(); logo.CopyTo(copy);
+            var image = header.AddParagraph().AddImage("base64:" + Convert.ToBase64String(copy.ToArray()));
+            image.Height = "0.9cm"; image.LockAspectRatio = true;
+        }
+        header.AddParagraph($"{ProductIdentity.CommercialName}   /   ÉTUDE DE RÉGULATION");
         section.Footers.Primary.AddParagraph($"Simulation {sim.Id}");
         void Heading(string value) => section.AddParagraph(value, "Heading2");
         void Line(string value) => section.AddParagraph(value);

@@ -8,7 +8,7 @@ internal sealed class IdentificationWindow : Window
 {
     internal IdentificationWindow(IdentificationWorkspace workspace)
     {
-        Title = "MKR — Identification";
+        Title = "ORIAS — Identification";
         Width = 960; Height = 780; MinWidth = 620; MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var view = new IdentificationView(workspace);

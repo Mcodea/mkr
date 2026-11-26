@@ -1,7 +1,7 @@
 <Window x:Class="Mkr.Desktop.AuditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MKR — Journal d'audit" Width="1100" Height="720" MinWidth="720" MinHeight="460" WindowStartupLocation="CenterOwner">
+        Title="ORIAS — Journal d'audit" Width="1100" Height="720" MinWidth="720" MinHeight="460" WindowStartupLocation="CenterOwner">
     <Grid Margin="24,18,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

@@ -3,7 +3,15 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Commercial identity: ORIAS. The assembly name stays Mkr.Desktop (technical name MKR) so that installations, data and updates keep working. -->
+    <ApplicationIcon>Assets/orias.ico</ApplicationIcon>
+    <Product>ORIAS</Product>
+    <AssemblyTitle>ORIAS</AssemblyTitle>
+    <Description>Logiciel d’assistance à l’ingénierie de la régulation et de l’asservissement industriel.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets/orias-logo.png;Assets/orias-logo-dark.png;Assets/orias-logo-mono.png;Assets/orias-symbol.png;Assets/orias.ico" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Mkr.Core/Mkr.Core.csproj" />
     <ProjectReference Include="../Mkr.Infrastructure/Mkr.Infrastructure.csproj" />

@@ -32,4 +32,7 @@
     <SolidColorBrush x:Key="MkrSignal2" Color="#C25E00"/>
     <SolidColorBrush x:Key="MkrSignal3" Color="#1B7F4B"/>
     <SolidColorBrush x:Key="MkrSignal4" Color="#A12B6E"/>
+    <!-- ORIAS logo for this theme (transparent PNG; the dark variant has a light wordmark). -->
+    <BitmapImage x:Key="OriasLogo" UriSource="pack://application:,,,/Assets/orias-logo.png" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="OriasSymbol" UriSource="pack://application:,,,/Assets/orias-symbol.png" CacheOption="OnLoad"/>
 </ResourceDictionary>

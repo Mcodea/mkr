@@ -61,7 +61,7 @@ function Wait-Text($parent, $field, $pattern, $seconds = 30) {
 }
 function Open-Acquisition($root, $project) {
     Press $project 'Acquisition automate…'
-    return Find $root $name 'MKR — Acquisition en lecture seule'
+    return Find $root $name 'ORIAS — Acquisition en lecture seule'
 }
 
 $manifest = Join-Path $env:RUNNER_TEMP 'mkr-ui-interop.json'
@@ -92,7 +92,7 @@ try {
     Start-Sleep -Milliseconds 500
     $process = [System.Diagnostics.Process]::Start($start)
     $root = $elementType::RootElement
-    $main = Find $root $name 'MKR — Espace projets'
+    $main = Find $root $name 'ORIAS — Espace projets'
     $grid = Find $main $id 'ProjectList'
     $row = Find $grid $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
@@ -193,7 +193,7 @@ public static extern System.IntPtr GetDlgItem(System.IntPtr dialog, int id);
 public static extern bool PostMessage(System.IntPtr target, uint msg, System.IntPtr wParam, System.IntPtr lParam);
 '@
     Press $window "Démarrer l’enregistrement continu"
-    $dialog = Find $root $name 'MKR — Enregistrement continu terminé'
+    $dialog = Find $root $name 'ORIAS — Enregistrement continu terminé'
     if ($dialog.Current.ProcessId -ne $process.Id) { throw 'Dialogue hors du processus MKR.' }
     $summaryText = (@($dialog.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }) -join ' ')
     if (!$summaryText.Contains('Durée prévue atteinte.') -or !$summaryText.Contains('segment(s) enregistré(s)') -or !$summaryText.Contains('37 mesures')) {

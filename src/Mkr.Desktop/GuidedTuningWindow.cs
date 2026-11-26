@@ -13,7 +13,7 @@ internal sealed class GuidedTuningWindow : Window
 
     private GuidedTuningWindow(GuidedTuningView view)
     {
-        Title = "MKR — Réglage guidé";
+        Title = "ORIAS — Réglage guidé";
         Width = 900; Height = 720; MinWidth = 640; MinHeight = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         view.CloseRequested += (_, _) => Close();

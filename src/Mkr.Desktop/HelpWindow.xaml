@@ -1,4 +1,4 @@
-<Window x:Class="Mkr.Desktop.HelpWindow" Title="MKR — Aide"
+<Window x:Class="Mkr.Desktop.HelpWindow" Title="ORIAS — Aide"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Width="640" Height="560" MinWidth="420" MinHeight="360" WindowStartupLocation="CenterOwner">
@@ -7,7 +7,7 @@
                 AutomationProperties.Name="Fermer l'aide"/>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="Aide MKR" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                <TextBlock Text="Aide ORIAS" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,12"/>
                 <TextBlock Text="Parcours d'étude" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
                 <TextBlock TextWrapping="Wrap" Margin="0,0,0,14">
                     1. Créez un projet et décrivez la boucle (repère, grandeur réglée, point de fonctionnement, objectif).
@@ -21,8 +21,8 @@
                 </TextBlock>
                 <TextBlock Text="Sécurité et limites" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
                 <TextBlock TextWrapping="Wrap" Margin="0,0,0,14">
-                    MKR lit l'automate et n'y écrit jamais. Les valeurs préparées pour un bloc PID restent « non qualifiées » : elles doivent être essayées
-                    sur banc ou en simulation avant toute mise en service. MKR n'est pas déclaré qualifié industriellement.
+                    ORIAS lit l'automate et n'y écrit jamais. Les valeurs préparées pour un bloc PID restent « non qualifiées » : elles doivent être essayées
+                    sur banc ou en simulation avant toute mise en service. ORIAS n'est pas déclaré qualifié industriellement.
                 </TextBlock>
                 <TextBlock Text="Raccourcis" FontWeight="SemiBold" FontSize="16" Margin="0,0,0,6"/>
                 <TextBlock TextWrapping="Wrap">

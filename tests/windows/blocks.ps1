@@ -105,7 +105,7 @@ $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
-    $main = Find $root $name 'MKR — Espace projets'
+    $main = Find $root $name 'ORIAS — Espace projets'
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
@@ -120,7 +120,7 @@ try {
     $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$integratorId"
     Press $ident 'Régler le procédé intégrateur…'
-    $tuning = Find $root $name "MKR — Réglage d'un procédé intégrateur"
+    $tuning = Find $root $name "ORIAS — Réglage d'un procédé intégrateur"
     if ((Find $tuning $id 'Compute').Current.IsEnabled -or (Find $tuning $id 'BlockValues').Current.IsEnabled) {
         throw 'Aucun calcul ne doit être possible sans durée de réponse saisie.'
     }
@@ -132,7 +132,7 @@ try {
         if (!$text.Contains($part)) { throw "Réglage intégrateur : $part absent. $text" }      # slope -0.3, delay 2.5 s, tau_c 8 s: Ti = 4 x 10.5 = 42 s
     }
     Press $tuning 'Valeurs du bloc PIDFF…'
-    $values = Find $root $name 'MKR — Valeurs du bloc PIDFF (non qualifiées)'
+    $values = Find $root $name 'ORIAS — Valeurs du bloc PIDFF (non qualifiées)'
     $block = Wait-Value $values 'Values' '*NON QUALIFIÉ*'
     if (!$block.Contains('rev_dir = 1') -or !$block.Contains('ti = T#42000ms')) { throw "Valeurs PIDFF de l'intégrateur inattendues. $block" }
     Close-Window $values
@@ -157,7 +157,7 @@ try {
     Fill $ident 'MvTolerance' '0.01'
     Fill $ident 'PvTolerance' '0.01'
     Press $ident 'Vérifier le modèle sur un nouvel essai…'
-    $verdict = Find $root $name 'MKR — Contrôle de dérive du modèle'
+    $verdict = Find $root $name 'ORIAS — Contrôle de dérive du modèle'
     $report = Texts $verdict
     if (!$report.Contains('reste cohérent') -or !$report.Contains('constante de temps')) { throw "Verdict de dérive inattendu. $report" }
     Close-Window $verdict
@@ -180,7 +180,7 @@ try {
 
     # ---- Review of a study: session identity, four-eyes rule, declared self-review ----
     Press $ident "Revue de l'étude…"
-    $review = Find $root $name "MKR — Revue de l'étude"
+    $review = Find $root $name "ORIAS — Revue de l'étude"
     if (!(Find $review $id 'Identity').Current.Name.Contains('[S-1-')) { throw "L'identité de session (SID) doit figurer dans la revue : $((Find $review $id 'Identity').Current.Name)" }
     $null = Wait-Name $review 'StateLine' '*Aucune revue*'
     if ((Find $review $id 'Verify').Current.IsEnabled -or !(Find $review $id 'Calculated').Current.IsEnabled) { throw 'Seul « calculé » doit être possible sans revue.' }
@@ -204,7 +204,7 @@ try {
     # ---- Audit log: the actions above are traced and the chain is intact ----
     Go-Tab $main 2
     Press $project "Journal d'audit…"
-    $audit = Find $root $name "MKR — Journal d'audit"
+    $audit = Find $root $name "ORIAS — Journal d'audit"
     foreach ($part in @('integrator.pi.calculated', 'block.values.shown', 'model.drift.checked', 'review.recorded')) {
         $rows = Audit-Rows $audit $part
         if (!$rows.Contains($part)) { throw "Action absente du journal : $part. $rows" }
