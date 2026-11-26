@@ -214,6 +214,11 @@ function Save-Through-Dialog($main, $path) {
         Write-Host '##DIAG saisie clavier du nom de fichier'
         [void][Mkr.Mouse]::SetForegroundWindow([IntPtr]$dialog.Current.NativeWindowHandle)
         Start-Sleep -Milliseconds 500
+        # a real click in the name field gives it the keyboard focus whatever the automation tree says
+        $fr = $nameField.Current.BoundingRectangle
+        Mouse-Move ($fr.X + $fr.Width / 2) ($fr.Y + $fr.Height / 2)
+        [Mkr.Mouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [Mkr.Mouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+        Start-Sleep -Milliseconds 400
         [System.Windows.Forms.SendKeys]::SendWait('^a')
         [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
     }
