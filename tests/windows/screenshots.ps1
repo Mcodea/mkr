@@ -203,9 +203,17 @@ function Save-Through-Dialog($main, $path) {
     $desc = [System.Windows.Automation.TreeScope]::Descendants
     # the name field is the native Edit of id 1001 (the address bar also has an id 1001, but it is a toolbar): select it by class
     $nameField = $null
-    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1001'))) {
-        if ($e.Current.ClassName -eq 'Edit') { $nameField = $e; break }
-    }
+    $fieldDeadline = [DateTime]::UtcNow.AddSeconds(15)
+    do {
+        # the dialog fills its tree progressively: look again (and re-find the dialog) until the field appears
+        $dialog = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, '#32770'))
+        if ($null -ne $dialog) {
+            foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1001'))) {
+                if ($e.Current.ClassName -eq 'Edit') { $nameField = $e; break }
+            }
+        }
+        if ($null -eq $nameField) { Start-Sleep -Milliseconds 400 }
+    } while ($null -eq $nameField -and [DateTime]::UtcNow -lt $fieldDeadline)
     if ($null -eq $nameField) { throw 'zone du nom de fichier (Edit 1001) introuvable dans la boîte Enregistrer sous' }
     $vp = $null
     if ($nameField.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path) }
@@ -236,7 +244,7 @@ function Save-Through-Dialog($main, $path) {
         }
     }
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
-    while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
+    while (((-not (Test-Path $path)) -or ((Get-Item $path).Length -eq 0)) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
 }
 function Step($label, [scriptblock]$body) {
     try { & $body } catch {
@@ -438,6 +446,9 @@ try {
         Press $main 'Sélectionner une plage A–B'      # gives the keyboard focus to the main chart
         [System.Windows.Forms.SendKeys]::SendWait('{RIGHT}')
         Start-Sleep -Milliseconds 400
+        $panned = View-Of $main1
+        $panDeadline = [DateTime]::UtcNow.AddSeconds(4)
+        while ((View-Of $cmd) -ne (View-Of $main1) -and [DateTime]::UtcNow -lt $panDeadline) { Start-Sleep -Milliseconds 200 }
         $panned = View-Of $main1
         Check 'déplacement (flèche droite) : la fenêtre glisse' { $panned -ne $zoomed -and (View-Of $cmd) -eq $panned }
         Press $main 'Zoom arrière'; Press $main 'Zoom arrière'; Press $main 'Zoom arrière'
