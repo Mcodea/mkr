@@ -281,6 +281,8 @@ try {
     $root = $elementType::RootElement
     Step '00-demarrage' {
         $splash = Find $root $name 'ORIAS — Démarrage'
+        $until = [DateTime]::UtcNow.AddSeconds(5)
+        while ($splash.Current.BoundingRectangle.Width -lt 100 -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 150 }
         Capture $splash '00-demarrage'
     }
     $main = Find $root $name 'ORIAS — Espace projets'
@@ -525,7 +527,10 @@ try {
                 Start-Sleep -Milliseconds 900
                 if ($screen[1] -eq 'acquisition') {
                     # an import of the project is opened so that the trend, the summary and the signals are shown with real data
-                    try { Select-Option $main 'Imports' '*'; Press $main 'Ouvrir'; Start-Sleep -Milliseconds 1200 } catch { Write-Host "##DIAG acquisition : $($_.Exception.Message)" }
+                    try { Select-Option $main 'Imports' 'essai-*'; Press $main 'Ouvrir'; Start-Sleep -Milliseconds 1200 } catch { Write-Host "##DIAG acquisition : $($_.Exception.Message)" }
+                }
+                if ($screen[1] -eq 'diagnostic') {
+                    try { Select-Option $main 'Imports' 'essai-*'; Start-Sleep -Milliseconds 800 } catch { Write-Host "##DIAG diagnostic : $($_.Exception.Message)" }
                 }
                 if ($screen[1] -eq 'identification') { Show-Page $main 'PageResults' }
                 if ($screen[1] -eq 'reglage-pid') {
