@@ -541,7 +541,8 @@ try {
     Step '22-a-propos' {
         $menu = Find $main $name 'Aide'
         $menu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
-        $item = Find $main $name 'À propos d’ORIAS'
+        $apos = [string][char]0x2019
+        $item = Find $main $name "À propos d${apos}ORIAS"
         $item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
         $about = Find $root $name 'ORIAS — À propos'
         Capture $about '22-a-propos'
