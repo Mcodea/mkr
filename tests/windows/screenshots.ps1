@@ -202,38 +202,20 @@ function Save-Through-Dialog($main, $path) {
     if ($null -eq $dialog) { throw 'boîte « Enregistrer sous » introuvable' }
     $AE = [System.Windows.Automation.AutomationElement]
     $desc = [System.Windows.Automation.TreeScope]::Descendants
-    $edit = $null
-    # the file name field is an Edit inside the combo box 1001 (or a combo box with a value pattern, depending on the Windows version)
-    $combo = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1001'))
-    if ($null -ne $combo) {
-        $edit = $combo.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))
-        if ($null -eq $edit) { $edit = $combo }
+    # the name field is the native Edit of id 1001 (the address bar also has an id 1001, but it is a toolbar): select it by class
+    $nameField = $null
+    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1001'))) {
+        if ($e.Current.ClassName -eq 'Edit') { $nameField = $e; break }
     }
-    if ($null -eq $edit) {
-        foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.Condition]::TrueCondition)) {
-            Write-Host "##DIAG dialog element id=$($e.Current.AutomationId) name=$($e.Current.Name) type=$($e.Current.ControlType.ProgrammaticName) class=$($e.Current.ClassName)"
-        }
-        throw 'zone du nom de fichier introuvable dans la boîte Enregistrer sous'
-    }
-    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.Condition]::TrueCondition)) {
-        Write-Host "##DIAG dialog element id=$($e.Current.AutomationId) name=$($e.Current.Name) type=$($e.Current.ControlType.ProgrammaticName) class=$($e.Current.ClassName)"
-    }
-    # prefer any Edit of the dialog that accepts a value (the name field), whatever the Windows version builds around it
-    $target = $null
-    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))) {
-        $vp = $null
-        if ($e.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path); $target = $e; break }
-    }
-    if ($null -eq $target) {
-        $vp = $null
-        if ($edit.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path) }
-        else {
-            Write-Host '##DIAG saisie clavier du nom de fichier'
-            [void][Mkr.Mouse]::SetForegroundWindow([IntPtr]$dialog.Current.NativeWindowHandle)
-            Start-Sleep -Milliseconds 500
-            [System.Windows.Forms.SendKeys]::SendWait('^a')
-            [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
-        }
+    if ($null -eq $nameField) { throw 'zone du nom de fichier (Edit 1001) introuvable dans la boîte Enregistrer sous' }
+    $vp = $null
+    if ($nameField.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path) }
+    else {
+        Write-Host '##DIAG saisie clavier du nom de fichier'
+        [void][Mkr.Mouse]::SetForegroundWindow([IntPtr]$dialog.Current.NativeWindowHandle)
+        Start-Sleep -Milliseconds 500
+        [System.Windows.Forms.SendKeys]::SendWait('^a')
+        [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
     }
     $save = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1'))
     $invoke = $null
