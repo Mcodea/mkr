@@ -10,7 +10,8 @@ namespace Mkr.Desktop;
 /// </summary>
 public partial class WindowView
 {
-    private const int WmGetMinMaxInfo = 0x0024;
+    private const int WmGetMinMaxInfo = 0x0024, WmDisplayChange = 0x007E, WmSettingChange = 0x001A;
+    private const int SpiSetWorkArea = 0x002F;
     private const uint MonitorDefaultToNearest = 2;
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -19,8 +20,19 @@ public partial class WindowView
         if (PresentationSource.FromVisual(this) is HwndSource source) source.AddHook(MaximisedRectangle);
     }
 
-    private static IntPtr MaximisedRectangle(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    private IntPtr MaximisedRectangle(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // The screen size or the work area changed (resolution, scaling, taskbar moved): a maximised window is not asked again by Windows, so maximise it anew.
+        if (message == WmDisplayChange || (message == WmSettingChange && wParam.ToInt64() == SpiSetWorkArea))
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (WindowState != WindowState.Maximized) return;
+                WindowState = WindowState.Normal;
+                WindowState = WindowState.Maximized;
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            return IntPtr.Zero;
+        }
         if (message != WmGetMinMaxInfo) return IntPtr.Zero;
         var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
         if (monitor == IntPtr.Zero) return IntPtr.Zero;
