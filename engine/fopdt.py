@@ -196,7 +196,7 @@ def diagnostics(step, gain, response):
 
 
 def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
-    """Local iid residual error, conditional on the measured baselines and input."""
+    """Local iid residual error plus the propagated uncertainty of the measured baseline (the step instant stays conditional)."""
     correlation = diagnostics["residualLagOne"]
     if correlation is not None and abs(correlation) > residual_lag_bound(len(step.times)):
         warnings.append("correlated_residuals")
@@ -227,7 +227,15 @@ def conditional_errors(step, gain, tau, delay, diagnostics, warnings):
         return None
     degrees = len(step.times) - jacobian.shape[1]
     sigma = diagnostics["rmse"] / scale * math.sqrt(len(step.times) / degrees)
-    standard = sigma * np.sqrt(np.sum((right.T / singular) ** 2, axis=1))
+    gram_inverse = (right.T / singular ** 2) @ right                    # (J'J)^-1
+    covariance = sigma ** 2 * gram_inverse
+    if step.baseline_samples > 1:
+        # The baseline is itself the mean of a few noisy pre-step samples: its error moves every observation by the same offset and
+        # shifts the estimates by (J'J)^-1 J' 1 delta (the gain, mostly set by the plateau level, most of all). Leaving this term out
+        # understates the gain error by a factor of about two (LOT 0b, P0-1; same propagation as SOPDT and the integrator, model_drift.py).
+        shift = gram_inverse @ (jacobian.T @ np.ones(len(step.times)))
+        covariance = covariance + ((step.baseline_noise / scale) ** 2 / step.baseline_samples) * np.outer(shift, shift)
+    standard = np.sqrt(np.diag(covariance))
     return dict(gain=float(standard[0]) * abs(scale / step.amplitude),
                 tauSeconds=float(standard[1]) * tau, delaySeconds=float(standard[2]) * tau)
 

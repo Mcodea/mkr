@@ -191,11 +191,20 @@ def evaluate(theta, na, nb, nk, u, y, maximum_rmse, estimator):
     return dict(reasons=reasons, simulationRmse=rmse, residualLagOne=lag_one, inputCorrelation=worst, bound=bound, poles=p)
 
 
-def first_order_equivalent(theta, covariance, ts, nk):
+def first_order_equivalent(theta, covariance, ts, nk, horizon=None):
     """Exact zero-order-hold equivalent of ARX(1,1,nk) as first order with delay (None when the pole is not in (0, 1))."""
     a1, b1 = float(theta[0]), float(theta[1])
     pole = -a1
     if not 0 < pole < 1:
+        return None
+    # A pole indistinguishable from 1 is an integrator: tau = -Ts / ln p and K = b / (1 - p) diverge and are not identifiable (the data fix
+    # only K / tau, the slope). The first-order equivalent is published only when p is below 1 at the same 99 % level as the residual tests
+    # (LOT 0b, P0-2): an ARX model of an integrator stays a valid predictor, but is never presented as a first-order process.
+    if pole + LJUNG_Z_99 * math.sqrt(max(float(covariance[0, 0]), 0.0)) >= 1.0:
+        return None
+    # Observability: a time constant longer than the recorded duration is not seen as curvature in the data, only as a slope (the local
+    # standard error of the pole, computed in the linearised model, would claim otherwise). Not published beyond the training record.
+    if horizon is not None and -ts / math.log(pole) > horizon:
         return None
     tau = -ts / math.log(pole)
     gain = b1 / (1 - pole)
@@ -277,7 +286,7 @@ def identify(payload):
     _, entry, theta, covariance = best
     selected = dict(entry)
     if entry["na"] == 1 and entry["nb"] == 1:
-        selected["firstOrder"] = first_order_equivalent(theta, covariance, ts_t, entry["nk"])
+        selected["firstOrder"] = first_order_equivalent(theta, covariance, ts_t, entry["nk"], horizon=ts_t * len(y_t))
     selected["standardErrors"] = np.sqrt(np.maximum(np.diag(covariance), 0.0)).tolist()
     result.update(selected=selected, decision="accepted")
     return result

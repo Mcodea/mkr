@@ -136,19 +136,24 @@ def calculate(payload):
     if family == "Integrateur":
         return _integrator(gain, delay, sample, errors, objective, limit, variation, optimise, ratio)
     notes, tau1, tau2, theta = [], tau, None, delay
+    # The plant on which robustness is JUDGED is the identified model. The half rule only serves to COMPUTE the PI from a reduced model: judging
+    # the loop on that reduced model announced a peak sensitivity the true second-order process then exceeded (LOT 0b, P0-3a).
+    judged_tau, judged_delay, judged_second = tau, delay, None
     if family == "SOPDT":
         if second > delay:
             tau2 = second                  # PID: the second time constant is worth cancelling (Skogestad 2003)
+            judged_second = second
             notes.append("pid_second_pole_exceeds_delay")
         else:
             tau1, theta = tau + second / 2, delay + second / 2          # half rule (Skogestad 2003)
+            judged_second = second
             notes.append("half_rule_second_pole_not_above_delay")
     else:
         notes.append("first_order_model_pi_is_the_rule")
     sampling_delay = sample / 2        # effective delay includes half the sampling period (Skogestad 2003)
     effective = theta + sampling_delay
     try:
-        plants, quantified = _corners(gain, tau1, theta, tau2, errors, variation)
+        plants, quantified = _corners(gain, judged_tau, judged_delay, judged_second, errors, variation)
     except ValueError as error:
         return _refusal(family, objective, limit, ["parameter_uncertainty_excludes_the_model"] if str(error) == "recommend_uncertainty" else [str(error)],
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
