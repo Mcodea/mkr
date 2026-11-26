@@ -982,11 +982,11 @@ try
         var noisyTraining = await SaveStepAsync(20, 2, delaySeconds: 10, samples: 700, tau: 60, noise: 0.03);
         var noisyValidation = await SaveStepAsync(21, -1.5, delaySeconds: 10, samples: 700, tau: 60, noise: 0.03);
         var (noisyFit, noisyVersion) = await engine.IdentifyAsync(ModelFamily.FOPDT,
-            new StepImport(noisyTraining, columns), new StepImport(noisyValidation, columns), 0.2, 0.2, default);
+            new StepImport(noisyTraining, columns), new StepImport(noisyValidation, columns), 0.01, 0.2, default);
         var (_, noisyAssessment, _) = await engine.AssessAsync(ModelFamily.FOPDT, new StepImport(noisyTraining, columns),
-            new StepImport(noisyValidation, columns), 0.2, 0.2, new ComparisonCriteria(0.2, 0.8), default);
+            new StepImport(noisyValidation, columns), 0.01, 0.2, new ComparisonCriteria(0.2, 0.8), default);
         var noisyStudy = new IdentificationStudy(Guid.NewGuid(), noisyTraining.Summary.Id, noisyValidation.Summary.Id,
-            columns, columns, "%", "bar", 0.2, 0.2, DateTimeOffset.UtcNow, noisyVersion, noisyFit, Assessment: noisyAssessment);
+            columns, columns, "%", "bar", 0.01, 0.2, DateTimeOffset.UtcNow, noisyVersion, noisyFit, Assessment: noisyAssessment);
         restored.SaveStudy(project.Id, noisyStudy);
         Directory.CreateDirectory(fixture);
         File.WriteAllText(Path.Combine(fixture, "noisy-demo-study.txt"), noisyStudy.Id.ToString()[..8]);
