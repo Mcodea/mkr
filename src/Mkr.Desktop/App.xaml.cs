@@ -49,6 +49,7 @@ public partial class App : Application
         catch (Exception error)
         {
             Trace.TraceError("startup {0}", error.GetType().Name);
+            Trace.TraceError("startup detail {0}", error);          // local log only: the window text below stays generic
             var detail = error is InvalidDataException ? error.Message : "Vérifiez l’accès au dossier local MKR.";
             MessageBox.Show($"Impossible d’ouvrir le stockage MKR. {detail}", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
