@@ -197,6 +197,12 @@ function Save-Through-Dialog($main, $path) {
     } while ($null -eq $dialog -and [DateTime]::UtcNow -lt $deadline)
     if ($null -eq $dialog) { throw 'boîte « Enregistrer sous » introuvable' }
     $edit = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1001'))
+    if ($null -eq $edit) {
+        foreach ($e in $dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
+            Write-Host "##DIAG dialog element id=$($e.Current.AutomationId) name=$($e.Current.Name) type=$($e.Current.ControlType.ProgrammaticName) class=$($e.Current.ClassName)"
+        }
+        throw 'zone du nom de fichier introuvable dans la boîte Enregistrer sous'
+    }
     $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($path)
     $save = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1'))
     $save.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
@@ -399,6 +405,7 @@ try {
         Check 'déplacement (flèche droite) : la fenêtre glisse' { $panned -ne $zoomed -and (View-Of $cmd) -eq $panned }
         Press $main 'Zoom arrière'; Press $main 'Zoom arrière'; Press $main 'Zoom arrière'
         Start-Sleep -Milliseconds 400
+        Write-Host "##DIAG vue complete [$full] apres trois zoom arriere [$(View-Of $main1)] apres deplacement [$panned]"
         Check 'zoom arrière : retour à la vue complète' { (View-Of $main1) -eq $full }
         Press $main 'Zoom avant'
         Press $main "Ajuster à tout l${apos}essai"
