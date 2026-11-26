@@ -153,12 +153,35 @@ public partial class WindowView : Window
 
     private void SetToolbarEnabled(bool enabled) { foreach (var button in _toolbarButtons) button.IsEnabled = enabled; }
 
-    /// <summary>The next step the project can do, shown as the status-bar button of a desktop wizard (assisted mode only).</summary>
+    /// <summary>Tabs of the study path (Données → Diagnostic → Identification → Validation → Réglage → Simulation → Rapport), in order.</summary>
+    private static readonly int[] PathTabs = { 1, 2, 3, 4, 5, 8, 9 };
+    private int? _nextTab;
+
+    /// <summary>
+    /// The status-bar button of a desktop wizard (assisted mode only). On a screen of the path it leads to the following screen of the path
+    /// (disabled, with the reason, while that step is closed); elsewhere it leads to the next step the project can do. No button on the last screen.
+    /// </summary>
     private void UpdateNext()
     {
-        var next = _assisted && StudyView.Visibility == Visibility.Visible ? StudyJourney.NextStep(_steps) : null;
+        _nextTab = null;
+        if (!(_assisted && StudyView.Visibility == Visibility.Visible)) { NextButton.Visibility = Visibility.Collapsed; return; }
+        var position = Array.IndexOf(PathTabs, _tab);
+        if (position >= 0)
+        {
+            if (position == PathTabs.Length - 1) { NextButton.Visibility = Visibility.Collapsed; return; }
+            var target = PathTabs[position + 1];
+            var step = _steps[target];
+            _nextTab = target;
+            NextButton.Visibility = Visibility.Visible;
+            NextButton.Content = $"Suivant : {ShortTitles[target]}  \u203A";
+            NextButton.IsEnabled = step.State != StepState.Blocked;
+            NextButton.ToolTip = step.State == StepState.Blocked ? $"Étape indisponible : {step.Detail}" : $"{step.Title}. {step.Detail}";
+            return;
+        }
+        var next = StudyJourney.NextStep(_steps);
         NextButton.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
         if (next is null) return;
+        _nextTab = next.Number - 1;
         NextButton.Content = $"Suivant : {ShortTitles[next.Number - 1]}  \u203A";
         NextButton.ToolTip = $"{next.Title}. {next.Detail}";
         NextButton.IsEnabled = _tab != next.Number - 1;
@@ -166,7 +189,7 @@ public partial class WindowView : Window
 
     private void GoToNext(object sender, RoutedEventArgs args)
     {
-        if (StudyJourney.NextStep(_steps) is { } next) SelectTab(next.Number - 1);
+        if (_nextTab is { } tab) SelectTab(tab);
     }
 
     private void WindowKeyDown(object sender, System.Windows.Input.KeyEventArgs args)

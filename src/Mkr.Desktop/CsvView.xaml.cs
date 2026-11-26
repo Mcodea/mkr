@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -77,6 +78,7 @@ public partial class CsvView : UserControl, IStepView
             if (token.IsCancellationRequested)
                 return;
             ShowResult(result);
+            ShowTrend(File.ReadAllBytes(dialog.FileName), Path.GetFileName(dialog.FileName), null, null, ((string)Delimiter.SelectedValue)[0], ((string)DecimalSeparator.SelectedValue)[0], null);
             Analyze.IsEnabled = true;
             StatusText.Text = "Sélectionnez les colonnes, le rôle et l’unité.";
             if (result.SuggestedFormat is { } suggestion) ApplySuggestion(suggestion);
@@ -186,6 +188,7 @@ public partial class CsvView : UserControl, IStepView
     {
         Controls.IsEnabled = false;
         StatusText.Text = "Traitement du CSV…";
+        SetState(DataState.Loading, "Chargement…");
         var token = _lifetime.Token;
         try { await operation(token); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
@@ -222,6 +225,8 @@ public partial class CsvView : UserControl, IStepView
             Report.Text += $"  |  Lecture : {import.Format!.Describe()}.";
         if (import.Acquisition is { } origin)
             Report.Text += $"  |  {origin.Describe()} · unité de la mesure {origin.ProcessUnit}, de la sortie de commande {origin.CommandUnit}.";
+        ShowTrend(import.Original, import.Summary.FileName, import.Mapping.ValueColumn, import.Mapping.Unit, import.Delimiter.Length > 0 ? import.Delimiter[0] : ',',
+            (import.Format ?? CsvFormat.Default).Decimal is { Length: > 0 } dec ? dec[0] : '.', import.Mapping.TimeColumn);
         var quality = import.Result.Quality!;
         Report.Text += $"  |  {import.Summary.FileName}  |  SHA-256 : {import.Summary.Sha256}\n" +
             $"{Terms.RoleName(import.Mapping.Role)} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +
@@ -233,11 +238,115 @@ public partial class CsvView : UserControl, IStepView
             $"Méthode {quality.AlgorithmVersion} · moteur {import.EngineVersion}.";
     }
 
+    // ---------- trends and summary (display only: the raw columns of the file, nothing interpreted) ----------
+    private enum DataState { None, Loading, Loaded, Error }
+
+    private Trend? _trend;
+    private string _trendSource = "";
+    private string? _mappedColumn, _mappedUnit;
+    private readonly HashSet<string> _hiddenSignals = new();
+
+    private void SetState(DataState state, string text)
+    {
+        StateText.Text = text;
+        var (back, fore) = state switch
+        {
+            DataState.Loaded => ("MkrSuccessPale", "MkrSuccess"),
+            DataState.Error => ("MkrDangerPale", "MkrDanger"),
+            DataState.Loading => ("MkrWarningPale", "MkrWarning"),
+            _ => ("MkrSurfaceAlt", "MkrMuted")
+        };
+        StateBadge.SetResourceReference(Border.BackgroundProperty, back);
+        StateBadge.SetResourceReference(Border.BorderBrushProperty, fore);
+        StateText.SetResourceReference(TextBlock.ForegroundProperty, fore);
+    }
+
+    private void ShowTrend(byte[] bytes, string source, string? mappedColumn, string? unit, char delimiter, char decimalSeparator, string? timeColumn)
+    {
+        _trendSource = source; _mappedColumn = mappedColumn; _mappedUnit = unit;
+        _trend = TrendReader.Read(bytes, delimiter, decimalSeparator, timeColumn);
+        _hiddenSignals.Clear();
+        SignalPicker.Children.Clear();
+        if (_trend is null)
+        {
+            TrendChart.SetTracks(Array.Empty<ChartTrack>());
+            TrendEmpty.Visibility = Visibility.Visible;
+            SetState(DataState.Loaded, "Données chargées (tendance non disponible)");
+            FillSummary(null);
+            SignalPicker.Children.Add(new TextBlock { Text = "Aucune colonne numérique lisible : les lignes source restent disponibles dans « Données brutes ».", TextWrapping = TextWrapping.Wrap });
+            return;
+        }
+        // The first three numeric columns are drawn by default; the others stay one click away.
+        for (var i = 0; i < _trend.Names.Length; i++)
+        {
+            var name = _trend.Names[i];
+            if (i >= 3) _hiddenSignals.Add(name);
+            var box = new CheckBox { Content = name + (name == _mappedColumn && !string.IsNullOrEmpty(_mappedUnit) ? $" ({_mappedUnit})" : ""), IsChecked = i < 3, Margin = new Thickness(0, 0, 0, 4), Tag = name };
+            System.Windows.Automation.AutomationProperties.SetName(box, "Afficher le signal " + name);
+            box.Checked += (_, _) => { _hiddenSignals.Remove(name); DrawTrend(); };
+            box.Unchecked += (_, _) => { _hiddenSignals.Add(name); DrawTrend(); };
+            SignalPicker.Children.Add(box);
+        }
+        SetState(DataState.Loaded, "Données chargées");
+        FillSummary(_trend);
+        DrawTrend();
+        DataTabs.SelectedIndex = 0;
+    }
+
+    private void DrawTrend()
+    {
+        if (_trend is null) return;
+        var tracks = new List<ChartTrack>();
+        var colour = 1;
+        for (var i = 0; i < _trend.Names.Length; i++)
+        {
+            var name = _trend.Names[i];
+            if (_hiddenSignals.Contains(name)) continue;
+            var unit = name == _mappedColumn ? _mappedUnit ?? "" : "";
+            var points = Enumerable.Range(0, _trend.X.Length).Where(k => !double.IsNaN(_trend.X[k]) && !double.IsNaN(_trend.Values[i][k])).ToArray();
+            tracks.Add(new ChartTrack(name, unit, new[] { new ChartSeries(name, "MkrSignal" + (colour++ % 4 + 1), points.Select(k => _trend.X[k]).ToArray(), points.Select(k => _trend.Values[i][k]).ToArray()) })
+            { YLabel = unit.Length > 0 ? $"{name} ({unit})" : name, ShowLegend = false });
+        }
+        TrendChart.XLabel = _trend.HasTime ? "Temps depuis le premier échantillon (s)" : "Numéro d’échantillon";
+        TrendChart.SetTracks(tracks);
+        TrendEmpty.Visibility = tracks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (tracks.Count == 0) TrendEmpty.Text = "Aucun signal coché : cochez au moins une colonne dans « Signaux affichés ».";
+    }
+
+    private void FillSummary(Trend? trend)
+    {
+        SummaryGrid.Children.Clear();
+        SummaryGrid.RowDefinitions.Clear();
+        var rows = new List<(string, string)> { ("Source", _trendSource) };
+        if (trend is not null)
+        {
+            rows.Add(("Points", trend.Rows.ToString("N0", CultureInfo.CurrentCulture)));
+            if (trend.Start is { } start && trend.End is { } end)
+            {
+                rows.Add(("Période", $"{start.ToLocalTime():g} → {end.ToLocalTime():g}"));
+                rows.Add(("Durée", TimeSpan.FromSeconds((end - start).TotalSeconds).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)));
+            }
+            if (trend.MedianStepSeconds is { } step) rows.Add(("Période d’échantillonnage", $"{step.ToString("G4", CultureInfo.CurrentCulture)} s"));
+            rows.Add(("Colonnes numériques", trend.Names.Length.ToString(CultureInfo.CurrentCulture)));
+        }
+        for (var r = 0; r < rows.Count; r++)
+        {
+            SummaryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var label = new TextBlock { Text = rows[r].Item1, Margin = new Thickness(0, 0, 12, 4) };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "MkrMuted");
+            var value = new TextBlock { Text = rows[r].Item2, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
+            value.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
+            Grid.SetRow(label, r); Grid.SetRow(value, r); Grid.SetColumn(value, 1);
+            SummaryGrid.Children.Add(label); SummaryGrid.Children.Add(value);
+        }
+    }
+
     private static string Format(double? value) => value?.ToString("G6") ?? "—";
 
     private void ShowError(Exception error)
     {
         Trace.TraceError("csv.workspace {0}", error.GetType().Name);
+        SetState(DataState.Error, "Erreur : voir le message en bas de l’écran");
         StatusText.Text = error is CsvInputException input ? input.Code switch
         {
             "csv_limit" => "Le CSV dépasse les limites de 1 Mio ou 10 000 lignes.",

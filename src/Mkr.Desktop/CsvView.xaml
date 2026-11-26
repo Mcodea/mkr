@@ -19,31 +19,58 @@
                         <ColumnDefinition Width="6"/>
                         <ColumnDefinition Width="430" MinWidth="320" MaxWidth="700"/>
                     </Grid.ColumnDefinitions>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="Aperçu du fichier (lignes source, valeurs brutes inchangées)" FontWeight="SemiBold" Margin="2,0,0,6"/>
-                        <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" CanUserAddRows="False" AutoGenerateColumns="False"
-                                  AutomationProperties.Name="Aperçu des données CSV"/>
-                        <TextBlock Grid.Row="1" x:Name="PreviewEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
-                                   Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
-                                   Text="Aucun fichier ouvert. Choisissez un CSV, lancez une acquisition en lecture seule ou ouvrez un import enregistré (panneau de droite) : les lignes source s’affichent ici, valeurs brutes inchangées.">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ElementName=Preview, Path=HasItems}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
+                    <TabControl x:Name="DataTabs" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" Padding="0">
+                        <TabItem Header="_Tendances" AutomationProperties.Name="Tendances des signaux">
+                            <Grid Margin="6">
+                                <local:SignalChart x:Name="TrendChart" ReferenceStyle="True" ShowValueBoxes="False" MinHeight="200"
+                                        AutomationProperties.Name="Tendances des signaux du fichier, en fonction du temps"
+                                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                                <TextBlock x:Name="TrendEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
+                                           Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
+                                           Text="Aucune donnée à tracer. Choisissez un CSV, lancez une acquisition en lecture seule ou ouvrez un import enregistré (panneau de droite) : les colonnes numériques s’affichent ici, valeurs brutes inchangées."/>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Données _brutes" AutomationProperties.Name="Données brutes">
+                            <Grid Margin="6">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Lignes source, valeurs brutes inchangées" FontWeight="SemiBold" Margin="2,0,0,6"/>
+                                <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" CanUserAddRows="False" AutoGenerateColumns="False"
+                                          AutomationProperties.Name="Aperçu des données CSV"/>
+                                <TextBlock Grid.Row="1" x:Name="PreviewEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
+                                           Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
+                                           Text="Aucune ligne à afficher.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=Preview, Path=HasItems}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
                     <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="Controls">
+                            <Expander Style="{StaticResource MkrPanel}" Header="État et synthèse des données">
+                                <StackPanel Margin="10,8">
+                                    <Border x:Name="StateBadge" CornerRadius="3" Padding="10,6" Margin="0,0,0,8" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
+                                        <TextBlock x:Name="StateText" FontWeight="SemiBold" Text="Aucune donnée" AutomationProperties.LiveSetting="Polite"/>
+                                    </Border>
+                                    <Grid x:Name="SummaryGrid"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions></Grid>
+                                </StackPanel>
+                            </Expander>
+                            <Expander Style="{StaticResource MkrPanel}" Header="Signaux affichés">
+                                <StackPanel x:Name="SignalPicker" Margin="10,8">
+                                    <TextBlock x:Name="SignalHint" Text="Les colonnes numériques du fichier apparaissent ici une fois les données ouvertes." TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
+                                </StackPanel>
+                            </Expander>
                             <Expander Style="{StaticResource MkrPanel}" Header="Source et format du fichier">
                                 <StackPanel Margin="10,8">
 <Grid>
