@@ -716,7 +716,7 @@ try {
         $about = Find $root $name 'ORIAS — About'
         Capture $about '24-english-about'
         Close-Window $about
-        $start.EnvironmentVariables.Remove('MKR_LANGUAGE')
+        $start.EnvironmentVariables['MKR_LANGUAGE'] = 'fr'
     }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"

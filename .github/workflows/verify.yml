@@ -18,6 +18,10 @@ concurrency:
 permissions:
   contents: read
 
+# Les tests graphiques attendent l'interface en français ; le runner est en anglais (en-US).
+env:
+  MKR_LANGUAGE: fr
+
 jobs:
   windows:
     runs-on: windows-2025
