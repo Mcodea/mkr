@@ -428,7 +428,8 @@ try
         static int Placeholders(string text) => System.Text.RegularExpressions.Regex.Matches(text, @"\{\d+\}").Select(m => m.Value).Distinct().Count();
         Require(english.All(pair => Placeholders(pair.Value) == Placeholders(french[pair.Key])), "French and English texts use the same placeholders.");
         Require(french.Values.All(value => !string.IsNullOrWhiteSpace(value)), "No empty French text.");
-        Require(Loc.Lookup(Loc.English, "product.description") == Loc.Lookup(Loc.French, "product.description"), "A text without English version falls back to French.");
+        Require(french.Keys.Where(key => !english.ContainsKey(key)).All(key => Loc.Lookup(Loc.English, key) == french[key]), "A text without English version falls back to French.");
+        Require(Loc.Lookup(Loc.English, "product.description") != Loc.Lookup(Loc.French, "product.description"), "The About description has an English version.");
         Require(Loc.Lookup(Loc.English, "nav.next") == "Next: {0}" && Loc.Lookup(Loc.French, "nav.next") == "Suivant : {0}", "The language selects the text.");
         Require(Loc.Lookup(Loc.French, "no.such.key") == "no.such.key", "An unknown key is shown as itself.");
     }
