@@ -103,7 +103,7 @@
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Border x:Name="CaptionBar" Grid.Row="0" Height="30" Background="{DynamicResource MkrCaption}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
+    <Border x:Name="CaptionBar" Grid.Row="0" Height="30" Background="{DynamicResource MkrTitleBar}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
         <DockPanel LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                 <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMinimize" ToolTip="Réduire" AutomationProperties.Name="Réduire" WindowChrome.IsHitTestVisibleInChrome="True" ><TextBlock x:Name="MinimizeGlyph" Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
