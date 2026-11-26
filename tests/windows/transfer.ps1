@@ -343,6 +343,9 @@ public static extern bool PostMessage(System.IntPtr target, uint msg, System.Int
     # The scenario fields fold away once a run is recorded (room for the chart): unfold them as an operator would.
     (Find $sim $id 'ScenarioFields').GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
     Fill $sim 'Setpoint' '3'
+    # the detail of the recorded simulation is folded by default since the simulation screen was decluttered: unfold it, then read it
+    (Find $sim $name 'Détail de la simulation enregistrée').GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+    Start-Sleep -Milliseconds 400
     $report = (Find $sim $id 'Report').Current.Name
     if (!$report.Contains('Variation de consigne 1 bar') -or !$report.Contains('durée 10 s')) { throw "Scénario enregistré ambigu. $report" }
     Press $sim 'Exporter les séries enregistrées…'
