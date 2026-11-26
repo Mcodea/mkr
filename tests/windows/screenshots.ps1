@@ -179,6 +179,7 @@ function Check($label, [scriptblock]$body) {
 Add-Type -Name Mouse -Namespace Mkr -MemberDefinition @"
 [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
 [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
 "@
 function Mouse-Move($x, $y) { [void][Mkr.Mouse]::SetCursorPos([int]$x, [int]$y); Start-Sleep -Milliseconds 250 }
 function Mouse-Drag($x1, $y1, $x2, $y2) {
@@ -214,16 +215,25 @@ function Save-Through-Dialog($main, $path) {
         }
         throw 'zone du nom de fichier introuvable dans la boîte Enregistrer sous'
     }
-    $valuePattern = $null
-    if ($edit.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
-        $valuePattern.SetValue($path)
-    } else {
-        # no value pattern on this field: type the path (SendKeys special characters escaped)
-        # the file name field has the focus when the dialog opens: bring the dialog forward and type
-        try { $dialog.SetFocus() } catch { }
-        Start-Sleep -Milliseconds 400
-        [System.Windows.Forms.SendKeys]::SendWait('^a')
-        [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
+    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.Condition]::TrueCondition)) {
+        Write-Host "##DIAG dialog element id=$($e.Current.AutomationId) name=$($e.Current.Name) type=$($e.Current.ControlType.ProgrammaticName) class=$($e.Current.ClassName)"
+    }
+    # prefer any Edit of the dialog that accepts a value (the name field), whatever the Windows version builds around it
+    $target = $null
+    foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))) {
+        $vp = $null
+        if ($e.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path); $target = $e; break }
+    }
+    if ($null -eq $target) {
+        $vp = $null
+        if ($edit.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$vp)) { $vp.SetValue($path) }
+        else {
+            Write-Host '##DIAG saisie clavier du nom de fichier'
+            [void][Mkr.Mouse]::SetForegroundWindow([IntPtr]$dialog.Current.NativeWindowHandle)
+            Start-Sleep -Milliseconds 500
+            [System.Windows.Forms.SendKeys]::SendWait('^a')
+            [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
+        }
     }
     $save = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1'))
     $invoke = $null
