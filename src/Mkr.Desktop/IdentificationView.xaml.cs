@@ -902,7 +902,9 @@ public partial class IdentificationView : UserControl, IStepView
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
-        grid.Children.Add(new TextBlock { Text = label, Margin = new Thickness(10, 4, 6, 4), TextWrapping = TextWrapping.Wrap });
+        var name = new TextBlock { Text = label, Margin = new Thickness(10, 2, 6, 2), TextWrapping = TextWrapping.Wrap };
+        name.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
+        grid.Children.Add(name);
         var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 1, 4, 1), TextAlignment = TextAlignment.Right };
         val.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         Grid.SetColumn(val, 1);
