@@ -781,18 +781,18 @@ public partial class IdentificationView : UserControl, IStepView
 
     private void ExportPlotImage(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "diagnostic-modele.png" };
-        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-        try { ExportChartsPng(dialog.FileName); Message.Text = "Image exportée."; }
+        var target = ExportTarget.Choose(Window.GetWindow(this), "Image PNG (*.png)|*.png", "diagnostic-modele.png");
+        if (target is null) return;
+        try { ExportChartsPng(target); Message.Text = "Image exportée."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }
 
     private void ExportPlotData(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "diagnostic-modele.csv" };
-        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-        try { SignalChart.ExportCsv(dialog.FileName, Chart, CommandChart, ResidualChart); Message.Text = "Données exportées."; }
+        var target = ExportTarget.Choose(Window.GetWindow(this), "CSV (*.csv)|*.csv", "diagnostic-modele.csv");
+        if (target is null) return;
+        try { SignalChart.ExportCsv(target, Chart, CommandChart, ResidualChart); Message.Text = "Données exportées."; }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
         { Message.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
     }

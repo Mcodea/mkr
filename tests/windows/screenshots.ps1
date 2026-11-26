@@ -270,6 +270,10 @@ $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
 $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
 $start.EnvironmentVariables['MKR_THEME'] = $Theme
+$exportDir = Join-Path $env:RUNNER_TEMP "mkr-exports-$Theme"
+Remove-Item -Recurse -Force $exportDir -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $exportDir | Out-Null
+$start.EnvironmentVariables['MKR_EXPORT_DIRECTORY'] = $exportDir     # the exports of the plots are written here, without the operating system dialog
 $start.EnvironmentVariables['MKR_CULTURE'] = 'fr-FR'      # captures show the French date and number format whatever the runner's regional settings
 $process = [System.Diagnostics.Process]::Start($start)
 try {
@@ -479,19 +483,21 @@ try {
         Press $main 'Effacer la plage A–B'
         Start-Sleep -Milliseconds 500
         Check 'effacer A-B : retour a la plage par defaut de l ajustement' { (Find $main $id 'PlotLegend').Current.Name -like '*intervalle de l*ajustement*' }
-        $csv = Join-Path $env:RUNNER_TEMP 'chart-export.csv'
-        $png = Join-Path $env:RUNNER_TEMP 'chart-export.png'
-        Remove-Item $csv, $png -ErrorAction SilentlyContinue
+        $csv = Join-Path $exportDir 'diagnostic-modele.csv'
+        $png = Join-Path $exportDir 'diagnostic-modele.png'
+        function Wait-File($path) {
+            $until = [DateTime]::UtcNow.AddSeconds(15)
+            while (((-not (Test-Path $path)) -or ((Get-Item $path).Length -eq 0)) -and [DateTime]::UtcNow -lt $until) { Start-Sleep -Milliseconds 300 }
+        }
         Press $main 'Exporter les données'
-        Save-Through-Dialog $main $csv
+        Wait-File $csv
         $csvText = if (Test-Path $csv) { [System.IO.File]::ReadAllText($csv, [System.Text.Encoding]::UTF8) } else { '' }
         Write-Host "##DIAG csv : $($csvText.Length) caracteres ; debut [$($csvText.Substring(0, [Math]::Min(160, $csvText.Length)) -replace "`r|`n", ' / ')]"
-        if (-not (Test-Path $csv)) { Capture $root '10i-export-csv-absent' }
         Check 'export des données : CSV écrit avec les trois graphiques' {
             $csvText.StartsWith('piste;courbe;unite;temps_s;valeur') -and $csvText.Contains('Commande') -and $csvText.Contains('Résidus')
         }
         Press $main "Exporter l${apos}image"
-        Save-Through-Dialog $main $png
+        Wait-File $png
         Check 'export de limage : PNG valide' {
             (Test-Path $png) -and ((Get-Item $png).Length -gt 2000) -and ([System.IO.File]::ReadAllBytes($png)[1] -eq 0x50)
         }
