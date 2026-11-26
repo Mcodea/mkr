@@ -92,6 +92,7 @@ function Capture($window, $label) {
     try {
         # park the pointer on the title bar so that no tooltip or hover state appears in the capture
         try { $tb = $window.Current.BoundingRectangle; [void][Mkr.Mouse]::SetCursorPos([int]($tb.X + $tb.Width / 2), [int]($tb.Y + 14)) } catch { }
+        [System.Windows.Forms.SendKeys]::SendWait('{ESC}')       # closes a tooltip shown for the keyboard focus
         Start-Sleep -Milliseconds 900
         try { $window.SetFocus() } catch { }
         Start-Sleep -Milliseconds 300

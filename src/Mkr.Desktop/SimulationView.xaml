@@ -65,7 +65,7 @@
                     <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Background="{DynamicResource MkrCanvas}" Padding="10,6" Margin="0,4,0,0">
                         <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré." Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                     </Border>
-                    <Expander Header="Aide : lire le graphique" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
+                    <Expander Header="Aide : lire le graphique" Foreground="{DynamicResource MkrText}" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
                         <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
                                    Foreground="{DynamicResource MkrMuted}" Margin="4,4,0,0" TextWrapping="Wrap"/>
                     </Expander>
@@ -78,7 +78,7 @@
                         <StackPanel>
                             <Grid x:Name="IndicatorGrid"/>
                             <TextBlock x:Name="IndicatorNote" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
-                            <Expander Header="Détail de la simulation enregistrée" Margin="0" IsExpanded="True" FontSize="12">
+                            <Expander Header="Détail de la simulation enregistrée" Foreground="{DynamicResource MkrText}" Margin="0" IsExpanded="True" FontSize="12">
                                 <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,6,10,8" FontSize="11"/>
                             </Expander>
                         </StackPanel>
