@@ -72,7 +72,7 @@ public partial class WindowView : Window
     private void ReflectWindowState()
     {
         var maximized = WindowState == WindowState.Maximized;
-        RootFrame.Margin = maximized ? new Thickness(SystemParameters.WindowResizeBorderThickness.Left + SystemParameters.FixedFrameVerticalBorderWidth) : new Thickness(0);
+        RootFrame.Margin = new Thickness(0);          // the maximised rectangle is answered by the work area (WindowView.Chrome.cs): no overshoot to compensate
         MaximizeGlyph.Text = maximized ? "\uE923" : "\uE922";
     }
 

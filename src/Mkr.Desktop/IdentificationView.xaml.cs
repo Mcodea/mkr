@@ -982,7 +982,7 @@ public partial class IdentificationView : UserControl, IStepView
                     Family = name + (comparison.Selected == name ? " ✓" : ""),
                     Fit = match is not null && FitPercent(match.Result.Validation) is { } f ? f.ToString("F1", CultureInfo.CurrentCulture) : "—",
                     Rmse = candidate.ValidationRmse.ToString("G3", CultureInfo.CurrentCulture),
-                    Decision = candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : "refusé"
+                    Decision = candidate.RejectionReasons.Length == 0 ? "satisfait" : "refusé"
                 });
             }
         foreach (var item in sameTrials.Where(item => rows.All(row => !row.Family.StartsWith(FamilyName(item.Family), StringComparison.Ordinal))))
