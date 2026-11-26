@@ -64,6 +64,8 @@ public partial class App : Application
             MainWindow = new WindowView(store, engine, project => new IdentificationWorkspace(project, store, store, engine, store, engine, engine, engine)) { DataContext = model };
             MainWindow.Closed += (_, _) => model.CancelDiagnostics();
             startup.Report("Ouverture de l’espace de travail…");
+            // Automated captures only: keep the start-up window visible for the given time (never set in normal use).
+            if (int.TryParse(Environment.GetEnvironmentVariable("MKR_STARTUP_HOLD_MS"), out var hold) && hold > 0) Thread.Sleep(Math.Min(hold, 10_000));
             MainWindow.Show();
             startup.Close();
         }

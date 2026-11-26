@@ -13,7 +13,8 @@ NS = {"x": "http://schemas.microsoft.com/winfx/2006/xaml"}
 def tokens(name):
     tree = ET.parse(ROOT / "Resources" / "Themes" / f"{name}.xaml")
     key = "{http://schemas.microsoft.com/winfx/2006/xaml}Key"
-    return {element.attrib[key]: element.attrib["Color"] for element in tree.getroot()}
+    # the theme files also carry the logo images (BitmapImage): only the colour brushes are checked here
+    return {element.attrib[key]: element.attrib["Color"] for element in tree.getroot() if element.tag.endswith("SolidColorBrush")}
 
 
 def luminance(hex_color):

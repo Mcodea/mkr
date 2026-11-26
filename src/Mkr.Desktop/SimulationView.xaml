@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Mkr.Desktop">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <Grid Margin="14,10,14,10" MinHeight="700">
+    <Grid Margin="14,10,14,10" MinHeight="520">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -57,7 +57,6 @@
                             <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="10,0,0,0"/>
                         </StackPanel>
                     </Border>
-                    <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource MkrMuted}"/>
                 </StackPanel>
                 <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ReferenceStyle="True" ShowValueBoxes="False"
                         AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
@@ -67,8 +66,11 @@
                         <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré." Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                     </Border>
                     <Expander Header="Aide : lire le graphique" Foreground="{DynamicResource MkrText}" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
+                      <StackPanel>
+                        <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="4,4,0,0" Foreground="{DynamicResource MkrText}"/>
                         <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
                                    Foreground="{DynamicResource MkrMuted}" Margin="4,4,0,0" TextWrapping="Wrap"/>
+                      </StackPanel>
                     </Expander>
                 </StackPanel>
             </Grid>
@@ -79,7 +81,7 @@
                         <StackPanel>
                             <Grid x:Name="IndicatorGrid"/>
                             <TextBlock x:Name="IndicatorNote" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
-                            <Expander Header="Détail de la simulation enregistrée" Foreground="{DynamicResource MkrText}" Margin="0" IsExpanded="True" FontSize="12">
+                            <Expander Header="Détail de la simulation enregistrée" Foreground="{DynamicResource MkrText}" Margin="0" IsExpanded="False" FontSize="12">
                                 <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,6,10,8" FontSize="11"/>
                             </Expander>
                         </StackPanel>

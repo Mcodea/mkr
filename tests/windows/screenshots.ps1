@@ -274,10 +274,15 @@ $exportDir = Join-Path $env:RUNNER_TEMP "mkr-exports-$Theme"
 Remove-Item -Recurse -Force $exportDir -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $exportDir | Out-Null
 $start.EnvironmentVariables['MKR_EXPORT_DIRECTORY'] = $exportDir     # the exports of the plots are written here, without the operating system dialog
+$start.EnvironmentVariables['MKR_STARTUP_HOLD_MS'] = '4000'            # keeps the start-up window visible long enough to be captured
 $start.EnvironmentVariables['MKR_CULTURE'] = 'fr-FR'      # captures show the French date and number format whatever the runner's regional settings
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
+    Step '00-demarrage' {
+        $splash = Find $root $name 'ORIAS — Démarrage'
+        Capture $splash '00-demarrage'
+    }
     $main = Find $root $name 'ORIAS — Espace projets'
     Capture $main '01-espace-projets'
     $row = Find (Find $main $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
@@ -518,6 +523,10 @@ try {
                 $tabElement = Find $main $id $screen[2]
                 $tabElement.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
                 Start-Sleep -Milliseconds 900
+                if ($screen[1] -eq 'acquisition') {
+                    # an import of the project is opened so that the trend, the summary and the signals are shown with real data
+                    try { Select-Option $main 'Imports' '*'; Press $main 'Ouvrir'; Start-Sleep -Milliseconds 1200 } catch { Write-Host "##DIAG acquisition : $($_.Exception.Message)" }
+                }
                 if ($screen[1] -eq 'identification') { Show-Page $main 'PageResults' }
                 if ($screen[1] -eq 'reglage-pid') {
                     try { Press $main 'Calculer le réglage guidé' } catch { }
@@ -528,6 +537,15 @@ try {
             }
         }
         Set-Resolution $original.Width $original.Height
+    }
+    Step '22-a-propos' {
+        $menu = Find $main $name 'Aide'
+        $menu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+        $item = Find $main $name 'À propos d’ORIAS'
+        $item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $about = Find $root $name 'ORIAS — À propos'
+        Capture $about '22-a-propos'
+        Close-Window $about
     }
     Step '10h-identification-resolutions' {
         Close-Others $root $main

@@ -73,9 +73,53 @@ public partial class DiagnosticView : UserControl, IStepView
                 findings.Add($"Échantillonnage irrégulier (pas de {G(min)} s à {G(max)} s) : à rééchantillonner ou à signaler avant l'identification.");
             if (findings.Count == 0) findings.Add("Aucune anomalie de comptage ni d'horodatage détectée. L'excitation de la commande et le bruit de mesure sont évalués à l'étape Identification.");
             Findings.Text = string.Join("\n", findings.Select(line => "· " + line));
+            // The verdict restates the findings above (counts and the sampling rule already shown): it adds no criterion and never declares the data fit for use.
+            var flagged = findings.Count(line => !line.StartsWith("Aucune anomalie"));
+            SetVerdict(flagged == 0 ? "Aucune anomalie de comptage ni d’horodatage détectée" : $"{flagged} constat(s) à traiter avant l’identification : voir « Constats »", flagged == 0 ? "MkrSuccess" : "MkrWarning", flagged == 0 ? "MkrSuccessPale" : "MkrWarningPale");
         }
+        if (q is null) SetVerdict("Import non analysé : lancez « Analyser et enregistrer » à l’étape Données", "MkrMuted", "MkrSurfaceAlt");
+        ShowGraphs(import, q);
         Provenance.Text = $"{summary.FileName}\nSHA-256 : {summary.Sha256}\nImporté le {summary.ImportedAt.ToLocalTime():g}\nMoteur d'analyse {import.EngineVersion}" +
                           (q is null ? "" : $" · algorithme {q.AlgorithmVersion}") + $"\nLecture : {(import.Format ?? CsvFormat.Default).Describe()}";
+    }
+
+    private void SetVerdict(string text, string foreground, string background)
+    {
+        VerdictText.Text = text;
+        VerdictText.SetResourceReference(TextBlock.ForegroundProperty, foreground);
+        VerdictBadge.SetResourceReference(Border.BackgroundProperty, background);
+        VerdictBadge.SetResourceReference(Border.BorderBrushProperty, foreground);
+    }
+
+    /// <summary>Plots the numeric columns of the import (raw values) and marks, at their instants, the faults the analysis counts: missing values of the analysed signal and sampling steps beyond 1.5 × the smallest step.</summary>
+    private void ShowGraphs(CsvImport import, CsvQuality? quality)
+    {
+        var format = import.Format ?? CsvFormat.Default;
+        var trend = TrendReader.Read(import.Original, import.Delimiter.Length > 0 ? import.Delimiter[0] : ',', format.Decimal is { Length: > 0 } d ? d[0] : '.', import.Mapping.TimeColumn);
+        if (trend is null) { TrendChart.SetTracks(Array.Empty<ChartTrack>()); TrendChart.SetEvents(Array.Empty<(double, string)>()); TrendEmpty.Visibility = Visibility.Visible; return; }
+        TrendEmpty.Visibility = Visibility.Collapsed;
+        var tracks = new List<ChartTrack>();
+        var order = Enumerable.Range(0, trend.Names.Length).OrderBy(i => trend.Names[i] == import.Mapping.ValueColumn ? 0 : 1).Take(3).ToList();
+        var colour = 1;
+        foreach (var i in order)
+        {
+            var name = trend.Names[i];
+            var unit = name == import.Mapping.ValueColumn ? import.Mapping.Unit : "";
+            var points = Enumerable.Range(0, trend.X.Length).Where(k => !double.IsNaN(trend.X[k]) && !double.IsNaN(trend.Values[i][k])).ToArray();
+            tracks.Add(new ChartTrack(name, unit, new[] { new ChartSeries(name, "MkrSignal" + (colour++ % 4 + 1), points.Select(k => trend.X[k]).ToArray(), points.Select(k => trend.Values[i][k]).ToArray()) })
+            { YLabel = unit.Length > 0 ? $"{name} ({unit})" : name });
+        }
+        TrendChart.XLabel = trend.HasTime ? "Temps depuis le premier échantillon (s)" : "Numéro d’échantillon";
+        TrendChart.SetTracks(tracks);
+        var events = new List<(double X, string Label)>();
+        var mapped = Array.IndexOf(trend.Names, import.Mapping.ValueColumn);
+        if (mapped >= 0)
+            for (var k = 0; k < trend.X.Length && events.Count < 20; k++)
+                if (double.IsNaN(trend.Values[mapped][k]) && !double.IsNaN(trend.X[k])) events.Add((trend.X[k], "valeur manquante"));
+        if (trend.HasTime && quality?.MinPositiveStepSeconds is { } min && min > 0)
+            for (var k = 1; k < trend.X.Length && events.Count < 40; k++)
+                if (!double.IsNaN(trend.X[k]) && !double.IsNaN(trend.X[k - 1]) && trend.X[k] - trend.X[k - 1] > 1.5 * min) events.Add((trend.X[k - 1], "pas irrégulier"));
+        TrendChart.SetEvents(events);
     }
 
     private UIElement Row(string label, string value, bool flag)
