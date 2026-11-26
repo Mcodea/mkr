@@ -466,9 +466,10 @@ try {
         Remove-Item $csv, $png -ErrorAction SilentlyContinue
         Press $main 'Exporter les données'
         Save-Through-Dialog $main $csv
+        $csvText = if (Test-Path $csv) { [System.IO.File]::ReadAllText($csv, [System.Text.Encoding]::UTF8) } else { '' }
+        Write-Host "##DIAG csv : $($csvText.Length) caracteres ; debut [$($csvText.Substring(0, [Math]::Min(160, $csvText.Length)) -replace "`r|`n", ' / ')]"
         Check 'export des données : CSV écrit avec les trois graphiques' {
-            (Test-Path $csv) -and ((Get-Content -LiteralPath $csv -TotalCount 1) -like '*piste;courbe;unite;temps_s;valeur*') -and
-            ((Get-Content -LiteralPath $csv -Raw) -like '*Commande*') -and ((Get-Content -LiteralPath $csv -Raw) -like '*Résidus*')
+            $csvText.StartsWith('piste;courbe;unite;temps_s;valeur') -and $csvText.Contains('Commande') -and $csvText.Contains('Résidus')
         }
         Press $main "Exporter l${apos}image"
         Save-Through-Dialog $main $png
