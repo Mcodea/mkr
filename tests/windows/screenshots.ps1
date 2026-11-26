@@ -91,8 +91,9 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $script:SettleMs = 900
 function Capture($window, $label) {
     try {
-        try { $window.SetFocus() } catch { }
-        # park the pointer on the title bar, after the focus change (which can raise a keyboard tooltip), then let the tooltip time out
+        # bring the window forward without moving the keyboard focus (UIA SetFocus restores the focus to a navigation button and raises its tooltip)
+        try { [void][Mkr.Mouse]::SetForegroundWindow([IntPtr]$window.Current.NativeWindowHandle) } catch { }
+        # park the pointer on the title bar, then let any tooltip time out
         try { $tb = $window.Current.BoundingRectangle; [void][Mkr.Mouse]::SetCursorPos([int]($tb.X + $tb.Width / 2), [int]($tb.Y + 14)) } catch { }
         Start-Sleep -Milliseconds $script:SettleMs
         $r = $window.Current.BoundingRectangle
