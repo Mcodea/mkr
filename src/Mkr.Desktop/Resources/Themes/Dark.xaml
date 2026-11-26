@@ -4,6 +4,7 @@
          Every text/background pair is checked against WCAG 2.1 AA (4.5:1) by tests/test_theme_contrast.py. -->
     <SolidColorBrush x:Key="MkrNavy" Color="#163253"/>
     <SolidColorBrush x:Key="MkrBrand" Color="#BFD7F5"/>
+    <SolidColorBrush x:Key="MkrCaption" Color="#0B1522"/>
     <SolidColorBrush x:Key="MkrNavySoft" Color="#1E4170"/>
     <SolidColorBrush x:Key="MkrNavyText" Color="#F2F6FB"/>
     <SolidColorBrush x:Key="MkrNavyMuted" Color="#A3B3C6"/>

@@ -48,6 +48,8 @@ public partial class WindowView : Window
         VersionText.Text = version is null ? "MKR · application Windows" : $"MKR {version.Major}.{version.Minor}.{version.Build} · application Windows";
         Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
         TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
+        StateChanged += (_, _) => ReflectWindowState();
+        Loaded += (_, _) => ReflectWindowState();
         SizeChanged += (_, e) => ToolbarBand.Visibility = e.NewSize.Height < 820 ? Visibility.Collapsed : Visibility.Visible;     // low screens: the toolbar only repeats the navigation
         ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
     }
@@ -60,6 +62,18 @@ public partial class WindowView : Window
         Grid.SetColumn(Stages, narrow ? 0 : 1);
         Grid.SetColumnSpan(Stages, narrow ? 2 : 1);
         Stages.Margin = new Thickness(0, narrow ? 8 : 0, 0, 0);
+    }
+
+    private void CaptionMinimize(object sender, RoutedEventArgs args) => WindowState = WindowState.Minimized;
+    private void CaptionMaximize(object sender, RoutedEventArgs args) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void CaptionClose(object sender, RoutedEventArgs args) => Close();
+
+    /// <summary>A borderless maximised window overshoots the screen by the resize border: pull the content back inside, and show the matching glyph.</summary>
+    private void ReflectWindowState()
+    {
+        var maximized = WindowState == WindowState.Maximized;
+        RootFrame.Margin = maximized ? new Thickness(SystemParameters.WindowResizeBorderThickness.Left + SystemParameters.FixedFrameVerticalBorderWidth) : new Thickness(0);
+        MaximizeGlyph.Text = maximized ? "\uE923" : "\uE922";
     }
 
     private string _defaultFacts = "";

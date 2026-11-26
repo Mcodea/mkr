@@ -128,6 +128,13 @@
                     <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (mêmes essais)">
                         <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="21" ColumnHeaderHeight="26" MaxHeight="150"
                                   SelectionMode="Single" SelectionChanged="ModelTableChanged" AutomationProperties.Name="Comparaison des modèles">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                    <Setter Property="Padding" Value="6,2"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                    <Setter Property="Height" Value="26"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Modèle" Binding="{Binding Family}" Width="1.2*"/>
                                 <DataGridTextColumn Header="FIT (%)" Binding="{Binding Fit}" Width="*"/>

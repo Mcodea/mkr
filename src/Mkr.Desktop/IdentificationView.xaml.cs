@@ -966,17 +966,37 @@ public partial class IdentificationView : UserControl, IStepView
         if (study.Assessment is { } decision)
             VerdictCard.ToolTip = $"{VerdictDetail.Text} Seuil de RMSE : {decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture)} {study.PvUnit}.";
 
-        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).Where(item => item.TrainingId == study.TrainingId && item.ValidationId == study.ValidationId).GroupBy(item => item.Family).Select(group => group.OrderByDescending(item => item.CalculatedAt).First()).Select(item => new ModelRow
-        {
-            Study = item,
-            Family = item.Family == ModelFamily.Integrateur ? "Intégrateur" : item.Family.ToString(),
-            Fit = FitPercent(item.Result.Validation) is { } f ? f.ToString("F1", CultureInfo.CurrentCulture) : "—",
-            Rmse = item.Result.Validation.Rmse.ToString("G3", CultureInfo.CurrentCulture),
-            Decision = item.Assessment is { Accepted: true } ? "accepté" : item.Assessment is not null ? "refusé" : "non décidé"
-        }).ToList();
+        // Rows come from what was really computed on these two trials: the candidates of the saved comparison (FOPDT / SOPDT judged on the validation trial),
+        // then any other study of another family fitted on the same trials. The FIT percentage exists only where a fitted series is stored.
+        var sameTrials = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).Where(item => item.TrainingId == study.TrainingId && item.ValidationId == study.ValidationId)
+            .GroupBy(item => item.Family).Select(group => group.OrderByDescending(item => item.CalculatedAt).First()).ToList();
+        string FamilyName(ModelFamily family) => family == ModelFamily.Integrateur ? "Intégrateur" : family.ToString();
+        var rows = new List<ModelRow>();
+        if (study.Comparison is { } comparison)
+            foreach (var (name, candidate) in comparison.Candidates)
+            {
+                var match = sameTrials.FirstOrDefault(item => FamilyName(item.Family) == name);
+                rows.Add(new ModelRow
+                {
+                    Study = match ?? study,
+                    Family = name + (comparison.Selected == name ? " ✓" : ""),
+                    Fit = match is not null && FitPercent(match.Result.Validation) is { } f ? f.ToString("F1", CultureInfo.CurrentCulture) : "—",
+                    Rmse = candidate.ValidationRmse.ToString("G3", CultureInfo.CurrentCulture),
+                    Decision = candidate.RejectionReasons.Length == 0 ? "critères satisfaits" : "refusé"
+                });
+            }
+        foreach (var item in sameTrials.Where(item => rows.All(row => !row.Family.StartsWith(FamilyName(item.Family), StringComparison.Ordinal))))
+            rows.Add(new ModelRow
+            {
+                Study = item,
+                Family = FamilyName(item.Family),
+                Fit = FitPercent(item.Result.Validation) is { } f ? f.ToString("F1", CultureInfo.CurrentCulture) : "—",
+                Rmse = item.Result.Validation.Rmse.ToString("G3", CultureInfo.CurrentCulture),
+                Decision = item.Assessment is { Accepted: true } ? "accepté" : item.Assessment is not null ? "refusé" : "non décidé"
+            });
         _tableSync = true;
         ModelTable.ItemsSource = rows;
-        ModelTable.SelectedItem = rows.FirstOrDefault(row => row.Study.Id == study.Id);
+        ModelTable.SelectedItem = rows.FirstOrDefault(row => row.Study.Id == study.Id && row.Family.StartsWith(study.Family == ModelFamily.Integrateur ? "Intégrateur" : study.Family.ToString(), StringComparison.Ordinal));
         _tableSync = false;
     }
 
@@ -1024,20 +1044,16 @@ public partial class IdentificationView : UserControl, IStepView
                 new ChartSeries("Résidu", "MkrSignal4", seconds, points.Select(p => p.Observed - p.Predicted).ToArray())
             }) { YLabel = $"Résidu ({study.PvUnit})" }
         });
-        // A and B are the bounds the user selected by dragging on the chart (left button); the shading is that range. Nothing is shown until then.
-        if (_window is { } range)
+        // A and B bound the interval the figures are computed on. By default it is the whole displayed trial (the fit uses every point from the step onset to its end);
+        // dragging on a chart narrows it, and the indicators are then recomputed on that range (display only, nothing is re-estimated).
+        var interval = _window ?? (first, horizon);
+        if (seconds.Length > 1)
         {
-            Chart.SetEvents(new[] { (range.From, "A"), (range.To, "B") });
-            Chart.SetHighlight(range.From, range.To);
-            CommandChart.SetHighlight(range.From, range.To);
-            ResidualChart.SetHighlight(range.From, range.To);
-            PlotLegend.Text += $" · plage A–B : de {range.From:G4} s à {range.To:G4} s (indicateurs recalculés sur cette plage, sans nouvelle estimation).";
-        }
-        else
-        {
-            Chart.SetEvents(Array.Empty<(double, string)>());
-            foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.SetHighlight(null, null);
-            PlotLegend.Text += " · glissez sur le graphique pour choisir une plage A–B.";
+            Chart.SetEvents(new[] { (interval.Item1, "A"), (interval.Item2, "B") });
+            foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.SetHighlight(interval.Item1, interval.Item2);
+            PlotLegend.Text += _window is null
+                ? $" · A–B : intervalle de l'ajustement, de {first:G4} s à {horizon:G4} s après l'échelon. Glissez sur un graphique pour le restreindre."
+                : $" · plage A–B choisie : de {interval.Item1:G4} s à {interval.Item2:G4} s (indicateurs recalculés sur cette plage, sans nouvelle estimation).";
         }
         RefreshSidePanels();
         var shownPoints = _window is { } w ? points.Count(p => p.Seconds >= w.From && p.Seconds <= w.To) : points.Length;
