@@ -92,6 +92,7 @@ Add-Type -AssemblyName System.Windows.Forms
 $out = Join-Path $env:RUNNER_TEMP 'mkr-captures'
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $script:SettleMs = 900
+$script:PhysicalRect = $false
 function Capture($window, $label) {
     try {
         # bring the window forward without moving the keyboard focus (UIA SetFocus restores the focus to a navigation button and raises its tooltip)
@@ -100,6 +101,12 @@ function Capture($window, $label) {
         try { $tb = $window.Current.BoundingRectangle; [void][Mkr.Mouse]::SetCursorPos([int]($tb.X + $tb.Width / 2), [int]($tb.Y + 14)) } catch { }
         Start-Sleep -Milliseconds $script:SettleMs
         $r = $window.Current.BoundingRectangle
+        if ($script:PhysicalRect -and $window.Current.NativeWindowHandle -ne 0) {
+            # scaled display: the window rectangle comes from Win32 in physical pixels (UI Automation reports scaled values to a process that is not DPI aware)
+            [MkrDpi]::Aware()
+            $wr = [MkrDpi]::WindowRect([IntPtr]$window.Current.NativeWindowHandle)
+            $r = New-Object System.Windows.Rect $wr[0], $wr[1], $wr[2], $wr[3]
+        }
         $x = [int][Math]::Max(0, $r.X); $y = [int][Math]::Max(0, $r.Y)
         $physical = [MkrDisplay]::Current()      # the screen limit in physical pixels (VirtualScreen is scaled when the process is not DPI aware)
         $w = [int][Math]::Min($r.Width, $physical[0] - $x)
@@ -224,6 +231,12 @@ public static class MkrDpi {
         return DisplayConfigSetDeviceInfo(ref s);
     }
     public static uint WindowDpi(IntPtr window) { return GetDpiForWindow(window); }
+    [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+    // per-monitor aware (v2) calling thread: window rectangles are then physical pixels, whatever the process manifest
+    public static void Aware() { try { SetThreadDpiAwarenessContext(new IntPtr(-4)); } catch (Exception) { } }
+    public static int[] WindowRect(IntPtr window) { Rect r; if (!GetWindowRect(window, out r)) return new int[] { 0, 0, 0, 0 }; return new int[] { r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top }; }
 }
 "@
 Add-Type -Name Mouse -Namespace Mkr -MemberDefinition @"
@@ -625,6 +638,7 @@ try {
         $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
         $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
         $script:SettleMs = 2500
+        $script:PhysicalRect = $true
         foreach ($size in @(@(1920,1080), @(1366,768))) {
             Set-Resolution $size[0] $size[1]
             Start-Sleep -Milliseconds 1500
@@ -658,6 +672,7 @@ try {
             }
         }
         [void][MkrDpi]::Set(0); Start-Sleep -Milliseconds 2000
+        $script:PhysicalRect = $false
         Set-Resolution $original.Width $original.Height
     }
     Step '24-anglais' {
