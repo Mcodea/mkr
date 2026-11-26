@@ -88,12 +88,12 @@ Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
 $out = Join-Path $env:RUNNER_TEMP 'mkr-captures'
 New-Item -ItemType Directory -Force -Path $out | Out-Null
+$script:SettleMs = 900
 function Capture($window, $label) {
     try {
         # park the pointer on the title bar so that no tooltip or hover state appears in the capture
         try { $tb = $window.Current.BoundingRectangle; [void][Mkr.Mouse]::SetCursorPos([int]($tb.X + $tb.Width / 2), [int]($tb.Y + 14)) } catch { }
-        [System.Windows.Forms.SendKeys]::SendWait('{ESC}')       # closes a tooltip shown for the keyboard focus
-        Start-Sleep -Milliseconds 900
+        Start-Sleep -Milliseconds $script:SettleMs               # a tooltip shown for the keyboard focus hides by itself after about five seconds
         try { $window.SetFocus() } catch { }
         Start-Sleep -Milliseconds 300
         $r = $window.Current.BoundingRectangle
@@ -239,6 +239,11 @@ function Save-Through-Dialog($main, $path) {
     $invoke = $null
     if ($null -ne $save -and $save.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke() }
     else { [System.Windows.Forms.SendKeys]::SendWait('{ENTER}') }
+    # an existing file asks for a confirmation: answer « Yes » (« Oui »)
+    Start-Sleep -Milliseconds 800
+    foreach ($b in $root.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button))) {
+        if ($b.Current.Name -in @('Yes', 'Oui')) { $ip = $null; if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$ip)) { $ip.Invoke(); Write-Host '##DIAG remplacement confirme'; break } }
+    }
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
     while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
 }
@@ -480,6 +485,7 @@ try {
         $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
         Select-Option $main 'StudyPicker' "*$modelId"
         Start-Sleep -Milliseconds 800
+        $script:SettleMs = 6000
         $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
         $screens = @(@('1','acquisition','Step2'), @('2','diagnostic','Step3'), @('3','identification','Step4'), @('4','reglage-pid','Step6'), @('5','simulation','Step9'), @('6','validation','Step5'), @('7','rapport','Step10'))
         foreach ($size in @(@(1920,1080), @(1366,768))) {
