@@ -21,7 +21,13 @@ $process = Start-Process -FilePath $exe.Path -PassThru
 try {
     $nameProperty = [System.Windows.Automation.AutomationElement]::NameProperty
     $idProperty = [System.Windows.Automation.AutomationElement]::AutomationIdProperty
-    $main = Wait-Element $root $nameProperty 'MKR — Espace projets'
+    try { $main = Wait-Element $root $nameProperty 'MKR — Espace projets' }
+    catch {
+        # Diagnostic only: say whether the application is still alive and what the runtime reported, instead of a bare « introuvable ».
+        Write-Host "##DIAG exited=$($process.HasExited) exitcode=$(if ($process.HasExited) { $process.ExitCode })"
+        try { Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2 } -MaxEvents 4 | ForEach-Object { $m = ($_.Message -replace "`r?`n", ' | '); Write-Host ("##DIAG " + $_.ProviderName + ' ' + $m.Substring(0, [Math]::Min(1500, $m.Length))) } } catch { Write-Host '##DIAG no event log' }
+        throw
+    }
     $button = Wait-Element $main $nameProperty 'Ouvrir le catalogue des blocs'
     $button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     $catalogue = Wait-Element $root $nameProperty 'MKR — Catalogue des blocs'
