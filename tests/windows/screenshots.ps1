@@ -211,10 +211,19 @@ function Save-Through-Dialog($main, $path) {
         }
         throw 'zone du nom de fichier introuvable dans la boîte Enregistrer sous'
     }
-    $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($path)
+    $valuePattern = $null
+    if ($edit.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$valuePattern)) {
+        $valuePattern.SetValue($path)
+    } else {
+        # no value pattern on this field: type the path (SendKeys special characters escaped)
+        $edit.SetFocus()
+        [System.Windows.Forms.SendKeys]::SendWait('^a')
+        [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
+    }
     $save = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1'))
-    if ($null -eq $save) { throw 'bouton Enregistrer introuvable dans la boîte Enregistrer sous' }
-    $save.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $invoke = $null
+    if ($null -ne $save -and $save.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke() }
+    else { [System.Windows.Forms.SendKeys]::SendWait('{ENTER}') }
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
     while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
 }

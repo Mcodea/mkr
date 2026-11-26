@@ -88,6 +88,8 @@ public static class ChartMath
     public static (double Lo, double Hi) Pan(double lo, double hi, double delta, double fullLo, double fullHi)
     {
         var span = hi - lo;
+        // the whole range is shown: return the exact bounds (no floating-point residue such as 5.7E-14 at the left edge)
+        if (span >= (fullHi - fullLo) * (1 - 1e-9)) return (fullLo, fullHi);
         var newLo = lo + delta;
         if (newLo < fullLo) newLo = fullLo;
         if (newLo + span > fullHi) newLo = fullHi - span;

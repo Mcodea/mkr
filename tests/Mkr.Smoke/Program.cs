@@ -411,6 +411,13 @@ try
         Require(plo == 80 && phi == 100, "Pan cannot leave the data.");
         var (flo, fhi) = ChartMath.Zoom(10, 20, 15, 100, 0, 100);
         Require(flo == 0 && fhi == 100, "Zooming out stops at the full range.");
+        {
+            // zoom in, slide right, zoom out again: the exact full range comes back (no 5.7E-14 residue on the left edge)
+            var (lo, hi) = ChartMath.Zoom(0, 693.37, 346.685, 0.7, 0, 693.37);
+            (lo, hi) = ChartMath.Pan(lo, hi, 1000, 0, 693.37);
+            for (var i = 0; i < 3; i++) (lo, hi) = ChartMath.Zoom(lo, hi, (lo + hi) / 2, 1 / 0.7, 0, 693.37);
+            Require(lo == 0 && hi == 693.37, "Zooming out after a pan returns exactly to the full range.");
+        }
     }
 
     {
