@@ -363,7 +363,7 @@ public partial class WindowView : Window
             if (done || closed)
                 label.Children.Add(new TextBlock { Text = done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 12, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
                                                    Foreground = (Brush)FindResource(current ? "MkrNavyText" : done ? "MkrSuccess" : "MkrMuted") });
-            var text = new TextBlock { Text = title, FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center };
+            var text = new TextBlock { Text = Loc.T("stage." + i), FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center };
             text.SetResourceReference(TextBlock.ForegroundProperty, current ? "MkrNavyText" : closed ? "MkrMuted" : "MkrText");
             label.Children.Add(text);
             var cell = new Grid { Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
@@ -395,7 +395,7 @@ public partial class WindowView : Window
         RibbonCommands.Children.Clear();
         if (_steps.Count == 0) return;
         var step = _steps[_tab];
-        ScreenTitle.Text = _tab == 5 ? "Réglage PID" : _tab == 2 ? "Diagnostic des données" : step.Title;
+        ScreenTitle.Text = Loc.T("screen." + _tab);
         BuildStages();
         var open = step.State != StepState.Blocked;
         var selected = (StudyGrid.SelectedItem as StudyRow)?.Study;

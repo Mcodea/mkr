@@ -1,4 +1,7 @@
 ﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [string]$Theme = 'light')
+# the script itself must be DPI aware: otherwise window coordinates are scaled and the captures at 125 % / 150 % would be cropped
+Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();' -Name DpiAware -Namespace Mkr
+[void][Mkr.DpiAware]::SetProcessDPIAware()
 # Captures of the real windows of the packaged application (for people without a Windows PC). Never fails the build.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
@@ -565,10 +568,10 @@ try {
                 Start-Sleep -Milliseconds 900
                 if ($screen[1] -eq 'acquisition') {
                     # an import of the project is opened so that the trend, the summary and the signals are shown with real data
-                    try { Select-Option $main 'Imports' 'essai-*'; Press $main 'Ouvrir'; Start-Sleep -Milliseconds 1200 } catch { Write-Host "##DIAG acquisition : $($_.Exception.Message)" }
+                    try { Select-Option $main 'Imports' '*essai-*'; Press $main 'Ouvrir'; Start-Sleep -Milliseconds 1200 } catch { Write-Host "##DIAG acquisition : $($_.Exception.Message)" }
                 }
                 if ($screen[1] -eq 'diagnostic') {
-                    try { Select-Option $main 'Imports' 'essai-*'; Start-Sleep -Milliseconds 800 } catch { Write-Host "##DIAG diagnostic : $($_.Exception.Message)" }
+                    try { Select-Option $main 'Imports' '*essai-*'; Start-Sleep -Milliseconds 800 } catch { Write-Host "##DIAG diagnostic : $($_.Exception.Message)" }
                 }
                 if ($screen[1] -eq 'identification') { Show-Page $main 'PageResults' }
                 if ($screen[1] -eq 'reglage-pid') {

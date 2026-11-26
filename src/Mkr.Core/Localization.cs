@@ -73,6 +73,10 @@ public static class Loc
         ["step.project"] = "Projet", ["step.data"] = "Données", ["step.diagnostic"] = "Diagnostic", ["step.identification"] = "Identification",
         ["step.validation"] = "Validation", ["step.tuning"] = "Réglage PID", ["step.block"] = "Bloc", ["step.pi"] = "Paramètres PI",
         ["step.simulation"] = "Simulation", ["step.report"] = "Rapport",
+        ["screen.0"] = "Configuration du procédé", ["screen.1"] = "Acquisition des données", ["screen.2"] = "Diagnostic des données", ["screen.3"] = "Identification du modèle",
+        ["screen.4"] = "Validation du modèle", ["screen.5"] = "Réglage PID", ["screen.6"] = "Bloc constructeur", ["screen.7"] = "Calcul des paramètres",
+        ["screen.8"] = "Simulation et robustesse", ["screen.9"] = "Validation et rapport",
+        ["stage.0"] = "Données", ["stage.1"] = "Diagnostic", ["stage.2"] = "Identification", ["stage.3"] = "Validation", ["stage.4"] = "Réglage", ["stage.5"] = "Simulation", ["stage.6"] = "Rapport",
         ["menu.language"] = "Langue : français",
         ["menu.language.restart"] = "La langue sera appliquée au prochain démarrage d’ORIAS.",
     };
@@ -100,6 +104,10 @@ public static class Loc
         ["step.project"] = "Project", ["step.data"] = "Data", ["step.diagnostic"] = "Diagnostic", ["step.identification"] = "Identification",
         ["step.validation"] = "Validation", ["step.tuning"] = "PID tuning", ["step.block"] = "Block", ["step.pi"] = "PI parameters",
         ["step.simulation"] = "Simulation", ["step.report"] = "Report",
+        ["screen.0"] = "Process setup", ["screen.1"] = "Data acquisition", ["screen.2"] = "Data diagnostic", ["screen.3"] = "Model identification",
+        ["screen.4"] = "Model validation", ["screen.5"] = "PID tuning", ["screen.6"] = "Manufacturer block", ["screen.7"] = "Parameter calculation",
+        ["screen.8"] = "Simulation and robustness", ["screen.9"] = "Validation and report",
+        ["stage.0"] = "Data", ["stage.1"] = "Diagnostic", ["stage.2"] = "Identification", ["stage.3"] = "Validation", ["stage.4"] = "Tuning", ["stage.5"] = "Simulation", ["stage.6"] = "Report",
         ["menu.language"] = "Language: English",
         ["menu.language.restart"] = "The language will apply the next time ORIAS starts.",
     };
