@@ -218,7 +218,9 @@ function Save-Through-Dialog($main, $path) {
         $valuePattern.SetValue($path)
     } else {
         # no value pattern on this field: type the path (SendKeys special characters escaped)
-        $edit.SetFocus()
+        # the file name field has the focus when the dialog opens: bring the dialog forward and type
+        try { $dialog.SetFocus() } catch { }
+        Start-Sleep -Milliseconds 400
         [System.Windows.Forms.SendKeys]::SendWait('^a')
         [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
     }
