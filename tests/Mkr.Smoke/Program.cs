@@ -423,6 +423,7 @@ try
     {
         // Central texts: every English text has its French reference, with the same placeholders; a gap falls back instead of breaking the screen.
         var french = Loc.FrenchTexts; var english = Loc.EnglishTexts;
+        Require(french.Count > 1000 && english.Count > 1000, "The embedded text files are loaded (not left in satellite assemblies).");
         Require(english.Keys.All(french.ContainsKey), "Every English text has a French reference.");
         static int Placeholders(string text) => System.Text.RegularExpressions.Regex.Matches(text, @"\{\d+\}").Select(m => m.Value).Distinct().Count();
         Require(english.All(pair => Placeholders(pair.Value) == Placeholders(french[pair.Key])), "French and English texts use the same placeholders.");

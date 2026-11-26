@@ -4,6 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- User-visible texts of the screens: key → text, French (reference) and English. Loaded by Loc. -->
-    <EmbeddedResource Include="Texts/*.json" />
+    <EmbeddedResource Include="Texts/*.json" WithCulture="false" />
   </ItemGroup>
 </Project>
