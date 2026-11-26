@@ -228,7 +228,10 @@ function Save-Through-Dialog($main, $path) {
         [Mkr.Mouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero); [Mkr.Mouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
         Start-Sleep -Milliseconds 400
         [System.Windows.Forms.SendKeys]::SendWait('^a')
-        [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}'))
+        # paste the path (typing a long path key by key loses characters on a loaded runner)
+        try { [System.Windows.Forms.Clipboard]::SetText($path); [System.Windows.Forms.SendKeys]::SendWait('^v') }
+        catch { [System.Windows.Forms.SendKeys]::SendWait(($path -replace '([+^%~(){}\[\]])', '{$1}')) }
+        Start-Sleep -Milliseconds 400
     }
     $save = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1'))
     $invoke = $null
@@ -444,9 +447,13 @@ try {
         $zoomed = View-Of $main1
         Check 'zoom avant : la vue se resserre' { $zoomed -ne $full }
         Check 'zoom avant : les trois graphiques restent synchronisés' { (View-Of $cmd) -eq $zoomed -and (View-Of $res) -eq $zoomed }
-        Press $main 'Sélectionner une plage A–B'      # gives the keyboard focus to the main chart
-        [System.Windows.Forms.SendKeys]::SendWait('{RIGHT}')
-        Start-Sleep -Milliseconds 400
+        foreach ($try in 1..3) {
+            Press $main 'Sélectionner une plage A–B'      # gives the keyboard focus to the main chart
+            Start-Sleep -Milliseconds 300
+            [System.Windows.Forms.SendKeys]::SendWait('{RIGHT}')
+            Start-Sleep -Milliseconds 500
+            if ((View-Of $main1) -ne $zoomed) { break }   # the key can be lost while the window settles: retry, the check below still requires a real pan
+        }
         $panned = View-Of $main1
         $panDeadline = [DateTime]::UtcNow.AddSeconds(4)
         while ((View-Of $cmd) -ne (View-Of $main1) -and [DateTime]::UtcNow -lt $panDeadline) { Start-Sleep -Milliseconds 200 }
@@ -479,6 +486,7 @@ try {
         Save-Through-Dialog $main $csv
         $csvText = if (Test-Path $csv) { [System.IO.File]::ReadAllText($csv, [System.Text.Encoding]::UTF8) } else { '' }
         Write-Host "##DIAG csv : $($csvText.Length) caracteres ; debut [$($csvText.Substring(0, [Math]::Min(160, $csvText.Length)) -replace "`r|`n", ' / ')]"
+        if (-not (Test-Path $csv)) { Capture $root '10i-export-csv-absent' }
         Check 'export des données : CSV écrit avec les trois graphiques' {
             $csvText.StartsWith('piste;courbe;unite;temps_s;valeur') -and $csvText.Contains('Commande') -and $csvText.Contains('Résidus')
         }
