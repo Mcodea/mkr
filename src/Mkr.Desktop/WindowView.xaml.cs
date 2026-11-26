@@ -19,6 +19,8 @@ public sealed class StudyRow
     public string Decision { get; init; } = "";
     public string When { get; init; } = "";
     public string Label => $"{Family} · {When} · {Decision}";
+    /// <summary>Name read by assistive technology and UI tests: the label plus the short study identifier (kept off the screen).</summary>
+    public string AutomationName => $"{Label} · {Study.Id.ToString()[..8]}";
 }
 
 public partial class WindowView : Window

@@ -204,7 +204,11 @@ function Save-Through-Dialog($main, $path) {
     while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
 }
 function Step($label, [scriptblock]$body) {
-    try { & $body } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
+    try { & $body } catch {
+        Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)"
+        # a captures step never fails the run, but the interaction checks are assertions: not being able to run them is a failure
+        if ($label -like '*interactions*') { $script:failures += "$label : $($_.Exception.Message)" }
+    }
 }
 $start = New-Object System.Diagnostics.ProcessStartInfo
 $start.FileName = (Resolve-Path $Executable).Path
@@ -426,6 +430,32 @@ try {
         Check 'export de limage : PNG valide' {
             (Test-Path $png) -and ((Get-Item $png).Length -gt 2000) -and ([System.IO.File]::ReadAllBytes($png)[1] -eq 0x50)
         }
+    }
+    Step '21-screens-resolutions' {
+        # The six screens at both resolutions (12 captures), on the study that has a stored PI tuning and simulation.
+        Close-Others $root $main
+        $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+        Select-Option $main 'StudyPicker' "*$modelId"
+        Start-Sleep -Milliseconds 800
+        $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
+        $screens = @(@('1','acquisition','Step2'), @('2','diagnostic','Step3'), @('3','identification','Step4'), @('4','reglage-pid','Step6'), @('5','simulation','Step9'), @('6','validation','Step5'), @('7','rapport','Step10'))
+        foreach ($size in @(@(1920,1080), @(1366,768))) {
+            Set-Resolution $size[0] $size[1]
+            Start-Sleep -Milliseconds 1500
+            foreach ($screen in $screens) {
+                $tabElement = Find $main $id $screen[2]
+                $tabElement.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+                Start-Sleep -Milliseconds 900
+                if ($screen[1] -eq 'identification') { Show-Page $main 'PageResults' }
+                if ($screen[1] -eq 'reglage-pid') {
+                    try { Press $main 'Calculer le réglage guidé' } catch { }
+                    $null = Wait-Name $main 'Status' '*.' 40
+                    Start-Sleep -Milliseconds 800
+                }
+                Capture $main ("21-{0}-{1}-{2}x{3}" -f $screen[0], $screen[1], $size[0], $size[1])
+            }
+        }
+        Set-Resolution $original.Width $original.Height
     }
     Step '10h-identification-resolutions' {
         Close-Others $root $main

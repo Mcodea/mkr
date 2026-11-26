@@ -331,7 +331,13 @@
                                         <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
                                     </Border>
                                     <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
-                                    <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" AutomationProperties.Name="Étude affichée"/>
+                                    <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" AutomationProperties.Name="Étude affichée">
+                                        <ComboBox.ItemContainerStyle>
+                                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                                <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}"/>
+                                            </Style>
+                                        </ComboBox.ItemContainerStyle>
+                                    </ComboBox>
                                     <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Expander>

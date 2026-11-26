@@ -67,6 +67,17 @@ internal sealed class SignalChart : FrameworkElement
     private readonly List<(Rect Box, ChartSeries Series)> _legend = new();
     private IReadOnlyList<(double X, string Label)> _events = Array.Empty<(double, string)>();
 
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new SignalChartPeer(this);
+
+    /// <summary>Makes the chart visible to assistive technology and to UI tests: a named graphic whose item status carries the time window and the cursor.</summary>
+    private sealed class SignalChartPeer(SignalChart chart) : System.Windows.Automation.Peers.FrameworkElementAutomationPeer(chart)
+    {
+        protected override string GetClassNameCore() => nameof(SignalChart);
+        protected override System.Windows.Automation.Peers.AutomationControlType GetAutomationControlTypeCore() => System.Windows.Automation.Peers.AutomationControlType.Image;
+        protected override bool IsControlElementCore() => true;
+        protected override bool IsContentElementCore() => true;
+    }
+
     public SignalChart()
     {
         Focusable = true;
