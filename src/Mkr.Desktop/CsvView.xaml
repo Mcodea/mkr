@@ -17,7 +17,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" MinWidth="300"/>
                         <ColumnDefinition Width="6"/>
-                        <ColumnDefinition Width="350" MinWidth="260" MaxWidth="700"/>
+                        <ColumnDefinition Width="430" MinWidth="320" MaxWidth="700"/>
                     </Grid.ColumnDefinitions>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -27,86 +27,93 @@
                         <TextBlock Text="Aperçu du fichier (lignes source, valeurs brutes inchangées)" FontWeight="SemiBold" Margin="2,0,0,6"/>
                         <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" CanUserAddRows="False" AutoGenerateColumns="False"
                                   AutomationProperties.Name="Aperçu des données CSV"/>
+                        <TextBlock Grid.Row="1" x:Name="PreviewEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
+                                   Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
+                                   Text="Aucun fichier ouvert. Choisissez un CSV, lancez une acquisition en lecture seule ou ouvrez un import enregistré (panneau de droite) : les lignes source s’affichent ici, valeurs brutes inchangées.">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ElementName=Preview, Path=HasItems}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
                     <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="Controls">
                             <Expander Style="{StaticResource MkrPanel}" Header="Source et format du fichier">
                                 <StackPanel Margin="10,8">
-<WrapPanel VerticalAlignment="Center">
-                                        <Label Content="_Séparateur" Target="{Binding ElementName=Delimiter}"
-                                               VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="Delimiter" Width="145" SelectedIndex="0"
-                                                  SelectedValuePath="Tag" VerticalAlignment="Center">
+<Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Label Grid.Row="0" Content="_Séparateur" Target="{Binding ElementName=Delimiter}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="Delimiter" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6">
                                             <ComboBoxItem Content="Virgule" Tag=","/>
                                             <ComboBoxItem Content="Point-virgule" Tag=";"/>
                                         </ComboBox>
-                                        <Label Content="_Décimale" Target="{Binding ElementName=DecimalSeparator}"
-                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
-                                        <ComboBox x:Name="DecimalSeparator" Width="90" SelectedIndex="0"
-                                                  SelectedValuePath="Tag" VerticalAlignment="Center"
+                                        <Label Grid.Row="1" Content="_Décimale" Target="{Binding ElementName=DecimalSeparator}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="DecimalSeparator" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6"
                                                   AutomationProperties.Name="Séparateur décimal">
                                             <ComboBoxItem Content="Point" Tag="."/>
                                             <ComboBoxItem Content="Virgule" Tag=","/>
                                         </ComboBox>
-                                        <Label Content="_Date et heure" Target="{Binding ElementName=TimeFormat}"
-                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
-                                        <ComboBox x:Name="TimeFormat" Width="250" SelectedIndex="0"
-                                                  SelectedValuePath="Tag" VerticalAlignment="Center"
+                                        <Label Grid.Row="2" Content="_Date et heure" Target="{Binding ElementName=TimeFormat}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="TimeFormat" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6"
                                                   AutomationProperties.Name="Notation de la date et de l’heure"/>
-                                        <Label Content="_Fuseau" Target="{Binding ElementName=TimeZone}"
-                                               VerticalAlignment="Center" Margin="12,0,0,0"/>
-                                        <TextBox x:Name="TimeZone" Width="140" Text="Europe/Paris" IsEnabled="False"
+                                        <Label Grid.Row="3" Content="_Fuseau" Target="{Binding ElementName=TimeZone}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,8"/>
+                                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TimeZone" Text="Europe/Paris" IsEnabled="False" Margin="0,0,0,8"
                                                  ToolTip="Nom IANA du fuseau de l’enregistreur, par exemple Europe/Paris ou UTC"
                                                  AutomationProperties.Name="Fuseau horaire"/>
-                                        <Button Content="Acquisition _automate…" Click="OpenAcquisition" Margin="12,0,0,0" ToolTip="Schneider (Modbus TCP) ou Siemens (S7comm), en lecture seule"/>
-                                        <Button Content="_Choisir un CSV…" Click="ChooseCsv"
-                                                Margin="12,0,0,0" ToolTip="Importer un fichier CSV en UTF-8"/>
-                                    </WrapPanel>
+                                        <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal">
+                                            <Button Content="Acquisition _automate…" Click="OpenAcquisition" ToolTip="Schneider (Modbus TCP) ou Siemens (S7comm), en lecture seule"/>
+                                            <Button Content="_Choisir un CSV…" Click="ChooseCsv" Margin="8,0,0,0" ToolTip="Importer un fichier CSV en UTF-8"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </Expander>
                             <Expander Style="{StaticResource MkrPanel}" Header="Correspondance des variables">
                                 <StackPanel Margin="10,8">
                                     <TextBlock Text="Sélectionnez explicitement les colonnes, le rôle métier et l’unité physique. Aucun rôle n’est déduit automatiquement."
                                                Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-<WrapPanel>
-                                        <StackPanel Margin="0,0,12,8">
-                                            <Label Content="_Horodatage" Target="{Binding ElementName=TimeColumn}"
-                                                   Padding="0" Margin="0,0,0,4"/>
-                                            <ComboBox x:Name="TimeColumn" Width="185" MinHeight="34"/>
+<Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <StackPanel Margin="0,0,0,8">
+                                            <Label Content="_Horodatage" Target="{Binding ElementName=TimeColumn}" Padding="0" Margin="0,0,0,4"/>
+                                            <ComboBox x:Name="TimeColumn" MinHeight="34"/>
                                         </StackPanel>
-                                        <StackPanel Margin="0,0,12,8">
-                                            <Label Content="_Valeur" Target="{Binding ElementName=ValueColumn}"
-                                                   Padding="0" Margin="0,0,0,4"/>
-                                            <ComboBox x:Name="ValueColumn" Width="185" MinHeight="34"/>
+                                        <StackPanel Grid.Column="2" Margin="0,0,0,8">
+                                            <Label Content="_Valeur" Target="{Binding ElementName=ValueColumn}" Padding="0" Margin="0,0,0,4"/>
+                                            <ComboBox x:Name="ValueColumn" MinHeight="34"/>
                                         </StackPanel>
-                                        <StackPanel Margin="0,0,12,8">
-                                            <Label Content="_Rôle" Target="{Binding ElementName=Role}"
-                                                   Padding="0" Margin="0,0,0,4"/>
-                                            <ComboBox x:Name="Role" Width="190" MinHeight="34"/>
+                                        <StackPanel Grid.Row="1" Margin="0,0,0,8">
+                                            <Label Content="_Rôle" Target="{Binding ElementName=Role}" Padding="0" Margin="0,0,0,4"/>
+                                            <ComboBox x:Name="Role" MinHeight="34"/>
                                         </StackPanel>
-                                        <StackPanel Margin="0,0,12,8">
-                                            <Label Content="_Unité" Target="{Binding ElementName=Unit}"
-                                                   Padding="0" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="Unit" Width="112" MaxLength="40"/>
+                                        <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,8">
+                                            <Label Content="_Unité" Target="{Binding ElementName=Unit}" Padding="0" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="Unit" MaxLength="40" MinHeight="34"/>
                                         </StackPanel>
-                                        <Button x:Name="Analyze" Content="_Analyser et enregistrer"
-                                                Click="AnalyzeCsv" IsEnabled="False" VerticalAlignment="Bottom"
-                                                Margin="0,0,0,8" Style="{StaticResource MkrPrimaryButton}"/>
-                                    </WrapPanel>
+                                        <Button Grid.Row="2" Grid.ColumnSpan="3" x:Name="Analyze" Content="_Analyser et enregistrer" Click="AnalyzeCsv" IsEnabled="False"
+                                                HorizontalAlignment="Left" Style="{StaticResource MkrPrimaryButton}"/>
+                                    </Grid>
                                 </StackPanel>
                             </Expander>
                             <Expander Style="{StaticResource MkrPanel}" Header="Imports enregistrés">
                                 <StackPanel Margin="10,8">
-<WrapPanel VerticalAlignment="Center">
-                                        <Label Content="_Imports enregistrés"
-                                               Target="{Binding ElementName=Imports}" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="Imports" Width="280" MinHeight="34"
-                                                  DisplayMemberPath="Label" VerticalAlignment="Center"/>
-                                        <Button Content="_Ouvrir" Click="OpenImport" Margin="10,0,0,0"/>
-                                        <Button Content="Exporter l’_original…" Click="ExportOriginal"
-                                                Margin="8,0,0,0"/>
-                                    </WrapPanel>
+<StackPanel>
+                                        <Label Content="_Imports enregistrés" Target="{Binding ElementName=Imports}" Padding="0" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="Imports" MinHeight="34" DisplayMemberPath="Label" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="_Ouvrir" Click="OpenImport"/>
+                                            <Button Content="Exporter l’_original…" Click="ExportOriginal" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                             </Expander>
                             <Expander Style="{StaticResource MkrPanel}" Header="Qualité et provenance">

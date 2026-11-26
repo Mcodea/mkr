@@ -310,7 +310,7 @@ public partial class SimulationView : UserControl, IStepView
         IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
         for (var i = 0; i < 4; i++) IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         for (var i = 0; i < 3; i++) IndicatorGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var headers = new[] { "Méthode", $"IAE ({_model.PvUnit}·s)", $"Dépassement ({_model.PvUnit})", "Temps de réponse ±5 % (s)", "Saturation (s)" };
+        var headers = new[] { "Méthode", $"IAE ({_model.PvUnit}·s)", $"Dépass. ({_model.PvUnit})", "Rép. ±5 % (s)", "Satur. (s)" };
         for (var c = 0; c < headers.Length; c++) IndicatorGrid.Children.Add(IndicatorCell(headers[c], 0, c, header: true));
         var unavailable = false;
         string Num(double? value) { if (value is null) { unavailable = true; return "—"; } return value.Value.ToString("G4", CultureInfo.CurrentCulture); }

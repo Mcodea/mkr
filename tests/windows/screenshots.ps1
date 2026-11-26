@@ -90,7 +90,9 @@ $out = Join-Path $env:RUNNER_TEMP 'mkr-captures'
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 function Capture($window, $label) {
     try {
-        Start-Sleep -Milliseconds 700
+        # park the pointer on the title bar so that no tooltip or hover state appears in the capture
+        try { $tb = $window.Current.BoundingRectangle; [void][Mkr.Mouse]::SetCursorPos([int]($tb.X + $tb.Width / 2), [int]($tb.Y + 14)) } catch { }
+        Start-Sleep -Milliseconds 900
         try { $window.SetFocus() } catch { }
         Start-Sleep -Milliseconds 300
         $r = $window.Current.BoundingRectangle
