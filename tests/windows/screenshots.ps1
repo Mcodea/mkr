@@ -196,15 +196,24 @@ function Save-Through-Dialog($main, $path) {
         if ($null -eq $dialog) { Start-Sleep -Milliseconds 300 }
     } while ($null -eq $dialog -and [DateTime]::UtcNow -lt $deadline)
     if ($null -eq $dialog) { throw 'boîte « Enregistrer sous » introuvable' }
-    $edit = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1001'))
+    $AE = [System.Windows.Automation.AutomationElement]
+    $desc = [System.Windows.Automation.TreeScope]::Descendants
+    $edit = $null
+    # the file name field is an Edit inside the combo box 1001 (or a combo box with a value pattern, depending on the Windows version)
+    $combo = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1001'))
+    if ($null -ne $combo) {
+        $edit = $combo.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))
+        if ($null -eq $edit) { $edit = $combo }
+    }
     if ($null -eq $edit) {
-        foreach ($e in $dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
+        foreach ($e in $dialog.FindAll($desc, [System.Windows.Automation.Condition]::TrueCondition)) {
             Write-Host "##DIAG dialog element id=$($e.Current.AutomationId) name=$($e.Current.Name) type=$($e.Current.ControlType.ProgrammaticName) class=$($e.Current.ClassName)"
         }
         throw 'zone du nom de fichier introuvable dans la boîte Enregistrer sous'
     }
     $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($path)
-    $save = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1'))
+    $save = $dialog.FindFirst($desc, [System.Windows.Automation.PropertyCondition]::new($AE::AutomationIdProperty, '1'))
+    if ($null -eq $save) { throw 'bouton Enregistrer introuvable dans la boîte Enregistrer sous' }
     $save.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
     while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
@@ -214,6 +223,9 @@ function Step($label, [scriptblock]$body) {
         Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)"
         # a captures step never fails the run, but the interaction checks are assertions: not being able to run them is a failure
         if ($label -like '*interactions*') { $script:failures += "$label : $($_.Exception.Message)" }
+        # a dialog left open by the failed step would hide every following capture
+        $left = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, '#32770'))
+        if ($null -ne $left) { [System.Windows.Forms.SendKeys]::SendWait('{ESC}'); Start-Sleep -Milliseconds 500 }
     }
 }
 $start = New-Object System.Diagnostics.ProcessStartInfo

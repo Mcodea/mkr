@@ -119,6 +119,7 @@ jobs:
         shell: powershell
         run: ./tests/windows/blocks.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
       - name: Capturer les fenêtres réelles, thèmes clair puis sombre (pour relecture sans poste Windows)
+        id: captures
         shell: powershell
         continue-on-error: true
         run: |
@@ -133,3 +134,9 @@ jobs:
           path: distribution/
           retention-days: 30
           if-no-files-found: error
+      - name: Échouer si une vérification d'interaction graphique a échoué
+        if: steps.captures.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "Les captures ont été produites, mais au moins une vérification (zoom, déplacement, sélection A-B, export, curseur) a échoué : voir les lignes ##CHECK FAIL."
+          exit 1
