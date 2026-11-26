@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Windows.Markup;
 using System.IO;
 using System.Windows;
 using Mkr.Infrastructure;
@@ -26,6 +28,18 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // Dates and numbers follow the user's regional settings everywhere, including text bound in XAML (WPF would otherwise format with en-US).
+        // MKR_CULTURE forces a culture (used by the UI captures, which must show the French format whatever the machine's settings).
+        try
+        {
+            if (Environment.GetEnvironmentVariable("MKR_CULTURE") is { Length: > 0 } forced)
+            {
+                var culture = CultureInfo.GetCultureInfo(forced);
+                CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = culture;
+            }
+        }
+        catch (CultureNotFoundException) { }
+        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
         // Every window fits the usable screen area (1024x768 laptops, docked taskbars) and stays fully on screen.
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(FitToScreen));
         try

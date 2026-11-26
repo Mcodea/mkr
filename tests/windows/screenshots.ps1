@@ -166,6 +166,43 @@ function Close-Others($rootElement, $mainWindow) {
         }
     }
 }
+$script:failures = @()
+function Check($label, [scriptblock]$body) {
+    # Unlike Step (captures never fail the run), a Check is an assertion: a failure fails the CI job.
+    try {
+        if (& $body) { Write-Host "##CHECK PASS $label" } else { $script:failures += $label; Write-Host "##CHECK FAIL $label" }
+    } catch { $script:failures += $label; Write-Host "##CHECK FAIL $label : $($_.Exception.Message)" }
+}
+Add-Type -Name Mouse -Namespace Mkr -MemberDefinition @"
+[DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+[DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+"@
+function Mouse-Move($x, $y) { [void][Mkr.Mouse]::SetCursorPos([int]$x, [int]$y); Start-Sleep -Milliseconds 250 }
+function Mouse-Drag($x1, $y1, $x2, $y2) {
+    Mouse-Move $x1 $y1
+    [Mkr.Mouse]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)         # left button down
+    foreach ($k in 1..8) { Mouse-Move ($x1 + ($x2 - $x1) * $k / 8) ($y1 + ($y2 - $y1) * $k / 8) }
+    [Mkr.Mouse]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)         # left button up
+    Start-Sleep -Milliseconds 400
+}
+function View-Of($chart) { ($chart.Current.ItemStatus -split ' ; ')[0] }
+function Save-Through-Dialog($main, $path) {
+    # Common « Save as » dialog: file name field (id 1001), Save button (id 1).
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    $dialog = $null
+    do {
+        $cond = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, '#32770')
+        $dialog = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
+        if ($null -eq $dialog) { Start-Sleep -Milliseconds 300 }
+    } while ($null -eq $dialog -and [DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $dialog) { throw 'boîte « Enregistrer sous » introuvable' }
+    $edit = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1001'))
+    $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($path)
+    $save = $dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, '1'))
+    $save.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
+}
 function Step($label, [scriptblock]$body) {
     try { & $body } catch { Write-Host "##CAPTURE-FAILED $label : $($_.Exception.Message)" }
 }
@@ -174,6 +211,7 @@ $start.FileName = (Resolve-Path $Executable).Path
 $start.UseShellExecute = $false
 $start.EnvironmentVariables['MKR_DATA_DIRECTORY'] = (Resolve-Path $Fixture).Path
 $start.EnvironmentVariables['MKR_THEME'] = $Theme
+$start.EnvironmentVariables['MKR_CULTURE'] = 'fr-FR'      # captures show the French date and number format whatever the runner's regional settings
 $process = [System.Diagnostics.Process]::Start($start)
 try {
     $root = $elementType::RootElement
@@ -331,6 +369,64 @@ try {
         Start-Sleep -Milliseconds 1200
         Capture $main '15-simulation-integree'
     }
+    Step '10i-chart-interactions' {
+        Close-Others $root $main
+        $tab = Find $main $id 'Step4'
+        $tab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Show-Page $main 'PageResults'
+        $noisyId = (Get-Content -LiteralPath (Join-Path $Fixture 'noisy-demo-study.txt') -Raw).Trim()
+        Select-Option $main 'StudyList' "*$noisyId"
+        Start-Sleep -Milliseconds 1000
+        $apos = [string][char]0x2019
+        $main1 = Find $main $name ('Réponse du procédé : mesure observée et modèle identifié, en fonction du temps')
+        $cmd = Find $main $name ("Commande de l${apos}essai, en fonction du temps")
+        $res = Find $main $name ('Résidus (mesure moins modèle), en fonction du temps')
+        $full = View-Of $main1
+        Check 'les trois graphiques partagent la même vue au départ' { (View-Of $cmd) -eq $full -and (View-Of $res) -eq $full }
+        Press $main 'Zoom avant'
+        Start-Sleep -Milliseconds 400
+        $zoomed = View-Of $main1
+        Check 'zoom avant : la vue se resserre' { $zoomed -ne $full }
+        Check 'zoom avant : les trois graphiques restent synchronisés' { (View-Of $cmd) -eq $zoomed -and (View-Of $res) -eq $zoomed }
+        Press $main 'Sélectionner une plage A–B'      # gives the keyboard focus to the main chart
+        [System.Windows.Forms.SendKeys]::SendWait('{RIGHT}')
+        Start-Sleep -Milliseconds 400
+        $panned = View-Of $main1
+        Check 'déplacement (flèche droite) : la fenêtre glisse' { $panned -ne $zoomed -and (View-Of $cmd) -eq $panned }
+        Press $main 'Zoom arrière'; Press $main 'Zoom arrière'; Press $main 'Zoom arrière'
+        Start-Sleep -Milliseconds 400
+        Check 'zoom arrière : retour à la vue complète' { (View-Of $main1) -eq $full }
+        Press $main 'Zoom avant'
+        Press $main 'Ajuster à tout l’essai'
+        Start-Sleep -Milliseconds 400
+        Check 'ajuster : vue complète sur les trois graphiques' { (View-Of $main1) -eq $full -and (View-Of $cmd) -eq $full -and (View-Of $res) -eq $full }
+        $r = $main1.Current.BoundingRectangle
+        $cx = $r.X + $r.Width * 0.5; $cy = $r.Y + $r.Height * 0.5
+        Mouse-Move $cx $cy
+        Check 'curseur : la position se reflète sur Commande et Résidus' { ($cmd.Current.ItemStatus -like '*curseur*') -and ($res.Current.ItemStatus -like '*curseur*') }
+        Mouse-Drag ($r.X + $r.Width * 0.3) $cy ($r.X + $r.Width * 0.6) $cy
+        Mouse-Move ($r.X + 5) ($r.Y - 60)            # leave the chart so that the legend line is shown again
+        $legend = Find $main $id 'PlotLegend'
+        Check 'sélection A–B : la plage choisie est annoncée' { $legend.Current.Name -like '*plage A–B choisie*' }
+        Check 'sélection A–B : les indicateurs sont recalculés sur la plage' { (Find $main $name 'FIT (validation A–B, NRMSE)') -ne $null }
+        Press $main 'Effacer la plage A–B'
+        Start-Sleep -Milliseconds 500
+        Check 'effacer A–B : retour à l’intervalle de l’ajustement' { (Find $main $id 'PlotLegend').Current.Name -like '*intervalle de l*ajustement*' }
+        $csv = Join-Path $env:RUNNER_TEMP 'chart-export.csv'
+        $png = Join-Path $env:RUNNER_TEMP 'chart-export.png'
+        Remove-Item $csv, $png -ErrorAction SilentlyContinue
+        Press $main 'Exporter les données'
+        Save-Through-Dialog $main $csv
+        Check 'export des données : CSV écrit avec les trois graphiques' {
+            (Test-Path $csv) -and ((Get-Content -LiteralPath $csv -TotalCount 1) -like '*piste;courbe;unite;temps_s;valeur*') -and
+            ((Get-Content -LiteralPath $csv -Raw) -like '*Commande*') -and ((Get-Content -LiteralPath $csv -Raw) -like '*Résidus*')
+        }
+        Press $main 'Exporter l’image'
+        Save-Through-Dialog $main $png
+        Check 'export de l’image : PNG valide' {
+            (Test-Path $png) -and ((Get-Item $png).Length -gt 2000) -and ([System.IO.File]::ReadAllBytes($png)[1] -eq 0x50)
+        }
+    }
     Step '10h-identification-resolutions' {
         Close-Others $root $main
         $tab = Find $main $id 'Step4'
@@ -351,5 +447,9 @@ try {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
 } finally {
     if (-not $process.HasExited) { Stop-Process -Id $process.Id }
+}
+if ($script:failures.Count -gt 0) {
+    Write-Host "##CHECKS-FAILED $($script:failures -join ' | ')"
+    exit 1
 }
 exit 0

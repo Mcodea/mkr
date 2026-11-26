@@ -896,23 +896,27 @@ public partial class IdentificationView : UserControl, IStepView
         return total;
     }
 
-    private UIElement KeyValue(string label, string value, string unit = "")
+    /// <summary>One result line: label (regular), value (semi-bold, right aligned, optionally the headline figure) and unit (muted) in fixed columns.</summary>
+    private UIElement KeyValue(string label, string value, string unit = "", bool headline = false)
     {
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
-        var name = new TextBlock { Text = label, Margin = new Thickness(10, 2, 6, 2), TextWrapping = TextWrapping.Wrap };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = 62 });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(58) });
+        var name = new TextBlock { Text = label, FontSize = 12, Margin = new Thickness(10, 2, 6, 2), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
         name.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         grid.Children.Add(name);
-        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 1, 4, 1), TextAlignment = TextAlignment.Right };
+        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, FontSize = headline ? 15 : 13, Margin = new Thickness(6, 1, 4, 1), TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
         val.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         Grid.SetColumn(val, 1);
         grid.Children.Add(val);
-        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 1, 8, 1), Foreground = (Brush)FindResource("MkrMuted") };
+        var u = new TextBlock { Text = unit, FontSize = 11, Margin = new Thickness(2, 1, 8, 1), VerticalAlignment = VerticalAlignment.Center };
+        u.SetResourceReference(TextBlock.ForegroundProperty, "MkrMuted");
         Grid.SetColumn(u, 2);
         grid.Children.Add(u);
-        return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
+        var border = new Border { Child = grid, BorderThickness = new Thickness(0, 0, 0, 1) };
+        border.SetResourceReference(Border.BorderBrushProperty, "MkrBorder");
+        return border;
     }
 
     private void RefreshSidePanels()
@@ -951,7 +955,7 @@ public partial class IdentificationView : UserControl, IStepView
                 pts = pts.Where(p => p.Seconds >= w.From && p.Seconds <= w.To).ToArray();
                 label += " A–B";
             }
-            if (FitPercent(pts) is { } fitValue) QualityTable.Children.Add(KeyValue($"FIT ({label}, NRMSE)", fitValue.ToString("F1", CultureInfo.CurrentCulture), "%"));
+            if (FitPercent(pts) is { } fitValue) QualityTable.Children.Add(KeyValue($"FIT ({label}, NRMSE)", fitValue.ToString("F1", CultureInfo.CurrentCulture), "%", headline: true));
             var finite = pts.Where(p => double.IsFinite(p.Observed) && double.IsFinite(p.Predicted)).ToArray();
             if (finite.Length > 0)
             {
@@ -959,7 +963,7 @@ public partial class IdentificationView : UserControl, IStepView
                 QualityTable.Children.Add(KeyValue($"RMSE ({label})", rmse.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit));
                 var mean = finite.Average(p => p.Observed);
                 var total = finite.Sum(p => (p.Observed - mean) * (p.Observed - mean));
-                if (total > 0) QualityTable.Children.Add(KeyValue($"R² ({label})", (1 - finite.Sum(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted)) / total).ToString("F3", CultureInfo.CurrentCulture)));
+                if (total > 0) QualityTable.Children.Add(KeyValue($"R² ({label})", (1 - finite.Sum(p => (p.Observed - p.Predicted) * (p.Observed - p.Predicted)) / total).ToString("F3", CultureInfo.CurrentCulture), "sans unité"));
             }
             if (Iae(pts) is { } iae) QualityTable.Children.Add(KeyValue($"IAE ({label})", iae.ToString("G3", CultureInfo.CurrentCulture), study.PvUnit + "·s"));
         }
@@ -994,6 +998,13 @@ public partial class IdentificationView : UserControl, IStepView
                 Rmse = item.Result.Validation.Rmse.ToString("G3", CultureInfo.CurrentCulture),
                 Decision = item.Assessment is { Accepted: true } ? "accepté" : item.Assessment is not null ? "refusé" : "non décidé"
             });
+        ModelTable.Columns[1].Header = "FIT (%)";
+        ModelTable.Columns[2].Header = $"RMSE ({study.PvUnit})";
+        var unavailable = rows.Any(row => row.Fit == "—");
+        ModelNote.Visibility = unavailable ? Visibility.Visible : Visibility.Collapsed;
+        ModelNote.Text = unavailable
+            ? "— : indicateur non disponible. Le FIT se calcule sur la série ajustée du modèle ; elle n'est enregistrée que pour les modèles réellement estimés et enregistrés comme études (la comparaison enregistrée ne conserve que l'erreur RMSE de chaque candidat)."
+            : "";
         _tableSync = true;
         ModelTable.ItemsSource = rows;
         ModelTable.SelectedItem = rows.FirstOrDefault(row => row.Study.Id == study.Id && row.Family.StartsWith(study.Family == ModelFamily.Integrateur ? "Intégrateur" : study.Family.ToString(), StringComparison.Ordinal));
@@ -1050,7 +1061,8 @@ public partial class IdentificationView : UserControl, IStepView
         if (seconds.Length > 1)
         {
             Chart.SetEvents(new[] { (interval.Item1, "A"), (interval.Item2, "B") });
-            foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.SetHighlight(interval.Item1, interval.Item2);
+            // the markers always show the interval the figures cover; the tint appears only for a range the user selected
+            foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) { if (_window is null) chart.SetHighlight(null, null); else chart.SetHighlight(interval.Item1, interval.Item2); }
             PlotLegend.Text += _window is null
                 ? $" · A–B : intervalle de l'ajustement, de {first:G4} s à {horizon:G4} s après l'échelon. Glissez sur un graphique pour le restreindre."
                 : $" · plage A–B choisie : de {interval.Item1:G4} s à {interval.Item2:G4} s (indicateurs recalculés sur cette plage, sans nouvelle estimation).";

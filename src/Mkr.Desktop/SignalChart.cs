@@ -175,6 +175,14 @@ internal sealed class SignalChart : FrameworkElement
         return (min - pad, max + pad);
     }
 
+    /// <summary>Exposes the current time window and cursor to assistive technology and to the UI tests (« vue a–b s ; curseur t s »).</summary>
+    private void PublishState()
+    {
+        var text = $"vue {_lo.ToString("G6", CultureInfo.InvariantCulture)}–{_hi.ToString("G6", CultureInfo.InvariantCulture)} s" +
+                   (_cursor is { } c ? $" ; curseur {c.ToString("G6", CultureInfo.InvariantCulture)} s" : "");
+        System.Windows.Automation.AutomationProperties.SetItemStatus(this, text);
+    }
+
     private static Brush Faded(Brush brush, double opacity) { var copy = brush.Clone(); copy.Opacity = opacity; return copy; }
 
     private static Brush Theme(string key) => (Brush)Application.Current.FindResource(key);
@@ -190,6 +198,7 @@ internal sealed class SignalChart : FrameworkElement
     // ---------- drawing ----------
     protected override void OnRender(DrawingContext dc)
     {
+        PublishState();
         _legend.Clear();
         dc.DrawRectangle(Theme("MkrSurface"), null, new Rect(0, 0, ActualWidth, ActualHeight));
         if (!HasData || ActualWidth < 200 || ActualHeight < (ReferenceStyle ? 96 : 160))
@@ -202,7 +211,7 @@ internal sealed class SignalChart : FrameworkElement
         var grid = new Pen(Theme("MkrPlotGrid"), 1);
         var labelBrush = Theme("MkrPlotLabel");
         var buckets = Math.Max(50, (int)PlotWidth);
-        var (xTicks, _) = ChartMath.NiceTicks(_lo, _hi, Math.Max(2, (int)(PlotWidth / 90)));
+        var (xTicks, _) = ChartMath.NiceTicks(_lo, _hi, Math.Max(ReferenceStyle ? 3 : 2, (int)(PlotWidth / (ReferenceStyle ? 64 : 90))));
 
         for (var t = 0; t < _tracks.Count; t++)
         {
@@ -240,7 +249,7 @@ internal sealed class SignalChart : FrameworkElement
             }
 
             // grid + y labels
-            var (yTicks, _) = ChartMath.NiceTicks(ymin, ymax, Math.Max(2, (int)(height / 38)));
+            var (yTicks, _) = ChartMath.NiceTicks(ymin, ymax, Math.Max(ReferenceStyle ? 3 : 2, (int)(height / (ReferenceStyle ? 28 : 38))));
             foreach (var v in yTicks)
             {
                 var py = Y(v);
