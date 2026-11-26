@@ -106,9 +106,9 @@
     <Border x:Name="CaptionBar" Grid.Row="0" Height="30" Background="{DynamicResource MkrTitleBar}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
         <DockPanel LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMinimize" ToolTip="Réduire" AutomationProperties.Name="Réduire" WindowChrome.IsHitTestVisibleInChrome="True" ><TextBlock x:Name="MinimizeGlyph" Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMaximize" ToolTip="Agrandir ou restaurer" AutomationProperties.Name="Agrandir ou restaurer" WindowChrome.IsHitTestVisibleInChrome="True"><TextBlock x:Name="MaximizeGlyph" Text="&#xE923;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionClose" ToolTip="Fermer" AutomationProperties.Name="Fermer" WindowChrome.IsHitTestVisibleInChrome="True" Tag="close"><TextBlock x:Name="CloseGlyph" Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMinimize" ToolTip="Réduire la fenêtre" AutomationProperties.Name="Minimiser la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True" ><TextBlock x:Name="MinimizeGlyph" Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMaximize" ToolTip="Agrandir ou restaurer" AutomationProperties.Name="Maximiser ou restaurer la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True"><TextBlock x:Name="MaximizeGlyph" Text="&#xE923;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionClose" ToolTip="Fermer la fenêtre" AutomationProperties.Name="Fermer la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True" Tag="close"><TextBlock x:Name="CloseGlyph" Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
                 <Path Data="M0,9 C4,12 11,11 15,3" Stroke="{DynamicResource MkrAccent}" StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="16" Height="14" Stretch="Fill"/>
