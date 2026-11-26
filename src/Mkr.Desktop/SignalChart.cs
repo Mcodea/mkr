@@ -55,8 +55,8 @@ internal sealed class SignalChart : FrameworkElement
     private const double RightMargin = 14, TopMargin = 6, TrackGap = 30;
     // The reference layout (see docs/ui) puts the title above the plot, a rotated axis label on the left and a boxed legend inside the plot.
     private double LeftMargin => ReferenceStyle ? 70 : 74;
-    private double BottomMargin => ReferenceStyle ? 44 : 40;
-    private double LegendHeight => ReferenceStyle ? 26 : 22;
+    private double BottomMargin => ReferenceStyle ? 38 : 40;
+    private double LegendHeight => ReferenceStyle ? 22 : 22;
     private static readonly DashStyle[] Dashes = { DashStyles.Solid, new DashStyle(new double[] { 6, 3 }, 0), new DashStyle(new double[] { 1.5, 3 }, 0), new DashStyle(new double[] { 6, 3, 1.5, 3 }, 0) };
 
     private IReadOnlyList<ChartTrack> _tracks = Array.Empty<ChartTrack>();
@@ -192,7 +192,7 @@ internal sealed class SignalChart : FrameworkElement
     {
         _legend.Clear();
         dc.DrawRectangle(Theme("MkrSurface"), null, new Rect(0, 0, ActualWidth, ActualHeight));
-        if (!HasData || ActualWidth < 200 || ActualHeight < 160)
+        if (!HasData || ActualWidth < 200 || ActualHeight < (ReferenceStyle ? 96 : 160))
         {
             var empty = Text(HasData ? "Zone trop petite pour tracer." : "Aucune donnée à afficher.", 13, Theme("MkrPlotLabel"));
             dc.DrawText(empty, new Point(LeftMargin, TopMargin + 8));
@@ -354,7 +354,7 @@ internal sealed class SignalChart : FrameworkElement
             dc.DrawText(l, new Point(XToPixel(v) - l.Width / 2, bottom + 4));
         }
         var xl = Text(XLabel, 12, labelBrush);
-        dc.DrawText(xl, new Point(LeftMargin + PlotWidth / 2 - xl.Width / 2, bottom + 22));
+        dc.DrawText(xl, new Point(LeftMargin + PlotWidth / 2 - xl.Width / 2, bottom + (ReferenceStyle ? 18 : 22)));
 
         // range being selected
         if (_selectOrigin is { } so && _selectCurrent is { } sc)

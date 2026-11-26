@@ -25,7 +25,10 @@
                     </ComboBox.ItemContainerStyle>
                 </ComboBox>
                 <Button Content="_Estimer et enregistrer" Click="Calculate" Margin="12,0,0,0" Style="{StaticResource MkrPrimaryButton}" VerticalAlignment="Center"/>
-                <Button Content="Es_sais et critères…" Click="ToggleTrials" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="Ouvrir la page « Essais et actions » : choix des essais d'estimation et de validation, critères, réglage"/>
+                <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
+                    <RadioButton x:Name="PageResults" GroupName="IdentPage" IsChecked="True" Content="Résultats" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageResults" ToolTip="Résultats : modèle, paramètres, qualité, comparaison"/>
+                    <RadioButton x:Name="PageSetup" GroupName="IdentPage" Content="Essais et actions" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageSetup" ToolTip="Essais d'estimation et de validation, critères, ARX, réglage, rapport"/>
+                </StackPanel>
             </WrapPanel>
         </Border>
         <Grid Grid.Row="1" Margin="0,6,0,0">
@@ -37,9 +40,9 @@
             <Grid x:Name="ChartArea">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition x:Name="MainRow" Height="5*" MinHeight="150"/>
+                    <RowDefinition x:Name="MainRow" Height="4*" MinHeight="140"/>
                     <RowDefinition Height="5"/>
-                    <RowDefinition x:Name="SideRow" Height="3*" MinHeight="110"/>
+                    <RowDefinition x:Name="SideRow" Height="3*" MinHeight="120"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,2" Margin="0,0,0,4">
@@ -89,22 +92,12 @@
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
             <Grid x:Name="PanelScroll" Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,3" Margin="0,0,0,4">
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton x:Name="PageResults" GroupName="IdentPage" IsChecked="True" Content="Résultats" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageResults"/>
-                        <RadioButton x:Name="PageSetup" GroupName="IdentPage" Content="Essais et actions" Style="{StaticResource MkrPageTab}" Checked="PageChanged" AutomationProperties.AutomationId="PageSetup"/>
-                    </StackPanel>
-                </Border>
-                <ScrollViewer x:Name="ResultsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="ResultsPage" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
                     <Expander x:Name="ModelPanel" Style="{StaticResource MkrPanel}" Header="Modèle identifié">
-                        <StackPanel Margin="10,8">
-                            <StackPanel x:Name="FormulaHost" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4"/>
-                            <TextBlock x:Name="FormulaFamily" Foreground="{DynamicResource MkrMuted}" TextAlignment="Center"/>
+                        <StackPanel Margin="10,4">
+                            <StackPanel x:Name="FormulaHost" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2"/>
+                            <TextBlock x:Name="FormulaFamily" Visibility="Collapsed"/>
                         </StackPanel>
                     </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du modèle">
@@ -112,8 +105,8 @@
                     </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Qualité du modèle">
                         <StackPanel>
-                            <StackPanel Margin="10,8,10,0">
-                <Border x:Name="VerdictCard" Visibility="Collapsed" CornerRadius="3" Padding="8,6" Margin="0,0,0,6" BorderThickness="1">
+                            <StackPanel Margin="8,6,8,0">
+                <Border x:Name="VerdictCard" Visibility="Collapsed" CornerRadius="3" Padding="6,3" Margin="0,0,0,4" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -132,8 +125,8 @@
                             <StackPanel x:Name="QualityTable"/>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (dernière étude de chaque famille)">
-                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="22" ColumnHeaderHeight="26" MaxHeight="150"
+                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (mêmes essais)">
+                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="22" ColumnHeaderHeight="28" MaxHeight="150"
                                   SelectionMode="Single" SelectionChanged="ModelTableChanged" AutomationProperties.Name="Comparaison des modèles">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Modèle" Binding="{Binding Family}" Width="1.2*"/>
@@ -145,7 +138,7 @@
                     </Expander>
                     </StackPanel>
                 </ScrollViewer>
-                <ScrollViewer x:Name="SetupPage" Grid.Row="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="SetupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
                     <Expander x:Name="TrialsPanel" Style="{StaticResource MkrPanel}" Header="Essais d'identification (estimation et validation)">
                         <StackPanel x:Name="Form" Margin="10,8">

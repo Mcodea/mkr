@@ -926,11 +926,11 @@ public partial class IdentificationView : UserControl, IStepView
         var result = study.Result;
         var gainUnit = study.Family == ModelFamily.Integrateur ? $"{study.PvUnit}/({study.MvUnit}·s)" : $"{study.PvUnit}/{study.MvUnit}";
         BuildFormula(study.Family);
-        FormulaFamily.Text = study.Family switch
+        ModelPanel.Header = study.Family switch
         {
-            ModelFamily.SOPDT => "SOPDT (2e ordre + temps mort)",
-            ModelFamily.Integrateur => "Intégrateur + temps mort",
-            _ => "FOPDT (1er ordre + temps mort)"
+            ModelFamily.SOPDT => "Modèle identifié · SOPDT (2e ordre + temps mort)",
+            ModelFamily.Integrateur => "Modèle identifié · intégrateur + temps mort",
+            _ => "Modèle identifié · FOPDT (1er ordre + temps mort)"
         };
         ParameterTable.Children.Add(KeyValue(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain du procédé K", result.Gain.ToString("G5", CultureInfo.CurrentCulture), gainUnit));
         if (result.TauSeconds is { } tau) ParameterTable.Children.Add(KeyValue(result.SecondTauSeconds is null ? "Constante de temps τ" : "Constante lente τ₁", tau.ToString("G5", CultureInfo.CurrentCulture), "s"));
@@ -963,7 +963,7 @@ public partial class IdentificationView : UserControl, IStepView
         if (study.Assessment is { } decision)
             VerdictCard.ToolTip = $"{VerdictDetail.Text} Seuil de RMSE : {decision.Criteria.MaximumRmse.ToString("G3", CultureInfo.CurrentCulture)} {study.PvUnit}.";
 
-        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).GroupBy(item => item.Family).Select(group => group.OrderByDescending(item => item.CalculatedAt).First()).Select(item => new ModelRow
+        var rows = (StudyList.ItemsSource as IEnumerable<IdentificationStudy> ?? []).Where(item => item.TrainingId == study.TrainingId && item.ValidationId == study.ValidationId).GroupBy(item => item.Family).Select(group => group.OrderByDescending(item => item.CalculatedAt).First()).Select(item => new ModelRow
         {
             Study = item,
             Family = item.Family == ModelFamily.Integrateur ? "Intégrateur" : item.Family.ToString(),
