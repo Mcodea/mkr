@@ -101,8 +101,10 @@ function Capture($window, $label) {
         Start-Sleep -Milliseconds $script:SettleMs
         $r = $window.Current.BoundingRectangle
         $x = [int][Math]::Max(0, $r.X); $y = [int][Math]::Max(0, $r.Y)
-        $w = [int][Math]::Min($r.Width, [System.Windows.Forms.SystemInformation]::VirtualScreen.Width - $x)
-        $h = [int][Math]::Min($r.Height, [System.Windows.Forms.SystemInformation]::VirtualScreen.Height - $y)
+        $physical = [MkrDisplay]::Current()      # the screen limit in physical pixels (VirtualScreen is scaled when the process is not DPI aware)
+        $w = [int][Math]::Min($r.Width, $physical[0] - $x)
+        $h = [int][Math]::Min($r.Height, $physical[1] - $y)
+        if ($Theme -eq 'light' -and $label -like '23-*') { Write-Host "##DIAG capture $label rect=$([int]$r.X),$([int]$r.Y),$([int]$r.Width)x$([int]$r.Height) ecran=$($physical[0])x$($physical[1]) virtuel=$([System.Windows.Forms.SystemInformation]::VirtualScreen.Width)" }
         $bmp = New-Object System.Drawing.Bitmap $w, $h
         $g = [System.Drawing.Graphics]::FromImage($bmp)
         $g.CopyFromScreen($x, $y, 0, 0, (New-Object System.Drawing.Size $w, $h))
@@ -133,6 +135,13 @@ public class MkrDisplay {
     }
     [DllImport("user32.dll", CharSet = CharSet.Ansi)] public static extern bool EnumDisplaySettings(string device, int mode, ref DEVMODE dm);
     [DllImport("user32.dll", CharSet = CharSet.Ansi)] public static extern int ChangeDisplaySettings(ref DEVMODE dm, int flags);
+    // physical resolution of the primary display, whatever the DPI awareness of the calling process
+    public static int[] Current() {
+        DEVMODE dm = new DEVMODE();
+        dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+        EnumDisplaySettings(null, -1, ref dm);
+        return new int[] { dm.dmPelsWidth, dm.dmPelsHeight };
+    }
     public static int Set(int width, int height) {
         DEVMODE dm = new DEVMODE();
         dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
