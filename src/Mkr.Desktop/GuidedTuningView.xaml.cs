@@ -76,6 +76,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         _noiseUpperBound = noiseUpperBound;
         _recommend = recommend;
         ModelLine.Text = modelLine;
+        Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? "Survolez un graphique pour lire les valeurs au curseur." : text;
         ObjectiveChanged(this, null!);
     }
 
@@ -315,6 +316,28 @@ public partial class GuidedTuningView : UserControl, IStepView
         DrawCurves();
     }
 
+    private void ZoomIn(object sender, RoutedEventArgs args) => Chart.ZoomBy(0.7);
+
+    private void ZoomOut(object sender, RoutedEventArgs args) => Chart.ZoomBy(1 / 0.7);
+
+    private void ResetView(object sender, RoutedEventArgs args) => Chart.ResetView();
+
+    private void ExportImage(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "reglage-guide.png" };
+        if (dialog.ShowDialog() != true) return;
+        try { Chart.ExportPng(dialog.FileName); Status.Text = "Image exportée."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+    }
+
+    private void ExportData(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "reglage-guide.csv" };
+        if (dialog.ShowDialog() != true) return;
+        try { Chart.ExportCsv(dialog.FileName); Status.Text = "Données exportées."; }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+    }
+
     private void CurveChanged(object sender, RoutedEventArgs args) { if (IsLoaded && _last is not null) DrawCurves(); }
 
     private void DrawCurves()
@@ -332,8 +355,8 @@ public partial class GuidedTuningView : UserControl, IStepView
         var command = entries.Select(e => new ChartSeries(e.Item1, e.Item3, Pick(e.Item2!).Seconds, Pick(e.Item2!).Mv)).ToList();
         Chart.SetTracks(new[]
         {
-            new ChartTrack(load ? "Mesure : réponse à un échelon de perturbation de charge" : "Mesure : réponse à un échelon de consigne unitaire", _pvUnit, measure) { Weight = 2 },
-            new ChartTrack("Sortie de commande", _mvUnit, command)
+            new ChartTrack(load ? "Aperçu de la réponse – perturbation de charge unitaire" : "Aperçu de la réponse – échelon de consigne unitaire", _pvUnit, measure) { Weight = 2, YLabel = $"Mesure ({_pvUnit})" },
+            new ChartTrack("Commande (sortie du régulateur)", _mvUnit, command) { YLabel = $"MV ({_mvUnit})" }
         });
     }
 

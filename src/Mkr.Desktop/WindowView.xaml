@@ -319,7 +319,7 @@
                             <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
                             <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
+                        <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" ReferenceStyle="True" ShowValueBoxes="False" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
                             AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
                         <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                     </Grid>

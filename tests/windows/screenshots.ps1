@@ -397,7 +397,7 @@ try {
         Start-Sleep -Milliseconds 400
         Check 'zoom arrière : retour à la vue complète' { (View-Of $main1) -eq $full }
         Press $main 'Zoom avant'
-        Press $main 'Ajuster à tout l’essai'
+        Press $main "Ajuster à tout l${apos}essai"
         Start-Sleep -Milliseconds 400
         Check 'ajuster : vue complète sur les trois graphiques' { (View-Of $main1) -eq $full -and (View-Of $cmd) -eq $full -and (View-Of $res) -eq $full }
         $r = $main1.Current.BoundingRectangle
@@ -411,7 +411,7 @@ try {
         Check 'sélection A–B : les indicateurs sont recalculés sur la plage' { (Find $main $name 'FIT (validation A–B, NRMSE)') -ne $null }
         Press $main 'Effacer la plage A–B'
         Start-Sleep -Milliseconds 500
-        Check 'effacer A–B : retour à l’intervalle de l’ajustement' { (Find $main $id 'PlotLegend').Current.Name -like '*intervalle de l*ajustement*' }
+        Check 'effacer A-B : retour a la plage par defaut de l ajustement' { (Find $main $id 'PlotLegend').Current.Name -like '*intervalle de l*ajustement*' }
         $csv = Join-Path $env:RUNNER_TEMP 'chart-export.csv'
         $png = Join-Path $env:RUNNER_TEMP 'chart-export.png'
         Remove-Item $csv, $png -ErrorAction SilentlyContinue
@@ -421,9 +421,9 @@ try {
             (Test-Path $csv) -and ((Get-Content -LiteralPath $csv -TotalCount 1) -like '*piste;courbe;unite;temps_s;valeur*') -and
             ((Get-Content -LiteralPath $csv -Raw) -like '*Commande*') -and ((Get-Content -LiteralPath $csv -Raw) -like '*Résidus*')
         }
-        Press $main 'Exporter l’image'
+        Press $main "Exporter l${apos}image"
         Save-Through-Dialog $main $png
-        Check 'export de l’image : PNG valide' {
+        Check 'export de limage : PNG valide' {
             (Test-Path $png) -and ((Get-Item $png).Length -gt 2000) -and ([System.IO.File]::ReadAllBytes($png)[1] -eq 0x50)
         }
     }

@@ -392,8 +392,8 @@ public partial class WindowView : Window
                 RibbonCommands.Children.Add(Command("\uE916", _openLoop ? "Boucle fermée" : "Boucle ouverte", _openLoop ? "Revenir à la comparaison PI en boucle fermée" : "Réponse du modèle à un échelon, sans régulateur", () => { _openLoop = !_openLoop; BuildRibbon(); }, open && selected is not null));
                 break;
             case 9:
-                RibbonCommands.Children.Add(Command("\uE749", "Fiche d'étude PDF", "Depuis la fenêtre de simulation : « Fiche de mise au point (PDF) »", () => OpenWithTuning(tuning => new SimulationWindow(_workspace!, selected!, tuning)), open && selected is not null));
-                break;
+                break;                      // shown in the workspace itself: the final validation view (UpdateStepHost), which exports the study sheet
+
         }
         UpdateStepHost(selected, open);
         StudyTablePanel.Visibility = _tab == 4 ? Visibility.Visible : Visibility.Collapsed;     // the study table only serves the validation view
@@ -459,7 +459,7 @@ public partial class WindowView : Window
     /// </summary>
     private void UpdateStepHost(IdentificationStudy? selected, bool open)
     {
-        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 2 or 5 or 6 or 8))
+        if (_workspace is null || !(IsIdentificationTab(_tab) || _tab is 1 or 2 or 5 or 6 or 8 or 9))
         {
             if (StepHost.Visibility == Visibility.Visible) { StepHost.Child = null; StepHost.Visibility = Visibility.Collapsed; }
             _hosted?.Cancel();
@@ -561,6 +561,12 @@ public partial class WindowView : Window
                 var view = new GuidedTuningView(_workspace, selected) { ShowClose = false };
                 _hosted = view;
                 { view.MinHeight = 420; StepHost.Child = _hostChild = view; }
+            }
+            else if (_tab == 9)
+            {
+                var view = new ReportView(_workspace, selected);
+                _hosted = view;
+                StepHost.Child = _hostChild = view;
             }
             else if (_tab == 8 && _openLoop)
             {
@@ -728,15 +734,15 @@ public partial class WindowView : Window
         Chart.XLabel = "Temps depuis l'échelon de la sortie de commande (s)";
         Chart.SetTracks(new[]
         {
-            new ChartTrack("Mesure", study.PvUnit, new[]
+            new ChartTrack(ShowValidation.IsChecked == true ? "Réponse observée et modèle – essai de validation" : "Réponse observée et modèle – essai d'estimation", study.PvUnit, new[]
             {
                 new ChartSeries("Observée", "MkrSignal1", seconds, fit.Points.Select(p => p.Observed).ToArray()),
                 new ChartSeries("Modèle", "MkrSignal2", seconds, fit.Points.Select(p => p.Predicted).ToArray())
-            }) { Weight = 2 },
-            new ChartTrack("Sortie de commande (écart)", study.MvUnit, new[]
+            }) { Weight = 2, YLabel = $"Mesure ({study.PvUnit})" },
+            new ChartTrack("Commande (sortie du régulateur, écart)", study.MvUnit, new[]
             {
                 new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { -horizon * 0.05, 0, 0, horizon }, new[] { 0, 0, step, step })
-            })
+            }) { YLabel = $"MV ({study.MvUnit})" }
         });
         BuildRibbon();
     }

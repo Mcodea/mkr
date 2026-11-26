@@ -235,6 +235,8 @@ public partial class SimulationView : UserControl, IStepView
         if (_shown is not { } simulation)
         {
             Report.Text = Legend.Text = "";
+            IndicatorGrid.Children.Clear();
+            IndicatorNote.Visibility = Visibility.Collapsed;
             DrawPlot();
             return;
         }
@@ -261,6 +263,7 @@ public partial class SimulationView : UserControl, IStepView
             $"IMC : {ResponseWindow(result.Imc.SetpointResponse)}" +
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
             $"{string.Join(" ", warnings)}";
+        BuildIndicators(result);
         Legend.Text = $"Mesure et consigne ({_model.PvUnit}) : bleu = Lambda, orange = SIMC, vert pointillé = consigne. " +
             $"Commandes ({_model.MvUnit}) : pointillés = commande calculée, vert = commande appliquée, gris = limites ; violet = instant de perturbation.";
         if (simulation.Robustness?.Envelope is not null)
@@ -284,6 +287,47 @@ public partial class SimulationView : UserControl, IStepView
         ? ""
         : $"Fenêtre de réponse à la consigne [0, {response.WindowEndSeconds:G5}] s · — : valeur indisponible.\n";
 
+    private System.Windows.Controls.TextBlock IndicatorCell(string text, int row, int column, bool header = false)
+    {
+        var cell = new System.Windows.Controls.TextBlock
+        {
+            Text = text, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(6, 3, 6, 3), VerticalAlignment = VerticalAlignment.Center, FontSize = 12,
+            FontWeight = header || column == 0 ? FontWeights.SemiBold : FontWeights.Normal, TextAlignment = column == 0 ? TextAlignment.Left : TextAlignment.Right
+        };
+        cell.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "MkrText");
+        if (header) cell.SetResourceReference(System.Windows.Controls.TextBlock.BackgroundProperty, "MkrSurfaceAlt");
+        System.Windows.Controls.Grid.SetRow(cell, row);
+        System.Windows.Controls.Grid.SetColumn(cell, column);
+        return cell;
+    }
+
+    /// <summary>The persisted indicators of the two compared methods as a table (units in the headers; « — » = not available, explained below).</summary>
+    private void BuildIndicators(PiSimulationResult result)
+    {
+        IndicatorGrid.Children.Clear();
+        IndicatorGrid.RowDefinitions.Clear();
+        IndicatorGrid.ColumnDefinitions.Clear();
+        IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
+        for (var i = 0; i < 4; i++) IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        for (var i = 0; i < 3; i++) IndicatorGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var headers = new[] { "Méthode", $"IAE ({_model.PvUnit}·s)", $"Dépassement ({_model.PvUnit})", "Temps de réponse ±5 % (s)", "Saturation (s)" };
+        for (var c = 0; c < headers.Length; c++) IndicatorGrid.Children.Add(IndicatorCell(headers[c], 0, c, header: true));
+        var unavailable = false;
+        string Num(double? value) { if (value is null) { unavailable = true; return "—"; } return value.Value.ToString("G4", CultureInfo.CurrentCulture); }
+        void Row(int row, string name, SimulationRun run)
+        {
+            IndicatorGrid.Children.Add(IndicatorCell(name, row, 0));
+            IndicatorGrid.Children.Add(IndicatorCell(Num(run.Iae), row, 1));
+            IndicatorGrid.Children.Add(IndicatorCell(Num(run.SetpointResponse?.OvershootPv), row, 2));
+            IndicatorGrid.Children.Add(IndicatorCell(Num(run.SetpointResponse?.SettlingSeconds), row, 3));
+            IndicatorGrid.Children.Add(IndicatorCell(Num(run.SaturationSeconds), row, 4));
+        }
+        Row(1, "Lambda (Dahlin)", result.Imc);
+        Row(2, "SIMC", result.Simc);
+        IndicatorNote.Visibility = unavailable ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorNote.Text = unavailable ? "— : indicateur non disponible (la réponse ne franchit pas le seuil dans la fenêtre simulée, ou n'est pas calculée pour ce scénario)." : "";
+    }
+
     private void DrawPlot()
     {
         if (Chart is null)
@@ -297,12 +341,12 @@ public partial class SimulationView : UserControl, IStepView
         var simc = study.Result.Simc.Points;
         var seconds = imc.Select(p => p.Seconds).ToArray();
         var setpoint = study.Scenario.Setpoint;
-        var pvTrack = new ChartTrack("Variation de consigne et mesure", _model.PvUnit, new[]
+        var pvTrack = new ChartTrack("Simulation · variation de consigne et mesure", _model.PvUnit, new[]
         {
             new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
             new ChartSeries("Mesure Lambda (Dahlin)", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
             new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
-        }) { Weight = 2 };
+        }) { Weight = 2, YLabel = $"Mesure ({_model.PvUnit})" };
         if (study.Robustness?.Envelope is { } envelope && envelope.Seconds.Length == seconds.Length &&
             envelope.Imc.MinPv.Length == seconds.Length && envelope.Imc.MaxPv.Length == seconds.Length &&
             envelope.Simc.MinPv.Length == seconds.Length && envelope.Simc.MaxPv.Length == seconds.Length)
@@ -322,13 +366,17 @@ public partial class SimulationView : UserControl, IStepView
                 new ChartSeries("Calculée", colorKey, t, withCommand.Select(p => p.Cv!.Value).ToArray()),
                 new ChartSeries("Limite basse", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[0], limits[0] }),
                 new ChartSeries("Limite haute", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[1], limits[1] })
-            });
+            }) { YLabel = $"MV ({_model.MvUnit})" };
         }
 
         Chart.XLabel = "Temps depuis le début du scénario (s)";
         Chart.SetTracks(new[] { pvTrack, Commands("Lambda (Dahlin)", "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
         Chart.SetEvents(study.Scenario.Disturbance != 0 ? new[] { (study.Scenario.DisturbanceAtSeconds, "Perturbation") } : Array.Empty<(double, string)>());
     }
+
+    private void ZoomIn(object sender, RoutedEventArgs args) => Chart.ZoomBy(0.7);
+
+    private void ZoomOut(object sender, RoutedEventArgs args) => Chart.ZoomBy(1 / 0.7);
 
     private void ResetZoom(object sender, RoutedEventArgs args)
     {

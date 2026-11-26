@@ -48,14 +48,24 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <StackPanel x:Name="CurveBar" Orientation="Horizontal" Margin="4,0,0,4" Visibility="Collapsed">
-                    <TextBlock Text="Courbes" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                    <RadioButton x:Name="ShowSetpoint" Content="Échelon de consigne" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                    <RadioButton x:Name="ShowLoad" Content="Perturbation de charge" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
-                </StackPanel>
-                <local:SignalChart x:Name="Chart" Grid.Row="1" Visibility="Collapsed" MinHeight="260"
+                <Border x:Name="CurveBar" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="6,2" Margin="0,0,0,4" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ResetView" ToolTip="Revenir à toute la réponse (double-clic)" AutomationProperties.Name="Ajuster à toute la réponse"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportImage" ToolTip="Exporter les graphiques en image PNG" AutomationProperties.Name="Exporter l’image"><TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportData" ToolTip="Exporter les courbes en CSV" AutomationProperties.Name="Exporter les données"><TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="8,3"/>
+                        <TextBlock Text="Courbes" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton x:Name="ShowSetpoint" Content="Échelon de consigne" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                        <RadioButton x:Name="ShowLoad" Content="Perturbation de charge" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <local:SignalChart x:Name="Chart" Grid.Row="1" Visibility="Collapsed" MinHeight="260" ReferenceStyle="True" ShowValueBoxes="False"
                                    AutomationProperties.Name="Réponses simulées des réglages comparés"/>
+                <TextBlock x:Name="CursorLine" Grid.Row="2" FontSize="11" TextTrimming="CharacterEllipsis" Margin="2,3,0,0" Foreground="{DynamicResource MkrMuted}"/>
                 <TextBlock x:Name="ChartEmpty" Grid.Row="1" Text="Les réponses simulées des réglages apparaîtront ici après le calcul." Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>

@@ -48,28 +48,40 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <StackPanel>
-                    <WrapPanel Margin="0,0,0,4">
-                        <Button x:Name="ResetZoomButton" Content="_Réinitialiser le zoom" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation" Margin="0,0,12,0"/>
-                        <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"/>
-                    </WrapPanel>
+                    <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,2" Margin="0,0,0,4">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                            <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                            <Button x:Name="ResetZoomButton" Style="{StaticResource MkrToolButton}" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation (double-clic)" AutomationProperties.Name="Réinitialiser le zoom"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                            <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </Border>
                     <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{DynamicResource MkrMuted}"/>
                 </StackPanel>
-                <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300"
+                <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ReferenceStyle="True" ShowValueBoxes="False"
                         AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
                         AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
                 <StackPanel Grid.Row="2">
                     <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Background="{DynamicResource MkrCanvas}" Padding="10,6" Margin="0,4,0,0">
                         <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré." Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                     </Border>
-                    <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
-                               Foreground="{DynamicResource MkrMuted}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <Expander Header="Aide : lire le graphique" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
+                        <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
+                                   Foreground="{DynamicResource MkrMuted}" Margin="4,4,0,0" TextWrapping="Wrap"/>
+                    </Expander>
                 </StackPanel>
             </Grid>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="ScenarioForm">
-                    <Expander Style="{StaticResource MkrPanel}" Header="Indicateurs de comparaison">
-                        <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,8"/>
+                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des méthodes de réglage">
+                        <StackPanel>
+                            <Grid x:Name="IndicatorGrid"/>
+                            <TextBlock x:Name="IndicatorNote" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
+                            <Expander Header="Détail de la simulation enregistrée" Margin="0" IsExpanded="True" FontSize="12">
+                                <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,6,10,8" FontSize="11"/>
+                            </Expander>
+                        </StackPanel>
                     </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du scénario">
                         <StackPanel Margin="10,8">
