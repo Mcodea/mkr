@@ -817,7 +817,7 @@ public partial class IdentificationView : UserControl, IStepView
             VerticalAlignment = VerticalAlignment.Center, Foreground = (Brush)FindResource("MkrText")
         };
         FormulaHost.Children.Add(Part("Gp(s) = "));
-        var numerator = new TextBlock { FontFamily = new FontFamily("Cambria Math, Segoe UI"), FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, Foreground = (Brush)FindResource("MkrText") };
+        var numerator = new TextBlock { FontFamily = new FontFamily("Cambria Math, Segoe UI"), FontSize = 15, HorizontalAlignment = HorizontalAlignment.Center, Foreground = (Brush)FindResource("MkrText") };
         numerator.Inlines.Add(new System.Windows.Documents.Run(family == ModelFamily.Integrateur ? "k′ e" : "K e"));
         numerator.Inlines.Add(new System.Windows.Documents.Run("−θs") { BaselineAlignment = BaselineAlignment.Superscript, FontSize = 11 });
         var denominatorText = family switch
@@ -903,10 +903,11 @@ public partial class IdentificationView : UserControl, IStepView
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
         grid.Children.Add(new TextBlock { Text = label, Margin = new Thickness(10, 4, 6, 4), TextWrapping = TextWrapping.Wrap });
-        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 2, 4, 2), TextAlignment = TextAlignment.Right };
+        var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(6, 1, 4, 1), TextAlignment = TextAlignment.Right };
+        val.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         Grid.SetColumn(val, 1);
         grid.Children.Add(val);
-        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 2, 8, 2), Foreground = (Brush)FindResource("MkrMuted") };
+        var u = new TextBlock { Text = unit, Margin = new Thickness(2, 1, 8, 1), Foreground = (Brush)FindResource("MkrMuted") };
         Grid.SetColumn(u, 2);
         grid.Children.Add(u);
         return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
@@ -928,9 +929,9 @@ public partial class IdentificationView : UserControl, IStepView
         BuildFormula(study.Family);
         ModelPanel.Header = study.Family switch
         {
-            ModelFamily.SOPDT => "Modèle identifié · SOPDT (2e ordre + temps mort)",
-            ModelFamily.Integrateur => "Modèle identifié · intégrateur + temps mort",
-            _ => "Modèle identifié · FOPDT (1er ordre + temps mort)"
+            ModelFamily.SOPDT => "Modèle identifié · SOPDT",
+            ModelFamily.Integrateur => "Modèle identifié · intégrateur",
+            _ => "Modèle identifié · FOPDT"
         };
         ParameterTable.Children.Add(KeyValue(study.Family == ModelFamily.Integrateur ? "Pente k′" : "Gain du procédé K", result.Gain.ToString("G5", CultureInfo.CurrentCulture), gainUnit));
         if (result.TauSeconds is { } tau) ParameterTable.Children.Add(KeyValue(result.SecondTauSeconds is null ? "Constante de temps τ" : "Constante lente τ₁", tau.ToString("G5", CultureInfo.CurrentCulture), "s"));

@@ -219,10 +219,13 @@ public partial class GuidedTuningView : UserControl, IStepView
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var label = new StackPanel { Margin = new Thickness(10, 5, 8, 5) };
-        label.Children.Add(new TextBlock { Text = caption, TextWrapping = TextWrapping.Wrap });
+        var captionText = new TextBlock { Text = caption, TextWrapping = TextWrapping.Wrap };
+        captionText.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
+        label.Children.Add(captionText);
         if (note is not null) label.Children.Add(new TextBlock { Text = note, FontSize = 11, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)FindResource("MkrMuted") });
         grid.Children.Add(label);
         var val = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(8, 5, 10, 5), VerticalAlignment = VerticalAlignment.Top };
+        val.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         Grid.SetColumn(val, 1);
         grid.Children.Add(val);
         return new Border { Child = grid, BorderBrush = (Brush)FindResource("MkrBorder"), BorderThickness = new Thickness(0, 0, 0, 1) };
@@ -236,6 +239,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             FontWeight = header || column == 0 ? FontWeights.SemiBold : FontWeights.Normal,
             TextAlignment = column == 0 ? TextAlignment.Left : TextAlignment.Right
         };
+        cell.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
         if (header) cell.Background = (Brush)FindResource("MkrSurfaceAlt");
         else if (emphasis) cell.Background = (Brush)FindResource("MkrAccentPale");
         Grid.SetRow(cell, row);

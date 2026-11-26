@@ -105,8 +105,8 @@
                     </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Qualité du modèle">
                         <StackPanel>
-                            <StackPanel Margin="8,6,8,0">
-                <Border x:Name="VerdictCard" Visibility="Collapsed" CornerRadius="3" Padding="6,3" Margin="0,0,0,4" BorderThickness="1">
+                            <StackPanel Margin="8,4,8,0">
+                <Border x:Name="VerdictCard" Visibility="Collapsed" CornerRadius="3" Padding="5,2" Margin="0,0,0,2" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -126,7 +126,7 @@
                         </StackPanel>
                     </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des modèles (mêmes essais)">
-                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="22" ColumnHeaderHeight="28" MaxHeight="150"
+                        <DataGrid x:Name="ModelTable" IsReadOnly="True" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" RowHeight="21" ColumnHeaderHeight="26" MaxHeight="150"
                                   SelectionMode="Single" SelectionChanged="ModelTableChanged" AutomationProperties.Name="Comparaison des modèles">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Modèle" Binding="{Binding Family}" Width="1.2*"/>

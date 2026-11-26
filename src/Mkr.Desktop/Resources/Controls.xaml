@@ -251,7 +251,7 @@
                                               AutomationProperties.Name="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}">
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">
-                                            <Border Background="{DynamicResource MkrNavy}" Padding="10,6">
+                                            <Border Background="{DynamicResource MkrNavy}" Padding="10,3">
                                                 <DockPanel>
                                                     <TextBlock x:Name="Chevron" DockPanel.Dock="Left" Text="&#x25BE;" Foreground="{DynamicResource MkrNavyText}" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                                     <ContentPresenter Content="{Binding Header, RelativeSource={RelativeSource AncestorType=Expander}}" TextElement.Foreground="{DynamicResource MkrNavyText}" TextElement.FontWeight="SemiBold" VerticalAlignment="Center"/>

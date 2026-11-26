@@ -83,7 +83,9 @@ public partial class DiagnosticView : UserControl, IStepView
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(new TextBlock { Text = label, Margin = new Thickness(10, 5, 8, 5), TextWrapping = TextWrapping.Wrap });
+        var name = new TextBlock { Text = label, Margin = new Thickness(10, 5, 8, 5), TextWrapping = TextWrapping.Wrap };
+        name.SetResourceReference(TextBlock.ForegroundProperty, "MkrText");
+        grid.Children.Add(name);
         var text = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Margin = new Thickness(8, 5, 10, 5), TextAlignment = TextAlignment.Right };
         text.SetResourceReference(TextBlock.ForegroundProperty, flag ? "MkrDanger" : "MkrText");
         Grid.SetColumn(text, 1);
