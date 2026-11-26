@@ -228,8 +228,13 @@ function Save-Through-Dialog($main, $path) {
     else { [System.Windows.Forms.SendKeys]::SendWait('{ENTER}') }
     # an existing file asks for a confirmation: answer « Yes » (« Oui »)
     Start-Sleep -Milliseconds 800
-    foreach ($b in $root.FindAll($desc, [System.Windows.Automation.PropertyCondition]::new($AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button))) {
-        if ($b.Current.Name -in @('Yes', 'Oui')) { $ip = $null; if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$ip)) { $ip.Invoke(); Write-Host '##DIAG remplacement confirme'; break } }
+    foreach ($b in $root.FindAll($desc, [System.Windows.Automation.Condition]::TrueCondition)) {
+        if ($b.Current.Name -in @('Yes', 'Oui') -and $b.Current.ClassName -eq 'Button') {
+            $ip = $null
+            if ($b.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$ip)) { $ip.Invoke() } else { [System.Windows.Forms.SendKeys]::SendWait('y') }
+            Write-Host '##DIAG remplacement confirme'
+            break
+        }
     }
     $deadline = [DateTime]::UtcNow.AddSeconds(15)
     while (-not (Test-Path $path) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 300 }
@@ -241,7 +246,12 @@ function Step($label, [scriptblock]$body) {
         if ($label -like '*interactions*') { $script:failures += "$label : $($_.Exception.Message)" }
         # a dialog left open by the failed step would hide every following capture
         $left = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, '#32770'))
-        if ($null -ne $left) { [System.Windows.Forms.SendKeys]::SendWait('{ESC}'); Start-Sleep -Milliseconds 500 }
+        $tries = 0
+        while ($null -ne $left -and $tries -lt 4) {
+            [System.Windows.Forms.SendKeys]::SendWait('{ESC}'); Start-Sleep -Milliseconds 600
+            $left = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, '#32770'))
+            $tries++
+        }
     }
 }
 $start = New-Object System.Diagnostics.ProcessStartInfo
