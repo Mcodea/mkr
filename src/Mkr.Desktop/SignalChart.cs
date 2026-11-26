@@ -201,7 +201,7 @@ internal sealed class SignalChart : FrameworkElement
     private FormattedText Text(string text, double size, Brush brush, bool bold = false) =>
         new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
             new Typeface(SystemFonts.MessageFontFamily, FontStyles.Normal, bold ? FontWeights.SemiBold : FontWeights.Normal, FontStretches.Normal),
-            size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+            size + 1, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);     // +1 px over the base sizes below: axis values, legends and titles stay readable on small screens
 
     protected override Size MeasureOverride(Size availableSize) =>
         new(double.IsInfinity(availableSize.Width) ? 400 : availableSize.Width, double.IsInfinity(availableSize.Height) ? 300 : availableSize.Height);

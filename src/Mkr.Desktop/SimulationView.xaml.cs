@@ -333,7 +333,7 @@ public partial class SimulationView : UserControl, IStepView
         var setpoint = study.Scenario.Setpoint;
         var pvTrack = new ChartTrack(Loc.T("cs.simulation_variation_de_consigne_et"), _model.PvUnit, new[]
         {
-            new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
+            new ChartSeries(Terms.Setpoint, "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
             new ChartSeries(Loc.T("cs.mesure_lambda_dahlin"), "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
             new ChartSeries(Loc.T("cs.mesure_simc"), "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
         }) { Weight = 2, YLabel = Loc.T("cs.mesure", _model.PvUnit) };

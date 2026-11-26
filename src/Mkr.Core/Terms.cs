@@ -7,10 +7,10 @@ namespace Mkr.Core;
 /// </summary>
 public static class Terms
 {
-    public const string Setpoint = "Consigne";
-    public const string Measurement = "Mesure";
-    public const string Command = "Sortie de commande";
-    public const string CommandShort = "Commande";
+    public static string Setpoint => Loc.T("terms.setpoint");
+    public static string Measurement => Loc.T("terms.measurement");
+    public static string Command => Loc.T("terms.command");
+    public static string CommandShort => Loc.T("terms.command_short");
 
     /// <summary>Plain name of a signal role code (SP, PV, MV, CV, d), without the abbreviation.</summary>
     public static string RoleName(string code) => code switch
@@ -18,8 +18,8 @@ public static class Terms
         "SP" => Setpoint,
         "PV" => Measurement,
         "MV" => Command,
-        "CV" => "Commande calculée",
-        "d" => "Perturbation",
+        "CV" => Loc.T("terms.computed_command"),
+        "d" => Loc.T("terms.disturbance"),
         _ => code
     };
 

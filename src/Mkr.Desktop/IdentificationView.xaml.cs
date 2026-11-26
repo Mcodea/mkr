@@ -1059,10 +1059,10 @@ public partial class IdentificationView : UserControl, IStepView
         }
         RefreshSidePanels();
         var shownPoints = _window is { } w ? points.Count(p => p.Seconds >= w.From && p.Seconds <= w.To) : points.Length;
-        var fitText = FitPercent(_window is { } w2 ? points.Where(p => p.Seconds >= w2.From && p.Seconds <= w2.To).ToArray() : points) is { } fv ? $"   ·   FIT : {fv.ToString("F1", CultureInfo.CurrentCulture)} %" : "";
-        Facts = $"Essai : {category.ToLowerInvariant()}   ·   Durée : {horizon.ToString("G5", CultureInfo.CurrentCulture)} s   ·   Fenêtre : " +
+        var fitText = FitPercent(_window is { } w2 ? points.Where(p => p.Seconds >= w2.From && p.Seconds <= w2.To).ToArray() : points) is { } fv ? "   ·   " + Loc.T("facts.fit", fv.ToString("F1", CultureInfo.CurrentCulture)) : "";
+        Facts = Loc.T("facts.trial", category.ToLowerInvariant()) + "   ·   " + Loc.T("facts.duration", horizon.ToString("G5", CultureInfo.CurrentCulture)) + "   ·   " + Loc.T("facts.window") + " " +
                 (_window is { } w3 ? $"{w3.From.ToString("G4", CultureInfo.CurrentCulture)} – {w3.To.ToString("G4", CultureInfo.CurrentCulture)} s" : Loc.T("cs.essai_complet")) +
-                $"   ·   Points : {shownPoints.ToString("N0", CultureInfo.CurrentCulture)}{fitText}";
+                "   ·   " + Loc.T("facts.points", shownPoints.ToString("N0", CultureInfo.CurrentCulture)) + fitText;
         FactsChanged?.Invoke(this, EventArgs.Empty);
     }
 

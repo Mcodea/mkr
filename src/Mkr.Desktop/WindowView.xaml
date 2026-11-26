@@ -298,7 +298,10 @@
                                    AutomationProperties.LiveSetting="Polite"/>
                     </Grid>
                 </Border>
-                <Grid Grid.Row="2">
+                <!-- Zone adaptative : le contenu garde une taille minimale lisible (graphiques entiers) ; en dessous, la page défile au lieu de couper -->
+                <ScrollViewer x:Name="PageScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SizeChanged="PageScrollSized"
+                              AutomationProperties.Name="{local:Loc ui.contenu_de_l_etape}">
+                <Grid x:Name="PageBody" MinHeight="470" MinWidth="720">
 
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
@@ -372,6 +375,7 @@
                 </Border>
     
                 </Grid>
+                </ScrollViewer>
             </Grid>
         </Grid>
         <!-- Barre d'état : état, faits du projet, étape suivante -->

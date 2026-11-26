@@ -602,6 +602,16 @@ try {
                     Start-Sleep -Milliseconds 800
                 }
                 Capture $main ("21-{0}-{1}-{2}x{3}" -f $screen[0], $screen[1], $size[0], $size[1])
+                if ($screen[1] -eq 'diagnostic' -and $size[0] -eq 1366) {
+                    # An import with known faults (synthetic, 3 missing, 2 non-numeric, one sampling hole): the diagnostic must report them.
+                    Check "diagnostic : les anomalies d’un import défectueux sont détectées" {
+                        Select-Option $main 'Imports' '*defauts-synthetiques*'; Start-Sleep -Milliseconds 1500
+                        $findings = (Find $main $id 'Findings').Current.Name
+                        Write-Host "##DIAG constats : $findings"
+                        $findings.Contains('3 valeur(s) manquante(s)') -and $findings.Contains('2 valeur(s) non numériques') -and $findings.Contains('Échantillonnage irrégulier')
+                    }
+                    Capture $main '21-2b-diagnostic-anomalies-1366x768'
+                }
             }
         }
         Set-Resolution $original.Width $original.Height
@@ -668,6 +678,15 @@ try {
                     Start-Sleep -Milliseconds 900
                     if ($screen[0] -eq 'identification') { Show-Page $m2 'PageResults' }
                     Capture $m2 ("23-echelle-{0}pct-{1}-{2}x{3}" -f $percent, $screen[0], $size[0], $size[1])
+                    if ($screen[0] -ne 'acquisition') {
+                        # the chart keeps its full size at this scale (the page scrolls rather than squeezing it)
+                        $minimum = if ($screen[0] -eq 'simulation') { 290 } else { 250 }; $shown = $screen[0]; $scalePercent = $percent
+                        Check ("échelle {0} % à {1}x{2} : le graphique {3} garde sa taille" -f $percent, $size[0], $size[1], $shown) {
+                            $chartHeight = (Find $m2 $id 'Chart').Current.BoundingRectangle.Height
+                            Write-Host "##DIAG graphique $shown $scalePercent % hauteur=$chartHeight"
+                            $chartHeight -ge $minimum
+                        }
+                    }
                 }
             }
         }

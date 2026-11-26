@@ -12,17 +12,17 @@ public sealed record LoopMargins(string AlgorithmVersion, double? GainCrossoverR
     {
         string Number(double? value, string unit, string format = "G4") =>
             value is { } v ? v.ToString(format, System.Globalization.CultureInfo.CurrentCulture) + unit : "—";
-        var text = $"marge de phase {Number(PhaseMarginDegrees, "°", "F1")} · marge de gain " +
-            (GainMargin is null ? "infinie" : $"{Number(GainMargin, "")} ({Number(GainMarginDb, " dB", "F1")})") +
-            $" · marge de retard {Number(DelayMarginSeconds, " s")} · pic de sensibilité Ms {PeakSensitivity:G3}";
+        var text = Loc.T("margins.phase", Number(PhaseMarginDegrees, "°", "F1")) + " · " + Loc.T("margins.gain") + " " +
+            (GainMargin is null ? Loc.T("margins.infinite") : $"{Number(GainMargin, "")} ({Number(GainMarginDb, " dB", "F1")})") +
+            " · " + Loc.T("margins.delay", Number(DelayMarginSeconds, " s")) + " · " + Loc.T("margins.peak", PeakSensitivity.ToString("G3", System.Globalization.CultureInfo.CurrentCulture));
         var notes = Warnings.Select(code => code switch
         {
-            "nominal_unstable" => "BOUCLE NOMINALE INSTABLE",
-            "low_phase_margin" => "marge de phase faible (< 30°)",
-            "low_gain_margin" => "marge de gain faible (< 2)",
-            "high_sensitivity" => "sensibilité élevée (Ms > 2)",
-            "multiple_gain_crossovers" => "plusieurs passages à 0 dB : lire la marge minimale",
-            "no_gain_crossover" => "pas de passage à 0 dB : boucle très peu active",
+            "nominal_unstable" => Loc.T("margins.w.unstable"),
+            "low_phase_margin" => Loc.T("margins.w.phase"),
+            "low_gain_margin" => Loc.T("margins.w.gain"),
+            "high_sensitivity" => Loc.T("margins.w.sens"),
+            "multiple_gain_crossovers" => Loc.T("margins.w.multi"),
+            "no_gain_crossover" => Loc.T("margins.w.none"),
             _ => code
         }).ToArray();
         return notes.Length == 0 ? text : text + " · " + string.Join(", ", notes);

@@ -99,7 +99,7 @@ public partial class ReportView : UserControl, IStepView
 
         // final parameters
         Shape(ParameterGrid, 3, 1.4, 1, 1, 1);
-        string[] heads = ["Méthode", $"Kp ({_model.MvUnit}/{_model.PvUnit})", "Ti (s)", Loc.T("cs.ki_parallele")];
+        string[] heads = [Loc.T("cs.methode"), $"Kp ({_model.MvUnit}/{_model.PvUnit})", "Ti (s)", Loc.T("cs.ki_parallele")];
         for (var c = 0; c < heads.Length; c++) ParameterGrid.Children.Add(Cell(heads[c], 0, c, header: true));
         if (_tuning is { } tuning)
         {
@@ -118,7 +118,7 @@ public partial class ReportView : UserControl, IStepView
 
         // indicators
         Shape(IndicatorGrid, 3, 1.3, 1, 1, 1, 1);
-        string[] indicators = ["Méthode", Loc.T("cs.iae_s", _model.PvUnit), Loc.T("cs.depassement_2", _model.PvUnit), Loc.T("cs.reponse_5_s"), Loc.T("cs.marge_de_phase")];
+        string[] indicators = [Loc.T("cs.methode"), Loc.T("cs.iae_s", _model.PvUnit), Loc.T("cs.depassement_2", _model.PvUnit), Loc.T("cs.reponse_5_s"), Loc.T("cs.marge_de_phase")];
         for (var c = 0; c < indicators.Length; c++) IndicatorGrid.Children.Add(Cell(indicators[c], 0, c, header: true));
         var unavailable = false;
         string N(double? value, string format = "G4") { if (value is null) { unavailable = true; return "—"; } return F(value, format); }
@@ -168,7 +168,7 @@ public partial class ReportView : UserControl, IStepView
         {
             new ChartTrack(Loc.T("cs.comparaison_des_reponses_lambda_et"), _model.PvUnit, new[]
             {
-                new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { study.Scenario.Setpoint, study.Scenario.Setpoint }),
+                new ChartSeries(Terms.Setpoint, "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { study.Scenario.Setpoint, study.Scenario.Setpoint }),
                 new ChartSeries(Loc.T("cs.mesure_lambda_dahlin"), "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
                 new ChartSeries(Loc.T("cs.mesure_simc"), "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
             }) { Weight = 2, YLabel = Loc.T("cs.mesure", _model.PvUnit) },

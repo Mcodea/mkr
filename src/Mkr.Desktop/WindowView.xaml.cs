@@ -53,17 +53,46 @@ public partial class WindowView : Window
         TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
         StateChanged += (_, _) => ReflectWindowState();
         Loaded += (_, _) => ReflectWindowState();
-        SizeChanged += (_, e) => ToolbarBand.Visibility = e.NewSize.Height < 820 ? Visibility.Collapsed : Visibility.Visible;     // low screens: the toolbar only repeats the navigation
+        SizeChanged += (_, e) =>
+        {
+            ToolbarBand.Visibility = e.NewSize.Height < 820 ? Visibility.Collapsed : Visibility.Visible;     // low screens: the toolbar only repeats the navigation
+            ApplyDensity(e.NewSize.Height < CompactHeight);
+            ValuesColumn.Width = new GridLength(e.NewSize.Width < 1150 ? 240 : 300);
+        };
         ThemeService.Changed += () => { if (_workspace is not null && StudyView.Visibility == Visibility.Visible) UpdateVerdictColour(); };
     }
 
-    /// <summary>Narrow windows put the stage chevrons on their own line under the title instead of clipping their labels.</summary>
+    /// <summary>Below this window height (in device-independent pixels: a 1366×768 screen at 125 % or more) the chrome is made compact so the charts keep their room.</summary>
+    private const double CompactHeight = 640;
+    private bool _compact;
+
+    /// <summary>Compact density: no screen title (the active stage names it), no study line, no ribbon note; the page below scrolls rather than clipping a chart.</summary>
+    private void ApplyDensity(bool compact)
+    {
+        if (compact == _compact) return;
+        _compact = compact;
+        ScreenTitle.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        ActiveStudy.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        RibbonNote.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        LayoutTitle(TitleBar.ActualWidth);
+    }
+
+    /// <summary>The step content fills the viewport but never gets smaller than the minimum that keeps a chart readable: below it, the page scrolls.</summary>
+    private void PageScrollSized(object sender, SizeChangedEventArgs args)
+    {
+        var verticalBar = args.NewSize.Height < PageBody.MinHeight ? SystemParameters.VerticalScrollBarWidth : 0;
+        PageBody.Height = Math.Max(PageBody.MinHeight, args.NewSize.Height - (args.NewSize.Width < PageBody.MinWidth ? SystemParameters.HorizontalScrollBarHeight : 0));
+        PageBody.Width = Math.Max(PageBody.MinWidth, args.NewSize.Width - verticalBar);
+    }
+
+    /// <summary>Narrow windows put the stage chevrons on their own line under the title instead of clipping their labels; compact ones drop the title and give the whole line to the chevrons.</summary>
     private void LayoutTitle(double width)
     {
-        var narrow = width < 1000;
+        var narrow = width < 1000 && !_compact;
+        var wide = _compact;
         Grid.SetRow(Stages, narrow ? 1 : 0);
-        Grid.SetColumn(Stages, narrow ? 0 : 1);
-        Grid.SetColumnSpan(Stages, narrow ? 2 : 1);
+        Grid.SetColumn(Stages, narrow || wide ? 0 : 1);
+        Grid.SetColumnSpan(Stages, narrow || wide ? 2 : 1);
         Stages.Margin = new Thickness(0, narrow ? 8 : 0, 0, 0);
     }
 

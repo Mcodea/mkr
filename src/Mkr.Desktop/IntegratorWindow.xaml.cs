@@ -60,9 +60,9 @@ public partial class IntegratorWindow : Window
         text.AppendLine(Loc.T("cs.pi_integrateur_regle_c_s", pi.Rule, pi.ResponseSeconds));
         text.AppendLine(Loc.T("cs.kp_ti_s_ki_parallele_2", pi.Kp, _model.MvUnit, _model.PvUnit, pi.TiSeconds, pi.ParallelKi));
         var m = pi.Margins;
-        text.AppendLine($"Marge de gain : {(m.GainMargin is { } g ? g.ToString("G4", CultureInfo.CurrentCulture) : "—")}   " +
-                        $"marge de phase : {(m.PhaseMarginDegrees is { } p ? p.ToString("G4", CultureInfo.CurrentCulture) + " °" : "—")}   " +
-                        $"sensibilité maximale : {m.PeakSensitivity:G4}");
+        text.AppendLine(Loc.T("margins.gain_colon") + $" {(m.GainMargin is { } g ? g.ToString("G4", CultureInfo.CurrentCulture) : "—")}   " +
+                        Loc.T("margins.phase_colon") + $" {(m.PhaseMarginDegrees is { } p ? p.ToString("G4", CultureInfo.CurrentCulture) + " °" : "—")}   " +
+                        Loc.T("margins.peak_colon") + $" {m.PeakSensitivity:G4}");
         text.AppendLine();
         text.AppendLine(Loc.T("cs.reserves"));
         foreach (var warning in pi.Warnings) text.AppendLine("  · " + Warning(warning));

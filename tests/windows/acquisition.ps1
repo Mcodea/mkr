@@ -127,6 +127,9 @@ try {
     if (!$progress.StartsWith('5 / 5 mesures · 0 manquée')) { throw "Avancement inattendu : $progress" }
     $bar = (Find $window $id 'Progress').GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern).Current
     if ($bar.Value -ne 5 -or $bar.Maximum -ne 5) { throw "Barre de progression incomplète : $($bar.Value)/$($bar.Maximum)" }
+    # End state of a direct acquisition, shown in the state panel (the light and the text agree with the real outcome).
+    $finished = Wait-Text $window 'ConnectionState' 'Acquisition terminée*'
+    Write-Output "##STATE terminée : $finished"
     Press $window 'Enregistrer dans le projet'
     $report = Wait-Text $project 'Report' '*S7 127.0.0.1:15102*DB10.DBD4*5/5 mesures*'
 
@@ -166,6 +169,21 @@ try {
     Fill $window 'MVOffset' '5000'
     Press $window 'Tester la lecture'
     $null = Wait-Text $window 'Status' '*Exception Modbus 02*'
+    # Nobody listens on port 1: the acquisition must end in an explicit failure state, never in « terminée » or « en cours ».
+    Fill $window 'MVOffset' '104'
+    Fill $window 'Port' '1'
+    Fill $window 'Period' '200'
+    Fill $window 'Count' '5'
+    Press $window "Démarrer l’acquisition"
+    $failure = $null
+    $until = [DateTime]::UtcNow.AddSeconds(40)
+    do {
+        $failure = (Find $window $id 'ConnectionState').Current.Name
+        if ($failure -like 'Connexion impossible*' -or $failure -like "Erreur d’acquisition*" -or $failure -like 'Déconnecté*') { break }
+        Start-Sleep -Milliseconds 300
+    } while ([DateTime]::UtcNow -lt $until)
+    Write-Output "##STATE échec : $failure"
+    if (!($failure -like 'Connexion impossible*' -or $failure -like "Erreur d’acquisition*" -or $failure -like 'Déconnecté*')) { throw "État d’échec d’acquisition inattendu : $failure" }
     $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
 
     # Continuous recording: about 3.6 s at 100 ms, cut into segments of 10 readings that overlap by 2.

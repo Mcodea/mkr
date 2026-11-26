@@ -516,5 +516,6 @@
  "ui.zone_s7": "S7 area",
  "ui.zoom_arriere": "Zoom out",
  "ui.zoom_avant": "Zoom in",
- "ui.zoom_avant_ou_molette": "Zoom in (or wheel)"
+ "ui.zoom_avant_ou_molette": "Zoom in (or wheel)",
+ "ui.contenu_de_l_etape": "Step content"
 }

@@ -133,6 +133,13 @@ jobs:
         shell: powershell
         run: ./tests/windows/catalogue.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe"
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ORIAS-captures
+          path: ${{ runner.temp }}/mkr-captures/*.png
+          retention-days: 30
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
         with:
           name: MKR-Windows-x64
           path: distribution/

@@ -1010,6 +1010,24 @@ try
             columns, columns, "%", "bar", 0.01, 0.2, DateTimeOffset.UtcNow, noisyVersion, noisyFit, Assessment: noisyAssessment, Comparison: noisyComparison);
         restored.SaveStudy(project.Id, noisyStudy);
         Directory.CreateDirectory(fixture);
+        {
+            // Synthetic import with known faults, to check on screen that the diagnostic really detects them:
+            // 3 missing values (rows 10-12), 2 non-numeric values (rows 20 and 45), a 6 s hole in the sampling (rows 30-35 absent).
+            var faulty = new StringBuilder("timestamp;mv;pv\n");
+            var origin = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+            for (var i = 0; i < 60; i++)
+            {
+                if (i is >= 30 and < 36) continue;
+                var value = i is 10 or 11 or 12 ? "" : i is 20 or 45 ? "n/a" : (8 + 0.05 * i).ToString("G6", System.Globalization.CultureInfo.InvariantCulture);
+                faulty.Append(origin.AddSeconds(i).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture)).Append(';').Append(i >= 5 ? 1 : 0).Append(';').Append(value).Append('\n');
+            }
+            var faultyRaw = Encoding.UTF8.GetBytes(faulty.ToString());
+            var faultyMapping = new CsvMapping("timestamp", "pv", "PV", "bar");
+            var (faultyResult, faultyVersion) = await engine.AnalyzeAsync(faultyRaw, ";", faultyMapping, default);
+            Require(faultyResult.Quality is { MissingValues: 3, InvalidValues: 2 }, "The synthetic faulty import carries exactly the faults written into it.");
+            var faultySummary = new ImportSummary(Guid.NewGuid(), "defauts-synthetiques.csv", Convert.ToHexString(SHA256.HashData(faultyRaw)), DateTimeOffset.UtcNow);
+            restored.SaveImport(project.Id, new CsvImport(faultySummary, ";", faultyMapping, faultyResult, faultyVersion, faultyRaw));
+        }
         File.WriteAllText(Path.Combine(fixture, "noisy-demo-study.txt"), noisyStudy.Id.ToString()[..8]);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
         // Fixtures for the block, integrator and drift windows (tests/windows/blocks.ps1).

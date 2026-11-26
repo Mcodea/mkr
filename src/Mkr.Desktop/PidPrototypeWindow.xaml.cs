@@ -127,7 +127,7 @@ public partial class PidPrototypeWindow : Window
         {
             new ChartTrack(Loc.T("cs.mesure_et_consigne"), _model.PvUnit, new[]
             {
-                new ChartSeries("Consigne", "MkrSignal3", span, new[] { _scenario.Setpoint, _scenario.Setpoint }),
+                new ChartSeries(Terms.Setpoint, "MkrSignal3", span, new[] { _scenario.Setpoint, _scenario.Setpoint }),
                 new ChartSeries(Loc.T("cs.pi_lambda_reference"), "MkrSignal1", seconds, pi.Select(p => p.Pv).ToArray()),
                 new ChartSeries(Loc.T("cs.pid_manuel"), "MkrSignal2", pid.Select(p => p.Seconds).ToArray(), pid.Select(p => p.Pv).ToArray())
             }) { Weight = 2 },
