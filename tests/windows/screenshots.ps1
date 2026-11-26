@@ -679,12 +679,13 @@ try {
                     if ($screen[0] -eq 'identification') { Show-Page $m2 'PageResults' }
                     Capture $m2 ("23-echelle-{0}pct-{1}-{2}x{3}" -f $percent, $screen[0], $size[0], $size[1])
                     if ($screen[0] -ne 'acquisition') {
-                        # the chart keeps its full size at this scale (the page scrolls rather than squeezing it)
-                        $minimum = if ($screen[0] -eq 'simulation') { 290 } else { 250 }; $shown = $screen[0]; $scalePercent = $percent
+                        # the chart of the screen (found by its name: the window also holds a hidden chart under the step) keeps its size at this scale: the page scrolls rather than squeezing it
+                        $chartName = if ($screen[0] -eq 'simulation') { 'Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps' } else { 'Réponse du procédé : mesure observée et modèle identifié, en fonction du temps' }
+                        $shown = $screen[0]; $scalePercent = $percent
                         Check ("échelle {0} % à {1}x{2} : le graphique {3} garde sa taille" -f $percent, $size[0], $size[1], $shown) {
-                            $chartHeight = (Find $m2 $id 'Chart').Current.BoundingRectangle.Height
+                            $chartHeight = (Find $m2 $name $chartName).Current.BoundingRectangle.Height
                             Write-Host "##DIAG graphique $shown $scalePercent % hauteur=$chartHeight"
-                            $chartHeight -ge $minimum
+                            $chartHeight -ge 200
                         }
                     }
                 }

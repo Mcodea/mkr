@@ -175,15 +175,9 @@ try {
     Fill $window 'Period' '200'
     Fill $window 'Count' '5'
     Press $window "Démarrer l’acquisition"
-    $failure = $null
-    $until = [DateTime]::UtcNow.AddSeconds(40)
-    do {
-        $failure = (Find $window $id 'ConnectionState').Current.Name
-        if ($failure -like 'Connexion impossible*' -or $failure -like "Erreur d’acquisition*" -or $failure -like 'Déconnecté*') { break }
-        Start-Sleep -Milliseconds 300
-    } while ([DateTime]::UtcNow -lt $until)
+    # The only legitimate outcome is a refused connection: « Déconnecté » is the state left by the previous probe, so it is not accepted here.
+    $failure = Wait-Text $window 'ConnectionState' 'Connexion impossible*' 40
     Write-Output "##STATE échec : $failure"
-    if (!($failure -like 'Connexion impossible*' -or $failure -like "Erreur d’acquisition*" -or $failure -like 'Déconnecté*')) { throw "État d’échec d’acquisition inattendu : $failure" }
     $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
 
     # Continuous recording: about 3.6 s at 100 ms, cut into segments of 10 readings that overlap by 2.
