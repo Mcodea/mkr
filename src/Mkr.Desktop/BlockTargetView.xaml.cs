@@ -67,21 +67,21 @@ public partial class BlockTargetView : UserControl, IStepView
         if (Block is not { } block) return;
         if (!TryInstallation(out var installation))
         {
-            Status.Text = "Renseignez toutes les valeurs demandées (nombres strictement positifs).";
+            Status.Text = Loc.T("cs.renseignez_toutes_les_valeurs_demandees");
             return;
         }
         var token = _lifetime.Token;
         try
         {
             var sections = new List<string>();
-            foreach (var (simc, label) in new[] { (false, "Lambda (Dahlin)"), (true, "SIMC") })
+            foreach (var (simc, label) in new[] { (false, Loc.T("cs.lambda_dahlin")), (true, "SIMC") })
             {
                 var result = await _workspace.ConvertToBlockAsync(_model, _tuning, simc, block, installation, token);
                 token.ThrowIfCancellationRequested();
                 sections.Add(result.Settings is { } settings ? settings.Describe(label) : $"{label} : {result.RefusalText}");
             }
             Values.Text = string.Join("\n──────────\n\n", sections);
-            Status.Text = "Valeurs affichées. Non qualifiées.";
+            Status.Text = Loc.T("cs.valeurs_affichees_non_qualifiees");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }

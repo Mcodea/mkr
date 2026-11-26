@@ -9,9 +9,9 @@
         </Grid.RowDefinitions>
         <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
             <DockPanel>
-                <Label Content="_Import" Target="{Binding ElementName=Imports}" VerticalAlignment="Center"/>
+                <Label Content="{local:Loc ui.import}" Target="{Binding ElementName=Imports}" VerticalAlignment="Center"/>
                 <ComboBox x:Name="Imports" Width="360" DisplayMemberPath="Label" SelectionChanged="ImportChanged" MinHeight="28" VerticalAlignment="Center" HorizontalAlignment="Left"
-                          AutomationProperties.Name="Import à diagnostiquer"/>
+                          AutomationProperties.Name="{local:Loc ui.import_a_diagnostiquer}"/>
             </DockPanel>
         </Border>
         <Grid Grid.Row="1" Margin="0,6,0,0">
@@ -21,43 +21,43 @@
                 <ColumnDefinition Width="350" MinWidth="260" MaxWidth="640"/>
             </Grid.ColumnDefinitions>
             <TabControl Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" Padding="0">
-                <TabItem Header="_Graphiques" AutomationProperties.Name="Graphiques de diagnostic">
+                <TabItem Header="{local:Loc ui.graphiques}" AutomationProperties.Name="{local:Loc ui.graphiques_de_diagnostic}">
                     <Grid Margin="6">
                         <local:SignalChart x:Name="TrendChart" ReferenceStyle="True" ShowValueBoxes="False" MinHeight="200"
-                                AutomationProperties.Name="Signaux de l'import avec les anomalies repérées, en fonction du temps"
-                                AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                        <TextBlock x:Name="TrendEmpty" Text="Aucune donnée à tracer." Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" IsHitTestVisible="False"/>
+                                AutomationProperties.Name="{local:Loc ui.signaux_de_l_import_avec}"
+                                AutomationProperties.HelpText="{local:Loc ui.molette_zoom_clic_droit_glisse}"/>
+                        <TextBlock x:Name="TrendEmpty" Text="{local:Loc ui.aucune_donnee_a_tracer}" Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" IsHitTestVisible="False"/>
                     </Grid>
                 </TabItem>
-                <TabItem Header="Données _brutes" AutomationProperties.Name="Données brutes">
+                <TabItem Header="{local:Loc ui.donnees_brutes}" AutomationProperties.Name="{local:Loc ui.donnees_brutes_2}">
                     <Grid Margin="6">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock x:Name="PreviewTitle" Text="Lignes source (valeurs brutes inchangées)" FontWeight="SemiBold" Margin="2,0,0,6"/>
+                        <TextBlock x:Name="PreviewTitle" Text="{local:Loc ui.lignes_source_valeurs_brutes_inchangees_2}" FontWeight="SemiBold" Margin="2,0,0,6"/>
                         <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" CanUserAddRows="False" AutoGenerateColumns="False" RowHeight="26" ColumnHeaderHeight="30"
-                                  AutomationProperties.Name="Lignes source de l'import"/>
-                        <TextBlock Grid.Row="1" x:Name="Empty" Text="Aucun import dans ce projet. Importez des données à l'étape Données." Foreground="{DynamicResource MkrMuted}"
+                                  AutomationProperties.Name="{local:Loc ui.lignes_source_de_l_import}"/>
+                        <TextBlock Grid.Row="1" x:Name="Empty" Text="{local:Loc ui.aucun_import_dans_ce_projet}" Foreground="{DynamicResource MkrMuted}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"/>
                     </Grid>
                 </TabItem>
             </TabControl>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{local:Loc ui.redimensionner_le_panneau}"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Verdict du diagnostic">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.verdict_du_diagnostic}">
                         <Border x:Name="VerdictBadge" CornerRadius="3" Padding="10,7" Margin="10,8" BorderThickness="1">
                             <TextBlock x:Name="VerdictText" FontWeight="SemiBold" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                         </Border>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Qualité des données (mesurée)">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.qualite_des_donnees_mesuree}">
                         <StackPanel x:Name="Quality"/>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Constats">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.constats}">
                         <TextBlock x:Name="Findings" TextWrapping="Wrap" Margin="10,8"/>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Provenance">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.provenance}">
                         <TextBlock x:Name="Provenance" TextWrapping="Wrap" Margin="10,8" Foreground="{DynamicResource MkrMuted}"/>
                     </Expander>
                 </StackPanel>

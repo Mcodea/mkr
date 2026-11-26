@@ -1,84 +1,85 @@
 <Window x:Class="Mkr.Desktop.AcquisitionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ORIAS — Acquisition en lecture seule" Width="920" Height="820" MinWidth="640" MinHeight="520"
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="{local:Loc ui.orias_acquisition_en_lecture_seule}" Width="920" Height="820" MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner">
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="24,18,24,18">
-      <TextBlock Text="ORIAS  /  DONNÉES  /  ACQUISITION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
-      <TextBlock Text="Acquisition sur banc" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
+      <TextBlock Text="{local:Loc ui.orias_donnees_acquisition}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
+      <TextBlock Text="{local:Loc ui.acquisition_sur_banc}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
       <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
-                 Text="Lecture seule : ORIAS n’émet que des requêtes de lecture (Modbus 03/04, S7 « read var »). Aucune écriture, aucun forçage, aucune commande. Utilisez uniquement un banc autorisé."/>
+                 Text="{local:Loc ui.lecture_seule_orias_nemet_que}"/>
 
       <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15" Margin="0,14,0,10">
         <StackPanel x:Name="Settings">
-          <TextBlock Text="Automate" FontWeight="SemiBold" Margin="0,0,0,6"/>
+          <TextBlock Text="{local:Loc ui.automate}" FontWeight="SemiBold" Margin="0,0,0,6"/>
           <WrapPanel>
             <StackPanel Margin="0,0,12,0">
-              <Label Content="_Constructeur et protocole" Target="{Binding ElementName=Protocol}"/>
-              <ComboBox x:Name="Protocol" Width="300" SelectionChanged="ProtocolChanged" AutomationProperties.Name="Protocole">
-                <ComboBoxItem Content="Schneider Electric · Modbus TCP"/>
-                <ComboBoxItem Content="Siemens S7-1200/1500 · S7comm (ISO-on-TCP)"/>
+              <Label Content="{local:Loc ui.constructeur_et_protocole}" Target="{Binding ElementName=Protocol}"/>
+              <ComboBox x:Name="Protocol" Width="300" SelectionChanged="ProtocolChanged" AutomationProperties.Name="{local:Loc ui.protocole}">
+                <ComboBoxItem Content="{local:Loc ui.schneider_electric_modbus_tcp}"/>
+                <ComboBoxItem Content="{local:Loc ui.siemens_s7_1200_1500_s7comm}"/>
               </ComboBox>
             </StackPanel>
             <StackPanel Margin="0,0,12,0">
-              <Label Content="_Hôte du banc" Target="{Binding ElementName=Host}"/>
-              <TextBox x:Name="Host" Width="190" AutomationProperties.Name="Hôte"/>
+              <Label Content="{local:Loc ui.hote_du_banc}" Target="{Binding ElementName=Host}"/>
+              <TextBox x:Name="Host" Width="190" AutomationProperties.Name="{local:Loc ui.hote}"/>
             </StackPanel>
             <StackPanel>
-              <Label Content="Port TCP" Target="{Binding ElementName=Port}"/>
-              <TextBox x:Name="Port" Width="80" AutomationProperties.Name="Port"/>
+              <Label Content="{local:Loc ui.port_tcp}" Target="{Binding ElementName=Port}"/>
+              <TextBox x:Name="Port" Width="80" AutomationProperties.Name="{local:Loc ui.port}"/>
             </StackPanel>
           </WrapPanel>
 
           <WrapPanel x:Name="ModbusPanel" Margin="0,6,0,0">
             <StackPanel Margin="0,0,12,0">
-              <Label Content="Unité Modbus" Target="{Binding ElementName=UnitId}"/>
-              <TextBox x:Name="UnitId" Width="80" Text="1" AutomationProperties.Name="Unité Modbus"/>
+              <Label Content="{local:Loc ui.unite_modbus}" Target="{Binding ElementName=UnitId}"/>
+              <TextBox x:Name="UnitId" Width="80" Text="1" AutomationProperties.Name="{local:Loc ui.unite_modbus}"/>
             </StackPanel>
             <StackPanel Margin="0,0,12,0">
-              <Label Content="Table lue" Target="{Binding ElementName=Table}"/>
-              <ComboBox x:Name="Table" Width="270" SelectedIndex="0" AutomationProperties.Name="Table Modbus">
-                <ComboBoxItem Content="Registres de maintien · FC03 · %MW"/>
-                <ComboBoxItem Content="Registres d’entrée · FC04"/>
+              <Label Content="{local:Loc ui.table_lue}" Target="{Binding ElementName=Table}"/>
+              <ComboBox x:Name="Table" Width="270" SelectedIndex="0" AutomationProperties.Name="{local:Loc ui.table_modbus}">
+                <ComboBoxItem Content="{local:Loc ui.registres_de_maintien_fc03_mw}"/>
+                <ComboBoxItem Content="{local:Loc ui.registres_dentree_fc04}"/>
               </ComboBox>
             </StackPanel>
             <StackPanel>
-              <Label Content="Ordre des octets (32 bits)" Target="{Binding ElementName=Order}"/>
-              <ComboBox x:Name="Order" Width="300" AutomationProperties.Name="Ordre des octets">
-                <ComboBoxItem Content="ABCD · mot fort en premier"/>
-                <ComboBoxItem Content="CDAB · mot faible en premier (fréquent chez Schneider)"/>
-                <ComboBoxItem Content="BADC · octets inversés dans chaque mot"/>
-                <ComboBoxItem Content="DCBA · tout inversé"/>
+              <Label Content="{local:Loc ui.ordre_des_octets_32_bits}" Target="{Binding ElementName=Order}"/>
+              <ComboBox x:Name="Order" Width="300" AutomationProperties.Name="{local:Loc ui.ordre_des_octets}">
+                <ComboBoxItem Content="{local:Loc ui.abcd_mot_fort_en_premier}"/>
+                <ComboBoxItem Content="{local:Loc ui.cdab_mot_faible_en_premier}"/>
+                <ComboBoxItem Content="{local:Loc ui.badc_octets_inverses_dans_chaque}"/>
+                <ComboBoxItem Content="{local:Loc ui.dcba_tout_inverse}"/>
               </ComboBox>
             </StackPanel>
           </WrapPanel>
 
           <WrapPanel x:Name="S7Panel" Margin="0,6,0,0" Visibility="Collapsed">
             <StackPanel Margin="0,0,12,0">
-              <Label Content="Rack" Target="{Binding ElementName=Rack}"/>
-              <TextBox x:Name="Rack" Width="60" Text="0" AutomationProperties.Name="Rack"/>
+              <Label Content="{local:Loc ui.rack}" Target="{Binding ElementName=Rack}"/>
+              <TextBox x:Name="Rack" Width="60" Text="0" AutomationProperties.Name="{local:Loc ui.rack}"/>
             </StackPanel>
             <StackPanel Margin="0,0,12,0">
-              <Label Content="Emplacement" Target="{Binding ElementName=Slot}"/>
-              <TextBox x:Name="Slot" Width="60" Text="1" AutomationProperties.Name="Emplacement"/>
+              <Label Content="{local:Loc ui.emplacement}" Target="{Binding ElementName=Slot}"/>
+              <TextBox x:Name="Slot" Width="60" Text="1" AutomationProperties.Name="{local:Loc ui.emplacement}"/>
             </StackPanel>
             <StackPanel Margin="0,0,12,0">
-              <Label Content="Zone" Target="{Binding ElementName=Area}"/>
-              <ComboBox x:Name="Area" Width="210" SelectedIndex="0" AutomationProperties.Name="Zone S7">
-                <ComboBoxItem Content="Bloc de données (DB)"/>
-                <ComboBoxItem Content="Mémentos (M)"/>
+              <Label Content="{local:Loc ui.zone}" Target="{Binding ElementName=Area}"/>
+              <ComboBox x:Name="Area" Width="210" SelectedIndex="0" AutomationProperties.Name="{local:Loc ui.zone_s7}">
+                <ComboBoxItem Content="{local:Loc ui.bloc_de_donnees_db}"/>
+                <ComboBoxItem Content="{local:Loc ui.mementos_m}"/>
               </ComboBox>
             </StackPanel>
             <StackPanel>
-              <Label Content="Numéro de DB" Target="{Binding ElementName=DataBlock}"/>
-              <TextBox x:Name="DataBlock" Width="80" Text="1" AutomationProperties.Name="Numéro de DB"/>
+              <Label Content="{local:Loc ui.numero_de_db}" Target="{Binding ElementName=DataBlock}"/>
+              <TextBox x:Name="DataBlock" Width="80" Text="1" AutomationProperties.Name="{local:Loc ui.numero_de_db}"/>
             </StackPanel>
             <TextBlock TextWrapping="Wrap" Width="820" Margin="0,8,0,0" Foreground="{DynamicResource MkrMuted}"
-                       Text="Prérequis CPU : accès PUT/GET autorisé et DB à accès non optimisé (adresses absolues). Une DB d’instance PID_Compact est optimisée : copiez la consigne, la mesure et la sortie de commande dans une DB dédiée. Les valeurs S7 sont transmises en ABCD."/>
+                       Text="{local:Loc ui.prerequis_cpu_acces_put_get}"/>
           </WrapPanel>
 
-          <TextBlock Text="Signaux" FontWeight="SemiBold" Margin="0,14,0,0"/>
+          <TextBlock Text="{local:Loc ui.signaux}" FontWeight="SemiBold" Margin="0,14,0,0"/>
           <TextBlock x:Name="AddressHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,2,0,6"/>
           <Grid x:Name="SignalGrid">
             <Grid.ColumnDefinitions>
@@ -93,63 +94,63 @@
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock Grid.Column="1" Text="Adresse" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="3" Text="Brut bas" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="4" Text="Brut haut" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="5" Text="Physique bas" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="6" Text="Physique haut" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="1" Text="{local:Loc ui.adresse}" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="2" Text="{local:Loc ui.type}" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="3" Text="{local:Loc ui.brut_bas}" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="4" Text="{local:Loc ui.brut_haut}" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="5" Text="{local:Loc ui.physique_bas}" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="6" Text="{local:Loc ui.physique_haut}" FontWeight="SemiBold"/>
           </Grid>
           <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"
-                     Text="Mise à l’échelle linéaire : physique = bas + (brut − brut bas) × (physique haut − physique bas) / (brut haut − brut bas). Laissez 0 / 1 / 0 / 1 pour une valeur REAL déjà en unité physique."/>
+                     Text="{local:Loc ui.mise_a_lechelle_lineaire_physique}"/>
 
           <CheckBox x:Name="ModeEnabled" Margin="0,10,0,0" Checked="ModeOptionChanged" Unchecked="ModeOptionChanged"
-                    AutomationProperties.Name="Lire aussi le mode du régulateur">
-            <TextBlock Text="Lire aussi le mode du régulateur (manuel / automatique)"/>
+                    AutomationProperties.Name="{local:Loc ui.lire_aussi_le_mode_du}">
+            <TextBlock Text="{local:Loc ui.lire_aussi_le_mode_du_2}"/>
           </CheckBox>
           <WrapPanel x:Name="ModePanel" Visibility="Collapsed" Margin="0,4,0,0">
-            <StackPanel Margin="0,0,12,0"><Label Content="Adresse du mode" Target="{Binding ElementName=ModeOffset}"/><TextBox x:Name="ModeOffset" Width="90" AutomationProperties.Name="Adresse du mode"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Type du mode" Target="{Binding ElementName=ModeType}"/><ComboBox x:Name="ModeType" Width="120" AutomationProperties.Name="Type du mode"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Valeur brute « manuel »" Target="{Binding ElementName=ManualValue}"/><TextBox x:Name="ManualValue" Width="90" AutomationProperties.Name="Valeur brute manuel"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.adresse_du_mode}" Target="{Binding ElementName=ModeOffset}"/><TextBox x:Name="ModeOffset" Width="90" AutomationProperties.Name="{local:Loc ui.adresse_du_mode}"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.type_du_mode}" Target="{Binding ElementName=ModeType}"/><ComboBox x:Name="ModeType" Width="120" AutomationProperties.Name="{local:Loc ui.type_du_mode}"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.valeur_brute_manuel}" Target="{Binding ElementName=ManualValue}"/><TextBox x:Name="ManualValue" Width="90" AutomationProperties.Name="{local:Loc ui.valeur_brute_manuel_2}"/></StackPanel>
           </WrapPanel>
           <TextBlock x:Name="ModeHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" Visibility="Collapsed"
-                     Text="Le mode se lit avec la consigne, la mesure et la sortie de commande : placez-le, si possible, à une adresse consécutive aux trois autres pour une seule requête par mesure. MKR ne suppose aucune convention : indiquez la valeur brute que votre programme utilise pour « manuel ». Un mode booléen doit être copié dans un mot (INT/UINT). Les mesures prises hors manuel sont comptées et signalées : un essai en boucle ouverte n’y est pas valable."/>
+                     Text="{local:Loc ui.le_mode_se_lit_avec}"/>
 
-          <TextBlock Text="Plan d’acquisition" FontWeight="SemiBold" Margin="0,14,0,0"/>
+          <TextBlock Text="{local:Loc ui.plan_dacquisition}" FontWeight="SemiBold" Margin="0,14,0,0"/>
           <WrapPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Unité de la consigne et de la mesure" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="Unité de la consigne et de la mesure"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Unité de la sortie de commande" Target="{Binding ElementName=CommandUnit}"/><TextBox x:Name="CommandUnit" Width="100" AutomationProperties.Name="Unité de la sortie de commande"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Période (ms)" Target="{Binding ElementName=Period}"/><TextBox x:Name="Period" Text="1000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Période"/></StackPanel>
-            <StackPanel x:Name="CountPanel" Margin="0,0,12,0"><Label Content="Nombre de mesures" Target="{Binding ElementName=Count}"/><TextBox x:Name="Count" Text="600" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Nombre de mesures"/></StackPanel>
-            <StackPanel><Label Content="Coupure tolérée (s)" Target="{Binding ElementName=Outage}"/><TextBox x:Name="Outage" Text="10" Width="90" AutomationProperties.Name="Coupure tolérée"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.unite_de_la_consigne_et}" Target="{Binding ElementName=ProcessUnit}"/><TextBox x:Name="ProcessUnit" Width="100" AutomationProperties.Name="{local:Loc ui.unite_de_la_consigne_et}"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.unite_de_la_sortie_de}" Target="{Binding ElementName=CommandUnit}"/><TextBox x:Name="CommandUnit" Width="100" AutomationProperties.Name="{local:Loc ui.unite_de_la_sortie_de}"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.periode_ms}" Target="{Binding ElementName=Period}"/><TextBox x:Name="Period" Text="1000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="{local:Loc ui.periode}"/></StackPanel>
+            <StackPanel x:Name="CountPanel" Margin="0,0,12,0"><Label Content="{local:Loc ui.nombre_de_mesures}" Target="{Binding ElementName=Count}"/><TextBox x:Name="Count" Text="600" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="{local:Loc ui.nombre_de_mesures}"/></StackPanel>
+            <StackPanel><Label Content="{local:Loc ui.coupure_toleree_s}" Target="{Binding ElementName=Outage}"/><TextBox x:Name="Outage" Text="10" Width="90" AutomationProperties.Name="{local:Loc ui.coupure_toleree}"/></StackPanel>
           </WrapPanel>
           <CheckBox x:Name="Continuous" Margin="0,12,0,0" Checked="ModeChanged" Unchecked="ModeChanged"
-                    AutomationProperties.Name="Enregistrement continu">
-            <TextBlock TextWrapping="Wrap" Text="Enregistrement continu (fabriquer un historique) : lecture longue découpée en segments enregistrés au fil de l’eau, pour y retrouver ensuite des essais."/>
+                    AutomationProperties.Name="{local:Loc ui.enregistrement_continu}">
+            <TextBlock TextWrapping="Wrap" Text="{local:Loc ui.enregistrement_continu_fabriquer_un_historique}"/>
           </CheckBox>
           <WrapPanel x:Name="HistorianPanel" Visibility="Collapsed" Margin="0,6,0,0">
-            <StackPanel Margin="0,0,12,0"><Label Content="Durée (heures)" Target="{Binding ElementName=Hours}"/><TextBox x:Name="Hours" Text="1" Width="80" TextChanged="PlanChanged" AutomationProperties.Name="Durée en heures"/></StackPanel>
-            <StackPanel Margin="0,0,12,0"><Label Content="Mesures par segment" Target="{Binding ElementName=SegmentSize}"/><TextBox x:Name="SegmentSize" Text="3000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Mesures par segment"/></StackPanel>
-            <StackPanel><Label Content="Recouvrement (mesures)" Target="{Binding ElementName=Overlap}"/><TextBox x:Name="Overlap" Text="300" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="Recouvrement"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.duree_heures}" Target="{Binding ElementName=Hours}"/><TextBox x:Name="Hours" Text="1" Width="80" TextChanged="PlanChanged" AutomationProperties.Name="{local:Loc ui.duree_en_heures}"/></StackPanel>
+            <StackPanel Margin="0,0,12,0"><Label Content="{local:Loc ui.mesures_par_segment}" Target="{Binding ElementName=SegmentSize}"/><TextBox x:Name="SegmentSize" Text="3000" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="{local:Loc ui.mesures_par_segment}"/></StackPanel>
+            <StackPanel><Label Content="{local:Loc ui.recouvrement_mesures}" Target="{Binding ElementName=Overlap}"/><TextBox x:Name="Overlap" Text="300" Width="90" TextChanged="PlanChanged" AutomationProperties.Name="{local:Loc ui.recouvrement}"/></StackPanel>
           </WrapPanel>
           <TextBlock x:Name="PlanSummary" Margin="0,6,0,0" Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap"/>
         </StackPanel>
       </Border>
 
       <WrapPanel Margin="0,0,0,10">
-        <Button x:Name="Probe" Content="_Tester la lecture" Click="ProbeReading" AutomationProperties.Name="Tester la lecture"/>
-        <Button x:Name="Start" Content="_Démarrer l’acquisition" Margin="8,0,0,0" Style="{StaticResource MkrPrimaryButton}" Click="StartReading"/>
-        <Button x:Name="Stop" Content="_Arrêter" Margin="8,0" IsEnabled="False" Click="StopReading"/>
-        <Button x:Name="Save" Content="_Enregistrer dans le projet" IsEnabled="False" Click="SaveCapture"/>
+        <Button x:Name="Probe" Content="{local:Loc ui.tester_la_lecture}" Click="ProbeReading" AutomationProperties.Name="{local:Loc ui.tester_la_lecture_2}"/>
+        <Button x:Name="Start" Content="{local:Loc ui.demarrer_lacquisition}" Margin="8,0,0,0" Style="{StaticResource MkrPrimaryButton}" Click="StartReading"/>
+        <Button x:Name="Stop" Content="{local:Loc ui.arreter}" Margin="8,0" IsEnabled="False" Click="StopReading"/>
+        <Button x:Name="Save" Content="{local:Loc ui.enregistrer_dans_le_projet}" IsEnabled="False" Click="SaveCapture"/>
       </WrapPanel>
 
       <Border Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="15">
         <StackPanel>
           <DockPanel>
             <Ellipse x:Name="ConnectionLight" Width="12" Height="12" Fill="Gray" Margin="0,0,8,0" VerticalAlignment="Center"/>
-            <TextBlock x:Name="ConnectionState" Text="Déconnecté" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite"/>
+            <TextBlock x:Name="ConnectionState" Text="{local:Loc acq.state.idle}" FontWeight="SemiBold" AutomationProperties.LiveSetting="Polite"/>
           </DockPanel>
-          <ProgressBar x:Name="Progress" Height="14" Margin="0,10,0,4" Minimum="0" Maximum="1" AutomationProperties.Name="Progression de l’acquisition"/>
+          <ProgressBar x:Name="Progress" Height="14" Margin="0,10,0,4" Minimum="0" Maximum="1" AutomationProperties.Name="{local:Loc ui.progression_de_lacquisition}"/>
           <TextBlock x:Name="ProgressText" TextWrapping="Wrap"/>
           <TextBlock x:Name="Latest" TextWrapping="Wrap" Margin="0,6,0,0" FontFamily="Consolas"/>
           <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>

@@ -23,11 +23,11 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     /// <summary>Writes the audit log as JSON Lines; the export itself is then traced (after, so it is not part of the exported chain).</summary>
     public AuditVerification ExportAudit(string path)
     {
-        if (store is not IAuditLog log) throw new InvalidOperationException("Journal indisponible pour ce stockage.");
+        if (store is not IAuditLog log) throw new InvalidOperationException(Loc.T("cs.journal_indisponible_pour_ce_stockage"));
         var entries = log.List(project.Id);
         var verification = log.Verify(project.Id);
         File.WriteAllText(path, AuditExport.Write(project.Id, project.Name, entries, DateTimeOffset.UtcNow), new System.Text.UTF8Encoding(false));
-        Audit("audit.exported", Path.GetFileName(path), $"{entries.Count} entrée(s), empreinte de tête {verification.HeadHash}" + (verification.Intact ? "" : " · CHAÎNE ROMPUE à l'export"));
+        Audit("audit.exported", Path.GetFileName(path), Loc.T("cs.entree_s_empreinte_de_tete", entries.Count, verification.HeadHash) + (verification.Intact ? "" : Loc.T("cs.chaine_rompue_a_l_export")));
         return verification;
     }
 
@@ -36,7 +36,7 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     public void SaveLoopBrief(LoopBrief brief)
     {
         store.SaveLoopBrief(project.Id, brief);
-        Audit("loop.brief.saved", brief.Tag, $"grandeur « {brief.ControlledQuantity} », objectif « {brief.Objective} »");
+        Audit("loop.brief.saved", brief.Tag, Loc.T("cs.grandeur_objectif", brief.ControlledQuantity, brief.Objective));
     }
     public IReadOnlyList<ImportSummary> List() => store.ListImports(project.Id);
     public CsvImport Open(Guid id) => store.ReadImport(project.Id, id);
@@ -61,13 +61,13 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
     {
         var import = await Mkr.Infrastructure.AcquisitionArchive.SaveAsync(project.Id, store, engine, samples, origin, token);
         Audit(origin.Session is null ? "acquisition.saved" : "acquisition.segment.saved", import.Summary.FileName,
-            $"{import.Summary.Sha256[..12]} · {samples.Count} mesures · {origin.Describe()}");
+            Loc.T("cs.mesures", import.Summary.Sha256[..12], samples.Count, origin.Describe()));
         return import;
     }
 
     public async Task<CsvImport> AnalyzeAndSaveAsync(CsvMapping mapping, CancellationToken token, CsvFormat? format = null)
     {
-        var original = _original ?? throw new InvalidOperationException("Aucun CSV chargé.");
+        var original = _original ?? throw new InvalidOperationException(Loc.T("cs.aucun_csv_charge"));
         if (format is { Decimal: "," } && _delimiter == ",")
             throw new CsvInputException("csv_format");
         format = format is { IsDefault: true } ? null : format;
@@ -76,7 +76,7 @@ internal sealed class CsvWorkspace(Project project, IImportStore store, ICsvEngi
         var summary = new ImportSummary(Guid.NewGuid(), _fileName!, Convert.ToHexString(SHA256.HashData(original)), DateTimeOffset.UtcNow);
         var import = new CsvImport(summary, _delimiter!, mapping, result, version, original, Format: format);
         store.SaveImport(project.Id, import);
-        Audit("import.saved", summary.FileName, $"{summary.Sha256[..12]} · colonne {mapping.ValueColumn} ({mapping.Role}, {mapping.Unit})");
+        Audit("import.saved", summary.FileName, Loc.T("cs.colonne", summary.Sha256[..12], mapping.ValueColumn, mapping.Role, mapping.Unit));
         _original = null;
         return import;
     }

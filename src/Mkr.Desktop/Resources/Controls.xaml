@@ -379,6 +379,32 @@
             <Setter Property="Background" Value="{DynamicResource MkrSurface}"/>
             <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
         </Style>
+        <!-- Lists follow the theme (the default list is white in the dark theme). -->
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource MkrSurface}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource MkrBorder}"/>
+        </Style>
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource MkrSurfaceAlt}"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource MkrNavy}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource MkrNavyText}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="{DynamicResource MkrSurface}"/>
             <Setter Property="Foreground" Value="{DynamicResource MkrText}"/>

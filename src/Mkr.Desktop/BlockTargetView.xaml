@@ -12,48 +12,48 @@
         <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
-                       Text="Valeurs documentaires, non qualifiées, pour un régulateur PI. Aucune valeur d'installation n'est supposée : renseignez toutes les cases. Relisez et saisissez à la main, jamais par copie automatique."/>
+                       Text="{local:Loc ui.valeurs_documentaires_non_qualifiees_pour}"/>
         </Border>
         <StackPanel Grid.Row="1">
             <WrapPanel>
-                <Label Content="_Bloc" Target="{Binding ElementName=BlockChoice}"/>
-                <ComboBox x:Name="BlockChoice" Width="150" SelectionChanged="BlockChanged" AutomationProperties.Name="Bloc cible">
+                <Label Content="{local:Loc ui.bloc}" Target="{Binding ElementName=BlockChoice}"/>
+                <ComboBox x:Name="BlockChoice" Width="150" SelectionChanged="BlockChanged" AutomationProperties.Name="{local:Loc ui.bloc_cible}">
                     <ComboBoxItem Content="PID_INT" Tag="PID_INT"/>
-                    <ComboBoxItem Content="PID_Compact" Tag="PID_Compact"/>
+                    <ComboBoxItem Content="{local:Loc ui.pidcompact}" Tag="PID_Compact"/>
                 </ComboBox>
             </WrapPanel>
             <WrapPanel x:Name="IntPanel" Margin="0,8,0,0" Visibility="Collapsed">
-                <Label Content="Étendue de la _mesure" Target="{Binding ElementName=PvSpan}"/>
-                <TextBox x:Name="PvSpan" Width="90" AutomationProperties.Name="Étendue de la mesure"/>
-                <Label Content="Étendue de la _sortie de commande" Target="{Binding ElementName=MvSpan}" Margin="12,0,0,0"/>
-                <TextBox x:Name="MvSpan" Width="90" AutomationProperties.Name="Étendue de la sortie"/>
-                <Label Content="Période TS (_s)" Target="{Binding ElementName=Ts}" Margin="12,0,0,0"/>
-                <TextBox x:Name="Ts" Width="70" AutomationProperties.Name="Période d'échantillonnage en secondes"/>
+                <Label Content="{local:Loc ui.etendue_de_la_mesure}" Target="{Binding ElementName=PvSpan}"/>
+                <TextBox x:Name="PvSpan" Width="90" AutomationProperties.Name="{local:Loc ui.etendue_de_la_mesure_2}"/>
+                <Label Content="{local:Loc ui.etendue_de_la_sortie_de}" Target="{Binding ElementName=MvSpan}" Margin="12,0,0,0"/>
+                <TextBox x:Name="MvSpan" Width="90" AutomationProperties.Name="{local:Loc ui.etendue_de_la_sortie}"/>
+                <Label Content="{local:Loc ui.periode_ts_s}" Target="{Binding ElementName=Ts}" Margin="12,0,0,0"/>
+                <TextBox x:Name="Ts" Width="70" AutomationProperties.Name="{local:Loc ui.periode_d_echantillonnage_en_secondes}"/>
             </WrapPanel>
             <WrapPanel x:Name="CompactPanel" Margin="0,8,0,0" Visibility="Collapsed">
-                <Label Content="_Version" Target="{Binding ElementName=Version}"/>
-                <ComboBox x:Name="Version" Width="90" AutomationProperties.Name="Version de PID_Compact"/>
-                <Label Content="% de sortie par unité de _sortie de commande" Target="{Binding ElementName=PercentPerUnit}" Margin="12,0,0,0"/>
-                <TextBox x:Name="PercentPerUnit" Width="70" AutomationProperties.Name="Pour cent de sortie par unité de MV"/>
-                <Label Content="_CPU (facultatif)" Target="{Binding ElementName=Cpu}" Margin="12,0,0,0"/>
-                <ComboBox x:Name="Cpu" Width="110" AutomationProperties.Name="Famille de CPU">
-                    <ComboBoxItem Content="(non précisée)" Tag=""/>
+                <Label Content="{local:Loc ui.version}" Target="{Binding ElementName=Version}"/>
+                <ComboBox x:Name="Version" Width="90" AutomationProperties.Name="{local:Loc ui.version_de_pidcompact}"/>
+                <Label Content="{local:Loc ui.de_sortie_par_unite_de}" Target="{Binding ElementName=PercentPerUnit}" Margin="12,0,0,0"/>
+                <TextBox x:Name="PercentPerUnit" Width="70" AutomationProperties.Name="{local:Loc ui.pour_cent_de_sortie_par}"/>
+                <Label Content="{local:Loc ui.cpu_facultatif}" Target="{Binding ElementName=Cpu}" Margin="12,0,0,0"/>
+                <ComboBox x:Name="Cpu" Width="110" AutomationProperties.Name="{local:Loc ui.famille_de_cpu}">
+                    <ComboBoxItem Content="{local:Loc ui.non_precisee}" Tag=""/>
                     <ComboBoxItem Content="S7-1200" Tag="S7-1200"/>
                     <ComboBoxItem Content="S7-1200 G2" Tag="S7-1200 G2"/>
                     <ComboBoxItem Content="S7-1500" Tag="S7-1500"/>
                 </ComboBox>
-                <Label Content="Micro_logiciel" Target="{Binding ElementName=Firmware}" Margin="12,0,0,0"/>
-                <TextBox x:Name="Firmware" Width="60" AutomationProperties.Name="Micrologiciel, par exemple 3.1"/>
+                <Label Content="{local:Loc ui.micrologiciel}" Target="{Binding ElementName=Firmware}" Margin="12,0,0,0"/>
+                <TextBox x:Name="Firmware" Width="60" AutomationProperties.Name="{local:Loc ui.micrologiciel_par_exemple_3_1}"/>
             </WrapPanel>
             <WrapPanel Margin="0,8,0,0">
-                <Button x:Name="Compute" Content="Calcu_ler" Click="Calculate" IsEnabled="False"/>
+                <Button x:Name="Compute" Content="{local:Loc ui.calculer}" Click="Calculate" IsEnabled="False"/>
                 <TextBlock x:Name="Status" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
             </WrapPanel>
         </StackPanel>
         <TextBox x:Name="Values" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,12,0,0"
-                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="Valeurs du bloc"/>
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="{local:Loc ui.valeurs_du_bloc}"/>
         <WrapPanel Grid.Row="3" Margin="0,12,0,0">
-            <Button x:Name="CloseButton" Content="_Fermer" Click="CloseView"/>
+            <Button x:Name="CloseButton" Content="{local:Loc ui.fermer}" Click="CloseView"/>
         </WrapPanel>
     </Grid>
 </UserControl>

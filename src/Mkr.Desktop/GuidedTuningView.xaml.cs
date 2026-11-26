@@ -49,9 +49,9 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     internal GuidedTuningView(IdentificationWorkspace workspace, IdentificationStudy model)
         : this(workspace, model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
-            $"Modèle {model.Family} · K = {model.Result.Gain:G5} {model.PvUnit}/{model.MvUnit}" +
+            Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
             (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
-            $" · θ prudent = {model.Result.TuningDelaySeconds:G5} s",
+            Loc.T("cs.prudent_s", model.Result.TuningDelaySeconds),
             (objective, variation, token) => workspace.RecommendTuningAsync(model, objective, variation, token))
     {
     }
@@ -60,8 +60,8 @@ public partial class GuidedTuningView : UserControl, IStepView
     internal GuidedTuningView(IdentificationWorkspace workspace, ArxStudy study)
         : this(workspace, study.MvUnit, study.PvUnit, 0,
             study.Result.Selected is { FirstOrder: { } f, Nk: var nk }
-                ? $"Modèle ARX / OE (1,1) · K = {f.Gain:G5} {study.PvUnit}/{study.MvUnit} · τ = {f.TauSeconds:G5} s · θ prudent = {nk * study.Result.SamplePeriodSeconds:G5} s (quantifié au pas de {study.Result.SamplePeriodSeconds:G3} s)"
-                : "Modèle ARX / OE sans équivalent du premier ordre",
+                ? Loc.T("cs.modele_arx_oe_1_1", f.Gain, study.PvUnit, study.MvUnit, f.TauSeconds, nk * study.Result.SamplePeriodSeconds, study.Result.SamplePeriodSeconds)
+                : Loc.T("cs.modele_arx_oe_sans_equivalent"),
             (objective, variation, token) => workspace.RecommendTuningFromArxAsync(study, objective, variation, token))
     {
     }
@@ -76,7 +76,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         _noiseUpperBound = noiseUpperBound;
         _recommend = recommend;
         ModelLine.Text = modelLine;
-        Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? "Survolez un graphique pour lire les valeurs au curseur." : text;
+        Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? Loc.T("cs.survolez_un_graphique_pour_lire") : text;
         ObjectiveChanged(this, null!);
     }
 
@@ -87,9 +87,9 @@ public partial class GuidedTuningView : UserControl, IStepView
         if (ObjectiveHelp is null) return;
         ObjectiveHelp.Text = ObjectiveTag switch
         {
-            DesignObjectives.Robust => "Marges larges : réponse plus lente, tolère mieux les écarts de modèle et les variations du procédé.",
-            DesignObjectives.Performance => "Réponse la plus rapide admise par la plage usuelle de conception : moins de marge, à réserver à un modèle bien établi.",
-            _ => "Compromis courant entre rapidité et marge de stabilité."
+            DesignObjectives.Robust => Loc.T("cs.marges_larges_reponse_plus_lente"),
+            DesignObjectives.Performance => Loc.T("cs.reponse_la_plus_rapide_admise"),
+            _ => Loc.T("cs.compromis_courant_entre_rapidite_et")
         };
     }
 
@@ -101,13 +101,13 @@ public partial class GuidedTuningView : UserControl, IStepView
         {
             if (!double.TryParse(Variation.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var percent) || !(percent > 0 && percent <= 50))
             {
-                Status.Text = "La variation attendue est un pourcentage supérieur à 0 et au plus 50, ou laissez le champ vide.";
+                Status.Text = Loc.T("cs.la_variation_attendue_est_un");
                 return;
             }
             variation = percent;
         }
         Compute.IsEnabled = false;
-        Status.Text = "Calcul en cours : recherche du réglage le plus rapide qui respecte l'objectif sur toute l'incertitude…";
+        Status.Text = Loc.T("cs.calcul_en_cours_recherche_du");
         try
         {
             var tuning = await _recommend(ObjectiveTag, variation, token);
@@ -127,79 +127,79 @@ public partial class GuidedTuningView : UserControl, IStepView
         Verdict.Visibility = Visibility.Visible;
         CopyButton.IsEnabled = true;
         Verdict.Background = (Brush)FindResource(tuning.IsRecommended ? "MkrSuccess" : "MkrDanger");
-        VerdictText.Text = tuning.IsRecommended ? "RÉGLAGE RECOMMANDÉ (théorique)" : "RÉGLAGE REFUSÉ : les données ne le permettent pas";
+        VerdictText.Text = tuning.IsRecommended ? Loc.T("cs.reglage_recommande_theorique") : Loc.T("cs.reglage_refuse_les_donnees_ne");
         var text = new StringBuilder();
         var mv = _mvUnit;
         var pv = _pvUnit;
-        text.AppendLine($"Objectif : {Objective.Text}");
+        text.AppendLine(Loc.T("cs.objectif", Objective.Text));
         if (tuning.Recommendation is { } rec)
         {
             var c = rec.Controller;
-            text.AppendLine($"Structure : {c.Structure} (forme idéale, erreur = consigne − mesure)");
-            text.AppendLine($"Kp = {F(c.Kp)} {mv}/{pv}   Ti = {F(c.TiSeconds)} s" + (c.TdSeconds > 0 ? $"   Td = {F(c.TdSeconds)} s   Tf = {F(c.FilterSeconds)} s (filtre de la dérivée, Td/{F(tuning.DerivativeFilterRatio ?? 0)})" : ""));
-            text.AppendLine($"Constante de temps de boucle fermée visée τc = {F(rec.ResponseSeconds)} s (retard effectif {F(tuning.EffectiveDelaySeconds)} s)");
-            text.AppendLine($"Sensibilité maximale au pire cas : {F(rec.WorstPeakSensitivity)} (limite {F(tuning.MaximumPeakSensitivity)}) · pire cas : {rec.WorstCase}");
+            text.AppendLine(Loc.T("cs.structure_forme_ideale_erreur_consigne", c.Structure));
+            text.AppendLine(Loc.T("cs.kp_ti_s", F(c.Kp), mv, pv, F(c.TiSeconds)) + (c.TdSeconds > 0 ? Loc.T("cs.td_s_tf_s_filtre", F(c.TdSeconds), F(c.FilterSeconds), F(tuning.DerivativeFilterRatio ?? 0)) : ""));
+            text.AppendLine(Loc.T("cs.constante_de_temps_de_boucle", F(rec.ResponseSeconds), F(tuning.EffectiveDelaySeconds)));
+            text.AppendLine(Loc.T("cs.sensibilite_maximale_au_pire_cas", F(rec.WorstPeakSensitivity), F(tuning.MaximumPeakSensitivity), rec.WorstCase));
             text.AppendLine(tuning.UncertaintyQuantified
-                ? "Incertitude prise en compte : " + (tuning.UncertaintyCoverageSigma is { } sigma ? $"±{sigma:G2} erreurs-types sur le gain, la constante de temps et le retard" : "aucune erreur-type disponible") +
-                  (tuning.ProcessVariationPercent is { } v ? $" ; variation du procédé déclarée ±{v:G3} %." : ".")
-                : "Incertitude des paramètres non quantifiée : seule l'incertitude du retard est prise en compte.");
+                ? Loc.T("cs.incertitude_prise_en_compte") + (tuning.UncertaintyCoverageSigma is { } sigma ? Loc.T("cs.erreurs_types_sur_le_gain", sigma) : Loc.T("cs.aucune_erreur_type_disponible")) +
+                  (tuning.ProcessVariationPercent is { } v ? Loc.T("cs.variation_du_procede_declaree", v) : ".")
+                : Loc.T("cs.incertitude_des_parametres_non_quantifiee"));
         }
         else
         {
-            text.AppendLine("Raisons :");
+            text.AppendLine(Loc.T("cs.raisons"));
             foreach (var reason in tuning.Reasons ?? []) text.AppendLine("  · " + Reason(reason));
             text.AppendLine();
-            text.AppendLine("Ce qu'il faut faire :");
+            text.AppendLine(Loc.T("cs.ce_qu_il_faut_faire"));
             foreach (var action in tuning.Actions ?? []) text.AppendLine("  · " + action);
             if (tuning.ClosestTuning is { } near)
-                text.AppendLine($"\nLe plus proche essayé : τc = {F(near.ResponseSeconds)} s, sensibilité au pire cas {F(near.WorstPeakSensitivity)} (limite {F(tuning.MaximumPeakSensitivity)}). Il n'est pas recommandé.");
+                text.AppendLine(Loc.T("cs.le_plus_proche_essaye_c", F(near.ResponseSeconds), F(near.WorstPeakSensitivity), F(tuning.MaximumPeakSensitivity)));
         }
         if (tuning.Optimized is { } opt)
         {
             text.AppendLine();
-            text.AppendLine("Réglage optimisé pour le rejet de perturbation (gain intégral maximal sous la même contrainte de robustesse) :");
-            text.AppendLine($"  Kp = {F(opt.Controller.Kp)} {mv}/{pv}   Ti = {F(opt.Controller.TiSeconds)} s   Ki = {F(opt.IntegralGain)}");
-            text.AppendLine($"  Gain intégral ×{opt.IntegralGainRatio:G3} par rapport au réglage ci-dessus : l'erreur cumulée après une perturbation de charge diminue d'autant.");
-            text.AppendLine($"  Sensibilité au pire cas {F(opt.WorstPeakSensitivity)} · dépassement nominal sur un échelon de consigne : {opt.NominalOvershootPercent:G3} %.");
-            text.AppendLine("  Compromis : intégrale plus vive, donc davantage de dépassement en suivi de consigne.");
+            text.AppendLine(Loc.T("cs.reglage_optimise_pour_le_rejet"));
+            text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.IntegralGain)));
+            text.AppendLine(Loc.T("cs.gain_integral_par_rapport_au", opt.IntegralGainRatio));
+            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent));
+            text.AppendLine(Loc.T("cs.compromis_integrale_plus_vive_donc"));
         }
         if (tuning.OptimizedPid is { } pid)
         {
             text.AppendLine();
-            text.AppendLine("PID optimisé sous la même contrainte (recherche sur Td/Ti ∈ {0,05 … 0,25} et Ti ; le PID n'est jamais présumé meilleur que le PI) :");
-            text.AppendLine($"  Kp = {F(pid.Controller.Kp)} {mv}/{pv}   Ti = {F(pid.Controller.TiSeconds)} s   Td = {F(pid.Controller.TdSeconds)} s   Tf = {F(pid.Controller.FilterSeconds)} s   Ki = {F(pid.IntegralGain)}");
-            text.AppendLine($"  Sensibilité au pire cas {F(pid.WorstPeakSensitivity)}." +
-                (pid.IntegralGainRatioToOptimalPi is { } ratio ? $" Gain intégral ×{ratio:G3} par rapport au PI optimisé." : ""));
+            text.AppendLine(Loc.T("cs.pid_optimise_sous_la_meme"));
+            text.AppendLine(Loc.T("cs.kp_ti_s_td_s", F(pid.Controller.Kp), mv, pv, F(pid.Controller.TiSeconds), F(pid.Controller.TdSeconds), F(pid.Controller.FilterSeconds), F(pid.IntegralGain)));
+            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas", F(pid.WorstPeakSensitivity)) +
+                (pid.IntegralGainRatioToOptimalPi is { } ratio ? Loc.T("cs.gain_integral_par_rapport_au_2", ratio) : ""));
             if (pid.PidNotBetterThanPi == true)
-                text.AppendLine("  Sur ce modèle, le PID n'apporte pas de gain intégral par rapport au PI : garder le PI (moins sensible au bruit de mesure).");
+                text.AppendLine(Loc.T("cs.sur_ce_modele_le_pid"));
             else if (pid.PidNotBetterThanPi == false)
-                text.AppendLine("  Gain obtenu au prix d'une amplification du bruit de mesure plus forte (gain haute fréquence ci-dessous) : à décider selon la qualité du capteur.");
+                text.AppendLine(Loc.T("cs.gain_obtenu_au_prix_d"));
         }
         if (tuning.Performance is { } perf)
         {
             text.AppendLine();
-            text.AppendLine("Performances nominales simulées (échelon unitaire, sans limite d'actionneur ; IAE = intégrale de la valeur absolue de l'erreur) :");
+            text.AppendLine(Loc.T("cs.performances_nominales_simulees_echelon_unitaire"));
             void Line(string name, LoopPerformance? l)
             {
                 if (l is null) return;
-                text.AppendLine($"  {name} : consigne IAE {F(l.SetpointStep.Iae)}, dépassement {F(l.SetpointStep.OvershootPercent ?? 0)} %, établissement à 2 % {F(l.SetpointStep.SettlingSeconds ?? 0)} s · perturbation de charge IAE {F(l.LoadDisturbanceStep.Iae)} · gain haute fréquence {F(l.HighFrequencyGain)}");
+                text.AppendLine(Loc.T("cs.consigne_iae_depassement_etablissement_a", name, F(l.SetpointStep.Iae), F(l.SetpointStep.OvershootPercent ?? 0), F(l.SetpointStep.SettlingSeconds ?? 0), F(l.LoadDisturbanceStep.Iae), F(l.HighFrequencyGain)));
                 if (l.SetpointStep.PeakMv is { } peak && l.SetpointStep.InitialMvStep is { } kick)
-                    text.AppendLine($"      commande : à un échelon de consigne de 1 {pv}, saut initial {F(kick)} {mv}, maximum demandé {F(peak)} {mv} (à multiplier par votre échelon réel, à comparer à la plage de l'actionneur)");
+                    text.AppendLine(Loc.T("cs.commande_a_un_echelon_de", pv, F(kick), mv, F(peak), mv));
                 if (l.NoiseToControlGain is { } noise)
-                    text.AppendLine($"      bruit : un bruit de mesure d'écart-type σ donne environ {F(noise)} σ d'écart-type sur la commande" +
-                        (_noiseUpperBound > 0 ? $" ; avec σ ≤ {F(_noiseUpperBound)} {pv} (erreur d'ajustement, borne haute du bruit) : ≤ {F(noise * _noiseUpperBound)} {mv}" : ""));
+                    text.AppendLine(Loc.T("cs.bruit_un_bruit_de_mesure", F(noise)) +
+                        (_noiseUpperBound > 0 ? Loc.T("cs.avec_erreur_d_ajustement_borne", F(_noiseUpperBound), pv, F(noise * _noiseUpperBound), mv) : ""));
             }
-            Line("Recommandé", perf.Recommended);
-            Line("PI optimisé", perf.OptimizedPi);
-            Line("PID optimisé", perf.OptimizedPid);
+            Line(Loc.T("cs.recommande"), perf.Recommended);
+            Line(Loc.T("cs.pi_optimise"), perf.OptimizedPi);
+            Line(Loc.T("cs.pid_optimise"), perf.OptimizedPid);
         }
         if (tuning.Warnings is { Length: > 0 })
         {
             text.AppendLine();
-            text.AppendLine("Réserves :");
+            text.AppendLine(Loc.T("cs.reserves"));
             foreach (var warning in tuning.Warnings) text.AppendLine("  · " + Warning(warning));
         }
-        text.AppendLine("  · résultat théorique : limites et vitesse de l'actionneur, filtre de la dérivée et bloc réel non évalués. Qualification sur installation requise.");
+        text.AppendLine(Loc.T("cs.resultat_theorique_limites_et_vitesse"));
         Result.Text = text.ToString();
         _last = tuning;
         Present(tuning);
@@ -207,11 +207,11 @@ public partial class GuidedTuningView : UserControl, IStepView
         {
             Response = F(a.ResponseSeconds), Kp = F(a.Controller.Kp), Ti = F(a.Controller.TiSeconds), Td = a.Controller.TdSeconds > 0 ? F(a.Controller.TdSeconds) : "—",
             Ms = F(a.WorstPeakSensitivity),
-            Verdict = !a.StableOnAllCorners ? "instable" : a.WorstPeakSensitivity <= tuning.MaximumPeakSensitivity + 1e-9 ? "respecte l'objectif" : "trop sensible"
+            Verdict = !a.StableOnAllCorners ? "instable" : a.WorstPeakSensitivity <= tuning.MaximumPeakSensitivity + 1e-9 ? Loc.T("cs.respecte_l_objectif") : Loc.T("cs.trop_sensible")
         }).ToList();
         Alternatives.ItemsSource = rows;
         AltPanel.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        Status.Text = tuning.IsRecommended ? "Réglage calculé." : "Aucun réglage recommandé.";
+        Status.Text = tuning.IsRecommended ? Loc.T("cs.reglage_calcule") : Loc.T("cs.aucun_reglage_recommande");
     }
 
     private UIElement Card(string caption, string value, string? note = null)
@@ -259,12 +259,12 @@ public partial class GuidedTuningView : UserControl, IStepView
         if (tuning.Recommendation is { } rec)
         {
             var c = rec.Controller;
-            Cards.Children.Add(Card("Structure", c.Structure, "forme idéale"));
-            Cards.Children.Add(Card("Gain Kp", F(c.Kp), $"{mv}/{pv}"));
-            Cards.Children.Add(Card("Temps intégral Ti", F(c.TiSeconds) + " s"));
-            if (c.TdSeconds > 0) Cards.Children.Add(Card("Temps dérivé Td", F(c.TdSeconds) + " s", $"filtre Tf = {F(c.FilterSeconds)} s"));
-            Cards.Children.Add(Card("Sensibilité maximale Ms", F(rec.WorstPeakSensitivity), $"limite {F(tuning.MaximumPeakSensitivity)} · pire cas : {rec.WorstCase}"));
-            Cards.Children.Add(Card("Boucle fermée visée", F(rec.ResponseSeconds) + " s", $"retard effectif {F(tuning.EffectiveDelaySeconds)} s"));
+            Cards.Children.Add(Card("Structure", c.Structure, Loc.T("cs.forme_ideale")));
+            Cards.Children.Add(Card(Loc.T("cs.gain_kp"), F(c.Kp), $"{mv}/{pv}"));
+            Cards.Children.Add(Card(Loc.T("cs.temps_integral_ti"), F(c.TiSeconds) + " s"));
+            if (c.TdSeconds > 0) Cards.Children.Add(Card(Loc.T("cs.temps_derive_td"), F(c.TdSeconds) + " s", Loc.T("cs.filtre_tf_s", F(c.FilterSeconds))));
+            Cards.Children.Add(Card(Loc.T("cs.sensibilite_maximale_ms"), F(rec.WorstPeakSensitivity), Loc.T("cs.limite_pire_cas", F(tuning.MaximumPeakSensitivity), rec.WorstCase)));
+            Cards.Children.Add(Card(Loc.T("cs.boucle_fermee_visee"), F(rec.ResponseSeconds) + " s", Loc.T("cs.retard_effectif_s", F(tuning.EffectiveDelaySeconds))));
         }
 
         var rows = new List<ComparisonRow>();
@@ -278,9 +278,9 @@ public partial class GuidedTuningView : UserControl, IStepView
                 LoadIae = perf is null ? "—" : F3(perf.LoadDisturbanceStep.Iae), Noise = perf?.NoiseToControlGain is { } n ? F3(n) : "—"
             });
         }
-        AddRow("Recommandé", tuning.Recommendation?.Controller, tuning.Recommendation?.WorstPeakSensitivity, tuning.Performance?.Recommended);
-        AddRow("PI optimisé (rejet de perturbation)", tuning.Optimized?.Controller, tuning.Optimized?.WorstPeakSensitivity, tuning.Performance?.OptimizedPi);
-        AddRow("PID optimisé", tuning.OptimizedPid?.Controller, tuning.OptimizedPid?.WorstPeakSensitivity, tuning.Performance?.OptimizedPid);
+        AddRow(Loc.T("cs.recommande"), tuning.Recommendation?.Controller, tuning.Recommendation?.WorstPeakSensitivity, tuning.Performance?.Recommended);
+        AddRow(Loc.T("cs.pi_optimise_rejet_de_perturbation"), tuning.Optimized?.Controller, tuning.Optimized?.WorstPeakSensitivity, tuning.Performance?.OptimizedPi);
+        AddRow(Loc.T("cs.pid_optimise"), tuning.OptimizedPid?.Controller, tuning.OptimizedPid?.WorstPeakSensitivity, tuning.Performance?.OptimizedPid);
         CompareGrid.Children.Clear();
         CompareGrid.RowDefinitions.Clear();
         CompareGrid.ColumnDefinitions.Clear();
@@ -291,13 +291,13 @@ public partial class GuidedTuningView : UserControl, IStepView
             foreach (var _ in rows) CompareGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var lineSpecs = new (string Label, Func<ComparisonRow, string> Get)[]
             {
-                ("Kp", r => r.Kp), ("Ti (s)", r => r.Ti), ("Td (s)", r => r.Td), ("Ms pire cas", r => r.Ms),
-                ("Dépassement", r => r.Overshoot), ("IAE consigne", r => r.Iae), ("IAE charge", r => r.LoadIae), ("Bruit → commande", r => r.Noise)
+                ("Kp", r => r.Kp), ("Ti (s)", r => r.Ti), ("Td (s)", r => r.Td), (Loc.T("cs.ms_pire_cas"), r => r.Ms),
+                (Loc.T("cs.depassement"), r => r.Overshoot), (Loc.T("cs.iae_consigne"), r => r.Iae), (Loc.T("cs.iae_charge"), r => r.LoadIae), (Loc.T("cs.bruit_commande"), r => r.Noise)
             };
             for (var i = 0; i <= lineSpecs.Length; i++) CompareGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            CompareGrid.Children.Add(Cell("Critère", 0, 0, header: true));
+            CompareGrid.Children.Add(Cell(Loc.T("cs.critere"), 0, 0, header: true));
             for (var column = 0; column < rows.Count; column++)
-                CompareGrid.Children.Add(Cell(rows[column].Name.Replace(" (rejet de perturbation)", "").Replace("Recommandé", "Recom."), 0, column + 1, header: true));
+                CompareGrid.Children.Add(Cell(ShortColumnName(rows[column].Name), 0, column + 1, header: true));
             for (var line = 0; line < lineSpecs.Length; line++)
             {
                 CompareGrid.Children.Add(Cell(lineSpecs[line].Label, line + 1, 0));
@@ -307,10 +307,10 @@ public partial class GuidedTuningView : UserControl, IStepView
         }
 
         var lines = new List<string>();
-        if (tuning.OptimizedPid is { PidNotBetterThanPi: true }) lines.Add("Sur ce modèle le PID n'apporte pas de gain intégral par rapport au PI : garder le PI (moins sensible au bruit de mesure).");
-        else if (tuning.OptimizedPid is { PidNotBetterThanPi: false }) lines.Add("Le PID rejette mieux les perturbations mais amplifie davantage le bruit de mesure (colonne « Bruit → commande ») : à décider selon la qualité du capteur.");
+        if (tuning.OptimizedPid is { PidNotBetterThanPi: true }) lines.Add(Loc.T("cs.sur_ce_modele_le_pid_2"));
+        else if (tuning.OptimizedPid is { PidNotBetterThanPi: false }) lines.Add(Loc.T("cs.le_pid_rejette_mieux_les"));
         if (tuning.Warnings is { Length: > 0 }) lines.AddRange(tuning.Warnings.Select(w => Warning(w)));
-        lines.Add("Résultat théorique : limites et vitesse de l'actionneur, filtre de la dérivée du bloc réel et comportement sur l'installation non évalués. Qualification sur installation requise.");
+        lines.Add(Loc.T("cs.resultat_theorique_limites_et_vitesse_2"));
         Notes.Text = string.Join("\n", lines.Select(l => "· " + l));
         Notes.Visibility = Visibility.Visible;
         DrawCurves();
@@ -324,18 +324,18 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     private void ExportImage(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "reglage-guide.png" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = Loc.T("cs.image_png_png_png"), FileName = "reglage-guide.png" };
         if (dialog.ShowDialog() != true) return;
-        try { Chart.ExportPng(dialog.FileName); Status.Text = "Image exportée."; }
-        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+        try { Chart.ExportPng(dialog.FileName); Status.Text = Loc.T("cs.image_exportee"); }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = Loc.T("cs.export_impossible_verifiez_le_dossier"); }
     }
 
     private void ExportData(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "reglage-guide.csv" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = Loc.T("cs.csv_csv_csv"), FileName = "reglage-guide.csv" };
         if (dialog.ShowDialog() != true) return;
-        try { Chart.ExportCsv(dialog.FileName); Status.Text = "Données exportées."; }
-        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+        try { Chart.ExportCsv(dialog.FileName); Status.Text = Loc.T("cs.donnees_exportees"); }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Status.Text = Loc.T("cs.export_impossible_verifiez_le_dossier"); }
     }
 
     private void CurveChanged(object sender, RoutedEventArgs args) { if (IsLoaded && _last is not null) DrawCurves(); }
@@ -343,46 +343,51 @@ public partial class GuidedTuningView : UserControl, IStepView
     private void DrawCurves()
     {
         var performance = _last?.Performance;
-        var entries = new[] { ("Recommandé", performance?.Recommended, "MkrSignal1"), ("PI optimisé", performance?.OptimizedPi, "MkrSignal2"), ("PID optimisé", performance?.OptimizedPid, "MkrSignal3") }
+        var entries = new[] { (Loc.T("cs.recommande"), performance?.Recommended, "MkrSignal1"), (Loc.T("cs.pi_optimise"), performance?.OptimizedPi, "MkrSignal2"), (Loc.T("cs.pid_optimise"), performance?.OptimizedPid, "MkrSignal3") }
             .Where(e => e.Item2?.Curves is not null).ToArray();
         CurveBar.Visibility = Chart.Visibility = entries.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         ChartEmpty.Visibility = entries.Length > 0 ? Visibility.Collapsed : Visibility.Visible;
         if (entries.Length == 0) return;
         var load = ShowLoad.IsChecked == true;
         ResponseCurve Pick(LoopPerformance l) => load ? l.Curves!.Load : l.Curves!.Setpoint;
-        Chart.XLabel = "Temps (s)";
+        Chart.XLabel = Loc.T("cs.temps_s");
         var measure = entries.Select(e => new ChartSeries(e.Item1, e.Item3, Pick(e.Item2!).Seconds, Pick(e.Item2!).Pv)).ToList();
         var command = entries.Select(e => new ChartSeries(e.Item1, e.Item3, Pick(e.Item2!).Seconds, Pick(e.Item2!).Mv)).ToList();
         Chart.SetTracks(new[]
         {
-            new ChartTrack(load ? "Aperçu de la réponse – perturbation de charge unitaire" : "Aperçu de la réponse – échelon de consigne unitaire", _pvUnit, measure) { Weight = 2, YLabel = $"Mesure ({_pvUnit})" },
-            new ChartTrack("Commande (sortie du régulateur)", _mvUnit, command) { YLabel = $"MV ({_mvUnit})" }
+            new ChartTrack(load ? Loc.T("cs.apercu_de_la_reponse_perturbation") : Loc.T("cs.apercu_de_la_reponse_echelon"), _pvUnit, measure) { Weight = 2, YLabel = Loc.T("cs.mesure", _pvUnit) },
+            new ChartTrack(Loc.T("cs.commande_sortie_du_regulateur"), _mvUnit, command) { YLabel = $"MV ({_mvUnit})" }
         });
     }
 
     private static string Reason(string code) => code switch
     {
-        "parameter_uncertainty_excludes_the_model" => "l'incertitude des paramètres est trop grande : le signe du gain ou une constante de temps positive n'est plus établi.",
-        "no_tuning_meets_the_objective_on_the_uncertainty_set" => "aucun réglage ne respecte l'objectif de robustesse sur toute l'incertitude du modèle.",
+        "parameter_uncertainty_excludes_the_model" => Loc.T("cs.l_incertitude_des_parametres_est"),
+        "no_tuning_meets_the_objective_on_the_uncertainty_set" => Loc.T("cs.aucun_reglage_ne_respecte_l"),
         _ => code
     };
 
     private static string Warning(string code) => code switch
     {
-        "uncertainty_not_quantified" => "incertitude des paramètres non quantifiée (erreurs-types indisponibles pour ce modèle).",
-        "closed_loop_slower_than_the_process" => "la boucle fermée visée est plus lente que le procédé lui-même : l'incertitude impose beaucoup de marge.",
-        "pid_second_pole_exceeds_delay" => "second pôle supérieur au retard : un PID est justifié (règle SIMC) ; la dérivée est filtrée (Tf = Td/10 par défaut, plage usuelle 2 à 20) et ce filtre fait partie de la boucle jugée.",
-        "performance_is_nominal_without_actuator_limits" => "performances calculées sur le procédé nominal, sans limite ni vitesse d'actionneur : à confirmer avec le scénario complet de la simulation.",
-        "second_pole_uncertainty_not_propagated" => "l'incertitude du second pôle n'est pas propagée (gain, constante lente et retard le sont).",
-        "half_rule_second_pole_not_above_delay" => "second pôle non supérieur au retard : règle de la moitié, puis PI.",
-        "first_order_model_pi_is_the_rule" => "modèle du premier ordre : le PI est la règle SIMC.",
-        "integrating_process_simc" => "règle SIMC des procédés intégrateurs.",
+        "uncertainty_not_quantified" => Loc.T("cs.incertitude_des_parametres_non_quantifiee_2"),
+        "closed_loop_slower_than_the_process" => Loc.T("cs.la_boucle_fermee_visee_est"),
+        "pid_second_pole_exceeds_delay" => Loc.T("cs.second_pole_superieur_au_retard"),
+        "performance_is_nominal_without_actuator_limits" => Loc.T("cs.performances_calculees_sur_le_procede"),
+        "second_pole_uncertainty_not_propagated" => Loc.T("cs.l_incertitude_du_second_pole"),
+        "half_rule_second_pole_not_above_delay" => Loc.T("cs.second_pole_non_superieur_au"),
+        "first_order_model_pi_is_the_rule" => Loc.T("cs.modele_du_premier_ordre_le"),
+        "integrating_process_simc" => Loc.T("cs.regle_simc_des_procedes_integrateurs"),
         _ => code
     };
 
     private void Copy(object sender, RoutedEventArgs args)
     {
-        try { Clipboard.SetText(Result.Text); Status.Text = "Résultat copié."; }
-        catch (Exception error) when (error is System.Runtime.InteropServices.ExternalException) { Status.Text = "Copie impossible : le presse-papiers est occupé."; }
+        try { Clipboard.SetText(Result.Text); Status.Text = Loc.T("cs.resultat_copie"); }
+        catch (Exception error) when (error is System.Runtime.InteropServices.ExternalException) { Status.Text = Loc.T("cs.copie_impossible_le_presse_papiers"); }
     }
+
+    /// <summary>Shorter column titles of the comparison table (the full names stay in the other lists).</summary>
+    private static string ShortColumnName(string name) =>
+        name == Loc.T("cs.pi_optimise_rejet_de_perturbation") ? Loc.T("cs.pi_optimise")
+        : name == Loc.T("cs.recommande") ? Loc.T("tbl.recommended_short") : name;
 }

@@ -1,3 +1,4 @@
+using Mkr.Core;
 using System.Windows;
 
 namespace Mkr.Desktop;
@@ -16,11 +17,11 @@ public partial class BlockValuesWindow : Window
         try
         {
             Clipboard.SetText(Values.Text);
-            CopyStatus.Text = "Copié.";
+            CopyStatus.Text = Loc.T("cs.copie");
         }
         catch (System.Runtime.InteropServices.ExternalException)
         {
-            CopyStatus.Text = "Presse-papiers indisponible. Réessayez.";
+            CopyStatus.Text = Loc.T("cs.presse_papiers_indisponible_reessayez");
         }
     }
 }

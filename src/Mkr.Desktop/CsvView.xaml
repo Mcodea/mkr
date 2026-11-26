@@ -8,10 +8,10 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Text="Données de l’étude · CSV et acquisition en lecture seule" Foreground="{DynamicResource MkrMuted}" Margin="2,0,0,6"/>
+        <TextBlock Grid.Row="0" Text="{local:Loc ui.donnees_de_letude_csv_et}" Foreground="{DynamicResource MkrMuted}" Margin="2,0,0,6"/>
         <TabControl x:Name="Tabs" Grid.Row="1" Background="{DynamicResource MkrSurface}"
                     BorderBrush="{DynamicResource MkrBorder}" Padding="2">
-            <TabItem Header="_Données CSV">
+            <TabItem Header="{local:Loc ui.donnees_csv}">
                 <!-- One scrolling column: nothing can overlap, whatever the window height (the former fixed rows overlapped at 768 px). -->
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
@@ -20,28 +20,28 @@
                         <ColumnDefinition Width="430" MinWidth="320" MaxWidth="700"/>
                     </Grid.ColumnDefinitions>
                     <TabControl x:Name="DataTabs" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" Padding="0">
-                        <TabItem Header="_Tendances" AutomationProperties.Name="Tendances des signaux">
+                        <TabItem Header="{local:Loc ui.tendances}" AutomationProperties.Name="{local:Loc ui.tendances_des_signaux}">
                             <Grid Margin="6">
                                 <local:SignalChart x:Name="TrendChart" ReferenceStyle="True" ShowValueBoxes="False" MinHeight="200"
-                                        AutomationProperties.Name="Tendances des signaux du fichier, en fonction du temps"
-                                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                                        AutomationProperties.Name="{local:Loc ui.tendances_des_signaux_du_fichier}"
+                                        AutomationProperties.HelpText="{local:Loc ui.molette_zoom_clic_droit_glisse}"/>
                                 <TextBlock x:Name="TrendEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
                                            Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
-                                           Text="Aucune donnée à tracer. Choisissez un CSV, lancez une acquisition en lecture seule ou ouvrez un import enregistré (panneau de droite) : les colonnes numériques s’affichent ici, valeurs brutes inchangées."/>
+                                           Text="{local:Loc ui.aucune_donnee_a_tracer_choisissez}"/>
                             </Grid>
                         </TabItem>
-                        <TabItem Header="Données _brutes" AutomationProperties.Name="Données brutes">
+                        <TabItem Header="{local:Loc ui.donnees_brutes}" AutomationProperties.Name="{local:Loc ui.donnees_brutes_2}">
                             <Grid Margin="6">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Lignes source, valeurs brutes inchangées" FontWeight="SemiBold" Margin="2,0,0,6"/>
+                                <TextBlock Text="{local:Loc ui.lignes_source_valeurs_brutes_inchangees}" FontWeight="SemiBold" Margin="2,0,0,6"/>
                                 <DataGrid Grid.Row="1" x:Name="Preview" IsReadOnly="True" CanUserAddRows="False" AutoGenerateColumns="False"
-                                          AutomationProperties.Name="Aperçu des données CSV"/>
+                                          AutomationProperties.Name="{local:Loc ui.apercu_des_donnees_csv}"/>
                                 <TextBlock Grid.Row="1" x:Name="PreviewEmpty" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
                                            Foreground="{DynamicResource MkrMuted}" IsHitTestVisible="False"
-                                           Text="Aucune ligne à afficher.">
+                                           Text="{local:Loc ui.aucune_ligne_a_afficher}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                             <Style.Triggers>
@@ -55,102 +55,102 @@
                             </Grid>
                         </TabItem>
                     </TabControl>
-                    <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+                    <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{local:Loc ui.redimensionner_le_panneau}"/>
                     <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="Controls">
-                            <Expander Style="{StaticResource MkrPanel}" Header="État et synthèse des données">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.etat_et_synthese_des_donnees}">
                                 <StackPanel Margin="10,8">
                                     <Border x:Name="StateBadge" CornerRadius="3" Padding="10,6" Margin="0,0,0,8" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
-                                        <TextBlock x:Name="StateText" FontWeight="SemiBold" Text="Aucune donnée" AutomationProperties.LiveSetting="Polite"/>
+                                        <TextBlock x:Name="StateText" FontWeight="SemiBold" Text="{local:Loc ui.aucune_donnee}" AutomationProperties.LiveSetting="Polite"/>
                                     </Border>
                                     <Grid x:Name="SummaryGrid"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions></Grid>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Signaux affichés">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.signaux_affiches}">
                                 <StackPanel x:Name="SignalPicker" Margin="10,8">
-                                    <TextBlock x:Name="SignalHint" Text="Les colonnes numériques du fichier apparaissent ici une fois les données ouvertes." TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
+                                    <TextBlock x:Name="SignalHint" Text="{local:Loc ui.les_colonnes_numeriques_du_fichier}" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Source et format du fichier">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.source_et_format_du_fichier}">
                                 <StackPanel Margin="10,8">
 <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-                                        <Label Grid.Row="0" Content="_Séparateur" Target="{Binding ElementName=Delimiter}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <Label Grid.Row="0" Content="{local:Loc ui.separateur}" Target="{Binding ElementName=Delimiter}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
                                         <ComboBox Grid.Row="0" Grid.Column="1" x:Name="Delimiter" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6">
-                                            <ComboBoxItem Content="Virgule" Tag=","/>
-                                            <ComboBoxItem Content="Point-virgule" Tag=";"/>
+                                            <ComboBoxItem Content="{local:Loc ui.virgule}" Tag=","/>
+                                            <ComboBoxItem Content="{local:Loc ui.point_virgule}" Tag=";"/>
                                         </ComboBox>
-                                        <Label Grid.Row="1" Content="_Décimale" Target="{Binding ElementName=DecimalSeparator}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <Label Grid.Row="1" Content="{local:Loc ui.decimale}" Target="{Binding ElementName=DecimalSeparator}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
                                         <ComboBox Grid.Row="1" Grid.Column="1" x:Name="DecimalSeparator" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6"
-                                                  AutomationProperties.Name="Séparateur décimal">
-                                            <ComboBoxItem Content="Point" Tag="."/>
-                                            <ComboBoxItem Content="Virgule" Tag=","/>
+                                                  AutomationProperties.Name="{local:Loc ui.separateur_decimal}">
+                                            <ComboBoxItem Content="{local:Loc ui.point}" Tag="."/>
+                                            <ComboBoxItem Content="{local:Loc ui.virgule}" Tag=","/>
                                         </ComboBox>
-                                        <Label Grid.Row="2" Content="_Date et heure" Target="{Binding ElementName=TimeFormat}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
+                                        <Label Grid.Row="2" Content="{local:Loc ui.date_et_heure}" Target="{Binding ElementName=TimeFormat}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,6"/>
                                         <ComboBox Grid.Row="2" Grid.Column="1" x:Name="TimeFormat" SelectedIndex="0" SelectedValuePath="Tag" VerticalAlignment="Center" Margin="0,0,0,6"
-                                                  AutomationProperties.Name="Notation de la date et de l’heure"/>
-                                        <Label Grid.Row="3" Content="_Fuseau" Target="{Binding ElementName=TimeZone}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,8"/>
-                                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TimeZone" Text="Europe/Paris" IsEnabled="False" Margin="0,0,0,8"
-                                                 ToolTip="Nom IANA du fuseau de l’enregistreur, par exemple Europe/Paris ou UTC"
-                                                 AutomationProperties.Name="Fuseau horaire"/>
+                                                  AutomationProperties.Name="{local:Loc ui.notation_de_la_date_et}"/>
+                                        <Label Grid.Row="3" Content="{local:Loc ui.fuseau}" Target="{Binding ElementName=TimeZone}" VerticalAlignment="Center" Padding="0,0,12,0" Margin="0,0,0,8"/>
+                                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TimeZone" Text="{local:Loc ui.europe_paris}" IsEnabled="False" Margin="0,0,0,8"
+                                                 ToolTip="{local:Loc ui.nom_iana_du_fuseau_de}"
+                                                 AutomationProperties.Name="{local:Loc ui.fuseau_horaire}"/>
                                         <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal">
-                                            <Button Content="Acquisition _automate…" Click="OpenAcquisition" ToolTip="Schneider (Modbus TCP) ou Siemens (S7comm), en lecture seule"/>
-                                            <Button Content="_Choisir un CSV…" Click="ChooseCsv" Margin="8,0,0,0" ToolTip="Importer un fichier CSV en UTF-8"/>
+                                            <Button Content="{local:Loc ui.acquisition_automate}" Click="OpenAcquisition" ToolTip="{local:Loc ui.schneider_modbus_tcp_ou_siemens}"/>
+                                            <Button Content="{local:Loc ui.choisir_un_csv}" Click="ChooseCsv" Margin="8,0,0,0" ToolTip="{local:Loc ui.importer_un_fichier_csv_en}"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Correspondance des variables">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.correspondance_des_variables}">
                                 <StackPanel Margin="10,8">
-                                    <TextBlock Text="Sélectionnez explicitement les colonnes, le rôle métier et l’unité physique. Aucun rôle n’est déduit automatiquement."
+                                    <TextBlock Text="{local:Loc ui.selectionnez_explicitement_les_colonnes_le}"
                                                Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap" Margin="0,0,0,8"/>
 <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                         <StackPanel Margin="0,0,0,8">
-                                            <Label Content="_Horodatage" Target="{Binding ElementName=TimeColumn}" Padding="0" Margin="0,0,0,4"/>
+                                            <Label Content="{local:Loc ui.horodatage}" Target="{Binding ElementName=TimeColumn}" Padding="0" Margin="0,0,0,4"/>
                                             <ComboBox x:Name="TimeColumn" MinHeight="34"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Margin="0,0,0,8">
-                                            <Label Content="_Valeur" Target="{Binding ElementName=ValueColumn}" Padding="0" Margin="0,0,0,4"/>
+                                            <Label Content="{local:Loc ui.valeur}" Target="{Binding ElementName=ValueColumn}" Padding="0" Margin="0,0,0,4"/>
                                             <ComboBox x:Name="ValueColumn" MinHeight="34"/>
                                         </StackPanel>
                                         <StackPanel Grid.Row="1" Margin="0,0,0,8">
-                                            <Label Content="_Rôle" Target="{Binding ElementName=Role}" Padding="0" Margin="0,0,0,4"/>
+                                            <Label Content="{local:Loc ui.role}" Target="{Binding ElementName=Role}" Padding="0" Margin="0,0,0,4"/>
                                             <ComboBox x:Name="Role" MinHeight="34"/>
                                         </StackPanel>
                                         <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,8">
-                                            <Label Content="_Unité" Target="{Binding ElementName=Unit}" Padding="0" Margin="0,0,0,4"/>
+                                            <Label Content="{local:Loc ui.unite}" Target="{Binding ElementName=Unit}" Padding="0" Margin="0,0,0,4"/>
                                             <TextBox x:Name="Unit" MaxLength="40" MinHeight="34"/>
                                         </StackPanel>
-                                        <Button Grid.Row="2" Grid.ColumnSpan="3" x:Name="Analyze" Content="_Analyser et enregistrer" Click="AnalyzeCsv" IsEnabled="False"
+                                        <Button Grid.Row="2" Grid.ColumnSpan="3" x:Name="Analyze" Content="{local:Loc ui.analyser_et_enregistrer}" Click="AnalyzeCsv" IsEnabled="False"
                                                 HorizontalAlignment="Left" Style="{StaticResource MkrPrimaryButton}"/>
                                     </Grid>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Imports enregistrés">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.imports_enregistres}">
                                 <StackPanel Margin="10,8">
 <StackPanel>
-                                        <Label Content="_Imports enregistrés" Target="{Binding ElementName=Imports}" Padding="0" Margin="0,0,0,4"/>
+                                        <Label Content="{local:Loc ui.imports_enregistres_2}" Target="{Binding ElementName=Imports}" Padding="0" Margin="0,0,0,4"/>
                                         <ComboBox x:Name="Imports" MinHeight="34" DisplayMemberPath="Label" Margin="0,0,0,8"/>
                                         <StackPanel Orientation="Horizontal">
-                                            <Button Content="_Ouvrir" Click="OpenImport"/>
-                                            <Button Content="Exporter l’_original…" Click="ExportOriginal" Margin="8,0,0,0"/>
+                                            <Button Content="{local:Loc ui.ouvrir}" Click="OpenImport"/>
+                                            <Button Content="{local:Loc ui.exporter_loriginal}" Click="ExportOriginal" Margin="8,0,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Qualité et provenance">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.qualite_et_provenance}">
                                 <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,8" Foreground="{DynamicResource MkrText}"/>
                             </Expander>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </TabItem>
-            <TabItem Header="_Procédé">
+            <TabItem Header="{local:Loc ui.procede}">
                 <Grid Margin="18">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -158,25 +158,25 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Boucle et objectif de régulation" FontSize="17" FontWeight="SemiBold"/>
-                        <TextBlock Text="Indiquez le repère de la boucle, la grandeur régulée, le point de fonctionnement habituel avec son unité et le résultat recherché." TextWrapping="Wrap"/>
+                        <TextBlock Text="{local:Loc ui.boucle_et_objectif_de_regulation}" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock Text="{local:Loc ui.indiquez_le_repere_de_la}" TextWrapping="Wrap"/>
                     </StackPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
-                            <Label Content="Repère de la boucle" Target="{Binding ElementName=LoopTag}"/>
+                            <Label Content="{local:Loc ui.repere_de_la_boucle}" Target="{Binding ElementName=LoopTag}"/>
                             <TextBox x:Name="LoopTag"/>
-                            <Label Content="Grandeur régulée" Target="{Binding ElementName=LoopControlledQuantity}"/>
+                            <Label Content="{local:Loc ui.grandeur_regulee}" Target="{Binding ElementName=LoopControlledQuantity}"/>
                             <TextBox x:Name="LoopControlledQuantity"/>
-                            <Label Content="Point de fonctionnement et unité" Target="{Binding ElementName=LoopOperatingPoint}"/>
+                            <Label Content="{local:Loc ui.point_de_fonctionnement_et_unite}" Target="{Binding ElementName=LoopOperatingPoint}"/>
                             <TextBox x:Name="LoopOperatingPoint"/>
-                            <Label Content="Objectif de régulation" Target="{Binding ElementName=LoopObjective}"/>
+                            <Label Content="{local:Loc ui.objectif_de_regulation}" Target="{Binding ElementName=LoopObjective}"/>
                             <TextBox x:Name="LoopObjective"/>
-                            <Label Content="Description du procédé" Target="{Binding ElementName=Description}"/>
+                            <Label Content="{local:Loc ui.description_du_procede}" Target="{Binding ElementName=Description}"/>
                             <TextBox x:Name="Description" MinHeight="80" AcceptsReturn="True" MaxLength="4000"
-                                     TextWrapping="Wrap" AutomationProperties.Name="Description du procédé"/>
+                                     TextWrapping="Wrap" AutomationProperties.Name="{local:Loc ui.description_du_procede}"/>
                         </StackPanel>
                     </ScrollViewer>
-                    <Button Grid.Row="2" Content="_Enregistrer la description"
+                    <Button Grid.Row="2" Content="{local:Loc ui.enregistrer_la_description}"
                             Click="SaveDescription" HorizontalAlignment="Left"
                             Margin="0,12,0,0" Style="{StaticResource MkrPrimaryButton}"/>
                 </Grid>
@@ -194,13 +194,13 @@
                            Foreground="{DynamicResource MkrMuted}"
                            AutomationProperties.LiveSetting="Polite"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="Préparer les essais sur _banc…" Click="OpenCatalogue" Margin="0,0,8,0"
-                            ToolTip="Consulter les fiches constructeur et préparer le relevé de banc"/>
-                    <Button Content="Journal d'_audit…" Click="OpenAudit" Margin="0,0,8,0"
-                            ToolTip="Actions sensibles du projet, chaînées par empreintes"/>
-                    <Button Content="_Identification…" Click="OpenIdentification"
+                    <Button Content="{local:Loc ui.preparer_les_essais_sur_banc}" Click="OpenCatalogue" Margin="0,0,8,0"
+                            ToolTip="{local:Loc ui.consulter_les_fiches_constructeur_et}"/>
+                    <Button Content="{local:Loc ui.journal_d_audit}" Click="OpenAudit" Margin="0,0,8,0"
+                            ToolTip="{local:Loc ui.actions_sensibles_du_projet_chainees}"/>
+                    <Button Content="{local:Loc ui.identification}" Click="OpenIdentification"
                         Style="{StaticResource MkrPrimaryButton}"
-                        ToolTip="Ouvrir les études d’identification du projet"/>
+                        ToolTip="{local:Loc ui.ouvrir_les_etudes_didentification_du}"/>
                 </StackPanel>
             </Grid>
         </Border>

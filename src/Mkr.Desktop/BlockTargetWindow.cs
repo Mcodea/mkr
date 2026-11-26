@@ -8,7 +8,7 @@ internal sealed class BlockTargetWindow : Window
 {
     internal BlockTargetWindow(IdentificationWorkspace workspace, IdentificationStudy model, PiStudy tuning)
     {
-        Title = "ORIAS — Valeurs des blocs PID_INT et PID_Compact (non qualifiées)";
+        Title = Loc.T("cs.orias_valeurs_des_blocs_pid");
         Width = 900; Height = 820; MinWidth = 620; MinHeight = 520;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var view = new BlockTargetView(workspace, model, tuning);

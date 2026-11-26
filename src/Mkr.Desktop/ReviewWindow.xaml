@@ -1,7 +1,8 @@
 <Window x:Class="Mkr.Desktop.ReviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ORIAS — Revue de l'étude" Width="900" Height="720" MinWidth="620" MinHeight="480" WindowStartupLocation="CenterOwner">
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="{local:Loc ui.orias_revue_de_l_etude}" Width="900" Height="720" MinWidth="620" MinHeight="480" WindowStartupLocation="CenterOwner">
     <Grid Margin="24,18,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -12,36 +13,36 @@
         <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap"
-                       Text="Règle des quatre yeux : celui qui a calculé une étape ne la vérifie ni ne l'approuve, sauf auto-revue déclarée, inscrite comme telle. L'auteur de chaque décision est l'identité de la session Windows (compte, SID, poste) : il ne se saisit pas."/>
+                       Text="{local:Loc ui.regle_des_quatre_yeux_celui}"/>
         </Border>
         <StackPanel Grid.Row="1">
             <TextBlock x:Name="Identity" TextWrapping="Wrap" FontWeight="SemiBold"/>
             <WrapPanel Margin="0,8,0,0">
-                <Label Content="É_tape" Target="{Binding ElementName=Stage}"/>
-                <ComboBox x:Name="Stage" Width="150" SelectionChanged="StageChanged" AutomationProperties.Name="Étape de la revue"/>
+                <Label Content="{local:Loc ui.etape}" Target="{Binding ElementName=Stage}"/>
+                <ComboBox x:Name="Stage" Width="150" SelectionChanged="StageChanged" AutomationProperties.Name="{local:Loc ui.etape_de_la_revue}"/>
             </WrapPanel>
             <TextBlock x:Name="StateLine" TextWrapping="Wrap" Margin="0,6,0,0"/>
             <WrapPanel Margin="0,8,0,0">
-                <Label Content="_Motif" Target="{Binding ElementName=Reason}"/>
-                <TextBox x:Name="Reason" Width="320" MaxLength="500" AutomationProperties.Name="Motif de la décision"/>
-                <Label Content="_Référence de preuve" Target="{Binding ElementName=Evidence}" Margin="12,0,0,0"/>
-                <TextBox x:Name="Evidence" Width="220" MaxLength="500" AutomationProperties.Name="Référence de la preuve"/>
+                <Label Content="{local:Loc ui.motif}" Target="{Binding ElementName=Reason}"/>
+                <TextBox x:Name="Reason" Width="320" MaxLength="500" AutomationProperties.Name="{local:Loc ui.motif_de_la_decision}"/>
+                <Label Content="{local:Loc ui.reference_de_preuve}" Target="{Binding ElementName=Evidence}" Margin="12,0,0,0"/>
+                <TextBox x:Name="Evidence" Width="220" MaxLength="500" AutomationProperties.Name="{local:Loc ui.reference_de_la_preuve}"/>
             </WrapPanel>
-            <CheckBox x:Name="SelfReview" Margin="0,8,0,0" AutomationProperties.Name="Auto-revue déclarée">
-                <TextBlock Text="Je déclare vérifier ou approuver mon propre calcul (auto-revue, inscrite comme telle)"/>
+            <CheckBox x:Name="SelfReview" Margin="0,8,0,0" AutomationProperties.Name="{local:Loc ui.auto_revue_declaree}">
+                <TextBlock Text="{local:Loc ui.je_declare_verifier_ou_approuver}"/>
             </CheckBox>
             <WrapPanel Margin="0,8,0,0">
-                <Button x:Name="Calculated" Content="Marquer comme _calculé" Click="Record"/>
-                <Button x:Name="Verify" Content="_Vérifier" Click="Record" Margin="8,0,0,0"/>
-                <Button x:Name="Approve" Content="_Approuver" Click="Record" Margin="8,0,0,0"/>
-                <Button x:Name="Reject" Content="_Rejeter" Click="Record" Margin="8,0,0,0"/>
+                <Button x:Name="Calculated" Content="{local:Loc ui.marquer_comme_calcule}" Click="Record"/>
+                <Button x:Name="Verify" Content="{local:Loc ui.verifier}" Click="Record" Margin="8,0,0,0"/>
+                <Button x:Name="Approve" Content="{local:Loc ui.approuver}" Click="Record" Margin="8,0,0,0"/>
+                <Button x:Name="Reject" Content="{local:Loc ui.rejeter}" Click="Record" Margin="8,0,0,0"/>
             </WrapPanel>
             <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
         </StackPanel>
         <TextBox x:Name="History" Grid.Row="2" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,12,0,0"
-                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="Historique de la revue"/>
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas" AutomationProperties.Name="{local:Loc ui.historique_de_la_revue}"/>
         <WrapPanel Grid.Row="3" Margin="0,12,0,0">
-            <Button Content="_Fermer" IsCancel="True"/>
+            <Button Content="{local:Loc ui.fermer}" IsCancel="True"/>
         </WrapPanel>
     </Grid>
 </Window>

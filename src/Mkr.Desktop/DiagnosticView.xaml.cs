@@ -23,7 +23,7 @@ public partial class DiagnosticView : UserControl, IStepView
         Imports.ItemsSource = imports;
         Empty.Visibility = imports.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (imports.Count > 0) Imports.SelectedIndex = 0;
-        else Findings.Text = "Aucun import : rien à diagnostiquer.";
+        else Findings.Text = Loc.T("cs.aucun_import_rien_a_diagnostiquer");
     }
 
     public void Cancel() { }
@@ -38,49 +38,49 @@ public partial class DiagnosticView : UserControl, IStepView
         try { import = _workspace.Open(summary.Id); }
         catch (Exception error) when (error is System.IO.IOException or InvalidOperationException or KeyNotFoundException)
         {
-            Findings.Text = "Impossible de relire cet import. Vérifiez le stockage local.";
+            Findings.Text = Loc.T("cs.impossible_de_relire_cet_import");
             return;
         }
         Preview.Columns.Clear();
         for (var index = 0; index < import.Result.Headers.Length; index++)
             Preview.Columns.Add(new DataGridTextColumn { Header = import.Result.Headers[index], Binding = new Binding($"[{index}]") });
         Preview.ItemsSource = import.Result.Preview;
-        PreviewTitle.Text = $"Lignes source : {import.Result.Preview.Length} affichées sur {N(import.Result.RowCount)} (valeurs brutes inchangées)";
+        PreviewTitle.Text = Loc.T("cs.lignes_source_affichees_sur_valeurs", import.Result.Preview.Length, N(import.Result.RowCount));
 
         Quality.Children.Clear();
         var q = import.Result.Quality;
         var findings = new List<string>();
         if (q is null)
         {
-            Findings.Text = "Cet import n'a pas encore été analysé (étape Données : « Analyser et enregistrer »).";
+            Findings.Text = Loc.T("cs.cet_import_n_a_pas");
         }
         else
         {
             void Line(string label, string value, bool flag = false) => Quality.Children.Add(Row(label, value, flag));
-            Line("Rôle / unité", $"{import.Mapping.Role} · {import.Mapping.Unit}");
-            Line("Valeurs valides", N(q.ValidValues));
-            Line("Valeurs manquantes", N(q.MissingValues), q.MissingValues > 0);
-            Line("Valeurs invalides", N(q.InvalidValues), q.InvalidValues > 0);
-            Line("Horodatages invalides", N(q.InvalidTimestamps), q.InvalidTimestamps > 0);
-            Line("Horodatages en double", N(q.DuplicateTimestamps), q.DuplicateTimestamps > 0);
-            Line("Horodatages à rebours", N(q.ReversedTimestamps), q.ReversedTimestamps > 0);
-            Line("Minimum / maximum", $"{G(q.Minimum)} / {G(q.Maximum)}");
-            Line("Pas d'échantillonnage (s)", $"{G(q.MinPositiveStepSeconds)} à {G(q.MaxPositiveStepSeconds)}");
-            if (q.MissingValues > 0) findings.Add($"{N(q.MissingValues)} valeur(s) manquante(s) : à traiter (suppression ou interpolation sur une courte période) avant l'identification.");
-            if (q.InvalidValues > 0) findings.Add($"{N(q.InvalidValues)} valeur(s) non numériques : vérifiez le séparateur décimal et la colonne choisie.");
-            if (q.InvalidTimestamps + q.DuplicateTimestamps + q.ReversedTimestamps > 0) findings.Add("Horodatages incohérents : l'identification exige une base de temps croissante.");
+            Line(Loc.T("cs.role_unite"), $"{import.Mapping.Role} · {import.Mapping.Unit}");
+            Line(Loc.T("cs.valeurs_valides"), N(q.ValidValues));
+            Line(Loc.T("cs.valeurs_manquantes"), N(q.MissingValues), q.MissingValues > 0);
+            Line(Loc.T("cs.valeurs_invalides"), N(q.InvalidValues), q.InvalidValues > 0);
+            Line(Loc.T("cs.horodatages_invalides"), N(q.InvalidTimestamps), q.InvalidTimestamps > 0);
+            Line(Loc.T("cs.horodatages_en_double"), N(q.DuplicateTimestamps), q.DuplicateTimestamps > 0);
+            Line(Loc.T("cs.horodatages_a_rebours"), N(q.ReversedTimestamps), q.ReversedTimestamps > 0);
+            Line(Loc.T("cs.minimum_maximum"), $"{G(q.Minimum)} / {G(q.Maximum)}");
+            Line(Loc.T("cs.pas_d_echantillonnage_s"), $"{G(q.MinPositiveStepSeconds)} à {G(q.MaxPositiveStepSeconds)}");
+            if (q.MissingValues > 0) findings.Add(Loc.T("cs.valeur_s_manquante_s_a", N(q.MissingValues)));
+            if (q.InvalidValues > 0) findings.Add(Loc.T("cs.valeur_s_non_numeriques_verifiez", N(q.InvalidValues)));
+            if (q.InvalidTimestamps + q.DuplicateTimestamps + q.ReversedTimestamps > 0) findings.Add(Loc.T("cs.horodatages_incoherents_l_identification_exige"));
             if (q.MinPositiveStepSeconds is { } min && q.MaxPositiveStepSeconds is { } max && min > 0 && max > 1.5 * min)
-                findings.Add($"Échantillonnage irrégulier (pas de {G(min)} s à {G(max)} s) : à rééchantillonner ou à signaler avant l'identification.");
-            if (findings.Count == 0) findings.Add("Aucune anomalie de comptage ni d'horodatage détectée. L'excitation de la commande et le bruit de mesure sont évalués à l'étape Identification.");
+                findings.Add(Loc.T("cs.echantillonnage_irregulier_pas_de_s", G(min), G(max)));
+            var flagged = findings.Count;          // real findings only: the « no anomaly » line below is not one
+            if (flagged == 0) findings.Add(Loc.T("cs.aucune_anomalie_de_comptage_ni"));
             Findings.Text = string.Join("\n", findings.Select(line => "· " + line));
             // The verdict restates the findings above (counts and the sampling rule already shown): it adds no criterion and never declares the data fit for use.
-            var flagged = findings.Count(line => !line.StartsWith("Aucune anomalie"));
-            SetVerdict(flagged == 0 ? "Aucune anomalie de comptage ni d’horodatage détectée" : $"{flagged} constat(s) à traiter avant l’identification : voir « Constats »", flagged == 0 ? "MkrSuccess" : "MkrWarning", flagged == 0 ? "MkrSuccessPale" : "MkrWarningPale");
+            SetVerdict(flagged == 0 ? Loc.T("cs.aucune_anomalie_de_comptage_ni_2") : Loc.T("cs.constat_s_a_traiter_avant", flagged), flagged == 0 ? "MkrSuccess" : "MkrWarning", flagged == 0 ? "MkrSuccessPale" : "MkrWarningPale");
         }
-        if (q is null) SetVerdict("Import non analysé : lancez « Analyser et enregistrer » à l’étape Données", "MkrMuted", "MkrSurfaceAlt");
+        if (q is null) SetVerdict(Loc.T("cs.import_non_analyse_lancez_analyser"), "MkrMuted", "MkrSurfaceAlt");
         ShowGraphs(import, q);
-        Provenance.Text = $"{summary.FileName}\nSHA-256 : {summary.Sha256}\nImporté le {summary.ImportedAt.ToLocalTime():g}\nMoteur d'analyse {import.EngineVersion}" +
-                          (q is null ? "" : $" · algorithme {q.AlgorithmVersion}") + $"\nLecture : {(import.Format ?? CsvFormat.Default).Describe()}";
+        Provenance.Text = Loc.T("cs.sha_256_importe_le_moteur", summary.FileName, summary.Sha256, summary.ImportedAt.ToLocalTime(), import.EngineVersion) +
+                          (q is null ? "" : Loc.T("cs.algorithme", q.AlgorithmVersion)) + Loc.T("cs.lecture_2", (import.Format ?? CsvFormat.Default).Describe());
     }
 
     private void SetVerdict(string text, string foreground, string background)
@@ -109,16 +109,16 @@ public partial class DiagnosticView : UserControl, IStepView
             tracks.Add(new ChartTrack(name, unit, new[] { new ChartSeries(name, "MkrSignal" + (colour++ % 4 + 1), points.Select(k => trend.X[k]).ToArray(), points.Select(k => trend.Values[i][k]).ToArray()) })
             { YLabel = unit.Length > 0 ? $"{name} ({unit})" : name });
         }
-        TrendChart.XLabel = trend.HasTime ? "Temps depuis le premier échantillon (s)" : "Numéro d’échantillon";
+        TrendChart.XLabel = trend.HasTime ? Loc.T("cs.temps_depuis_le_premier_echantillon") : Loc.T("cs.numero_dechantillon");
         TrendChart.SetTracks(tracks);
         var events = new List<(double X, string Label)>();
         var mapped = Array.IndexOf(trend.Names, import.Mapping.ValueColumn);
         if (mapped >= 0)
             for (var k = 0; k < trend.X.Length && events.Count < 20; k++)
-                if (double.IsNaN(trend.Values[mapped][k]) && !double.IsNaN(trend.X[k])) events.Add((trend.X[k], "valeur manquante"));
+                if (double.IsNaN(trend.Values[mapped][k]) && !double.IsNaN(trend.X[k])) events.Add((trend.X[k], Loc.T("cs.valeur_manquante")));
         if (trend.HasTime && quality?.MinPositiveStepSeconds is { } min && min > 0)
             for (var k = 1; k < trend.X.Length && events.Count < 40; k++)
-                if (!double.IsNaN(trend.X[k]) && !double.IsNaN(trend.X[k - 1]) && trend.X[k] - trend.X[k - 1] > 1.5 * min) events.Add((trend.X[k - 1], "pas irrégulier"));
+                if (!double.IsNaN(trend.X[k]) && !double.IsNaN(trend.X[k - 1]) && trend.X[k] - trend.X[k - 1] > 1.5 * min) events.Add((trend.X[k - 1], Loc.T("cs.pas_irregulier")));
         TrendChart.SetEvents(events);
     }
 

@@ -9,8 +9,8 @@ internal sealed class StudyNameConverter : IValueConverter
 {
     public static string Name(IdentificationStudy study)
     {
-        var family = study.Family == ModelFamily.Integrateur ? "Intégrateur" : study.Family.ToString();
-        var decision = study.Assessment is { Accepted: true } ? "accepté" : study.Assessment is not null ? "refusé" : "non décidé";
+        var family = study.Family == ModelFamily.Integrateur ? Loc.T("cs.integrateur_2") : study.Family.ToString();
+        var decision = study.Assessment is { Accepted: true } ? Loc.T("cs.accepte") : study.Assessment is not null ? Loc.T("cs.refuse") : Loc.T("cs.non_decide_2");
         return $"{family} · {study.CalculatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)} · {decision}";
     }
 

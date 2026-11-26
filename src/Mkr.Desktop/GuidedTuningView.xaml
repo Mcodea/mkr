@@ -16,18 +16,18 @@
             <StackPanel>
                 <TextBlock x:Name="ModelLine" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
                 <WrapPanel>
-                    <Label Content="_Objectif" Target="{Binding ElementName=Objective}" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="Objective" Width="300" SelectedIndex="1" SelectionChanged="ObjectiveChanged" AutomationProperties.Name="Objectif de robustesse" VerticalAlignment="Center">
-                        <ComboBoxItem Tag="robust" Content="Robuste · Ms ≤ 1,4 (marge élevée)"/>
-                        <ComboBoxItem Tag="balanced" Content="Équilibré · Ms ≤ 1,7"/>
-                        <ComboBoxItem Tag="performance" Content="Performance · Ms ≤ 2,0 (plus rapide)"/>
+                    <Label Content="{local:Loc ui.objectif}" Target="{Binding ElementName=Objective}" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="Objective" Width="300" SelectedIndex="1" SelectionChanged="ObjectiveChanged" AutomationProperties.Name="{local:Loc ui.objectif_de_robustesse}" VerticalAlignment="Center">
+                        <ComboBoxItem Tag="robust" Content="{local:Loc ui.robuste_ms_1_4_marge}"/>
+                        <ComboBoxItem Tag="balanced" Content="{local:Loc ui.equilibre_ms_1_7}"/>
+                        <ComboBoxItem Tag="performance" Content="{local:Loc ui.performance_ms_2_0_plus}"/>
                     </ComboBox>
-                    <Label Content="_Variation du procédé (%)" Target="{Binding ElementName=Variation}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                    <TextBox x:Name="Variation" Width="60" VerticalAlignment="Center" AutomationProperties.Name="Variation attendue du procédé en pourcentage"
-                             ToolTip="Facultatif : écart attendu du gain, de la constante de temps et du retard sur la plage de fonctionnement (0 à 50 %). Élargit l'incertitude prise en compte."/>
-                    <Button x:Name="Compute" Content="_Calculer le réglage guidé" Click="Calculate" Margin="14,0,0,0" Style="{StaticResource MkrPrimaryButton}" VerticalAlignment="Center"/>
-                    <Button x:Name="CopyButton" Content="Co_pier le résultat" IsEnabled="False" Click="Copy" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                    <Button x:Name="CloseButton" Content="_Fermer" Click="CloseView" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <Label Content="{local:Loc ui.variation_du_procede}" Target="{Binding ElementName=Variation}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    <TextBox x:Name="Variation" Width="60" VerticalAlignment="Center" AutomationProperties.Name="{local:Loc ui.variation_attendue_du_procede_en}"
+                             ToolTip="{local:Loc ui.facultatif_ecart_attendu_du_gain}"/>
+                    <Button x:Name="Compute" Content="{local:Loc ui.calculer_le_reglage_guide}" Click="Calculate" Margin="14,0,0,0" Style="{StaticResource MkrPrimaryButton}" VerticalAlignment="Center"/>
+                    <Button x:Name="CopyButton" Content="{local:Loc ui.copier_le_resultat}" IsEnabled="False" Click="Copy" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    <Button x:Name="CloseButton" Content="{local:Loc ui.fermer}" Click="CloseView" Margin="8,0,0,0" VerticalAlignment="Center"/>
                 </WrapPanel>
                 <TextBlock x:Name="ObjectiveHelp" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -52,52 +52,52 @@
                 </Grid.RowDefinitions>
                 <Border x:Name="CurveBar" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="6,2" Margin="0,0,0,4" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ResetView" ToolTip="Revenir à toute la réponse (double-clic)" AutomationProperties.Name="Ajuster à toute la réponse"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ExportImage" ToolTip="Exporter les graphiques en image PNG" AutomationProperties.Name="Exporter l’image"><TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ExportData" ToolTip="Exporter les courbes en CSV" AutomationProperties.Name="Exporter les données"><TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="{local:Loc ui.zoom_avant_ou_molette}" AutomationProperties.Name="{local:Loc ui.zoom_avant}"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="{local:Loc ui.zoom_arriere}" AutomationProperties.Name="{local:Loc ui.zoom_arriere}"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ResetView" ToolTip="{local:Loc ui.revenir_a_toute_la_reponse}" AutomationProperties.Name="{local:Loc ui.ajuster_a_toute_la_reponse}"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportImage" ToolTip="{local:Loc ui.exporter_les_graphiques_en_image}" AutomationProperties.Name="{local:Loc ui.exporter_limage}"><TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ExportData" ToolTip="{local:Loc ui.exporter_les_courbes_en_csv}" AutomationProperties.Name="{local:Loc ui.exporter_les_donnees}"><TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
                         <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="8,3"/>
-                        <TextBlock Text="Courbes" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <RadioButton x:Name="ShowSetpoint" Content="Échelon de consigne" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
-                        <RadioButton x:Name="ShowLoad" Content="Perturbation de charge" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
+                        <TextBlock Text="{local:Loc ui.courbes}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton x:Name="ShowSetpoint" Content="{local:Loc ui.echelon_de_consigne}" GroupName="Curve" IsChecked="True" Checked="CurveChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                        <RadioButton x:Name="ShowLoad" Content="{local:Loc ui.perturbation_de_charge}" GroupName="Curve" Checked="CurveChanged" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
                 <local:SignalChart x:Name="Chart" Grid.Row="1" Visibility="Collapsed" MinHeight="260" ReferenceStyle="True" ShowValueBoxes="False"
-                                   AutomationProperties.Name="Réponses simulées des réglages comparés"/>
+                                   AutomationProperties.Name="{local:Loc ui.reponses_simulees_des_reglages_compares}"/>
                 <TextBlock x:Name="CursorLine" Grid.Row="2" FontSize="11" TextTrimming="CharacterEllipsis" Margin="2,3,0,0" Foreground="{DynamicResource MkrMuted}"/>
-                <TextBlock x:Name="ChartEmpty" Grid.Row="1" Text="Les réponses simulées des réglages apparaîtront ici après le calcul." Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ChartEmpty" Grid.Row="1" Text="{local:Loc ui.les_reponses_simulees_des_reglages}" Foreground="{DynamicResource MkrMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Grid>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{local:Loc ui.redimensionner_le_panneau}"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <Expander x:Name="ParamPanel" Style="{StaticResource MkrPanel}" Header="Réglage recommandé" Visibility="Collapsed">
+                    <Expander x:Name="ParamPanel" Style="{StaticResource MkrPanel}" Header="{local:Loc ui.reglage_recommande}" Visibility="Collapsed">
                         <StackPanel x:Name="Cards"/>
                     </Expander>
-                    <Expander x:Name="ComparePanel" Style="{StaticResource MkrPanel}" Header="Comparaison des réglages (nominal, échelon unitaire)" Visibility="Collapsed">
+                    <Expander x:Name="ComparePanel" Style="{StaticResource MkrPanel}" Header="{local:Loc ui.comparaison_des_reglages_nominal_echelon}" Visibility="Collapsed">
                         <Grid x:Name="CompareGrid" Margin="0"/>
                     </Expander>
-                    <Expander x:Name="AltPanel" Style="{StaticResource MkrPanel}" Header="Réglages voisins (vitesse contre robustesse)" Visibility="Collapsed" IsExpanded="False">
+                    <Expander x:Name="AltPanel" Style="{StaticResource MkrPanel}" Header="{local:Loc ui.reglages_voisins_vitesse_contre_robustesse}" Visibility="Collapsed" IsExpanded="False">
                         <DataGrid x:Name="Alternatives" RowHeight="30" ColumnHeaderHeight="40" IsReadOnly="True" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
-                                  AutomationProperties.Name="Réglages voisins">
+                                  AutomationProperties.Name="{local:Loc ui.reglages_voisins}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="τc (s)" Binding="{Binding Response}" Width="*"/>
                                 <DataGridTextColumn Header="Kp" Binding="{Binding Kp}" Width="*"/>
-                                <DataGridTextColumn Header="Ti (s)" Binding="{Binding Ti}" Width="*"/>
-                                <DataGridTextColumn Header="Td (s)" Binding="{Binding Td}" Width="*"/>
-                                <DataGridTextColumn Header="Ms pire cas" Binding="{Binding Ms}" Width="*"/>
-                                <DataGridTextColumn Header="Verdict" Binding="{Binding Verdict}" Width="1.6*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.ti_s}" Binding="{Binding Ti}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.td_s}" Binding="{Binding Td}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.ms_pire_cas}" Binding="{Binding Ms}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.verdict}" Binding="{Binding Verdict}" Width="1.6*"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Notes et réserves">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.notes_et_reserves}">
                         <StackPanel Margin="10,8">
                             <TextBlock x:Name="Notes" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
                             <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" FontWeight="Normal"
-                                       Text="Vous choisissez un objectif de robustesse, pas un temps de réponse. MKR cherche le réglage le plus rapide qui reste robuste sur le modèle identifié et sur l'incertitude de ses paramètres (règles SIMC, Skogestad 2003 ; sensibilité maximale Ms, Åström et Hägglund 2006). Si les données ne permettent pas d'en garantir un, MKR refuse et dit quoi faire. Résultat théorique, jamais qualifié sur installation."/>
+                                       Text="{local:Loc ui.vous_choisissez_un_objectif_de}"/>
                         </StackPanel>
                     </Expander>
-                    <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="Résultat du réglage guidé (texte à copier)"/>
+                    <TextBox x:Name="Result" IsReadOnly="True" Visibility="Collapsed" AutomationProperties.Name="{local:Loc ui.resultat_du_reglage_guide_texte}"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

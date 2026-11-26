@@ -45,13 +45,13 @@ public partial class AcquisitionWindow : Window
             SignalGrid.Children.Add(label);
             var offset = Box(1, ((row - 1) * 2).ToString(CultureInfo.CurrentCulture), "adresse", "Offset");
             var type = new ComboBox { ItemsSource = Types, SelectedItem = PlcDataType.Real32, Margin = new Thickness(0, 4, 8, 0) };
-            System.Windows.Automation.AutomationProperties.SetName(type, $"{role} type");
+            System.Windows.Automation.AutomationProperties.SetName(type, Loc.T("cs.type", role));
             System.Windows.Automation.AutomationProperties.SetAutomationId(type, role + "Type");
             Grid.SetRow(type, row);
             Grid.SetColumn(type, 2);
             SignalGrid.Children.Add(type);
-            _rows.Add(new SignalRow(role, offset, type, Box(3, "0", "brut bas", "RawLow"), Box(4, "1", "brut haut", "RawHigh"),
-                Box(5, "0", "physique bas", "EngineeringLow"), Box(6, "1", "physique haut", "EngineeringHigh")));
+            _rows.Add(new SignalRow(role, offset, type, Box(3, "0", Loc.T("cs.brut_bas"), "RawLow"), Box(4, "1", Loc.T("cs.brut_haut"), "RawHigh"),
+                Box(5, "0", Loc.T("cs.physique_bas"), "EngineeringLow"), Box(6, "1", Loc.T("cs.physique_haut"), "EngineeringHigh")));
             row++;
         }
         ModeType.ItemsSource = Types.Where(t => t != PlcDataType.Real32).ToArray();
@@ -77,8 +77,8 @@ public partial class AcquisitionWindow : Window
         S7Panel.Visibility = IsS7 ? Visibility.Visible : Visibility.Collapsed;
         if (Port.Text is "" or "502" or "102") Port.Text = IsS7 ? "102" : "502";
         AddressHelp.Text = IsS7
-            ? "Adresse = offset d’octet dans la zone : DB10.DBD4 → 4, DB10.DBW8 → 8, MD20 → 20. INT/WORD sur 2 octets, DINT/DWORD/REAL sur 4 octets."
-            : "Adresse = offset de registre en base 0 : %MW100 → 100 (notation Modicon 400101 → 100). Un REAL ou un entier 32 bits occupe 2 registres consécutifs.";
+            ? Loc.T("cs.adresse_offset_doctet_dans_la")
+            : Loc.T("cs.adresse_offset_de_registre_en");
         int step = IsS7 ? 4 : 2;
         for (int i = 0; i < _rows.Count; i++)
             if (_rows[i].Offset.Text is "0" or "2" or "4" or "8") _rows[i].Offset.Text = (i * step).ToString(CultureInfo.CurrentCulture);
@@ -94,7 +94,7 @@ public partial class AcquisitionWindow : Window
         HistorianPanel.Visibility = IsHistorian ? Visibility.Visible : Visibility.Collapsed;
         CountPanel.Visibility = IsHistorian ? Visibility.Collapsed : Visibility.Visible;
         Probe.Visibility = Save.Visibility = IsHistorian ? Visibility.Collapsed : Visibility.Visible;
-        Start.Content = IsHistorian ? "_Démarrer l’enregistrement continu" : "_Démarrer l’acquisition";
+        Start.Content = IsHistorian ? Loc.T("cs.demarrer_lenregistrement_continu") : Loc.T("cs.demarrer_lacquisition");
         UpdatePlan();
     }
 
@@ -116,20 +116,16 @@ public partial class AcquisitionWindow : Window
         if (IsHistorian)
         {
             var historian = ReadHistorian();
-            PlanSummary.Text = historian is null ? "Indiquez une durée, une période, une taille de segment et un recouvrement."
-                : historian.Validate() ?? $"{historian.TotalSamples:N0} mesures sur {Format(historian.PlannedDuration)} en {historian.ExpectedSegments} segment(s) " +
-                    $"d’environ {historian.SegmentSamples * 120 / 1024} Kio, enregistrés dès qu’ils sont complets. Le recouvrement garde entier un échelon proche d’une coupure " +
-                    $"s’il dure moins de {historian.OverlapSamples * historian.PeriodMs / 1000.0:G3} s : pour un essai plus long, utilisez l’acquisition ponctuelle. " +
-                    "Réalisez les échelons de la sortie de commande avec le régulateur en manuel ; MKR les retrouvera ensuite dans l’historique.";
+            PlanSummary.Text = historian is null ? Loc.T("cs.indiquez_une_duree_une_periode")
+                : historian.Validate() ?? Loc.T("cs.mesures_sur_en_segment_s", historian.TotalSamples, Format(historian.PlannedDuration), historian.ExpectedSegments, historian.SegmentSamples * 120 / 1024, historian.OverlapSamples * historian.PeriodMs / 1000.0);
             return;
         }
         if (int.TryParse(Count.Text, out int count) && int.TryParse(Period.Text, out int period) && count > 0 && period > 0)
         {
             var plan = new AcquisitionPlan(count, period);
-            PlanSummary.Text = $"Durée prévue : {Format(plan.PlannedDuration)} ({count} mesures toutes les {period} ms). " +
-                "Vérifiez qu’elle couvre la stabilisation avant l’échelon, le retard et 4 à 5 constantes de temps du procédé.";
+            PlanSummary.Text = Loc.T("cs.duree_prevue_mesures_toutes_les", Format(plan.PlannedDuration), count, period);
         }
-        else PlanSummary.Text = "Indiquez une période et un nombre de mesures pour estimer la durée.";
+        else PlanSummary.Text = Loc.T("cs.indiquez_une_periode_et_un");
     }
 
     private static string Format(TimeSpan span) => span.TotalHours >= 1
@@ -149,7 +145,7 @@ public partial class AcquisitionWindow : Window
                 !Number(row.RawLow, out var rawLow) || !Number(row.RawHigh, out var rawHigh) ||
                 !Number(row.EngineeringLow, out var engLow) || !Number(row.EngineeringHigh, out var engHigh))
             {
-                Status.Text = $"Adresse, type ou mise à l’échelle de {row.Role} invalide.";
+                Status.Text = Loc.T("cs.adresse_type_ou_mise_a", row.Role);
                 return null;
             }
             addresses.Add(new SignalAddress(offset, type, rawLow, rawHigh, engLow, engHigh));
@@ -157,7 +153,7 @@ public partial class AcquisitionWindow : Window
         if (!int.TryParse(Port.Text, out int port) || !int.TryParse(Count.Text, out int count) ||
             !int.TryParse(Period.Text, out int period) || !Number(Outage, out var outage))
         {
-            Status.Text = "Port, période, nombre de mesures ou coupure tolérée invalide.";
+            Status.Text = Loc.T("cs.port_periode_nombre_de_mesures");
             return null;
         }
         SignalAddress? mode = null;
@@ -167,7 +163,7 @@ public partial class AcquisitionWindow : Window
             if (!int.TryParse(ModeOffset.Text, out int modeOffset) || ModeType.SelectedItem is not PlcDataType modeType ||
                 !Number(ManualValue, out var manual))
             {
-                Status.Text = "Adresse, type du mode ou valeur brute « manuel » invalide : aucune convention n’est supposée.";
+                Status.Text = Loc.T("cs.adresse_type_du_mode_ou");
                 return null;
             }
             mode = new SignalAddress(modeOffset, modeType);
@@ -179,7 +175,7 @@ public partial class AcquisitionWindow : Window
             if (!int.TryParse(Rack.Text, out int rack) || !int.TryParse(Slot.Text, out int slot) ||
                 !int.TryParse(DataBlock.Text, out int db))
             {
-                Status.Text = "Rack, emplacement ou numéro de DB invalide.";
+                Status.Text = Loc.T("cs.rack_emplacement_ou_numero_de");
                 return null;
             }
             target = new AcquisitionTarget(PlcProtocol.S7, Host.Text.Trim(), port, addresses[0], addresses[1], addresses[2],
@@ -191,7 +187,7 @@ public partial class AcquisitionWindow : Window
         {
             if (!byte.TryParse(UnitId.Text, out byte unit) || Order.SelectedIndex < 0)
             {
-                Status.Text = "Choisissez l’unité Modbus et l’ordre des octets : un mauvais ordre donne des valeurs plausibles mais fausses.";
+                Status.Text = Loc.T("cs.choisissez_lunite_modbus_et_lordre");
                 return null;
             }
             target = new AcquisitionTarget(PlcProtocol.ModbusTcp, Host.Text.Trim(), port, addresses[0], addresses[1], addresses[2],
@@ -206,7 +202,7 @@ public partial class AcquisitionWindow : Window
             return null;
         }
         if (target is { Protocol: PlcProtocol.ModbusTcp } && new ModbusTcpReader(target).RequestsPerReading > 1)
-            Status.Text = "Adresses éloignées (plus de 125 registres) : une requête par signal, lues à des instants légèrement différents. Rapprochez-les pour une lecture groupée.";
+            Status.Text = Loc.T("cs.adresses_eloignees_plus_de_125");
         return (target, plan);
     }
 
@@ -214,19 +210,31 @@ public partial class AcquisitionWindow : Window
     {
         (ConnectionLight.Fill, ConnectionState.Text) = state switch
         {
-            AcquisitionState.Connecting => (PlotColors.Status("MkrWarning"), "Connexion en cours…"),
-            AcquisitionState.Connected or AcquisitionState.Reading => (PlotColors.Status("MkrSuccess"), "Connecté · lecture seule"),
-            AcquisitionState.Reconnecting => (PlotColors.Status("MkrWarning"), "Liaison perdue · reconnexion…"),
-            _ => (PlotColors.Status("MkrMuted"), "Déconnecté")
+            AcquisitionState.Connecting => (PlotColors.Status("MkrWarning"), Loc.T("cs.connexion_en_cours")),
+            AcquisitionState.Connected => (PlotColors.Status("MkrSuccess"), Loc.T("cs.connecte_lecture_seule")),
+            AcquisitionState.Reading => (PlotColors.Status("MkrSuccess"), Loc.T("acq.state.running")),
+            AcquisitionState.Reconnecting => (PlotColors.Status("MkrWarning"), Loc.T("cs.liaison_perdue_reconnexion")),
+            _ => (PlotColors.Status("MkrMuted"), Loc.T("cs.deconnecte"))
         };
         if (detail is not null) ConnectionState.Text += " · " + detail;
     }
 
+    /// <summary>The end state of an acquisition: completed, stopped by the operator, link lost, connection failed or error (always with its reason in the status line).</summary>
+    private void ShowOutcome(string stopReason, string? message = null)
+    {
+        (ConnectionLight.Fill, ConnectionState.Text) = stopReason switch
+        {
+            "sample_limit" => (PlotColors.Status("MkrSuccess"), Loc.T("acq.state.completed")),
+            "operator_stop" => (PlotColors.Status("MkrMuted"), Loc.T("acq.state.stopped")),
+            "connection_lost" => (PlotColors.Status("MkrDanger"), Loc.T("acq.state.lost")),
+            "connection_failed" => (PlotColors.Status("MkrDanger"), Loc.T("acq.state.failed")),
+            _ => (PlotColors.Status("MkrDanger"), Loc.T("acq.state.error"))
+        };
+        if (!string.IsNullOrWhiteSpace(message) && stopReason is not ("sample_limit" or "operator_stop")) ConnectionState.Text += " · " + message;
+    }
+
     private string Describe(AcquiredSample sample) =>
-        $"{sample.ReceivedAt:HH:mm:ss.fff} UTC · aller-retour {sample.RoundTripMs:0.#} ms\n" +
-        $"Consigne {sample.Sp:G6} {ProcessUnit.Text} (brut {sample.RawSp:G9})\n" +
-        $"Mesure {sample.Pv:G6} {ProcessUnit.Text} (brut {sample.RawPv:G9})\n" +
-        $"Sortie de commande {sample.Mv:G6} {CommandUnit.Text} (brut {sample.RawMv:G9})" +
+        Loc.T("cs.utc_aller_retour_ms_consigne", sample.ReceivedAt, sample.RoundTripMs, sample.Sp, ProcessUnit.Text, sample.RawSp, sample.Pv, ProcessUnit.Text, sample.RawPv, sample.Mv, CommandUnit.Text, sample.RawMv) +
         (sample.RawMode is { } rawMode ? $"\nMode brut {rawMode:G9} → {(sample.InManual == true ? "manuel" : "PAS en manuel")}" : "");
 
     private async void ProbeReading(object sender, RoutedEventArgs args)
@@ -242,9 +250,9 @@ public partial class AcquisitionWindow : Window
             if (samples.Count == 1)
             {
                 Latest.Text = Describe(samples[0]);
-                Status.Text = "Lecture d’essai réussie. Comparez les valeurs brutes et physiques à celles affichées dans l’atelier de l’automate avant de lancer l’acquisition.";
+                Status.Text = Loc.T("cs.lecture_dessai_reussie_comparez_les");
             }
-            else Status.Text = $"Lecture d’essai impossible : {result.Message ?? result.StopReason}";
+            else Status.Text = Loc.T("cs.lecture_dessai_impossible", result.Message ?? result.StopReason);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
         finally
@@ -259,7 +267,7 @@ public partial class AcquisitionWindow : Window
         var requested = ReadHistorian();
         if (requested is null || requested.Validate() is { } problem)
         {
-            Status.Text = requested is null ? "Durée, période, segment ou recouvrement invalide." : requested.Validate();
+            Status.Text = requested is null ? Loc.T("cs.duree_periode_segment_ou_recouvrement") : requested.Validate();
             return;
         }
         var plan = requested;
@@ -270,15 +278,14 @@ public partial class AcquisitionWindow : Window
         Progress.Maximum = plan.TotalSamples;
         Progress.Value = 0;
         int segments = 0;
-        Status.Text = "Enregistrement continu en cours. Chaque segment est enregistré dans le projet dès qu’il est complet : fermer cette fenêtre n’en perd aucun.";
+        Status.Text = Loc.T("cs.enregistrement_continu_en_cours_chaque");
         var progress = new Progress<AcquisitionProgress>(update =>
         {
             if (_lifetime.IsCancellationRequested) return;
-            ShowState(update.State, update.LastRoundTripMs is { } rtt ? $"dernier aller-retour {rtt:0.#} ms" : null);
+            ShowState(update.State, update.LastRoundTripMs is { } rtt ? Loc.T("cs.dernier_aller_retour_ms", rtt) : null);
             Progress.Value = Math.Min(plan.TotalSamples, update.Received + update.MissedSamples);
-            ProgressText.Text = $"{update.Received:N0} / {update.Requested:N0} mesures · {update.MissedSamples} manquée(s) · {segments} segment(s) enregistré(s) · " +
-                $"écoulé {Format(update.Elapsed)} · restant estimé {Format(update.Remaining)}" +
-                (update.LastError is { } error ? $"\nDernier incident : {error}" : "");
+            ProgressText.Text = Loc.T("cs.mesures_manquee_s_segment_s", update.Received, update.Requested, update.MissedSamples, segments, Format(update.Elapsed), Format(update.Remaining)) +
+                (update.LastError is { } error ? Loc.T("cs.dernier_incident", error) : "");
         });
         HistorianResult? result = null;
         try
@@ -293,7 +300,8 @@ public partial class AcquisitionWindow : Window
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { return; }
         catch (Exception e) when (e is ArgumentException or System.IO.IOException or System.IO.InvalidDataException)
         {
-            Status.Text = $"Enregistrement continu impossible. {e.Message}";
+            Status.Text = Loc.T("cs.enregistrement_continu_impossible", e.Message);
+            ShowOutcome("error", e.Message);
             return;
         }
         finally
@@ -304,23 +312,23 @@ public partial class AcquisitionWindow : Window
         }
         var summary = result.StopReason switch
         {
-            "sample_limit" => "Durée prévue atteinte.",
-            "operator_stop" => "Enregistrement arrêté par l’opérateur.",
-            "connection_failed" => $"Connexion impossible : {result.Message}",
-            "connection_lost" => $"Liaison perdue au-delà de la coupure tolérée : {result.Message}",
-            "storage_error" => result.Message ?? "Enregistrement d’un segment impossible.",
-            _ => $"Enregistrement interrompu : {result.Message}"
+            "sample_limit" => Loc.T("cs.duree_prevue_atteinte"),
+            "operator_stop" => Loc.T("cs.enregistrement_arrete_par_loperateur"),
+            "connection_failed" => Loc.T("cs.connexion_impossible", result.Message),
+            "connection_lost" => Loc.T("cs.liaison_perdue_au_dela_de", result.Message),
+            "storage_error" => result.Message ?? Loc.T("cs.enregistrement_dun_segment_impossible"),
+            _ => Loc.T("cs.enregistrement_interrompu", result.Message)
         };
-        summary += $" {result.SegmentsSaved} segment(s) enregistré(s), {result.Statistics.Received:N0} mesures, " +
-            $"{result.Statistics.MissedSamples} manquée(s) en {result.Statistics.Gaps.Length} lacune(s), aucune interpolée." +
+        summary += Loc.T("cs.segment_s_enregistre_s_mesures", result.SegmentsSaved, result.Statistics.Received, result.Statistics.MissedSamples, result.Statistics.Gaps.Length) +
             (result.Statistics.SamplesNotInManual > 0
-                ? $" ATTENTION : {result.Statistics.SamplesNotInManual:N0} mesure(s) hors du mode manuel déclaré ; la recherche d'essais les écartera (colonne MANUAL)."
+                ? Loc.T("cs.attention_mesure_s_hors_du", result.Statistics.SamplesNotInManual)
                 : "");
         Status.Text = summary;
+        ShowOutcome(result.StopReason, result.Message);
         if (result.SegmentsSaved > 0 && !_lifetime.IsCancellationRequested)
         {
-            MessageBox.Show(this, summary + "\n\nRetrouvez les essais dans « Identification » avec « Rechercher les essais exploitables ».",
-                "ORIAS — Enregistrement continu terminé", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, summary + Loc.T("cs.retrouvez_les_essais_dans_identification"),
+                Loc.T("cs.orias_enregistrement_continu_termine"), MessageBoxButton.OK, MessageBoxImage.Information);
             DialogResult = true;
         }
     }
@@ -340,15 +348,14 @@ public partial class AcquisitionWindow : Window
         Stop.IsEnabled = true;
         Progress.Maximum = plan.Samples;
         Progress.Value = 0;
-        Status.Text = "Acquisition en cours. Réalisez l’essai prévu sur le banc depuis l’atelier de l’automate.";
+        Status.Text = Loc.T("cs.acquisition_en_cours_realisez_lessai");
         var progress = new Progress<AcquisitionProgress>(update =>
         {
             if (_lifetime.IsCancellationRequested) return;
-            ShowState(update.State, update.LastRoundTripMs is { } rtt ? $"dernier aller-retour {rtt:0.#} ms" : null);
+            ShowState(update.State, update.LastRoundTripMs is { } rtt ? Loc.T("cs.dernier_aller_retour_ms", rtt) : null);
             Progress.Value = Math.Min(plan.Samples, update.Received + update.MissedSamples);
-            ProgressText.Text = $"{update.Received} / {update.Requested} mesures · {update.MissedSamples} manquée(s) · " +
-                $"écoulé {Format(update.Elapsed)} · restant estimé {Format(update.Remaining)}" +
-                (update.LastError is { } error ? $"\nDernier incident : {error}" : "");
+            ProgressText.Text = Loc.T("cs.mesures_manquee_s_ecoule_restant", update.Received, update.Requested, update.MissedSamples, Format(update.Elapsed), Format(update.Remaining)) +
+                (update.LastError is { } error ? Loc.T("cs.dernier_incident", error) : "");
             AcquiredSample? latest;
             lock (_gate) latest = _latest;
             if (latest is not null) Latest.Text = Describe(latest);
@@ -376,16 +383,17 @@ public partial class AcquisitionWindow : Window
         _origin = new AcquisitionOrigin(null, result.StopReason, "receiver_utc_midpoint", target, plan, result.Statistics);
         Status.Text = result.StopReason switch
         {
-            "sample_limit" => "Nombre de mesures atteint.",
-            "operator_stop" => "Acquisition arrêtée par l’opérateur.",
-            "connection_failed" => $"Connexion impossible : {result.Message}",
-            "connection_lost" => $"Liaison perdue au-delà de la coupure tolérée : {result.Message}",
-            _ => $"Acquisition interrompue : {result.Message}"
+            "sample_limit" => Loc.T("cs.nombre_de_mesures_atteint"),
+            "operator_stop" => Loc.T("cs.acquisition_arretee_par_loperateur"),
+            "connection_failed" => Loc.T("cs.connexion_impossible", result.Message),
+            "connection_lost" => Loc.T("cs.liaison_perdue_au_dela_de", result.Message),
+            _ => Loc.T("cs.acquisition_interrompue", result.Message)
         } + (result.Statistics.MissedSamples > 0
-            ? $" {result.Statistics.MissedSamples} mesure(s) manquée(s) sont enregistrées comme lacunes, sans interpolation."
+            ? Loc.T("cs.mesure_s_manquee_s_sont", result.Statistics.MissedSamples)
             : "") + (result.Statistics.SamplesNotInManual > 0
-            ? $" ATTENTION : {result.Statistics.SamplesNotInManual} mesure(s) prise(s) hors du mode manuel déclaré : un essai en boucle ouverte n’y est pas valable (colonne MANUAL de l’archive)."
+            ? Loc.T("cs.attention_mesure_s_prise_s", result.Statistics.SamplesNotInManual)
             : "");
+        ShowOutcome(result.StopReason, result.Message);
         Save.IsEnabled = count > 0;
         Settings.IsEnabled = Probe.IsEnabled = Start.IsEnabled = count == 0;
     }
@@ -407,7 +415,7 @@ public partial class AcquisitionWindow : Window
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
         catch (Exception e)
         {
-            Status.Text = $"Enregistrement impossible. {e.Message}";
+            Status.Text = Loc.T("cs.enregistrement_impossible", e.Message);
             Save.IsEnabled = true;
         }
     }

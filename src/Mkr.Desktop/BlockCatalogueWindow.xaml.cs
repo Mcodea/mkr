@@ -20,7 +20,7 @@ public partial class BlockCatalogueWindow : Window
         catch (Exception error)
         {
             System.Diagnostics.Trace.TraceError("catalogue.open {0}", error.GetType().Name);
-            MessageBox.Show(owner, "Impossible de lire le catalogue installé.", "ORIAS",
+            MessageBox.Show(owner, Loc.T("cs.impossible_de_lire_le_catalogue"), "ORIAS",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -35,15 +35,15 @@ public partial class BlockCatalogueWindow : Window
             {
                 if (!string.IsNullOrWhiteSpace(value)) context.Add($"{label} : {value}");
             }
-            Add("Repère", brief.Tag);
-            Add("Grandeur régulée", brief.ControlledQuantity);
-            Add("Point de fonctionnement", brief.OperatingPoint);
+            Add(Loc.T("cs.repere"), brief.Tag);
+            Add(Loc.T("cs.grandeur_regulee"), brief.ControlledQuantity);
+            Add(Loc.T("cs.point_de_fonctionnement"), brief.OperatingPoint);
             Add("Objectif", brief.Objective);
             Add("Description", brief.Description);
         }
         if (context.Count > 0)
         {
-            context.Insert(0, "Fiche de boucle enregistrée");
+            context.Insert(0, Loc.T("cs.fiche_de_boucle_enregistree"));
             LoopContext.Text = string.Join(Environment.NewLine, context);
             LoopContext.Visibility = Visibility.Visible;
         }
@@ -70,7 +70,7 @@ public partial class BlockCatalogueWindow : Window
                 $"ORIAS — Relevé de banc · {Read("name")}",
                 $"Catalogue : {root.GetProperty("catalogueVersion").GetString()}",
                 $"Constructeur : {Read("manufacturer")} · Logiciel : {Read("software")}",
-                "Statut initial : essai à réaliser",
+                Loc.T("cs.statut_initial_essai_a_realiser"),
                 "",
             };
             if (context.Count > 0)
@@ -80,18 +80,18 @@ public partial class BlockCatalogueWindow : Window
             }
             sheet.AddRange(new[]
             {
-                "Identification de la configuration observée",
-                "Référence CPU :",
-                "Version firmware :",
-                "Version du logiciel :",
-                "Nom et version de bibliothèque :",
-                "Instance du bloc et période d’exécution :",
-                "Plage et unité de mesure :",
-                "Plage et unité de commande :",
-                "Sens d’action et signe du gain (MKR fournit un gain signé ; le bloc peut exiger sa valeur absolue et un indicateur d’inversion) :",
-                "Unité de Ti et de Td (secondes, minutes, durée IEC, entier converti : préciser la conversion) :",
+                Loc.T("cs.identification_de_la_configuration_observee"),
+                Loc.T("cs.reference_cpu"),
+                Loc.T("cs.version_firmware"),
+                Loc.T("cs.version_du_logiciel"),
+                Loc.T("cs.nom_et_version_de_bibliotheque"),
+                Loc.T("cs.instance_du_bloc_et_periode"),
+                Loc.T("cs.plage_et_unite_de_mesure"),
+                Loc.T("cs.plage_et_unite_de_commande"),
+                Loc.T("cs.sens_daction_et_signe_du"),
+                Loc.T("cs.unite_de_ti_et_de"),
                 "",
-                "Paramètres relevés sur l’instance"
+                Loc.T("cs.parametres_releves_sur_linstance")
             });
             foreach (var parameter in block.GetProperty("parameters").EnumerateArray())
             {
@@ -99,22 +99,22 @@ public partial class BlockCatalogueWindow : Window
                 sheet.Add($"{parameter.GetProperty("name").GetString()} [{source}] — valeur observée :");
             }
             if (block.GetProperty("parameters").GetArrayLength() == 0)
-                sheet.Add("Aucun paramètre documenté dans cette fiche.");
+                sheet.Add(Loc.T("cs.aucun_parametre_documente_dans_cette"));
             sheet.AddRange(new[]
             {
-                "", "Essai et revue",
-                "Identifiant de l’étude et de l’essai :",
-                "Conditions initiales et scénario :",
-                "Résultat attendu et tolérance fixée avant essai :",
-                "Résultat observé et écart :",
-                "Référence de la trace de mesure :",
-                "Date, opérateur et relecteur :",
-                "Conclusion de la revue :"
+                "", Loc.T("cs.essai_et_revue"),
+                Loc.T("cs.identifiant_de_letude_et_de"),
+                Loc.T("cs.conditions_initiales_et_scenario"),
+                Loc.T("cs.resultat_attendu_et_tolerance_fixee"),
+                Loc.T("cs.resultat_observe_et_ecart"),
+                Loc.T("cs.reference_de_la_trace_de"),
+                Loc.T("cs.date_operateur_et_relecteur"),
+                Loc.T("cs.conclusion_de_la_revue")
             });
             _cards.Add(new Card(Read("name")!,
                 $"{Read("manufacturer")} · {Read("software")}\nCPU : {Read("cpu") ?? "à vérifier"}\nVersion logicielle : {Read("softwareVersion") ?? "à vérifier"}",
-                Read("status") == "verified" ? "Fiche documentaire vérifiée" : "Compatibilité à vérifier",
-                evidence.Length > 0 ? evidence : "Aucune propriété documentée dans cette édition du catalogue.",
+                Read("status") == "verified" ? Loc.T("cs.fiche_documentaire_verifiee") : Loc.T("cs.compatibilite_a_verifier"),
+                evidence.Length > 0 ? evidence : Loc.T("cs.aucune_propriete_documentee_dans_cette"),
                 string.Join(Environment.NewLine, sheet)));
         }
         Refresh();
@@ -126,11 +126,11 @@ public partial class BlockCatalogueWindow : Window
         try
         {
             Clipboard.SetText(card.BenchSheet);
-            CopyStatus.Text = $"Relevé {card.Name} copié.";
+            CopyStatus.Text = Loc.T("cs.releve_copie", card.Name);
         }
         catch (System.Runtime.InteropServices.ExternalException)
         {
-            CopyStatus.Text = "Presse-papiers indisponible. Réessayez.";
+            CopyStatus.Text = Loc.T("cs.presse_papiers_indisponible_reessayez");
         }
     }
 

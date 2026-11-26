@@ -84,8 +84,8 @@ public partial class App : Application
             startup?.Close();
             Trace.TraceError("startup {0}", error.GetType().Name);
             Trace.TraceError("startup detail {0}", error);          // local log only: the window text below stays generic
-            var detail = error is InvalidDataException ? error.Message : "Vérifiez l’accès au dossier local MKR.";
-            MessageBox.Show($"Impossible d’ouvrir le stockage ORIAS. {detail}", "ORIAS", MessageBoxButton.OK, MessageBoxImage.Error);
+            var detail = error is InvalidDataException ? error.Message : Loc.T("cs.verifiez_lacces_au_dossier_local");
+            MessageBox.Show(Loc.T("cs.impossible_douvrir_le_stockage_orias", detail), "ORIAS", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
     }

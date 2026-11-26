@@ -1,0 +1,6 @@
+{
+ "help.path": "1. Créez un projet et décrivez la boucle (repère, grandeur réglée, point de fonctionnement, objectif). 2. Importez un CSV ou acquérez des données depuis l'automate (lecture seule). 3. Identifiez le procédé : une validation sur des données indépendantes est obligatoire avant tout réglage. 4. Réglez, simulez, puis préparez les valeurs du bloc de votre automate.",
+ "help.safety": "ORIAS lit l'automate et n'y écrit jamais. Les valeurs préparées pour un bloc PID restent « non qualifiées » : elles doivent être essayées sur banc ou en simulation avant toute mise en service. ORIAS n'est pas déclaré qualifié industriellement.",
+ "help.shortcuts": "F1 : cette aide. Alt + lettre soulignée : activer une commande. Double-clic sur un projet : l'ouvrir. Tout est utilisable au clavier (Tab, Maj+Tab).",
+ "help.vocabulary": "Consigne (SP) : la valeur visée. Mesure (PV) : la valeur lue sur le procédé. Sortie de commande (MV) : la commande appliquée au procédé. Commande calculée (CV) : la commande demandée avant limitation. Perturbation : une entrée que le régulateur ne commande pas."
+}

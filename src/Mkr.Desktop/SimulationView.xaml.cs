@@ -26,11 +26,10 @@ public partial class SimulationView : UserControl, IStepView
         _model = model;
         _tuning = tuning;
         InitializeComponent();
-        Chart.CursorTextChanged += text => CursorReadout.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
-        Chart.ViewChanged += () => ZoomStatus.Text = $"Vue [{Chart.View.From:G6} ; {Chart.View.To:G6}] s";
-        RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
-        Units.Text = $"Cible PI : {tuning.Result.ResponseSeconds:G5} s. Déviations autour du point initial : " +
-            $"consigne et mesure en {model.PvUnit}, saturation et perturbation en {model.MvUnit}.";
+        Chart.CursorTextChanged += text => CursorReadout.Text = text.Length == 0 ? Loc.T("cs.survolez_le_graphique_pour_lire") : text;
+        Chart.ViewChanged += () => ZoomStatus.Text = Loc.T("cs.vue_s", Chart.View.From, Chart.View.To);
+        RateLabel.Content = Loc.T("cs.vitesse_max_de_la_sortie", model.MvUnit);
+        Units.Text = Loc.T("cs.cible_pi_s_deviations_autour", tuning.Result.ResponseSeconds, model.PvUnit, model.MvUnit);
         Saved.ItemsSource = _workspace.Simulations(_tuning.Id);
         if (Saved.Items.Count > 0)
             Saved.SelectedIndex = 0;
@@ -44,7 +43,7 @@ public partial class SimulationView : UserControl, IStepView
             !Read(Upper, out var upper) || !Read(Disturbance, out var disturbance) ||
             !Read(DisturbanceAt, out var at))
         {
-            Message.Text = "Saisissez les sept valeurs numériques du scénario.";
+            Message.Text = Loc.T("cs.saisissez_les_sept_valeurs_numeriques");
             return false;
         }
         double? rate = null;
@@ -52,7 +51,7 @@ public partial class SimulationView : UserControl, IStepView
         {
             if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
             {
-                Message.Text = "La vitesse maximale de la sortie de commande doit être strictement positive.";
+                Message.Text = Loc.T("cs.la_vitesse_maximale_de_la");
                 return false;
             }
             rate = maximumRate;
@@ -67,13 +66,13 @@ public partial class SimulationView : UserControl, IStepView
         if (!Read(ManualMv, out var manual) || !Read(SwitchTime, out var at) ||
             at <= 0 || at >= scenario.DurationSeconds)
         {
-            Message.Text = "Renseignez la commande manuelle et un instant de bascule compris entre le début et la fin du scénario.";
+            Message.Text = Loc.T("cs.renseignez_la_commande_manuelle_et");
             return;
         }
         var token = _lifetime.Token;
         bool simc = TransferTune.SelectedIndex == 1;
         ScenarioForm.IsEnabled = false;
-        Message.Text = "Simulation du transfert en cours…";
+        Message.Text = Loc.T("cs.simulation_du_transfert_en_cours");
         try
         {
             var transfer = await _workspace.TransferAsync(_model, _tuning, simc, scenario, manual, at, token);
@@ -81,12 +80,9 @@ public partial class SimulationView : UserControl, IStepView
             var first = Array.FindIndex(transfer.Points, p => p.Mode == "automatic");
             var before = transfer.Points[first - 1];
             var after = transfer.Points[first];
-            string method = simc ? "SIMC" : "Lambda (Dahlin)";
+            string method = simc ? "SIMC" : Loc.T("cs.lambda_dahlin");
             string warnings = string.Join(", ", transfer.Warnings);
-            Message.Text = $"Essai hors ligne {method} à {after.Seconds:G6} s · sortie manuelle demandée (écart) {manual:G6} {_model.MvUnit}\n" +
-                $"Sortie de commande appliquée avant → après : {before.Mv:G6} → {after.Mv:G6} {_model.MvUnit} · saut de commande : {transfer.TransferBumpMv:G6} {_model.MvUnit}\n" +
-                $"Écart de mesure à la bascule : {after.Pv:G6} {_model.PvUnit} · saturation : {transfer.SaturationSeconds:G6} s · limitation de vitesse : {transfer.RateLimitedSeconds:G6} s\n" +
-                $"Avertissements moteur : {warnings}";
+            Message.Text = Loc.T("cs.essai_hors_ligne_a_s", method, after.Seconds, manual, _model.MvUnit, before.Mv, after.Mv, _model.MvUnit, transfer.TransferBumpMv, _model.MvUnit, after.Pv, _model.PvUnit, transfer.SaturationSeconds, transfer.RateLimitedSeconds, warnings);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -113,7 +109,7 @@ public partial class SimulationView : UserControl, IStepView
         if (!TryReadScenario(out var scenario))
             return;
         ScenarioForm.IsEnabled = false;
-        Message.Text = "Simulation en cours…";
+        Message.Text = Loc.T("cs.simulation_en_cours");
         var token = _lifetime.Token;
         try
         {
@@ -121,7 +117,7 @@ public partial class SimulationView : UserControl, IStepView
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
-            Message.Text = "Simulation enregistrée.";
+            Message.Text = Loc.T("cs.simulation_enregistree");
             ScenarioFields.IsExpanded = false; // laisse la place au graphique
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
@@ -135,11 +131,11 @@ public partial class SimulationView : UserControl, IStepView
             return;
         if (!Read(Variation, out var variation) || variation <= 0 || variation > 50)
         {
-            Message.Text = "Indiquez une variation de sensibilité strictement supérieure à 0 et inférieure ou égale à 50 %.";
+            Message.Text = Loc.T("cs.indiquez_une_variation_de_sensibilite");
             return;
         }
         ScenarioForm.IsEnabled = false;
-        Message.Text = "Calcul de sept scénarios de sensibilité en cours…";
+        Message.Text = Loc.T("cs.calcul_de_sept_scenarios_de");
         var token = _lifetime.Token;
         try
         {
@@ -148,7 +144,7 @@ public partial class SimulationView : UserControl, IStepView
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
-            Message.Text = "Analyse de sensibilité enregistrée avec sa simulation nominale.";
+            Message.Text = Loc.T("cs.analyse_de_sensibilite_enregistree_avec");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -161,11 +157,11 @@ public partial class SimulationView : UserControl, IStepView
             return;
         if (!Read(Variation, out var variation) || variation <= 0 || variation > 50)
         {
-            Message.Text = "Indiquez une variation supérieure à 0 et inférieure ou égale à 50 %.";
+            Message.Text = Loc.T("cs.indiquez_une_variation_superieure_a");
             return;
         }
         ScenarioForm.IsEnabled = false;
-        Message.Text = "Calcul de la matrice de 27 procédés en cours…";
+        Message.Text = Loc.T("cs.calcul_de_la_matrice_de");
         var token = _lifetime.Token;
         try
         {
@@ -174,7 +170,7 @@ public partial class SimulationView : UserControl, IStepView
             var list = _workspace.Simulations(_tuning.Id);
             Saved.ItemsSource = list;
             Saved.SelectedItem = list.First(item => item.Id == study.Id);
-            Message.Text = "Matrice combinée enregistrée avec l'enveloppe de la mesure et sa simulation nominale.";
+            Message.Text = Loc.T("cs.matrice_combinee_enregistree_avec_l");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { ShowError(error); }
@@ -184,8 +180,8 @@ public partial class SimulationView : UserControl, IStepView
     private void ShowSaved(object sender, SelectionChangedEventArgs args)
     {
         _shown = Saved.SelectedItem as PiSimulationStudy;
-        ZoomStatus.Text = "Horizon complet";
-        CursorReadout.Text = "Survolez le graphique pour lire les valeurs au curseur.";
+        ZoomStatus.Text = Loc.T("cs.horizon_complet");
+        CursorReadout.Text = Loc.T("cs.survolez_le_graphique_pour_lire");
         SheetButton.IsEnabled = _shown is not null;
         ExportButton.IsEnabled = _shown is not null;
         RobustnessPanel.Visibility = _shown?.Robustness is null
@@ -197,12 +193,12 @@ public partial class SimulationView : UserControl, IStepView
                 Name = caseItem.Key switch
                 {
                     "nominal" => "Nominal",
-                    "gain_minus" => "Gain −",
-                    "gain_plus" => "Gain +",
-                    "tau_minus" => "Constante τ −",
-                    "tau_plus" => "Constante τ +",
-                    "delay_minus" => "Retard θ −",
-                    "delay_plus" => "Retard θ +",
+                    "gain_minus" => Loc.T("cs.gain"),
+                    "gain_plus" => Loc.T("cs.gain_2"),
+                    "tau_minus" => Loc.T("cs.constante_2"),
+                    "tau_plus" => Loc.T("cs.constante_3"),
+                    "delay_minus" => Loc.T("cs.retard_2"),
+                    "delay_plus" => Loc.T("cs.retard_3"),
                     _ => caseItem.Key
                 },
                 caseItem.Gain,
@@ -218,14 +214,12 @@ public partial class SimulationView : UserControl, IStepView
             var worstSimc = sensitivity.Cases.Max(c => c.Simc.Iae);
             var isCombined = sensitivity.Envelope is not null;
             var mode = isCombined
-                ? "Grille combinée K × τ × θ (27 procédés)"
-                : "Variation individuelle de K, τ ou θ (7 procédés)";
+                ? Loc.T("cs.grille_combinee_k_27_procedes")
+                : Loc.T("cs.variation_individuelle_de_k_ou");
             RobustnessSummary.Text =
-                $"{mode}, ±{sensitivity.VariationPercent:G5} %, coefficients PI fixes. " +
-                $"IAE maximale parmi les {sensitivity.Cases.Length} cas : " +
-                $"IMC {worstImc:G5} {_model.PvUnit}·s ; SIMC {worstSimc:G5} {_model.PvUnit}·s. " +
-                (isCombined ? "Les enveloppes de la mesure indiquent seulement les extrema simulés, pas un intervalle de confiance. " : "") +
-                $"Méthode {sensitivity.AlgorithmVersion} · modèle nominal conservé.";
+                Loc.T("cs.coefficients_pi_fixes_iae_maximale", mode, sensitivity.VariationPercent, sensitivity.Cases.Length, worstImc, _model.PvUnit, worstSimc, _model.PvUnit) +
+                (isCombined ? Loc.T("cs.les_enveloppes_de_la_mesure") : "") +
+                Loc.T("cs.methode_modele_nominal_conserve", sensitivity.AlgorithmVersion);
         }
         else
         {
@@ -252,9 +246,9 @@ public partial class SimulationView : UserControl, IStepView
         var result = simulation.Result;
         var warnings = result.Warnings.Select(code => code switch
         {
-            "coarse_sample" => "Pas supérieur au dixième de la constante de temps. Contrôlez la sensibilité au pas.",
-            "delay_beyond_horizon" => "Le retard atteint ou dépasse l’horizon du scénario.",
-            _ => "Simulation exploratoire sur modèle nominal."
+            "coarse_sample" => Loc.T("cs.pas_superieur_au_dixieme_de"),
+            "delay_beyond_horizon" => Loc.T("cs.le_retard_atteint_ou_depasse"),
+            _ => Loc.T("cs.simulation_exploratoire_sur_modele_nominal")
         });
         Report.Text = $"Simulation enregistrée {simulation.Id.ToString()[..8]} · durée {input.DurationSeconds:G6} s · " +
             $"Variation de consigne {input.Setpoint:G6} {_model.PvUnit} · pas {input.SampleSeconds:G6} s\n" +
@@ -264,20 +258,16 @@ public partial class SimulationView : UserControl, IStepView
             $"SIMC : {ResponseWindow(result.Simc.SetpointResponse)}" +
             $"{string.Join(" ", warnings)}";
         BuildIndicators(result);
-        Legend.Text = $"Mesure et consigne ({_model.PvUnit}) : bleu = Lambda, orange = SIMC, vert pointillé = consigne. " +
-            $"Commandes ({_model.MvUnit}) : pointillés = commande calculée, vert = commande appliquée, gris = limites ; violet = instant de perturbation.";
+        Legend.Text = Loc.T("cs.mesure_et_consigne_bleu_lambda", _model.PvUnit, _model.MvUnit);
         if (simulation.Robustness?.Envelope is not null)
-            Legend.Text += " Sur la piste de la mesure, zones translucides = enveloppes min/max de 27 simulations, sans garantie de stabilité.";
+            Legend.Text += Loc.T("cs.sur_la_piste_de_la");
         DrawPlot();
     }
 
     // Figures and the exported series are generated from the same persisted simulation runs.
     // A historical study is displayed without re-running a control algorithm.
     private string Metrics(SimulationRun run) =>
-        $"IAE {run.Iae:G5} {_model.PvUnit}·s · ISE {run.Ise:G5} {_model.PvUnit}²·s · " +
-        $"saturation {run.SaturationSeconds:G5} s · vitesse limitée {run.RateLimitedSeconds:G5} s · " +
-        $"intégration gelée {run.FrozenSteps} pas · " +
-        $"erreur finale {run.FinalError:G5} {_model.PvUnit}" +
+        Loc.T("cs.iae_s_ise_2s_saturation", run.Iae, _model.PvUnit, run.Ise, _model.PvUnit, run.SaturationSeconds, run.RateLimitedSeconds, run.FrozenSteps, run.FinalError, _model.PvUnit) +
         (run.SetpointResponse is { } response
             ? $" · dépassement {(response.OvershootPv is { } peak ? $"{peak:G5} {_model.PvUnit}" : "—")}" +
               $" · temps de réponse ±5 % {(response.SettlingSeconds is { } time ? $"{time:G5} s" : "—")}"
@@ -285,7 +275,7 @@ public partial class SimulationView : UserControl, IStepView
 
     private static string ResponseWindow(SetpointResponse? response) => response is null
         ? ""
-        : $"Fenêtre de réponse à la consigne [0, {response.WindowEndSeconds:G5}] s · — : valeur indisponible.\n";
+        : Loc.T("cs.fenetre_de_reponse_a_la", response.WindowEndSeconds);
 
     private System.Windows.Controls.TextBlock IndicatorCell(string text, int row, int column, bool header = false)
     {
@@ -310,7 +300,7 @@ public partial class SimulationView : UserControl, IStepView
         IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.5, GridUnitType.Star) });
         for (var i = 0; i < 4; i++) IndicatorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         for (var i = 0; i < 3; i++) IndicatorGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var headers = new[] { "Méthode", $"IAE ({_model.PvUnit}·s)", $"Dépass. ({_model.PvUnit})", "Rép. ±5 % (s)", "Satur. (s)" };
+        var headers = new[] { Loc.T("cs.methode"), Loc.T("cs.iae_s", _model.PvUnit), Loc.T("cs.depass", _model.PvUnit), Loc.T("cs.rep_5_s"), Loc.T("cs.satur_s") };
         for (var c = 0; c < headers.Length; c++) IndicatorGrid.Children.Add(IndicatorCell(headers[c], 0, c, header: true));
         var unavailable = false;
         string Num(double? value) { if (value is null) { unavailable = true; return "—"; } return value.Value.ToString("G4", CultureInfo.CurrentCulture); }
@@ -322,10 +312,10 @@ public partial class SimulationView : UserControl, IStepView
             IndicatorGrid.Children.Add(IndicatorCell(Num(run.SetpointResponse?.SettlingSeconds), row, 3));
             IndicatorGrid.Children.Add(IndicatorCell(Num(run.SaturationSeconds), row, 4));
         }
-        Row(1, "Lambda (Dahlin)", result.Imc);
+        Row(1, Loc.T("cs.lambda_dahlin"), result.Imc);
         Row(2, "SIMC", result.Simc);
         IndicatorNote.Visibility = unavailable ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorNote.Text = unavailable ? "— : indicateur non disponible (la réponse ne franchit pas le seuil dans la fenêtre simulée, ou n'est pas calculée pour ce scénario)." : "";
+        IndicatorNote.Text = unavailable ? Loc.T("cs.indicateur_non_disponible_la_reponse") : "";
     }
 
     private void DrawPlot()
@@ -341,18 +331,18 @@ public partial class SimulationView : UserControl, IStepView
         var simc = study.Result.Simc.Points;
         var seconds = imc.Select(p => p.Seconds).ToArray();
         var setpoint = study.Scenario.Setpoint;
-        var pvTrack = new ChartTrack("Simulation · variation de consigne et mesure", _model.PvUnit, new[]
+        var pvTrack = new ChartTrack(Loc.T("cs.simulation_variation_de_consigne_et"), _model.PvUnit, new[]
         {
             new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { setpoint, setpoint }),
-            new ChartSeries("Mesure Lambda (Dahlin)", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
-            new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
-        }) { Weight = 2, YLabel = $"Mesure ({_model.PvUnit})" };
+            new ChartSeries(Loc.T("cs.mesure_lambda_dahlin"), "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
+            new ChartSeries(Loc.T("cs.mesure_simc"), "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
+        }) { Weight = 2, YLabel = Loc.T("cs.mesure", _model.PvUnit) };
         if (study.Robustness?.Envelope is { } envelope && envelope.Seconds.Length == seconds.Length &&
             envelope.Imc.MinPv.Length == seconds.Length && envelope.Imc.MaxPv.Length == seconds.Length &&
             envelope.Simc.MinPv.Length == seconds.Length && envelope.Simc.MaxPv.Length == seconds.Length)
         {
-            pvTrack.Bands.Add(new ChartBand("Enveloppe IMC", "MkrSignal1", envelope.Seconds, envelope.Imc.MinPv, envelope.Imc.MaxPv));
-            pvTrack.Bands.Add(new ChartBand("Enveloppe SIMC", "MkrSignal2", envelope.Seconds, envelope.Simc.MinPv, envelope.Simc.MaxPv));
+            pvTrack.Bands.Add(new ChartBand(Loc.T("cs.enveloppe_imc"), "MkrSignal1", envelope.Seconds, envelope.Imc.MinPv, envelope.Imc.MaxPv));
+            pvTrack.Bands.Add(new ChartBand(Loc.T("cs.enveloppe_simc"), "MkrSignal2", envelope.Seconds, envelope.Simc.MinPv, envelope.Simc.MaxPv));
         }
 
         ChartTrack Commands(string title, string colorKey, SimulationPoint[] points)
@@ -360,17 +350,17 @@ public partial class SimulationView : UserControl, IStepView
             var withCommand = points.Where(p => p.Cv.HasValue && p.Mv.HasValue).ToArray();
             var t = withCommand.Select(p => p.Seconds).ToArray();
             var limits = new[] { study.Scenario.MinimumMv, study.Scenario.MaximumMv };
-            return new ChartTrack($"{title} · sortie de commande (écart)", _model.MvUnit, new[]
+            return new ChartTrack(Loc.T("cs.sortie_de_commande_ecart", title), _model.MvUnit, new[]
             {
-                new ChartSeries("Appliquée", "MkrSignal3", t, withCommand.Select(p => p.Mv!.Value).ToArray()),
-                new ChartSeries("Calculée", colorKey, t, withCommand.Select(p => p.Cv!.Value).ToArray()),
-                new ChartSeries("Limite basse", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[0], limits[0] }),
-                new ChartSeries("Limite haute", "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[1], limits[1] })
+                new ChartSeries(Loc.T("cs.appliquee"), "MkrSignal3", t, withCommand.Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries(Loc.T("cs.calculee"), colorKey, t, withCommand.Select(p => p.Cv!.Value).ToArray()),
+                new ChartSeries(Loc.T("cs.limite_basse"), "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[0], limits[0] }),
+                new ChartSeries(Loc.T("cs.limite_haute"), "MkrPlotAxis", new[] { seconds[0], seconds[^1] }, new[] { limits[1], limits[1] })
             }) { YLabel = $"MV ({_model.MvUnit})" };
         }
 
-        Chart.XLabel = "Temps depuis le début du scénario (s)";
-        Chart.SetTracks(new[] { pvTrack, Commands("Lambda (Dahlin)", "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
+        Chart.XLabel = Loc.T("cs.temps_depuis_le_debut_du");
+        Chart.SetTracks(new[] { pvTrack, Commands(Loc.T("cs.lambda_dahlin"), "MkrSignal1", imc), Commands("SIMC", "MkrSignal2", simc) });
         Chart.SetEvents(study.Scenario.Disturbance != 0 ? new[] { (study.Scenario.DisturbanceAtSeconds, "Perturbation") } : Array.Empty<(double, string)>());
     }
 
@@ -381,23 +371,23 @@ public partial class SimulationView : UserControl, IStepView
     private void ResetZoom(object sender, RoutedEventArgs args)
     {
         Chart.ResetView();
-        ZoomStatus.Text = "Horizon complet";
+        ZoomStatus.Text = Loc.T("cs.horizon_complet");
     }
 
     private void ExportSheet(object sender, RoutedEventArgs args)
     {
         if (_shown is not { } simulation) return;
-        var dialog = new SaveFileDialog { Title = "Exporter la fiche enregistrée", FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
+        var dialog = new SaveFileDialog { Title = Loc.T("cs.exporter_la_fiche_enregistree"), FileName = $"MKR-{simulation.Id:N}.pdf", Filter = Loc.T("cs.pdf_pdf_pdf") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try
         {
             _workspace.ExportSheet(dialog.FileName, _model, _tuning, simulation);
-            Message.Text = "Fiche de mise au point exportée.";
+            Message.Text = Loc.T("cs.fiche_de_mise_au_point");
         }
         catch (Exception error)
         {
             Trace.TraceError("report.export {0}", error.GetType().Name);
-            Message.Text = "Export PDF impossible. Vérifiez le dossier de destination et le journal MKR.";
+            Message.Text = Loc.T("cs.export_pdf_impossible_verifiez_le");
         }
     }
 
@@ -405,19 +395,19 @@ public partial class SimulationView : UserControl, IStepView
     {
         if (_shown is not { } simulation)
             return;
-        var dialog = new SaveFileDialog { Title = "Exporter les séries enregistrées", FileName = $"MKR-{simulation.Id:N}.csv", Filter = "CSV (*.csv)|*.csv" };
+        var dialog = new SaveFileDialog { Title = Loc.T("cs.exporter_les_series_enregistrees"), FileName = $"MKR-{simulation.Id:N}.csv", Filter = Loc.T("cs.csv_csv_csv") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         try
         {
             SimulationCsv.Export(dialog.FileName, simulation);
-            Message.Text = "Séries simulées exportées.";
+            Message.Text = Loc.T("cs.series_simulees_exportees");
         }
         catch (InvalidDataException error) { Message.Text = error.Message; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             Trace.TraceError("csv.export {0}", error.GetType().Name);
-            Message.Text = "Écriture du CSV impossible. Vérifiez le dossier et si le fichier est ouvert.";
+            Message.Text = Loc.T("cs.ecriture_du_csv_impossible_verifiez");
         }
         catch (Exception error) { ShowError(error); }
     }
@@ -430,15 +420,15 @@ public partial class SimulationView : UserControl, IStepView
         Trace.TraceError("pi.simulation {0}", error.GetType().Name);
         Message.Text = error is CsvInputException input ? input.Code switch
         {
-            "sim_grid" => "Utilisez une durée et un instant de perturbation multiples du pas, pour 2 à 5 000 intervalles.",
-            "sim_domain" => "Vérifiez le modèle, le pas positif, les limites de la sortie de commande autour de zéro et l’instant de perturbation.",
-            "sim_range" => "La dynamique calculée dépasse la plage numérique. Vérifiez le pas et le réglage.",
-            "robust_domain" => "Variation de sensibilité invalide : indiquez 0–50 %, avec un modèle FOPDT valide.",
-            "robust_input" => "Les paramètres de l'analyse de robustesse sont incomplets ou incompatibles.",
-            "combined_domain" => "La variation combinée doit rester entre 0 et 50 %, avec un modèle FOPDT valide.",
-            "combined_input" => "Contrat de calcul combiné invalide.",
-            "combined_grid" => "Les essais combinés n'ont pas tous le même axe temporel.",
-            _ => "Vérifiez les entrées et les unités du scénario."
-        } : "Simulation indisponible. Vérifiez le stockage et le journal MKR.";
+            "sim_grid" => Loc.T("cs.utilisez_une_duree_et_un_2"),
+            "sim_domain" => Loc.T("cs.verifiez_le_modele_le_pas"),
+            "sim_range" => Loc.T("cs.la_dynamique_calculee_depasse_la"),
+            "robust_domain" => Loc.T("cs.variation_de_sensibilite_invalide_indiquez"),
+            "robust_input" => Loc.T("cs.les_parametres_de_l_analyse"),
+            "combined_domain" => Loc.T("cs.la_variation_combinee_doit_rester"),
+            "combined_input" => Loc.T("cs.contrat_de_calcul_combine_invalide"),
+            "combined_grid" => Loc.T("cs.les_essais_combines_n_ont"),
+            _ => Loc.T("cs.verifiez_les_entrees_et_les")
+        } : Loc.T("cs.simulation_indisponible_verifiez_le_stockage");
     }
 }

@@ -40,7 +40,7 @@ public static class Loc
 
     public static string T(string key) => Lookup(Language, key);
 
-    public static string T(string key, params object[] arguments) => string.Format(CultureInfo.CurrentCulture, Lookup(Language, key), arguments);
+    public static string T(string key, params object?[] arguments) => string.Format(CultureInfo.CurrentCulture, Lookup(Language, key), arguments);
 
     public static string Lookup(string language, string key) =>
         language == English && En.TryGetValue(key, out var english) ? english
@@ -48,6 +48,22 @@ public static class Loc
 
     public static IReadOnlyDictionary<string, string> FrenchTexts => Fr;
     public static IReadOnlyDictionary<string, string> EnglishTexts => En;
+
+    /// <summary>Adds the texts of the embedded files Texts/*.fr.json and Texts/*.en.json (key → text) to the code dictionaries.</summary>
+    private static void LoadEmbedded()
+    {
+        var assembly = typeof(Loc).Assembly;
+        foreach (var resource in assembly.GetManifestResourceNames().Where(n => n.EndsWith(".json", StringComparison.Ordinal)))
+        {
+            var target = resource.EndsWith(".fr.json", StringComparison.Ordinal) ? Fr : resource.EndsWith(".en.json", StringComparison.Ordinal) ? En : null;
+            if (target is null) continue;
+            using var stream = assembly.GetManifestResourceStream(resource)!;
+            var texts = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
+            if (texts is not null) foreach (var (key, text) in texts) target[key] = text;
+        }
+    }
+
+    static Loc() => LoadEmbedded();
 
     private static readonly Dictionary<string, string> Fr = new()
     {

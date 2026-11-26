@@ -8,7 +8,7 @@ internal sealed class CsvWindow : Window
 {
     internal CsvWindow(CsvWorkspace workspace, IdentificationWorkspace identification)
     {
-        Title = $"ORIAS — {workspace.ProjectName}";
+        Title = Loc.T("cs.orias", workspace.ProjectName);
         Width = 1160; Height = 820; MinWidth = 800; MinHeight = 600;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var view = new CsvView(workspace);

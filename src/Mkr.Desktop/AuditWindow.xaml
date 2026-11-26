@@ -1,7 +1,8 @@
 <Window x:Class="Mkr.Desktop.AuditWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ORIAS — Journal d'audit" Width="1100" Height="720" MinWidth="720" MinHeight="460" WindowStartupLocation="CenterOwner">
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="{local:Loc ui.orias_journal_d_audit}" Width="1100" Height="720" MinWidth="720" MinHeight="460" WindowStartupLocation="CenterOwner">
     <Grid Margin="24,18,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -12,37 +13,37 @@
         <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap"
-                       Text="Journal en ajout seul, chaîné par empreintes SHA-256 : une entrée modifiée ou retirée au milieu rompt la chaîne. Il ne protège pas d'une réécriture complète par quelqu'un qui peut tout écrire dans le fichier du projet : notez l'empreinte de tête ailleurs pour le détecter."/>
+                       Text="{local:Loc ui.journal_en_ajout_seul_chaine}"/>
         </Border>
         <DockPanel Grid.Row="1" Margin="0,0,0,8">
             <TextBlock x:Name="Count" DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{DynamicResource MkrMuted}"
                        AutomationProperties.LiveSetting="Polite"/>
-            <Label Content="_Filtrer" Target="{Binding ElementName=Filter}" DockPanel.Dock="Left"/>
+            <Label Content="{local:Loc ui.filtrer}" Target="{Binding ElementName=Filter}" DockPanel.Dock="Left"/>
             <TextBox x:Name="Filter" TextChanged="FilterChanged" Margin="0,0,12,0"
-                     ToolTip="Texte cherché dans l'acteur, l'action, l'objet et le détail"
-                     AutomationProperties.Name="Filtrer les entrées"/>
+                     ToolTip="{local:Loc ui.texte_cherche_dans_l_acteur}"
+                     AutomationProperties.Name="{local:Loc ui.filtrer_les_entrees}"/>
         </DockPanel>
-        <DataGrid x:Name="Entries" Grid.Row="2" RowHeight="NaN" AutomationProperties.Name="Entrées du journal"
+        <DataGrid x:Name="Entries" Grid.Row="2" RowHeight="NaN" AutomationProperties.Name="{local:Loc ui.entrees_du_journal}"
                   HorizontalScrollBarVisibility="Auto" ClipboardCopyMode="IncludeHeader">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="N°" Binding="{Binding Sequence}" Width="56"/>
-                <DataGridTextColumn Header="Date (UTC)" Binding="{Binding At}" Width="150"/>
-                <DataGridTextColumn Header="Acteur" Binding="{Binding Actor}" Width="250">
+                <DataGridTextColumn Header="{local:Loc ui.date_utc}" Binding="{Binding At}" Width="150"/>
+                <DataGridTextColumn Header="{local:Loc ui.acteur}" Binding="{Binding Actor}" Width="250">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="6,6"/></Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="190">
+                <DataGridTextColumn Header="{local:Loc ui.action}" Binding="{Binding Action}" Width="190">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="6,6"/><Setter Property="FontFamily" Value="Consolas"/></Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Objet" Binding="{Binding Subject}" Width="110">
+                <DataGridTextColumn Header="{local:Loc ui.objet}" Binding="{Binding Subject}" Width="110">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="6,6"/></Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Détail" Binding="{Binding Detail}" Width="*" MinWidth="260">
+                <DataGridTextColumn Header="{local:Loc ui.detail}" Binding="{Binding Detail}" Width="*" MinWidth="260">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="6,6"/></Style>
                     </DataGridTextColumn.ElementStyle>
@@ -51,10 +52,10 @@
         </DataGrid>
         <StackPanel Grid.Row="3" Margin="0,12,0,0">
             <WrapPanel>
-                <Button Content="_Vérifier l'intégrité" Click="Verify" Style="{StaticResource MkrPrimaryButton}"/>
-                <Button Content="_Exporter…" Click="Export" Margin="8,0,0,0"
-                        ToolTip="Fichier à conserver hors du projet : vérifiable sans MKR avec scripts/verify-audit-export.py"/>
-                <Button Content="_Fermer" IsCancel="True" Margin="8,0,0,0"/>
+                <Button Content="{local:Loc ui.verifier_l_integrite}" Click="Verify" Style="{StaticResource MkrPrimaryButton}"/>
+                <Button Content="{local:Loc ui.exporter}" Click="Export" Margin="8,0,0,0"
+                        ToolTip="{local:Loc ui.fichier_a_conserver_hors_du}"/>
+                <Button Content="{local:Loc ui.fermer}" IsCancel="True" Margin="8,0,0,0"/>
             </WrapPanel>
             <TextBlock x:Name="VerifyStatus" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
         </StackPanel>

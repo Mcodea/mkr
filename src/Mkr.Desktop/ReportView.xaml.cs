@@ -25,8 +25,8 @@ public partial class ReportView : UserControl, IStepView
         InitializeComponent();
         _workspace = workspace;
         _model = model;
-        Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
-        Subject.Text = $"Étude : {StudyNameConverter.Name(model)}";
+        Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? Loc.T("cs.survolez_le_graphique_pour_lire") : text;
+        Subject.Text = Loc.T("cs.etude", StudyNameConverter.Name(model));
         try
         {
             _tuning = workspace.PiStudies(model.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
@@ -84,22 +84,22 @@ public partial class ReportView : UserControl, IStepView
         Checklist.Children.Clear();
         const string ok = "", no = "", warn = "";
         Checklist.Children.Add(Line(accepted ? ok : no, accepted ? "MkrSuccess" : "MkrDanger",
-            accepted ? "Modèle accepté à la validation indépendante (essai distinct de l'estimation)." : "Modèle non accepté : aucun réglage ni simulation n'en est déduit."));
+            accepted ? Loc.T("cs.modele_accepte_a_la_validation") : Loc.T("cs.modele_non_accepte_aucun_reglage")));
         Checklist.Children.Add(Line(_tuning is not null ? ok : warn, _tuning is not null ? "MkrSuccess" : "MkrWarning",
-            _tuning is not null ? "Réglage PI calculé (Lambda et SIMC) et enregistré." : "Aucun réglage PI enregistré : calculez-le à l'étape Réglage."));
+            _tuning is not null ? Loc.T("cs.reglage_pi_calcule_lambda_et") : Loc.T("cs.aucun_reglage_pi_enregistre_calculez")));
         Checklist.Children.Add(Line(_simulation is not null ? ok : warn, _simulation is not null ? "MkrSuccess" : "MkrWarning",
-            _simulation is not null ? "Simulation en boucle fermée enregistrée sur le modèle identifié." : "Aucune simulation enregistrée : lancez-la à l'étape Simulation."));
+            _simulation is not null ? Loc.T("cs.simulation_en_boucle_fermee_enregistree") : Loc.T("cs.aucune_simulation_enregistree_lancez_la")));
         var margins = _tuning?.Result.Simc.Margins;
         if (margins is not null)
             Checklist.Children.Add(Line(margins.Warnings.Length == 0 ? ok : warn, margins.Warnings.Length == 0 ? "MkrSuccess" : "MkrWarning",
-                "Marges de la boucle nominale (SIMC) : " + margins.Describe() + "."));
+                Loc.T("cs.marges_de_la_boucle_nominale") + margins.Describe() + "."));
         else if (_tuning is not null)
-            Checklist.Children.Add(Line(warn, "MkrWarning", "Marges de stabilité non enregistrées pour ce réglage (étude antérieure à leur calcul)."));
-        Checklist.Children.Add(Line("", "MkrMuted", "Résultats théoriques sur le modèle identifié : à qualifier sur l'installation. MKR n'écrit jamais dans l'automate."));
+            Checklist.Children.Add(Line(warn, "MkrWarning", Loc.T("cs.marges_de_stabilite_non_enregistrees")));
+        Checklist.Children.Add(Line("", "MkrMuted", Loc.T("cs.resultats_theoriques_sur_le_modele")));
 
         // final parameters
         Shape(ParameterGrid, 3, 1.4, 1, 1, 1);
-        string[] heads = ["Méthode", $"Kp ({_model.MvUnit}/{_model.PvUnit})", "Ti (s)", "Ki parallèle"];
+        string[] heads = ["Méthode", $"Kp ({_model.MvUnit}/{_model.PvUnit})", "Ti (s)", Loc.T("cs.ki_parallele")];
         for (var c = 0; c < heads.Length; c++) ParameterGrid.Children.Add(Cell(heads[c], 0, c, header: true));
         if (_tuning is { } tuning)
         {
@@ -110,15 +110,15 @@ public partial class ReportView : UserControl, IStepView
                 ParameterGrid.Children.Add(Cell(F(pi.TiSeconds), row, 2));
                 ParameterGrid.Children.Add(Cell(F(pi.ParallelKi), row, 3));
             }
-            Row(1, "Lambda (Dahlin)", tuning.Result.Imc);
+            Row(1, Loc.T("cs.lambda_dahlin"), tuning.Result.Imc);
             Row(2, "SIMC", tuning.Result.Simc);
-            ParameterNote.Text = $"Cible de boucle fermée τc = {F(tuning.Result.ResponseSeconds)} s. Bloc constructeur : valeurs documentaires non qualifiées, à demander dans l'étape Bloc ; le réglage actuellement en service n'est pas une donnée de MKR, aucune comparaison « actuel / proposé » n'est donc affichée.";
+            ParameterNote.Text = Loc.T("cs.cible_de_boucle_fermee_c", F(tuning.Result.ResponseSeconds));
         }
-        else ParameterNote.Text = "Aucun réglage enregistré.";
+        else ParameterNote.Text = Loc.T("cs.aucun_reglage_enregistre");
 
         // indicators
         Shape(IndicatorGrid, 3, 1.3, 1, 1, 1, 1);
-        string[] indicators = ["Méthode", $"IAE ({_model.PvUnit}·s)", $"Dépassement ({_model.PvUnit})", "Réponse ±5 % (s)", "Marge de phase (°)"];
+        string[] indicators = ["Méthode", Loc.T("cs.iae_s", _model.PvUnit), Loc.T("cs.depassement_2", _model.PvUnit), Loc.T("cs.reponse_5_s"), Loc.T("cs.marge_de_phase")];
         for (var c = 0; c < indicators.Length; c++) IndicatorGrid.Children.Add(Cell(indicators[c], 0, c, header: true));
         var unavailable = false;
         string N(double? value, string format = "G4") { if (value is null) { unavailable = true; return "—"; } return F(value, format); }
@@ -132,18 +132,18 @@ public partial class ReportView : UserControl, IStepView
                 IndicatorGrid.Children.Add(Cell(N(run.SetpointResponse?.SettlingSeconds), row, 3));
                 IndicatorGrid.Children.Add(Cell(N(pi.Margins?.PhaseMarginDegrees, "F1"), row, 4));
             }
-            Row(1, "Lambda (Dahlin)", sim.Result.Imc, t2.Result.Imc);
+            Row(1, Loc.T("cs.lambda_dahlin"), sim.Result.Imc, t2.Result.Imc);
             Row(2, "SIMC", sim.Result.Simc, t2.Result.Simc);
-            IndicatorNote.Text = (unavailable ? "— : indicateur non disponible (seuil non franchi dans la fenêtre simulée, ou marge non enregistrée pour ce réglage). " : "") +
-                $"Saturation de la commande : Lambda {F(sim.Result.Imc.SaturationSeconds)} s, SIMC {F(sim.Result.Simc.SaturationSeconds)} s. Aucun critère d'acceptation n'est saisi : MKR ne déclare pas d'objectif « atteint ».";
+            IndicatorNote.Text = (unavailable ? Loc.T("cs.indicateur_non_disponible_seuil_non") : "") +
+                Loc.T("cs.saturation_de_la_commande_lambda", F(sim.Result.Imc.SaturationSeconds), F(sim.Result.Simc.SaturationSeconds));
         }
-        else IndicatorNote.Text = "Indicateurs indisponibles : aucune simulation enregistrée.";
+        else IndicatorNote.Text = Loc.T("cs.indicateurs_indisponibles_aucune_simulation_enregistree");
 
         var limits = new List<string>();
-        limits.AddRange(_model.Result.Warnings.Select(code => "Modèle : " + code));
-        if (_tuning is not null) limits.AddRange(_tuning.Result.Warnings.Select(code => "Réglage : " + code));
-        if (_simulation is not null) limits.AddRange(_simulation.Result.Warnings.Select(code => "Simulation : " + code));
-        limits.Add("Simulation sur modèle nominal, sans qualification industrielle : limites et vitesse de l'actionneur, bruit et non-linéarités du procédé réel à vérifier sur installation.");
+        limits.AddRange(_model.Result.Warnings.Select(code => Loc.T("cs.modele") + code));
+        if (_tuning is not null) limits.AddRange(_tuning.Result.Warnings.Select(code => Loc.T("cs.reglage") + code));
+        if (_simulation is not null) limits.AddRange(_simulation.Result.Warnings.Select(code => Loc.T("cs.simulation") + code));
+        limits.Add(Loc.T("cs.simulation_sur_modele_nominal_sans"));
         Limits.Text = string.Join("\n", limits.Select(line => "· " + line));
 
         ExportButton.IsEnabled = _simulation is not null && _tuning is not null;
@@ -156,25 +156,25 @@ public partial class ReportView : UserControl, IStepView
         {
             Chart.SetTracks(Array.Empty<ChartTrack>());
             Empty.Visibility = Visibility.Visible;
-            Empty.Text = "Aucune simulation enregistrée pour cette étude. Le graphique de comparaison apparaît dès qu'une simulation est enregistrée à l'étape Simulation.";
+            Empty.Text = Loc.T("cs.aucune_simulation_enregistree_pour_cette");
             return;
         }
         Empty.Visibility = Visibility.Collapsed;
         var imc = study.Result.Imc.Points;
         var simc = study.Result.Simc.Points;
         var seconds = imc.Select(p => p.Seconds).ToArray();
-        Chart.XLabel = "Temps depuis le début du scénario (s)";
+        Chart.XLabel = Loc.T("cs.temps_depuis_le_debut_du");
         Chart.SetTracks(new[]
         {
-            new ChartTrack("Comparaison des réponses – Lambda et SIMC", _model.PvUnit, new[]
+            new ChartTrack(Loc.T("cs.comparaison_des_reponses_lambda_et"), _model.PvUnit, new[]
             {
                 new ChartSeries("Consigne", "MkrSignal3", new[] { seconds[0], seconds[^1] }, new[] { study.Scenario.Setpoint, study.Scenario.Setpoint }),
-                new ChartSeries("Mesure Lambda (Dahlin)", "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
-                new ChartSeries("Mesure SIMC", "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
-            }) { Weight = 2, YLabel = $"Mesure ({_model.PvUnit})" },
-            new ChartTrack("Commande appliquée (écart)", _model.MvUnit, new[]
+                new ChartSeries(Loc.T("cs.mesure_lambda_dahlin"), "MkrSignal1", seconds, imc.Select(p => p.Pv).ToArray()),
+                new ChartSeries(Loc.T("cs.mesure_simc"), "MkrSignal2", simc.Select(p => p.Seconds).ToArray(), simc.Select(p => p.Pv).ToArray())
+            }) { Weight = 2, YLabel = Loc.T("cs.mesure", _model.PvUnit) },
+            new ChartTrack(Loc.T("cs.commande_appliquee_ecart"), _model.MvUnit, new[]
             {
-                new ChartSeries("Lambda (Dahlin)", "MkrSignal1", imc.Where(p => p.Mv.HasValue).Select(p => p.Seconds).ToArray(), imc.Where(p => p.Mv.HasValue).Select(p => p.Mv!.Value).ToArray()),
+                new ChartSeries(Loc.T("cs.lambda_dahlin"), "MkrSignal1", imc.Where(p => p.Mv.HasValue).Select(p => p.Seconds).ToArray(), imc.Where(p => p.Mv.HasValue).Select(p => p.Mv!.Value).ToArray()),
                 new ChartSeries("SIMC", "MkrSignal2", simc.Where(p => p.Mv.HasValue).Select(p => p.Seconds).ToArray(), simc.Where(p => p.Mv.HasValue).Select(p => p.Mv!.Value).ToArray())
             }) { YLabel = $"MV ({_model.MvUnit})" }
         });
@@ -189,17 +189,17 @@ public partial class ReportView : UserControl, IStepView
     private void ExportSheet(object sender, RoutedEventArgs args)
     {
         if (_simulation is not { } simulation || _tuning is not { } tuning) return;
-        var dialog = new SaveFileDialog { Title = "Exporter la fiche d'étude", FileName = $"MKR-{simulation.Id:N}.pdf", Filter = "PDF (*.pdf)|*.pdf" };
+        var dialog = new SaveFileDialog { Title = Loc.T("cs.exporter_la_fiche_d_etude"), FileName = $"MKR-{simulation.Id:N}.pdf", Filter = Loc.T("cs.pdf_pdf_pdf") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try
         {
             _workspace.ExportSheet(dialog.FileName, _model, tuning, simulation);
-            Message.Text = "Fiche d'étude exportée.";
+            Message.Text = Loc.T("cs.fiche_d_etude_exportee");
         }
         catch (Exception error)
         {
             Trace.TraceError("report.export {0}", error.GetType().Name);
-            Message.Text = "Export PDF impossible. Vérifiez le dossier de destination et le journal MKR.";
+            Message.Text = Loc.T("cs.export_pdf_impossible_verifiez_le");
         }
     }
 }

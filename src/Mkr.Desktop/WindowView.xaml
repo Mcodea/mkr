@@ -1,4 +1,4 @@
-<Window x:Class="Mkr.Desktop.WindowView" Title="ORIAS — Espace projets" KeyDown="WindowKeyDown"
+<Window x:Class="Mkr.Desktop.WindowView" Title="{local:Loc ui.orias_espace_projets}" KeyDown="WindowKeyDown"
         AutomationProperties.Name="{Binding Title, RelativeSource={RelativeSource Self}}"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -106,9 +106,9 @@
     <Border x:Name="CaptionBar" Grid.Row="0" Height="30" Background="{DynamicResource MkrTitleBar}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,0,0,1">
         <DockPanel LastChildFill="True">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMinimize" ToolTip="Réduire la fenêtre" AutomationProperties.Name="Minimiser la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True" ><TextBlock x:Name="MinimizeGlyph" Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMaximize" ToolTip="Agrandir ou restaurer" AutomationProperties.Name="Maximiser ou restaurer la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True"><TextBlock x:Name="MaximizeGlyph" Text="&#xE923;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
-                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionClose" ToolTip="Fermer la fenêtre" AutomationProperties.Name="Fermer la fenêtre" WindowChrome.IsHitTestVisibleInChrome="True" Tag="close"><TextBlock x:Name="CloseGlyph" Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMinimize" ToolTip="{local:Loc ui.reduire_la_fenetre}" AutomationProperties.Name="{local:Loc ui.minimiser_la_fenetre}" WindowChrome.IsHitTestVisibleInChrome="True" ><TextBlock x:Name="MinimizeGlyph" Text="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionMaximize" ToolTip="{local:Loc ui.agrandir_ou_restaurer}" AutomationProperties.Name="{local:Loc ui.maximiser_ou_restaurer_la_fenetre}" WindowChrome.IsHitTestVisibleInChrome="True"><TextBlock x:Name="MaximizeGlyph" Text="&#xE923;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
+                <Button Style="{StaticResource MkrCaptionButton}" Click="CaptionClose" ToolTip="{local:Loc ui.fermer_la_fenetre}" AutomationProperties.Name="{local:Loc ui.fermer_la_fenetre}" WindowChrome.IsHitTestVisibleInChrome="True" Tag="close"><TextBlock x:Name="CloseGlyph" Text="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"/></Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
                 <Image Source="{DynamicResource OriasSymbol}" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -125,36 +125,36 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <!-- Barre de menus -->
-        <Menu Grid.Row="0" Background="{DynamicResource MkrSurface}" Foreground="{DynamicResource MkrText}" Padding="4,2" AutomationProperties.Name="Menus">
-            <MenuItem Header="_Fichier">
-                <MenuItem Header="_Nouveau projet…" Click="MenuNewProject"/>
-                <MenuItem Header="_Accueil (liste des projets)" Click="MenuHome"/>
+        <Menu Grid.Row="0" Background="{DynamicResource MkrSurface}" Foreground="{DynamicResource MkrText}" Padding="4,2" AutomationProperties.Name="{local:Loc ui.menus}">
+            <MenuItem Header="{local:Loc ui.fichier}">
+                <MenuItem Header="{local:Loc ui.nouveau_projet}" Click="MenuNewProject"/>
+                <MenuItem Header="{local:Loc ui.accueil_liste_des_projets}" Click="MenuHome"/>
                 <Separator/>
-                <MenuItem Header="_Quitter" Click="MenuQuit"/>
+                <MenuItem Header="{local:Loc ui.quitter}" Click="MenuQuit"/>
             </MenuItem>
-            <MenuItem Header="_Affichage">
-                <MenuItem x:Name="MenuAssisted" Header="Mode _assisté" IsCheckable="True" IsChecked="True" Click="MenuMode"/>
-                <MenuItem x:Name="MenuExpert" Header="Mode _expert" IsCheckable="True" Click="MenuMode"/>
+            <MenuItem Header="{local:Loc ui.affichage}">
+                <MenuItem x:Name="MenuAssisted" Header="{local:Loc ui.mode_assiste}" IsCheckable="True" IsChecked="True" Click="MenuMode"/>
+                <MenuItem x:Name="MenuExpert" Header="{local:Loc ui.mode_expert}" IsCheckable="True" Click="MenuMode"/>
                 <Separator/>
-                <MenuItem x:Name="MenuThemeSystem" Header="Thème : suivre _Windows" IsCheckable="True" Click="MenuTheme" Tag="System"/>
-                <MenuItem x:Name="MenuThemeLight" Header="Thème : _clair" IsCheckable="True" Click="MenuTheme" Tag="Light"/>
-                <MenuItem x:Name="MenuThemeDark" Header="Thème : _sombre" IsCheckable="True" Click="MenuTheme" Tag="Dark"/>
+                <MenuItem x:Name="MenuThemeSystem" Header="{local:Loc ui.theme_suivre_windows}" IsCheckable="True" Click="MenuTheme" Tag="System"/>
+                <MenuItem x:Name="MenuThemeLight" Header="{local:Loc ui.theme_clair}" IsCheckable="True" Click="MenuTheme" Tag="Light"/>
+                <MenuItem x:Name="MenuThemeDark" Header="{local:Loc ui.theme_sombre}" IsCheckable="True" Click="MenuTheme" Tag="Dark"/>
                 <Separator/>
-                <MenuItem Header="Langue : _français" Click="MenuLanguage" Tag="fr"/>
-                <MenuItem Header="Language: _English" Click="MenuLanguage" Tag="en"/>
+                <MenuItem Header="{local:Loc ui.langue_francais}" Click="MenuLanguage" Tag="fr"/>
+                <MenuItem Header="{local:Loc ui.language_english}" Click="MenuLanguage" Tag="en"/>
             </MenuItem>
-            <MenuItem Header="_Projet">
-                <MenuItem Header="_Description de la boucle" Click="MenuDescription"/>
-                <MenuItem Header="_Journal d'audit" Click="MenuAudit"/>
-                <MenuItem Header="_Revue de l'étude" Click="MenuReview"/>
+            <MenuItem Header="{local:Loc ui.projet}">
+                <MenuItem Header="{local:Loc ui.description_de_la_boucle}" Click="MenuDescription"/>
+                <MenuItem Header="{local:Loc ui.journal_d_audit_2}" Click="MenuAudit"/>
+                <MenuItem Header="{local:Loc ui.revue_de_l_etude_2}" Click="MenuReview"/>
             </MenuItem>
-            <MenuItem Header="_Outils">
-                <MenuItem Header="_Catalogue des blocs constructeurs" Click="OpenCatalogue"/>
-                <MenuItem Header="_Vérifier le moteur Python" Command="{Binding CheckEngine}"/>
+            <MenuItem Header="{local:Loc ui.outils}">
+                <MenuItem Header="{local:Loc ui.catalogue_des_blocs_constructeurs}" Click="OpenCatalogue"/>
+                <MenuItem Header="{local:Loc ui.verifier_le_moteur_python}" Command="{Binding CheckEngine}"/>
             </MenuItem>
-            <MenuItem Header="Ai_de">
-                <MenuItem Header="Aide et _vocabulaire (F1)" Click="OpenHelp"/>
-                <MenuItem Header="À _propos d’ORIAS" Click="OpenAbout"/>
+            <MenuItem Header="{local:Loc ui.aide}">
+                <MenuItem Header="{local:Loc ui.aide_et_vocabulaire_f1}" Click="OpenHelp"/>
+                <MenuItem Header="{local:Loc ui.a_propos_dorias}" Click="OpenAbout"/>
             </MenuItem>
         </Menu>
         <!-- Barre d'outils : accès direct aux grandes étapes -->
@@ -171,12 +171,12 @@
                     <Border Width="1" Background="{DynamicResource MkrBorder}" Margin="18,2,18,2"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock AutomationProperties.Name="Projet actif" AutomationProperties.LiveSetting="Polite"><Run Text="Projet : " FontWeight="SemiBold"/><Run x:Name="ActiveProject" Text="aucun projet sélectionné"/></TextBlock>
+                    <TextBlock AutomationProperties.Name="{local:Loc ui.projet_actif}" AutomationProperties.LiveSetting="Polite"><Run Text="{local:Loc ui.projet_2}" FontWeight="SemiBold"/><Run x:Name="ActiveProject" Text="{local:Loc ui.aucun_projet_selectionne}"/></TextBlock>
                     <TextBlock x:Name="ActiveStudy" Foreground="{DynamicResource MkrMuted}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Border Grid.Column="2" Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="6" Padding="10,4" VerticalAlignment="Center"
-                        ToolTip="ORIAS lit les données de l’automate et n’y écrit jamais." AutomationProperties.Name="Automate : lecture seule">
-                    <TextBlock Text="Automate : lecture seule" FontSize="12"/>
+                        ToolTip="{local:Loc ui.orias_lit_les_donnees_de}" AutomationProperties.Name="{local:Loc ui.automate_lecture_seule}">
+                    <TextBlock Text="{local:Loc ui.automate_lecture_seule}" FontSize="12"/>
                 </Border>
             </Grid>
         </Border>
@@ -192,21 +192,21 @@
                 <StackPanel>
                     <Image Source="{DynamicResource OriasLogo}" Height="46" HorizontalAlignment="Left" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="ORIAS"/>
                     <TextBlock x:Name="HomeTagline" Foreground="{DynamicResource MkrAccent}" FontSize="13" FontWeight="SemiBold" Margin="0,6,0,10"/>
-                    <TextBlock Text="Mes projets" FontWeight="SemiBold" FontSize="26"/>
-                    <TextBlock Text="Créez ou sélectionnez un projet, puis ouvrez son espace d'étude." Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    <TextBlock Text="{local:Loc ui.mes_projets}" FontWeight="SemiBold" FontSize="26"/>
+                    <TextBlock Text="{local:Loc ui.creez_ou_selectionnez_un_projet}" Foreground="{DynamicResource MkrMuted}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="HomeCatalogue" Content="_Catalogue des blocs" Click="OpenCatalogue" Margin="0,0,8,0" AutomationProperties.Name="Ouvrir le catalogue des blocs"/>
-                    <Button x:Name="OpenStudy" Style="{StaticResource MkrPrimaryButton}" Content="Ouvrir l'_espace d'étude" Click="EnterStudy" IsEnabled="False"
-                            AutomationProperties.Name="Ouvrir l'espace d'étude" ToolTip="Sélectionnez d'abord un projet dans la liste"/>
+                    <Button x:Name="HomeCatalogue" Content="{local:Loc ui.catalogue_des_blocs_2}" Click="OpenCatalogue" Margin="0,0,8,0" AutomationProperties.Name="{local:Loc ui.ouvrir_le_catalogue_des_blocs}"/>
+                    <Button x:Name="OpenStudy" Style="{StaticResource MkrPrimaryButton}" Content="{local:Loc ui.ouvrir_l_espace_d_etude}" Click="EnterStudy" IsEnabled="False"
+                            AutomationProperties.Name="{local:Loc ui.ouvrir_l_espace_d_etude_2}" ToolTip="{local:Loc ui.selectionnez_d_abord_un_projet}"/>
                 </StackPanel>
             </Grid>
             <Border Grid.Row="1" Background="{DynamicResource MkrSurface}"
                     BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" CornerRadius="8"
                     Padding="14" Margin="0,0,0,14">
                 <StackPanel>
-                    <TextBlock Text="Nouveau projet" FontWeight="SemiBold" FontSize="16"/>
-                    <TextBlock Text="Donnez un nom explicite à votre étude."
+                    <TextBlock Text="{local:Loc ui.nouveau_projet_2}" FontWeight="SemiBold" FontSize="16"/>
+                    <TextBlock Text="{local:Loc ui.donnez_un_nom_explicite_a}"
                                Foreground="{DynamicResource MkrMuted}" Margin="0,5,0,12"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -214,16 +214,16 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel>
-                            <Label Content="_Nom du projet" Target="{Binding ElementName=ProjectName}"
+                            <Label Content="{local:Loc ui.nom_du_projet}" Target="{Binding ElementName=ProjectName}"
                                    Padding="0" Margin="0,0,0,4" FontWeight="SemiBold"/>
                             <TextBox x:Name="ProjectName" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                     MaxLength="120" AutomationProperties.Name="Nom du nouveau projet"
-                                     ToolTip="Nom du projet (120 caractères maximum)"/>
+                                     MaxLength="120" AutomationProperties.Name="{local:Loc ui.nom_du_nouveau_projet}"
+                                     ToolTip="{local:Loc ui.nom_du_projet_120_caracteres}"/>
                         </StackPanel>
                         <Button Grid.Column="1" Style="{StaticResource MkrPrimaryButton}"
-                                Content="_Créer le projet" Command="{Binding CreateProject}"
+                                Content="{local:Loc ui.creer_le_projet}" Command="{Binding CreateProject}"
                                 VerticalAlignment="Bottom" Margin="12,0,0,0"
-                                AutomationProperties.Name="Créer le projet"/>
+                                AutomationProperties.Name="{local:Loc ui.creer_le_projet_2}"/>
                     </Grid>
                 </StackPanel>
             </Border>
@@ -237,20 +237,20 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Projets enregistrés" FontSize="16" FontWeight="SemiBold"/>
-                        <TextBlock Text="Sélectionnez une ligne, puis ouvrez le projet."
+                        <TextBlock Text="{local:Loc ui.projets_enregistres}" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="{local:Loc ui.selectionnez_une_ligne_puis_ouvrez}"
                                    Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0"/>
                     </StackPanel>
                     <DataGrid x:Name="ProjectList" Grid.Row="1" SelectionChanged="ProjectSelected" MouseDoubleClick="OpenProject"
                               ItemsSource="{Binding Projects}"
                               AlternationCount="2"
                               AlternatingRowBackground="{DynamicResource MkrCanvas}"
-                              AutomationProperties.Name="Projets enregistrés"
+                              AutomationProperties.Name="{local:Loc ui.projets_enregistres}"
                               SelectionMode="Single" IsReadOnly="True" CanUserAddRows="False"
                               AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Projet" Binding="{Binding Name}" Width="*"/>
-                            <DataGridTextColumn Header="Création (UTC)"
+                            <DataGridTextColumn Header="{local:Loc ui.projet_3}" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="{local:Loc ui.creation_utc}"
                                                 Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm:ss}"
                                                 Width="165"/>
                         </DataGrid.Columns>
@@ -260,12 +260,12 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Les projets sont enregistrés localement."
+                        <TextBlock Text="{local:Loc ui.les_projets_sont_enregistres_localement}"
                                    Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center"
                                    TextWrapping="Wrap" Margin="0,0,10,0"/>
                         <Button Grid.Column="1" Style="{StaticResource MkrPrimaryButton}"
-                                Content="_Ouvrir le projet sélectionné" Click="OpenProject"
-                                AutomationProperties.Name="Ouvrir le projet sélectionné"/>
+                                Content="{local:Loc ui.ouvrir_le_projet_selectionne}" Click="OpenProject"
+                                AutomationProperties.Name="{local:Loc ui.ouvrir_le_projet_selectionne_2}"/>
                     </Grid>
                 </Grid>
             </Border>
@@ -316,22 +316,22 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <RadioButton x:Name="ShowTraining" Content="Essai d'estimation" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
-                            <RadioButton x:Name="ShowValidation" Content="Essai de validation" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                            <RadioButton x:Name="ShowTraining" Content="{local:Loc ui.essai_d_estimation}" GroupName="Trial" IsChecked="True" Checked="TrialChanged" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                            <RadioButton x:Name="ShowValidation" Content="{local:Loc ui.essai_de_validation}" GroupName="Trial" Checked="TrialChanged" Margin="0,0,20,0" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" ReferenceStyle="True" ShowValueBoxes="False" AutomationProperties.Name="Mesure observée et modèle, sortie de commande, en fonction du temps"
-                            AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
-                        <TextBlock x:Name="CursorText" Grid.Row="2" Text="Survolez le graphique pour lire les valeurs au curseur." Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                        <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="260" ReferenceStyle="True" ShowValueBoxes="False" AutomationProperties.Name="{local:Loc ui.mesure_observee_et_modele_sortie}"
+                            AutomationProperties.HelpText="{local:Loc ui.molette_zoom_clic_droit_glisse}"/>
+                        <TextBlock x:Name="CursorText" Grid.Row="2" Text="{local:Loc ui.survolez_le_graphique_pour_lire}" Foreground="{DynamicResource MkrMuted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                     </Grid>
                     <ScrollViewer x:Name="ValuesPanel" Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="0,8,10,6">
                         <StackPanel>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Validation du modèle">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.validation_du_modele}">
                                 <StackPanel Margin="10,8">
                                     <Border x:Name="Verdict" CornerRadius="3" Padding="10,5" Margin="0,0,0,8" Background="{DynamicResource MkrBorderStrong}">
-                                        <TextBlock x:Name="VerdictText" Text="AUCUNE ÉTUDE" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
+                                        <TextBlock x:Name="VerdictText" Text="{local:Loc ui.aucune_etude}" FontWeight="Bold" Foreground="{DynamicResource MkrOnStatus}"/>
                                     </Border>
-                                    <Label Content="É_tude affichée" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
-                                    <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" AutomationProperties.Name="Étude affichée">
+                                    <Label Content="{local:Loc ui.etude_affichee}" Target="{Binding ElementName=StudyPicker}" Padding="0,0,0,2"/>
+                                    <ComboBox x:Name="StudyPicker" DisplayMemberPath="Label" SelectionChanged="PickerChanged" AutomationProperties.Name="{local:Loc ui.etude_affichee_2}">
                                         <ComboBox.ItemContainerStyle>
                                             <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                                                 <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}"/>
@@ -341,10 +341,10 @@
                                     <TextBlock x:Name="ValuesNote" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du modèle">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.parametres_du_modele}">
                                 <TextBlock x:Name="ValuesText" TextWrapping="Wrap" Margin="10,8" LineHeight="22"/>
                             </Expander>
-                            <Expander Style="{StaticResource MkrPanel}" Header="Projet">
+                            <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.projet_3}">
                                 <TextBlock x:Name="InspectorFacts" TextWrapping="Wrap" Margin="10,8" Foreground="{DynamicResource MkrMuted}"/>
                             </Expander>
                         </StackPanel>
@@ -355,17 +355,17 @@
                 <Border x:Name="StudyTablePanel" Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="0,1,0,0">
                     <Grid Margin="10,6,10,6">
                         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                        <Button x:Name="TableToggle" Content="▸ Tableau des études d'identification" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"
-                                AutomationProperties.Name="Afficher ou masquer le tableau des études"/>
-                        <DataGrid x:Name="StudyGrid" Grid.Row="1" Height="130" Visibility="Collapsed" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="Études d'identification du projet">
+                        <Button x:Name="TableToggle" Content="{local:Loc ui.tableau_des_etudes_d_identification}" Click="ToggleTable" HorizontalAlignment="Left" Margin="0,0,0,4" Padding="8,3"
+                                AutomationProperties.Name="{local:Loc ui.afficher_ou_masquer_le_tableau}"/>
+                        <DataGrid x:Name="StudyGrid" Grid.Row="1" Height="130" Visibility="Collapsed" RowHeight="26" ColumnHeaderHeight="26" SelectionChanged="StudySelected" AutomationProperties.Name="{local:Loc ui.etudes_d_identification_du_projet}">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Famille" Binding="{Binding Family}" Width="90"/>
-                                <DataGridTextColumn Header="Gain K" Binding="{Binding Gain}" Width="*"/>
-                                <DataGridTextColumn Header="Constante τ (s)" Binding="{Binding Tau}" Width="*"/>
-                                <DataGridTextColumn Header="Retard θ (s)" Binding="{Binding Delay}" Width="*"/>
-                                <DataGridTextColumn Header="Erreur de validation" Binding="{Binding Error}" Width="*"/>
-                                <DataGridTextColumn Header="Décision" Binding="{Binding Decision}" Width="110"/>
-                                <DataGridTextColumn Header="Calculée" Binding="{Binding When}" Width="130"/>
+                                <DataGridTextColumn Header="{local:Loc ui.famille}" Binding="{Binding Family}" Width="90"/>
+                                <DataGridTextColumn Header="{local:Loc ui.gain_k}" Binding="{Binding Gain}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.constante_s}" Binding="{Binding Tau}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.retard_s}" Binding="{Binding Delay}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.erreur_de_validation}" Binding="{Binding Error}" Width="*"/>
+                                <DataGridTextColumn Header="{local:Loc ui.decision}" Binding="{Binding Decision}" Width="110"/>
+                                <DataGridTextColumn Header="{local:Loc ui.calculee}" Binding="{Binding When}" Width="130"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -384,7 +384,7 @@
                 </StackPanel>
                 <TextBlock x:Name="StatusFacts" Grid.Column="1" Margin="22,0,12,0" VerticalAlignment="Center" Foreground="{DynamicResource MkrMuted}" TextTrimming="CharacterEllipsis"/>
                 <Button x:Name="NextButton" Grid.Column="2" Style="{StaticResource MkrPrimaryButton}" Click="GoToNext" Visibility="Collapsed" MinHeight="32" Padding="16,4"
-                        AutomationProperties.Name="Aller à la prochaine étape"/>
+                        AutomationProperties.Name="{local:Loc ui.aller_a_la_prochaine_etape}"/>
                 <TextBlock Grid.Column="3" x:Name="VersionText" Foreground="{DynamicResource MkrMuted}" FontSize="11" VerticalAlignment="Center" Margin="14,0,0,0"/>
             </Grid>
         </Border>

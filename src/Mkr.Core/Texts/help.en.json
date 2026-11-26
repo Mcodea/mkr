@@ -1,0 +1,6 @@
+{
+ "help.path": "1. Create a project and describe the loop (tag, controlled quantity, operating point, objective). 2. Import a CSV or acquire data from the PLC (read-only). 3. Identify the process: a validation on independent data is mandatory before any tuning. 4. Tune, simulate, then prepare the values of your PLC block.",
+ "help.safety": "ORIAS reads the PLC and never writes to it. The values prepared for a PID block stay “not qualified”: they must be tried on a bench or in simulation before any commissioning. ORIAS is not declared industrially qualified.",
+ "help.shortcuts": "F1: this help. Alt + underlined letter: activate a command. Double-click on a project: open it. Everything can be used with the keyboard (Tab, Shift+Tab).",
+ "help.vocabulary": "Setpoint (SP): the target value. Measurement (PV): the value read on the process. Control output (MV): the control applied to the process. Calculated control (CV): the control requested before limiting. Disturbance: an input the controller does not command."
+}

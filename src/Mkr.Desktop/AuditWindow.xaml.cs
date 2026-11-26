@@ -1,3 +1,4 @@
+using Mkr.Core;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +32,7 @@ public partial class AuditWindow : Window
     private void Load()
     {
         _rows = _workspace.AuditEntries()
-            .Select(e => new Row(e.Sequence, e.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) + "Z",
+            .Select(e => new Row(e.Sequence, e.At.UtcDateTime.ToString(Loc.T("cs.yyyy_mm_dd_hh_mm"), System.Globalization.CultureInfo.InvariantCulture) + "Z",
                 e.Actor, e.Action, e.Subject, e.Detail))
             .ToList();
         ApplyFilter();
@@ -42,8 +43,8 @@ public partial class AuditWindow : Window
         var needle = Filter.Text.Trim();
         var shown = needle.Length == 0 ? _rows : _rows.Where(r => r.Matches(needle)).ToList();
         Entries.ItemsSource = shown;
-        Count.Text = _rows.Count == 0 ? "Aucune entrée pour ce projet."
-            : needle.Length == 0 ? $"{_rows.Count} entrée(s)" : $"{shown.Count} entrée(s) sur {_rows.Count}";
+        Count.Text = _rows.Count == 0 ? Loc.T("cs.aucune_entree_pour_ce_projet")
+            : needle.Length == 0 ? Loc.T("cs.entree_s", _rows.Count) : Loc.T("cs.entree_s_sur", shown.Count, _rows.Count);
     }
 
     private void FilterChanged(object sender, TextChangedEventArgs args) => ApplyFilter();
@@ -52,18 +53,18 @@ public partial class AuditWindow : Window
     {
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title = "Exporter le journal d'audit", Filter = "Journal d'audit (*.jsonl)|*.jsonl", DefaultExt = ".jsonl",
+            Title = Loc.T("cs.exporter_le_journal_d_audit"), Filter = Loc.T("cs.journal_d_audit_jsonl_jsonl"), DefaultExt = ".jsonl",
             FileName = $"journal-audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl"
         };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
             var result = _workspace.ExportAudit(dialog.FileName);
-            VerifyStatus.Text = $"Journal exporté : {result.Entries} entrée(s). Empreinte de tête à noter : {result.HeadHash}" +
-                (result.Intact ? "" : " — ATTENTION : la chaîne était rompue au moment de l'export.");
+            VerifyStatus.Text = Loc.T("cs.journal_exporte_entree_s_empreinte", result.Entries, result.HeadHash) +
+                (result.Intact ? "" : Loc.T("cs.attention_la_chaine_etait_rompue"));
             Load();
         }
-        catch (Exception error) { VerifyStatus.Text = "Export impossible : " + error.Message; }
+        catch (Exception error) { VerifyStatus.Text = Loc.T("cs.export_impossible") + error.Message; }
     }
 
     private void Verify(object sender, RoutedEventArgs args)
@@ -73,11 +74,11 @@ public partial class AuditWindow : Window
             var result = _workspace.VerifyAudit();
             VerifyStatus.Text = result switch
             {
-                null => "Journal indisponible pour ce stockage.",
-                { Intact: true } r => $"Chaîne intacte : {r.Entries} entrée(s). Empreinte de tête : {r.HeadHash}",
-                var r => $"CHAÎNE ROMPUE à l'entrée {r!.FirstBrokenSequence} sur {r.Entries} : une entrée a été modifiée ou retirée."
+                null => Loc.T("cs.journal_indisponible_pour_ce_stockage"),
+                { Intact: true } r => Loc.T("cs.chaine_intacte_entree_s_empreinte", r.Entries, r.HeadHash),
+                var r => Loc.T("cs.chaine_rompue_a_l_entree", r!.FirstBrokenSequence, r.Entries)
             };
         }
-        catch (Exception error) { VerifyStatus.Text = "Vérification impossible : " + error.Message; }
+        catch (Exception error) { VerifyStatus.Text = Loc.T("cs.verification_impossible") + error.Message; }
     }
 }

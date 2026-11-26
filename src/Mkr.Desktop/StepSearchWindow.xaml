@@ -1,49 +1,50 @@
 <Window x:Class="Mkr.Desktop.StepSearchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ORIAS — Essais détectés" Width="1000" Height="760" MinWidth="720" MinHeight="520"
+        xmlns:local="clr-namespace:Mkr.Desktop"
+        Title="{local:Loc ui.orias_essais_detectes}" Width="1000" Height="760" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterOwner">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24,18,24,18">
-            <TextBlock Text="ORIAS  /  IDENTIFICATION  /  ESSAIS DÉTECTÉS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
-            <TextBlock Text="Essais exploitables de l’enregistrement" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
+            <TextBlock Text="{local:Loc ui.orias_identification_essais_detectes}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MkrAccent}"/>
+            <TextBlock Text="{local:Loc ui.essais_exploitables_de_lenregistrement}" FontSize="24" FontWeight="SemiBold" Margin="0,6,0,4"/>
             <TextBlock x:Name="Summary" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"/>
 
-            <TextBlock Text="Paires proposées (estimation + validation)" FontWeight="SemiBold" Margin="0,16,0,6"/>
-            <DataGrid x:Name="Pairs" AutomationProperties.Name="Paires proposées" Height="170" SelectionChanged="PairChanged">
+            <TextBlock Text="{local:Loc ui.paires_proposees_estimation_validation}" FontWeight="SemiBold" Margin="0,16,0,6"/>
+            <DataGrid x:Name="Pairs" AutomationProperties.Name="{local:Loc ui.paires_proposees}" Height="170" SelectionChanged="PairChanged">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Estimation" Binding="{Binding First}" Width="*"/>
-                    <DataGridTextColumn Header="Validation" Binding="{Binding Second}" Width="*"/>
-                    <DataGridTextColumn Header="Sens" Binding="{Binding Direction}" Width="110"/>
-                    <DataGridTextColumn Header="Rapport" Binding="{Binding Ratio}" Width="80"/>
-                    <DataGridTextColumn Header="Remarques" Binding="{Binding Notes}" Width="2*"/>
+                    <DataGridTextColumn Header="{local:Loc ui.estimation}" Binding="{Binding First}" Width="*"/>
+                    <DataGridTextColumn Header="{local:Loc ui.validation}" Binding="{Binding Second}" Width="*"/>
+                    <DataGridTextColumn Header="{local:Loc ui.sens}" Binding="{Binding Direction}" Width="110"/>
+                    <DataGridTextColumn Header="{local:Loc ui.rapport}" Binding="{Binding Ratio}" Width="80"/>
+                    <DataGridTextColumn Header="{local:Loc ui.remarques}" Binding="{Binding Notes}" Width="2*"/>
                 </DataGrid.Columns>
             </DataGrid>
             <WrapPanel Margin="0,8,0,0">
-                <Button x:Name="UsePair" Content="_Utiliser cette paire" IsEnabled="False" Click="UseSelectedPair"
-                        Style="{StaticResource MkrPrimaryButton}" AutomationProperties.Name="Utiliser cette paire"/>
-                <Button Content="_Fermer" Margin="8,0,0,0" IsCancel="True"/>
+                <Button x:Name="UsePair" Content="{local:Loc ui.utiliser_cette_paire}" IsEnabled="False" Click="UseSelectedPair"
+                        Style="{StaticResource MkrPrimaryButton}" AutomationProperties.Name="{local:Loc ui.utiliser_cette_paire_2}"/>
+                <Button Content="{local:Loc ui.fermer}" Margin="8,0,0,0" IsCancel="True"/>
             </WrapPanel>
             <TextBlock x:Name="PairHelp" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource MkrMuted}"/>
 
-            <TextBlock Text="Échelons détectés" FontWeight="SemiBold" Margin="0,16,0,6"/>
-            <DataGrid x:Name="Steps" AutomationProperties.Name="Échelons détectés" Height="200">
+            <TextBlock Text="{local:Loc ui.echelons_detectes}" FontWeight="SemiBold" Margin="0,16,0,6"/>
+            <DataGrid x:Name="Steps" AutomationProperties.Name="{local:Loc ui.echelons_detectes}" Height="200">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="N°" Binding="{Binding Id}" Width="40"/>
-                    <DataGridTextColumn Header="Début (UTC)" Binding="{Binding Start}" Width="160"/>
-                    <DataGridTextColumn Header="Sortie de commande" Binding="{Binding Mv}" Width="150"/>
-                    <DataGridTextColumn Header="Lignes" Binding="{Binding Rows}" Width="120"/>
-                    <DataGridTextColumn Header="Avant / après" Binding="{Binding Samples}" Width="110"/>
-                    <DataGridTextColumn Header="Durée" Binding="{Binding Horizon}" Width="80"/>
-                    <DataGridTextColumn Header="Réponse" Binding="{Binding Response}" Width="*"/>
+                    <DataGridTextColumn Header="{local:Loc ui.debut_utc}" Binding="{Binding Start}" Width="160"/>
+                    <DataGridTextColumn Header="{local:Loc ui.sortie_de_commande}" Binding="{Binding Mv}" Width="150"/>
+                    <DataGridTextColumn Header="{local:Loc ui.lignes}" Binding="{Binding Rows}" Width="120"/>
+                    <DataGridTextColumn Header="{local:Loc ui.avant_apres}" Binding="{Binding Samples}" Width="110"/>
+                    <DataGridTextColumn Header="{local:Loc ui.duree}" Binding="{Binding Horizon}" Width="80"/>
+                    <DataGridTextColumn Header="{local:Loc ui.reponse}" Binding="{Binding Response}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
 
-            <TextBlock Text="Échelons écartés" FontWeight="SemiBold" Margin="0,16,0,6"/>
-            <DataGrid x:Name="Rejected" AutomationProperties.Name="Échelons écartés" Height="130">
+            <TextBlock Text="{local:Loc ui.echelons_ecartes}" FontWeight="SemiBold" Margin="0,16,0,6"/>
+            <DataGrid x:Name="Rejected" AutomationProperties.Name="{local:Loc ui.echelons_ecartes}" Height="130">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Ligne de l’échelon" Binding="{Binding Row}" Width="140"/>
-                    <DataGridTextColumn Header="Motif" Binding="{Binding Reason}" Width="*"/>
+                    <DataGridTextColumn Header="{local:Loc ui.ligne_de_lechelon}" Binding="{Binding Row}" Width="140"/>
+                    <DataGridTextColumn Header="{local:Loc ui.motif_2}" Binding="{Binding Reason}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </StackPanel>

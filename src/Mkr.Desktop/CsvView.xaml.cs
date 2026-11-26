@@ -27,9 +27,9 @@ public partial class CsvView : UserControl, IStepView
         InitializeComponent();
         _workspace = workspace;
         Delimiter.SelectionChanged += (_, _) => Analyze.IsEnabled = false;
-        TimeFormat.Items.Add(new ComboBoxItem { Content = "ISO 8601 avec décalage (Z ou +hh:mm)", Tag = "" });
+        TimeFormat.Items.Add(new ComboBoxItem { Content = Loc.T("cs.iso_8601_avec_decalage_z"), Tag = "" });
         foreach (var (pattern, label) in CsvFormat.Patterns)
-            TimeFormat.Items.Add(new ComboBoxItem { Content = "Heure locale · " + label, Tag = pattern });
+            TimeFormat.Items.Add(new ComboBoxItem { Content = Loc.T("cs.heure_locale") + label, Tag = pattern });
         TimeFormat.SelectedIndex = 0;
         TimeFormat.SelectionChanged += (_, _) => TimeZone.IsEnabled = !string.IsNullOrEmpty((string?)TimeFormat.SelectedValue);
         Role.ItemsSource = new[] { "SP", "PV", "CV", "MV", "d" };
@@ -43,7 +43,7 @@ public partial class CsvView : UserControl, IStepView
         LoopObjective.Text = brief.Objective;
         Description.Text = brief.Description;
         Imports.ItemsSource = workspace.List();
-        StatusText.Text = "Choisissez un CSV ou ouvrez un import enregistré.";
+        StatusText.Text = Loc.T("cs.choisissez_un_csv_ou_ouvrez");
     }
 
     private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(Window.GetWindow(this), _workspace.ReadLoopBrief);
@@ -57,14 +57,14 @@ public partial class CsvView : UserControl, IStepView
             Imports.ItemsSource = _workspace.List();
             Imports.SelectedItem = recorded.Summary;
             ShowImport(recorded);
-            StatusText.Text = "Acquisition enregistrée dans le projet.";
+            StatusText.Text = Loc.T("cs.acquisition_enregistree_dans_le_projet");
             DataChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
     private async void ChooseCsv(object sender, RoutedEventArgs args)
     {
-        var dialog = new OpenFileDialog { Filter = "Fichiers CSV (*.csv)|*.csv" };
+        var dialog = new OpenFileDialog { Filter = Loc.T("cs.fichiers_csv_csv_csv") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         Analyze.IsEnabled = false;
@@ -80,7 +80,7 @@ public partial class CsvView : UserControl, IStepView
             ShowResult(result);
             ShowTrend(File.ReadAllBytes(dialog.FileName), Path.GetFileName(dialog.FileName), null, null, ((string)Delimiter.SelectedValue)[0], ((string)DecimalSeparator.SelectedValue)[0], null);
             Analyze.IsEnabled = true;
-            StatusText.Text = "Sélectionnez les colonnes, le rôle et l’unité.";
+            StatusText.Text = Loc.T("cs.selectionnez_les_colonnes_le_role");
             if (result.SuggestedFormat is { } suggestion) ApplySuggestion(suggestion);
         });
     }
@@ -91,12 +91,12 @@ public partial class CsvView : UserControl, IStepView
         DecimalSeparator.SelectedValue = suggestion.Decimal;
         TimeFormat.SelectedValue = suggestion.TimePattern ?? "";
         var local = suggestion.TimePattern is not null;
-        StatusText.Text = "Format proposé d’après les premières lignes : " +
-            (suggestion.Decimal == "," ? "décimale virgule" : "décimale point") + " · " +
-            (local ? $"heure locale (colonne {suggestion.TimeColumn}) : vérifiez le fuseau avant d’importer."
-                   : suggestion.IsoWithOffset ? "horodatage ISO 8601 avec décalage."
-                   : "aucune colonne de date reconnue : choisissez la notation.") +
-            " Sélectionnez les colonnes, le rôle et l’unité.";
+        StatusText.Text = Loc.T("cs.format_propose_dapres_les_premieres") +
+            (suggestion.Decimal == "," ? Loc.T("cs.decimale_virgule") : Loc.T("cs.decimale_point")) + " · " +
+            (local ? Loc.T("cs.heure_locale_colonne_verifiez_le", suggestion.TimeColumn)
+                   : suggestion.IsoWithOffset ? Loc.T("cs.horodatage_iso_8601_avec_decalage")
+                   : Loc.T("cs.aucune_colonne_de_date_reconnue")) +
+            Loc.T("cs.selectionnez_les_colonnes_le_role_2");
     }
 
     private CsvFormat ReadFormat() => new((string)DecimalSeparator.SelectedValue,
@@ -108,7 +108,7 @@ public partial class CsvView : UserControl, IStepView
         if (TimeColumn.SelectedItem is not string time || ValueColumn.SelectedItem is not string value ||
             Role.SelectedItem is not string role || string.IsNullOrWhiteSpace(Unit.Text) || time == value)
         {
-            StatusText.Text = "Indiquez deux colonnes distinctes, un rôle et une unité.";
+            StatusText.Text = Loc.T("cs.indiquez_deux_colonnes_distinctes_un");
             return;
         }
         await RunAsync(async token =>
@@ -117,7 +117,7 @@ public partial class CsvView : UserControl, IStepView
             Analyze.IsEnabled = false;
             ShowImport(import);
             Imports.ItemsSource = _workspace.List();
-            StatusText.Text = "Import et rapport enregistrés.";
+            StatusText.Text = Loc.T("cs.import_et_rapport_enregistres");
             DataChanged?.Invoke(this, EventArgs.Empty);
         });
     }
@@ -126,14 +126,14 @@ public partial class CsvView : UserControl, IStepView
     {
         if (Imports.SelectedItem is not ImportSummary summary)
         {
-            StatusText.Text = "Sélectionnez un import enregistré.";
+            StatusText.Text = Loc.T("cs.selectionnez_un_import_enregistre");
             return;
         }
         try
         {
             ShowImport(_workspace.Open(summary.Id));
             Analyze.IsEnabled = false;
-            StatusText.Text = "Import rouvert et empreinte de l’original vérifiée.";
+            StatusText.Text = Loc.T("cs.import_rouvert_et_empreinte_de");
         }
         catch (Exception error) { ShowError(error); }
     }
@@ -142,7 +142,7 @@ public partial class CsvView : UserControl, IStepView
     {
         if (Imports.SelectedItem is not ImportSummary summary)
         {
-            StatusText.Text = "Sélectionnez un import enregistré.";
+            StatusText.Text = Loc.T("cs.selectionnez_un_import_enregistre");
             return;
         }
         try
@@ -151,13 +151,13 @@ public partial class CsvView : UserControl, IStepView
             var dialog = new SaveFileDialog
             {
                 FileName = import.Summary.FileName,
-                Filter = "Fichiers CSV (*.csv)|*.csv",
+                Filter = Loc.T("cs.fichiers_csv_csv_csv"),
                 OverwritePrompt = true
             };
             if (dialog.ShowDialog(Window.GetWindow(this)) != true)
                 return;
             File.WriteAllBytes(dialog.FileName, import.Original);
-            StatusText.Text = "Fichier original exporté.";
+            StatusText.Text = Loc.T("cs.fichier_original_exporte");
         }
         catch (Exception error) { ShowError(error); }
     }
@@ -178,7 +178,7 @@ public partial class CsvView : UserControl, IStepView
         try
         {
             _workspace.SaveLoopBrief(new(LoopTag.Text, LoopControlledQuantity.Text, LoopOperatingPoint.Text, LoopObjective.Text, Description.Text));
-            StatusText.Text = "Description enregistrée.";
+            StatusText.Text = Loc.T("cs.description_enregistree");
             DataChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception error) { ShowError(error); }
@@ -187,7 +187,7 @@ public partial class CsvView : UserControl, IStepView
     private async Task RunAsync(Func<CancellationToken, Task> operation)
     {
         Controls.IsEnabled = false;
-        StatusText.Text = "Traitement du CSV…";
+        StatusText.Text = Loc.T("cs.traitement_du_csv");
         SetState(DataState.Loading, "Chargement…");
         var token = _lifetime.Token;
         try { await operation(token); }
@@ -206,7 +206,7 @@ public partial class CsvView : UserControl, IStepView
         for (var index = 0; index < result.Headers.Length; index++)
             Preview.Columns.Add(new DataGridTextColumn { Header = result.Headers[index], Binding = new Binding($"[{index}]") });
         Preview.ItemsSource = result.Preview;
-        Report.Text = $"Aperçu : {result.Preview.Length} / {result.RowCount} lignes.";
+        Report.Text = Loc.T("cs.apercu_lignes", result.Preview.Length, result.RowCount);
     }
 
     private void ShowImport(CsvImport import)
@@ -222,20 +222,13 @@ public partial class CsvView : UserControl, IStepView
         TimeFormat.SelectedValue = format.Time?.Pattern ?? "";
         TimeZone.Text = format.Time?.Zone ?? TimeZone.Text;
         if (!(import.Format ?? CsvFormat.Default).IsDefault)
-            Report.Text += $"  |  Lecture : {import.Format!.Describe()}.";
+            Report.Text += Loc.T("cs.lecture", import.Format!.Describe());
         if (import.Acquisition is { } origin)
-            Report.Text += $"  |  {origin.Describe()} · unité de la mesure {origin.ProcessUnit}, de la sortie de commande {origin.CommandUnit}.";
+            Report.Text += Loc.T("cs.unite_de_la_mesure_de", origin.Describe(), origin.ProcessUnit, origin.CommandUnit);
         ShowTrend(import.Original, import.Summary.FileName, import.Mapping.ValueColumn, import.Mapping.Unit, import.Delimiter.Length > 0 ? import.Delimiter[0] : ',',
             (import.Format ?? CsvFormat.Default).Decimal is { Length: > 0 } dec ? dec[0] : '.', import.Mapping.TimeColumn);
         var quality = import.Result.Quality!;
-        Report.Text += $"  |  {import.Summary.FileName}  |  SHA-256 : {import.Summary.Sha256}\n" +
-            $"{Terms.RoleName(import.Mapping.Role)} ({import.Mapping.Unit}) · valeurs finies : {quality.ValidValues}, " +
-            $"manquantes : {quality.MissingValues}, invalides : {quality.InvalidValues}. " +
-            $"Min./max. : {Format(quality.Minimum)} / {Format(quality.Maximum)}.\n" +
-            $"Horodatages invalides : {quality.InvalidTimestamps}, doublons : {quality.DuplicateTimestamps}, " +
-            $"inversions : {quality.ReversedTimestamps}. Pas positif min./max. : " +
-            $"{Format(quality.MinPositiveStepSeconds)} / {Format(quality.MaxPositiveStepSeconds)} s. " +
-            $"Méthode {quality.AlgorithmVersion} · moteur {import.EngineVersion}.";
+        Report.Text += Loc.T("cs.sha_256_valeurs_finies_manquantes", import.Summary.FileName, import.Summary.Sha256, Terms.RoleName(import.Mapping.Role), import.Mapping.Unit, quality.ValidValues, quality.MissingValues, quality.InvalidValues, Format(quality.Minimum), Format(quality.Maximum), quality.InvalidTimestamps, quality.DuplicateTimestamps, quality.ReversedTimestamps, Format(quality.MinPositiveStepSeconds), Format(quality.MaxPositiveStepSeconds), quality.AlgorithmVersion, import.EngineVersion);
     }
 
     // ---------- trends and summary (display only: the raw columns of the file, nothing interpreted) ----------
@@ -271,9 +264,9 @@ public partial class CsvView : UserControl, IStepView
         {
             TrendChart.SetTracks(Array.Empty<ChartTrack>());
             TrendEmpty.Visibility = Visibility.Visible;
-            SetState(DataState.Loaded, "Données chargées (tendance non disponible)");
+            SetState(DataState.Loaded, Loc.T("cs.donnees_chargees_tendance_non_disponible"));
             FillSummary(null);
-            SignalPicker.Children.Add(new TextBlock { Text = "Aucune colonne numérique lisible : les lignes source restent disponibles dans « Données brutes ».", TextWrapping = TextWrapping.Wrap });
+            SignalPicker.Children.Add(new TextBlock { Text = Loc.T("cs.aucune_colonne_numerique_lisible_les"), TextWrapping = TextWrapping.Wrap });
             return;
         }
         // The first three numeric columns are drawn by default; the others stay one click away.
@@ -282,12 +275,12 @@ public partial class CsvView : UserControl, IStepView
             var name = _trend.Names[i];
             if (i >= 3) _hiddenSignals.Add(name);
             var box = new CheckBox { Content = name + (name == _mappedColumn && !string.IsNullOrEmpty(_mappedUnit) ? $" ({_mappedUnit})" : ""), IsChecked = i < 3, Margin = new Thickness(0, 0, 0, 4), Tag = name };
-            System.Windows.Automation.AutomationProperties.SetName(box, "Afficher le signal " + name);
+            System.Windows.Automation.AutomationProperties.SetName(box, Loc.T("cs.afficher_le_signal") + name);
             box.Checked += (_, _) => { _hiddenSignals.Remove(name); DrawTrend(); };
             box.Unchecked += (_, _) => { _hiddenSignals.Add(name); DrawTrend(); };
             SignalPicker.Children.Add(box);
         }
-        SetState(DataState.Loaded, "Données chargées");
+        SetState(DataState.Loaded, Loc.T("cs.donnees_chargees"));
         FillSummary(_trend);
         DrawTrend();
         DataTabs.SelectedIndex = 0;
@@ -307,10 +300,10 @@ public partial class CsvView : UserControl, IStepView
             tracks.Add(new ChartTrack(name, unit, new[] { new ChartSeries(name, "MkrSignal" + (colour++ % 4 + 1), points.Select(k => _trend.X[k]).ToArray(), points.Select(k => _trend.Values[i][k]).ToArray()) })
             { YLabel = unit.Length > 0 ? $"{name} ({unit})" : name, ShowLegend = false });
         }
-        TrendChart.XLabel = _trend.HasTime ? "Temps depuis le premier échantillon (s)" : "Numéro d’échantillon";
+        TrendChart.XLabel = _trend.HasTime ? Loc.T("cs.temps_depuis_le_premier_echantillon") : Loc.T("cs.numero_dechantillon");
         TrendChart.SetTracks(tracks);
         TrendEmpty.Visibility = tracks.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (tracks.Count == 0) TrendEmpty.Text = "Aucun signal coché : cochez au moins une colonne dans « Signaux affichés ».";
+        if (tracks.Count == 0) TrendEmpty.Text = Loc.T("cs.aucun_signal_coche_cochez_au");
     }
 
     private void FillSummary(Trend? trend)
@@ -323,11 +316,11 @@ public partial class CsvView : UserControl, IStepView
             rows.Add(("Points", trend.Rows.ToString("N0", CultureInfo.CurrentCulture)));
             if (trend.Start is { } start && trend.End is { } end)
             {
-                rows.Add(("Période", $"{start.ToLocalTime():g} → {end.ToLocalTime():g}"));
-                rows.Add(("Durée", TimeSpan.FromSeconds((end - start).TotalSeconds).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)));
+                rows.Add((Loc.T("cs.periode"), $"{start.ToLocalTime():g} → {end.ToLocalTime():g}"));
+                rows.Add((Loc.T("cs.duree"), TimeSpan.FromSeconds((end - start).TotalSeconds).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)));
             }
-            if (trend.MedianStepSeconds is { } step) rows.Add(("Période d’échantillonnage", $"{step.ToString("G4", CultureInfo.CurrentCulture)} s"));
-            rows.Add(("Colonnes numériques", trend.Names.Length.ToString(CultureInfo.CurrentCulture)));
+            if (trend.MedianStepSeconds is { } step) rows.Add((Loc.T("cs.periode_dechantillonnage"), $"{step.ToString("G4", CultureInfo.CurrentCulture)} s"));
+            rows.Add((Loc.T("cs.colonnes_numeriques"), trend.Names.Length.ToString(CultureInfo.CurrentCulture)));
         }
         for (var r = 0; r < rows.Count; r++)
         {
@@ -346,19 +339,19 @@ public partial class CsvView : UserControl, IStepView
     private void ShowError(Exception error)
     {
         Trace.TraceError("csv.workspace {0}", error.GetType().Name);
-        SetState(DataState.Error, "Erreur : voir le message en bas de l’écran");
+        SetState(DataState.Error, Loc.T("cs.erreur_voir_le_message_en"));
         StatusText.Text = error is CsvInputException input ? input.Code switch
         {
-            "csv_limit" => "Le CSV dépasse les limites de 1 Mio ou 10 000 lignes.",
-            "csv_header" => "Utilisez de 1 à 64 en-têtes distincts et non vides (120 caractères maximum).",
-            "csv_width" => "Une ligne ne correspond pas au nombre de colonnes. Vérifiez le séparateur.",
-            "csv_empty" => "Le fichier ne contient aucune ligne de données.",
-            "csv_encoding_or_syntax" => "Le CSV doit être en UTF-8 et respecter la syntaxe des champs entre guillemets.",
-            "csv_mapping" => "Le mapping doit indiquer deux colonnes distinctes, un rôle et une unité.",
-            "csv_format" => "Format de lecture invalide : une décimale virgule exige le séparateur point-virgule, et le fuseau doit être un nom IANA (par exemple Europe/Paris ou UTC).",
-            "csv_timezone" => "Fuseau horaire inconnu. Utilisez un nom IANA, par exemple Europe/Paris, Europe/Brussels ou UTC.",
-            _ => "Requête CSV invalide."
-        } : "Opération impossible. Vérifiez le stockage local, le fichier et la disponibilité de Python.";
+            "csv_limit" => Loc.T("cs.le_csv_depasse_les_limites"),
+            "csv_header" => Loc.T("cs.utilisez_de_1_a_64"),
+            "csv_width" => Loc.T("cs.une_ligne_ne_correspond_pas"),
+            "csv_empty" => Loc.T("cs.le_fichier_ne_contient_aucune"),
+            "csv_encoding_or_syntax" => Loc.T("cs.le_csv_doit_etre_en"),
+            "csv_mapping" => Loc.T("cs.le_mapping_doit_indiquer_deux"),
+            "csv_format" => Loc.T("cs.format_de_lecture_invalide_une"),
+            "csv_timezone" => Loc.T("cs.fuseau_horaire_inconnu_utilisez_un"),
+            _ => Loc.T("cs.requete_csv_invalide")
+        } : Loc.T("cs.operation_impossible_verifiez_le_stockage");
     }
 }
 

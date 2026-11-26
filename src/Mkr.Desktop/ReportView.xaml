@@ -10,7 +10,7 @@
         </Grid.RowDefinitions>
         <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="8,5">
             <DockPanel>
-                <Button x:Name="ExportButton" DockPanel.Dock="Right" Content="_Exporter la fiche d'étude (PDF)…" Click="ExportSheet" Style="{StaticResource MkrPrimaryButton}" IsEnabled="False" MinHeight="28" Padding="10,2"/>
+                <Button x:Name="ExportButton" DockPanel.Dock="Right" Content="{local:Loc ui.exporter_la_fiche_d_etude}" Click="ExportSheet" Style="{StaticResource MkrPrimaryButton}" IsEnabled="False" MinHeight="28" Padding="10,2"/>
                 <TextBlock x:Name="Subject" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
             </DockPanel>
         </Border>
@@ -28,39 +28,39 @@
                 </Grid.RowDefinitions>
                 <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,2" Margin="0,0,0,4">
                     <StackPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                        <Button Style="{StaticResource MkrToolButton}" Click="ResetView" ToolTip="Vue complète (double-clic)" AutomationProperties.Name="Ajuster à toute la simulation"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="{local:Loc ui.zoom_avant_ou_molette}" AutomationProperties.Name="{local:Loc ui.zoom_avant}"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="{local:Loc ui.zoom_arriere}" AutomationProperties.Name="{local:Loc ui.zoom_arriere}"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                        <Button Style="{StaticResource MkrToolButton}" Click="ResetView" ToolTip="{local:Loc ui.vue_complete_double_clic}" AutomationProperties.Name="{local:Loc ui.ajuster_a_toute_la_simulation}"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
                     </StackPanel>
                 </Border>
                 <Border Grid.Row="1" Background="{DynamicResource MkrSurface}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1">
                     <Grid>
                         <local:SignalChart x:Name="Chart" ReferenceStyle="True" ShowValueBoxes="False" MinHeight="200"
-                                           AutomationProperties.Name="Comparaison des réponses simulées des deux réglages, en fonction du temps"/>
+                                           AutomationProperties.Name="{local:Loc ui.comparaison_des_reponses_simulees_des}"/>
                         <TextBlock x:Name="Empty" Visibility="Collapsed" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420" Foreground="{DynamicResource MkrMuted}"/>
                     </Grid>
                 </Border>
                 <TextBlock x:Name="CursorLine" Grid.Row="2" FontSize="11" TextTrimming="CharacterEllipsis" Margin="2,3,0,0" Foreground="{DynamicResource MkrMuted}"/>
             </Grid>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{local:Loc ui.redimensionner_le_panneau}"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Recommandation et validation">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.recommandation_et_validation}">
                         <StackPanel x:Name="Checklist"/>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Paramètres finaux (PI)">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.parametres_finaux_pi}">
                         <StackPanel>
                             <Grid x:Name="ParameterGrid"/>
                             <TextBlock x:Name="ParameterNote" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Indicateurs de performance et marges">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.indicateurs_de_performance_et_marges}">
                         <StackPanel>
                             <Grid x:Name="IndicatorGrid"/>
                             <TextBlock x:Name="IndicatorNote" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Avertissements et limites">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.avertissements_et_limites}">
                         <TextBlock x:Name="Limits" TextWrapping="Wrap" FontSize="12" Margin="10,8"/>
                     </Expander>
                 </StackPanel>

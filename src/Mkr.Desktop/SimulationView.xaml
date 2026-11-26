@@ -14,22 +14,22 @@
 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style></Border.Resources>
             <DockPanel LastChildFill="False">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                    <Button x:Name="ResetZoomButton" Style="{StaticResource MkrToolButton}" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation (double-clic)" AutomationProperties.Name="Réinitialiser le zoom"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                    <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="{local:Loc ui.zoom_avant_ou_molette}" AutomationProperties.Name="{local:Loc ui.zoom_avant}"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="{local:Loc ui.zoom_arriere}" AutomationProperties.Name="{local:Loc ui.zoom_arriere}"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <Button x:Name="ResetZoomButton" Style="{StaticResource MkrToolButton}" Click="ResetZoom" ToolTip="{local:Loc ui.revenir_a_toute_la_duree}" AutomationProperties.Name="{local:Loc ui.reinitialiser_le_zoom}"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <TextBlock x:Name="ZoomStatus" Text="{local:Loc ui.horizon_complet}" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
                 <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <Button Content="_Simuler et enregistrer" Click="Run" Margin="0,0,8,0"/>
-                    <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}"/>
+                    <Button Content="{local:Loc ui.simuler_et_enregistrer}" Click="Run" Margin="0,0,8,0"/>
+                    <Label Content="{local:Loc ui.variation}" Target="{Binding ElementName=Variation}"/>
                     <TextBox x:Name="Variation" Width="56" Text="20" Margin="0,0,8,0"
-                             ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
-                    <Button Content="_Comparer la robustesse" Click="RunRobustness" Style="{StaticResource MkrPrimaryButton}" Margin="0,0,8,0"
-                            ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
-                    <Button Content="Analyser 27 _combinaisons" Click="RunCombined" Margin="0,0,8,0"
-                            ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
-                    <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
-                            ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
+                             ToolTip="{local:Loc ui.analyse_de_sensibilite_de_0}"/>
+                    <Button Content="{local:Loc ui.comparer_la_robustesse}" Click="RunRobustness" Style="{StaticResource MkrPrimaryButton}" Margin="0,0,8,0"
+                            ToolTip="{local:Loc ui.sept_cas_nominal_et_variations}"/>
+                    <Button Content="{local:Loc ui.analyser_27_combinaisons}" Click="RunCombined" Margin="0,0,8,0"
+                            ToolTip="{local:Loc ui.grille_deterministe_3_3_3}"/>
+                    <Button Content="{local:Loc ui.essai_pid_manuel}" Click="OpenPidPrototype"
+                            ToolTip="{local:Loc ui.laboratoire_hors_ligne_sans_sauvegarde}"/>
                 </WrapPanel>
             </DockPanel>
         </Border>
@@ -48,105 +48,105 @@
                 <StackPanel>
                 </StackPanel>
                 <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ReferenceStyle="True" ShowValueBoxes="False"
-                        AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
-                        AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète. Flèches : déplacement."/>
+                        AutomationProperties.Name="{local:Loc ui.reponses_de_la_consigne_et}"
+                        AutomationProperties.HelpText="{local:Loc ui.molette_zoom_clic_droit_glisse}"/>
                 <StackPanel Grid.Row="2">
                     <Border BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Background="{DynamicResource MkrCanvas}" Padding="10,6" Margin="0,4,0,0">
-                        <TextBlock x:Name="CursorReadout" Text="Cliquez sur le graphique pour inspecter un échantillon enregistré." Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                        <TextBlock x:Name="CursorReadout" Text="{local:Loc ui.cliquez_sur_le_graphique_pour}" Foreground="{DynamicResource MkrText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                     </Border>
-                    <Expander Header="Aide : lire le graphique" Foreground="{DynamicResource MkrText}" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
+                    <Expander Header="{local:Loc ui.aide_lire_le_graphique}" Foreground="{DynamicResource MkrText}" Margin="0,4,0,0" IsExpanded="False" FontSize="11">
                       <StackPanel>
                         <TextBlock x:Name="Legend" TextWrapping="Wrap" Margin="4,4,0,0" Foreground="{DynamicResource MkrText}"/>
-                        <TextBlock Text="Molette pour zoomer, clic droit glissé pour déplacer, survol pour lire les valeurs ; cliquer une courbe de la légende la masque. La commande calculée (CV) est celle demandée avant limitation ; la sortie de commande appliquée (MV) est celle qui agit dans le modèle. Le zoom n'altère ni la simulation ni son export."
+                        <TextBlock Text="{local:Loc ui.molette_pour_zoomer_clic_droit}"
                                    Foreground="{DynamicResource MkrMuted}" Margin="4,4,0,0" TextWrapping="Wrap"/>
                       </StackPanel>
                     </Expander>
                 </StackPanel>
             </Grid>
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{local:Loc ui.redimensionner_le_panneau}"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="ScenarioForm">
-                    <Expander Style="{StaticResource MkrPanel}" Header="Simulation enregistrée et exports">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.simulation_enregistree_et_exports}">
                         <StackPanel Margin="10,8">
                             <TextBlock x:Name="Units" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <Label Content="Simulation à exporter" Target="{Binding ElementName=Saved}" Padding="0" Margin="0,0,0,4"/>
+                            <Label Content="{local:Loc ui.simulation_a_exporter}" Target="{Binding ElementName=Saved}" Padding="0" Margin="0,0,0,4"/>
                             <ComboBox x:Name="Saved" DisplayMemberPath="Label" SelectionChanged="ShowSaved" MinHeight="28" Margin="0,0,0,8"/>
                             <WrapPanel>
-                                <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="0,0,8,6" MinHeight="28" Padding="10,2"/>
-                                <Button x:Name="ExportButton" Content="_Exporter les séries enregistrées…" Click="Export" IsEnabled="False" Margin="0,0,0,6" MinHeight="28" Padding="10,2"/>
+                                <Button x:Name="SheetButton" Content="{local:Loc ui.fiche_de_mise_au_point}" Click="ExportSheet" IsEnabled="False" Margin="0,0,8,6" MinHeight="28" Padding="10,2"/>
+                                <Button x:Name="ExportButton" Content="{local:Loc ui.exporter_les_series_enregistrees}" Click="Export" IsEnabled="False" Margin="0,0,0,6" MinHeight="28" Padding="10,2"/>
                             </WrapPanel>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des méthodes de réglage">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.comparaison_des_methodes_de_reglage}">
                         <StackPanel>
                             <Grid x:Name="IndicatorGrid"/>
                             <TextBlock x:Name="IndicatorNote" Visibility="Collapsed" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource MkrMuted}" Margin="8,4,8,6"/>
-                            <Expander Header="Détail de la simulation enregistrée" Foreground="{DynamicResource MkrText}" Margin="0" IsExpanded="False" FontSize="12">
+                            <Expander Header="{local:Loc ui.detail_de_la_simulation_enregistree}" Foreground="{DynamicResource MkrText}" Margin="0" IsExpanded="False" FontSize="12">
                                 <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="10,6,10,8" FontSize="11"/>
                             </Expander>
                         </StackPanel>
                     </Expander>
-                    <Expander Style="{StaticResource MkrPanel}" Header="Paramètres du scénario">
+                    <Expander Style="{StaticResource MkrPanel}" Header="{local:Loc ui.parametres_du_scenario}">
                         <StackPanel Margin="10,8">
-                    <Expander x:Name="ScenarioFields" Foreground="{DynamicResource MkrText}" Header="Paramètres, limites et transfert manuel → automatique" IsExpanded="True" Margin="0,0,0,8" Style="{x:Null}">
+                    <Expander x:Name="ScenarioFields" Foreground="{DynamicResource MkrText}" Header="{local:Loc ui.parametres_limites_et_transfert_manuel}" IsExpanded="True" Margin="0,0,0,8" Style="{x:Null}">
                     <StackPanel>
                     <WrapPanel Margin="0,0,0,6">
-                        <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
+                        <Label Content="{local:Loc ui.pas_s}" Target="{Binding ElementName=Sample}" />
                         <TextBox x:Name="Sample" Width="75" />
-                        <Label Content="Durée (s)" Target="{Binding ElementName=Duration}" />
+                        <Label Content="{local:Loc ui.duree_s}" Target="{Binding ElementName=Duration}" />
                         <TextBox x:Name="Duration" Width="75" />
-                        <Label Content="Variation de consigne" Target="{Binding ElementName=Setpoint}" />
+                        <Label Content="{local:Loc ui.variation_de_consigne}" Target="{Binding ElementName=Setpoint}" />
                         <TextBox x:Name="Setpoint" Width="75" />
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,6">
-                        <Label Content="Sortie min. (écart)" Target="{Binding ElementName=Lower}" />
+                        <Label Content="{local:Loc ui.sortie_min_ecart}" Target="{Binding ElementName=Lower}" />
                         <TextBox x:Name="Lower" Width="75" />
-                        <Label Content="Sortie max. (écart)" Target="{Binding ElementName=Upper}" />
+                        <Label Content="{local:Loc ui.sortie_max_ecart}" Target="{Binding ElementName=Upper}" />
                         <TextBox x:Name="Upper" Width="75" />
-                        <Label Content="Perturbation (écart de sortie)" Target="{Binding ElementName=Disturbance}" />
+                        <Label Content="{local:Loc ui.perturbation_ecart_de_sortie}" Target="{Binding ElementName=Disturbance}" />
                         <TextBox x:Name="Disturbance" Width="75" Text="0" />
-                        <Label Content="Instant (s)" Target="{Binding ElementName=DisturbanceAt}" />
+                        <Label Content="{local:Loc ui.instant_s}" Target="{Binding ElementName=DisturbanceAt}" />
                         <TextBox x:Name="DisturbanceAt" Width="75" Text="0" />
                     </WrapPanel>
                     <WrapPanel Margin="0,0,0,6">
                         <Label x:Name="RateLabel" Target="{Binding ElementName=Rate}" />
                         <TextBox x:Name="Rate" Width="90" />
                     </WrapPanel>
-                    <GroupBox Header="Passage manuel → automatique · essai hors ligne" Margin="0,4,0,8">
+                    <GroupBox Header="{local:Loc ui.passage_manuel_automatique_essai_hors}" Margin="0,4,0,8">
                         <WrapPanel Margin="5">
-                            <Label Content="Sortie manuelle (écart)" Target="{Binding ElementName=ManualMv}"/>
+                            <Label Content="{local:Loc ui.sortie_manuelle_ecart}" Target="{Binding ElementName=ManualMv}"/>
                             <TextBox x:Name="ManualMv" Width="68"/>
-                            <Label Content="Bascule (s)" Target="{Binding ElementName=SwitchTime}"/>
+                            <Label Content="{local:Loc ui.bascule_s}" Target="{Binding ElementName=SwitchTime}"/>
                             <TextBox x:Name="SwitchTime" Width="68"/>
-                            <ComboBox x:Name="TransferTune" SelectedIndex="0" AutomationProperties.Name="Réglage de transfert" Margin="4">
-                                <ComboBoxItem Content="Lambda (Dahlin)"/><ComboBoxItem Content="SIMC"/>
+                            <ComboBox x:Name="TransferTune" SelectedIndex="0" AutomationProperties.Name="{local:Loc ui.reglage_de_transfert}" Margin="4">
+                                <ComboBoxItem Content="{local:Loc ui.lambda_dahlin}"/><ComboBoxItem Content="SIMC"/>
                             </ComboBox>
-                            <Button Content="Tester le transfert" Click="RunTransfer"/>
+                            <Button Content="{local:Loc ui.tester_le_transfert}" Click="RunTransfer"/>
                         </WrapPanel>
                     </GroupBox>
                     </StackPanel>
                     </Expander>
                         </StackPanel>
                     </Expander>
-                    <Expander x:Name="RobustnessPanel" Style="{StaticResource MkrPanel}" Header="Sensibilité des réglages PI" Visibility="Collapsed">
+                    <Expander x:Name="RobustnessPanel" Style="{StaticResource MkrPanel}" Header="{local:Loc ui.sensibilite_des_reglages_pi}" Visibility="Collapsed">
                         <StackPanel Margin="10,8">
                             <TextBlock x:Name="RobustnessSummary" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource MkrMuted}"/>
                         <DataGrid x:Name="RobustnessGrid" HeadersVisibility="Column"
                                   AutoGenerateColumns="False" IsReadOnly="True"
                                   CanUserAddRows="False" MaxHeight="300"
-                                  AutomationProperties.Name="Résultats de sensibilité IMC et SIMC">
+                                  AutomationProperties.Name="{local:Loc ui.resultats_de_sensibilite_imc_et}">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Cas" Binding="{Binding Name}" Width="170"/>
+                                <DataGridTextColumn Header="{local:Loc ui.cas}" Binding="{Binding Name}" Width="170"/>
                                 <DataGridTextColumn Header="K" Binding="{Binding Gain, StringFormat=G5}" Width="65"/>
                                 <DataGridTextColumn Header="τ (s)" Binding="{Binding Tau, StringFormat=G5}" Width="70"/>
                                 <DataGridTextColumn Header="θ (s)" Binding="{Binding Delay, StringFormat=G5}" Width="70"/>
-                                <DataGridTextColumn Header="IAE IMC" Binding="{Binding ImcIae, StringFormat=G5}" Width="95"/>
-                                <DataGridTextColumn Header="IAE SIMC" Binding="{Binding SimcIae, StringFormat=G5}" Width="95"/>
-                                <DataGridTextColumn Header="Sat. IMC (s)" Binding="{Binding ImcSaturation, StringFormat=G5}" Width="105"/>
-                                <DataGridTextColumn Header="Sat. SIMC (s)" Binding="{Binding SimcSaturation, StringFormat=G5}" Width="105"/>
+                                <DataGridTextColumn Header="{local:Loc ui.iae_imc}" Binding="{Binding ImcIae, StringFormat=G5}" Width="95"/>
+                                <DataGridTextColumn Header="{local:Loc ui.iae_simc}" Binding="{Binding SimcIae, StringFormat=G5}" Width="95"/>
+                                <DataGridTextColumn Header="{local:Loc ui.sat_imc_s}" Binding="{Binding ImcSaturation, StringFormat=G5}" Width="105"/>
+                                <DataGridTextColumn Header="{local:Loc ui.sat_simc_s}" Binding="{Binding SimcSaturation, StringFormat=G5}" Width="105"/>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <TextBlock Text="Étude exploratoire, un paramètre varie à la fois. Les coefficients PI restent fixes. Ne constitue pas une preuve de stabilité ni un intervalle de confiance."
+                        <TextBlock Text="{local:Loc ui.etude_exploratoire_un_parametre_varie}"
                                    FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource MkrMuted}"
                                    Margin="0,10,0,0"/>
                         </StackPanel>

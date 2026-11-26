@@ -7,19 +7,19 @@
             <TextBlock x:Name="Units" TextWrapping="Wrap" Margin="0,0,0,10" />
             <StackPanel x:Name="ScenarioForm">
                 <WrapPanel Margin="0,0,0,6">
-                    <Label Content="Pas (s)" Target="{Binding ElementName=Sample}" />
+                    <Label Content="{local:Loc ui.pas_s}" Target="{Binding ElementName=Sample}" />
                     <TextBox x:Name="Sample" Width="75" />
-                    <Label Content="Durée (s)" Target="{Binding ElementName=Duration}" />
+                    <Label Content="{local:Loc ui.duree_s}" Target="{Binding ElementName=Duration}" />
                     <TextBox x:Name="Duration" Width="75" />
-                    <Label Content="Instant de l’échelon (s)" Target="{Binding ElementName=StepAt}" />
+                    <Label Content="{local:Loc ui.instant_de_lechelon_s}" Target="{Binding ElementName=StepAt}" />
                     <TextBox x:Name="StepAt" Width="75" Text="0" />
                 </WrapPanel>
                 <WrapPanel Margin="0,0,0,6">
-                    <Label Content="Échelon de sortie" Target="{Binding ElementName=StepMv}" />
+                    <Label Content="{local:Loc ui.echelon_de_sortie}" Target="{Binding ElementName=StepMv}" />
                     <TextBox x:Name="StepMv" Width="75" />
-                    <Label Content="Sortie min. (écart)" Target="{Binding ElementName=Lower}" />
+                    <Label Content="{local:Loc ui.sortie_min_ecart}" Target="{Binding ElementName=Lower}" />
                     <TextBox x:Name="Lower" Width="75" />
-                    <Label Content="Sortie max. (écart)" Target="{Binding ElementName=Upper}" />
+                    <Label Content="{local:Loc ui.sortie_max_ecart}" Target="{Binding ElementName=Upper}" />
                     <TextBox x:Name="Upper" Width="75" />
                 </WrapPanel>
                 <WrapPanel Margin="0,0,0,6">
@@ -27,16 +27,16 @@
                     <TextBox x:Name="Rate" Width="90" />
                 </WrapPanel>
                 <WrapPanel Margin="0,0,0,8">
-                    <Button Content="_Simuler" Click="Run" />
-                    <Button x:Name="ExportButton" Content="_Exporter les séries…" Click="Export"
+                    <Button Content="{local:Loc ui.simuler}" Click="Run" />
+                    <Button x:Name="ExportButton" Content="{local:Loc ui.exporter_les_series}" Click="Export"
                             IsEnabled="False" Margin="8,0,0,0" />
                 </WrapPanel>
             </StackPanel>
             <TextBlock x:Name="Message" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
             <TextBlock x:Name="Report" TextWrapping="Wrap" Margin="0,8,0,0" />
             <local:SignalChart x:Name="Chart" Height="360" Margin="0,8,0,0"
-                    AutomationProperties.Name="Réponse de la mesure en boucle ouverte et niveau initial, en fonction du temps"
-                    AutomationProperties.HelpText="Molette : zoom. Clic droit glissé : déplacement. Double-clic ou touche Origine : vue complète."/>
+                    AutomationProperties.Name="{local:Loc ui.reponse_de_la_mesure_en}"
+                    AutomationProperties.HelpText="{local:Loc ui.molette_zoom_clic_droit_glisse_2}"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -21,7 +21,7 @@ public sealed class WorkspaceViewModel : INotifyPropertyChanged
         _store = store;
         _engine = engine;
         Projects = new ObservableCollection<Project>(_store.List());
-        Status = Projects.Count == 0 ? "Aucun projet enregistré." : $"{Projects.Count} projet(s) enregistré(s).";
+        Status = Projects.Count == 0 ? Loc.T("cs.aucun_projet_enregistre") : Loc.T("cs.projet_s_enregistre_s", Projects.Count);
         CreateProject = new Command(AddProject, () => !string.IsNullOrWhiteSpace(Name));
         CheckEngine = new Command(async () => await VerifyEngineAsync(), () => !_checking);
     }
@@ -69,12 +69,12 @@ public sealed class WorkspaceViewModel : INotifyPropertyChanged
             _store.Add(project);
             Projects.Add(project);
             Name = "";
-            Status = "Projet enregistré.";
+            Status = Loc.T("cs.projet_enregistre");
         }
         catch (Exception error)
         {
             Trace.TraceError("project.create {0}", error.GetType().Name);
-            Status = "Enregistrement impossible. Vérifiez l’accès au stockage local.";
+            Status = Loc.T("cs.enregistrement_impossible_verifiez_lacces_au");
         }
     }
 
@@ -82,19 +82,19 @@ public sealed class WorkspaceViewModel : INotifyPropertyChanged
     {
         _checking = true;
         ((Command)CheckEngine).Refresh();
-        Status = "Vérification du moteur Python…";
+        Status = Loc.T("cs.verification_du_moteur_python");
         try
         {
-            Status = $"Moteur Python disponible · version {await _engine.GetVersionAsync(_lifetime.Token)}.";
+            Status = Loc.T("cs.moteur_python_disponible_version", await _engine.GetVersionAsync(_lifetime.Token));
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
         {
-            Status = "Vérification annulée.";
+            Status = Loc.T("cs.verification_annulee");
         }
         catch (Exception error)
         {
             Trace.TraceError("engine.ping {0}", error.GetType().Name);
-            Status = error is TimeoutException ? error.Message : "Moteur indisponible. Vérifiez l’installation de Python et MKR_PYTHON.";
+            Status = error is TimeoutException ? error.Message : Loc.T("cs.moteur_indisponible_verifiez_linstallation_de");
         }
         finally
         {

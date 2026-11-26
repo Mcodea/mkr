@@ -23,9 +23,8 @@ public partial class OpenLoopView : UserControl, IStepView
         _workspace = workspace;
         _model = model;
         InitializeComponent();
-        RateLabel.Content = $"Vitesse max. de la sortie ({model.MvUnit}/s, facultative)";
-        Units.Text = $"Étude FOPDT {model.Label}\n" +
-            $"Écarts autour du point initial. Écarts de la sortie de commande en {model.MvUnit}, de la mesure en {model.PvUnit}.";
+        RateLabel.Content = Loc.T("cs.vitesse_max_de_la_sortie", model.MvUnit);
+        Units.Text = Loc.T("cs.etude_fopdt_ecarts_autour_du", model.Label, model.MvUnit, model.PvUnit);
     }
 
     private async void Run(object sender, RoutedEventArgs args)
@@ -37,7 +36,7 @@ public partial class OpenLoopView : UserControl, IStepView
         if (!Read(Sample, out var sample) || !Read(Duration, out var duration) || !Read(StepMv, out var step) ||
             !Read(StepAt, out var at) || !Read(Lower, out var lower) || !Read(Upper, out var upper))
         {
-            Message.Text = "Saisissez les six valeurs numériques du scénario.";
+            Message.Text = Loc.T("cs.saisissez_les_six_valeurs_numeriques");
             return;
         }
 
@@ -46,14 +45,14 @@ public partial class OpenLoopView : UserControl, IStepView
         {
             if (!Read(Rate, out var maximumRate) || maximumRate <= 0)
             {
-                Message.Text = "La vitesse maximale de la sortie de commande doit être strictement positive.";
+                Message.Text = Loc.T("cs.la_vitesse_maximale_de_la");
                 return;
             }
             rate = maximumRate;
         }
 
         ScenarioForm.IsEnabled = false;
-        Message.Text = "Simulation en cours…";
+        Message.Text = Loc.T("cs.simulation_en_cours");
         var token = _lifetime.Token;
         try
         {
@@ -62,13 +61,9 @@ public partial class OpenLoopView : UserControl, IStepView
             token.ThrowIfCancellationRequested();
             _shown = result;
             Message.Text = result.Warnings.Contains("response_beyond_horizon")
-                ? "Le retard repousse le début de la réponse jusqu’à la fin du scénario ou au-delà."
+                ? Loc.T("cs.le_retard_repousse_le_debut")
                 : "";
-            Report.Text = $"Simulation exploratoire · méthode {result.AlgorithmVersion} · moteur {version}\n" +
-                $"Écart final de la mesure {result.Points[^1].Pv:G5} {_model.PvUnit} · " +
-                $"Écart asymptotique de la mesure {result.SteadyPv:G5} {_model.PvUnit} · saturation {result.SaturationSeconds:G5} s · " +
-                $"vitesse limitée {result.RateLimitedSeconds:G5} s\n" +
-                $"Écart de mesure ({_model.PvUnit}) : réponse simulée et niveau initial (voir la légende du graphique)";
+            Report.Text = Loc.T("cs.simulation_exploratoire_methode_moteur_ecart", result.AlgorithmVersion, version, result.Points[^1].Pv, _model.PvUnit, result.SteadyPv, _model.PvUnit, result.SaturationSeconds, result.RateLimitedSeconds, _model.PvUnit);
             ExportButton.IsEnabled = true;
             DrawPlot();
         }
@@ -78,10 +73,10 @@ public partial class OpenLoopView : UserControl, IStepView
             Trace.TraceError("open_loop.simulation {0}", error.GetType().Name);
             Message.Text = error is CsvInputException input ? input.Code switch
             {
-                "sim_grid" => "Utilisez une durée et un instant d’échelon multiples du pas, avec 2 à 5 000 intervalles.",
-                "sim_domain" => "Vérifiez que le pas est positif, l’échelon non nul et antérieur à la fin, et les limites de la sortie de commande de part et d’autre de zéro.",
-                _ => "Vérifiez les valeurs et les unités du scénario."
-            } : "Simulation indisponible. Consultez le journal MKR.";
+                "sim_grid" => Loc.T("cs.utilisez_une_duree_et_un"),
+                "sim_domain" => Loc.T("cs.verifiez_que_le_pas_est"),
+                _ => Loc.T("cs.verifiez_les_valeurs_et_les")
+            } : Loc.T("cs.simulation_indisponible_consultez_le_journal");
         }
         finally { ScenarioForm.IsEnabled = true; }
     }
@@ -99,13 +94,13 @@ public partial class OpenLoopView : UserControl, IStepView
             return;
         }
         var seconds = result.Points.Select(p => p.Seconds).ToArray();
-        Chart.XLabel = "Temps depuis le début du scénario (s)";
+        Chart.XLabel = Loc.T("cs.temps_depuis_le_debut_du");
         Chart.SetTracks(new[]
         {
-            new ChartTrack("Écart de mesure", _model.PvUnit, new[]
+            new ChartTrack(Loc.T("cs.ecart_de_mesure"), _model.PvUnit, new[]
             {
-                new ChartSeries("Simulée", "MkrSignal1", seconds, result.Points.Select(p => p.Pv).ToArray()),
-                new ChartSeries("Niveau initial", "MkrSignal2", new[] { seconds[0], seconds[^1] }, new[] { 0.0, 0.0 })
+                new ChartSeries(Loc.T("cs.simulee"), "MkrSignal1", seconds, result.Points.Select(p => p.Pv).ToArray()),
+                new ChartSeries(Loc.T("cs.niveau_initial"), "MkrSignal2", new[] { seconds[0], seconds[^1] }, new[] { 0.0, 0.0 })
             })
         });
     }
@@ -114,7 +109,7 @@ public partial class OpenLoopView : UserControl, IStepView
     {
         if (_shown is not { } simulation)
             return;
-        var dialog = new SaveFileDialog { FileName = "mkr-boucle-ouverte.csv", Filter = "CSV (*.csv)|*.csv" };
+        var dialog = new SaveFileDialog { FileName = "mkr-boucle-ouverte.csv", Filter = Loc.T("cs.csv_csv_csv") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             return;
         try
@@ -124,12 +119,12 @@ public partial class OpenLoopView : UserControl, IStepView
                 csv.Append(FormattableString.Invariant(
                     $"{point.Seconds:G17},{point.Pv:G17},{point.RequestedMv:G17},{point.AppliedMv:G17}\r\n"));
             File.WriteAllText(dialog.FileName, csv.ToString(), new UTF8Encoding(false));
-            Message.Text = "Séries simulées exportées.";
+            Message.Text = Loc.T("cs.series_simulees_exportees");
         }
         catch (Exception error)
         {
             Trace.TraceError("open_loop.export {0}", error.GetType().Name);
-            Message.Text = "Export CSV impossible.";
+            Message.Text = Loc.T("cs.export_csv_impossible");
         }
     }
 }

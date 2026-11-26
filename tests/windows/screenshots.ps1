@@ -676,24 +676,43 @@ try {
         Set-Resolution $original.Width $original.Height
     }
     Step '24-anglais' {
-        # English interface chrome (central texts): navigation, « Next » button and About window, started with MKR_LANGUAGE=en.
+        # English interface: every screen is walked and every visible name still in French is reported (##FRENCH), then navigation and About are captured.
         if ($Theme -ne 'light') { return }
         if (-not $script:process.HasExited) { Stop-Process -Id $script:process.Id; Start-Sleep -Milliseconds 800 }
         $start.EnvironmentVariables['MKR_LANGUAGE'] = 'en'
         $script:process = [System.Diagnostics.Process]::Start($start)
-        $m3 = Find $root $name 'ORIAS — Espace projets'
+        $m3 = Find $root $name 'ORIAS — Projects'
+        $seen = @{}
+        function Dump-French($where) {
+            foreach ($e in $m3.FindAll($scope, [System.Windows.Automation.Condition]::TrueCondition)) {
+                $n = $e.Current.Name
+                if ($n -and $n.Length -gt 2 -and $n -notlike 'Projet initial*' -and $n -match '[éèêàçùôîïœÉÈÀÇ]|\b(le|la|les|des|du|pour|avec|sans|une|dans|est)\b') {
+                    $key = $n.Substring(0, [Math]::Min(100, $n.Length))
+                    if (-not $seen.ContainsKey($key)) { $seen[$key] = 1; Write-Host "##FRENCH [$where] $key" }
+                }
+            }
+        }
+        Dump-French 'accueil'
         $row = Find (Find $m3 $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
         $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-        Press $m3 'Ouvrir le projet sélectionné'
+        Press $m3 'Open the selected project'
         $null = Find $m3 $id 'StudyPicker'
         $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
         Select-Option $m3 'StudyPicker' "*$modelId"
-        (Find $m3 $id 'Step9').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
-        Start-Sleep -Milliseconds 1000
-        Capture $m3 '24-english-simulation'
-        $apos = [string][char]0x2019
-        (Find $m3 $name 'Aide').GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
-        (Find $m3 $name "À propos d${apos}ORIAS").GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        foreach ($s in 'Step2','Step3','Step4','Step5','Step6','Step9','Step10') {
+            (Find $m3 $id $s).GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+            Start-Sleep -Milliseconds 1200
+            if ($s -eq 'Step6') { try { Press $m3 'Calculate the guided tuning'; $null = Wait-Name $m3 'Status' '*.' 40 } catch { } }
+            Dump-French $s
+            if ($s -eq 'Step4') {
+                try { Press $m3 'Tests and actions'; Start-Sleep -Milliseconds 800; Dump-French 'Step4-essais' } catch { }
+                try { Press $m3 'Results' } catch { }
+            }
+            if ($s -eq 'Step9') { Capture $m3 '24-english-simulation' }
+            if ($s -eq 'Step2') { Capture $m3 '24-english-acquisition' }
+        }
+        (Find $m3 $name 'Help').GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+        (Find $m3 $name 'About ORIAS').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
         $about = Find $root $name 'ORIAS — About'
         Capture $about '24-english-about'
         Close-Window $about

@@ -19,7 +19,7 @@ public partial class IntegratorWindow : Window
         InitializeComponent();
         _workspace = workspace;
         _model = model;
-        ModelLine.Text = $"Modèle : pente k′ = {model.Result.Gain:G6} {model.PvUnit}/s par {model.MvUnit}, retard θ = {model.Result.DelaySeconds:G6} s.";
+        ModelLine.Text = Loc.T("cs.modele_pente_k_s_par", model.Result.Gain, model.PvUnit, model.MvUnit, model.Result.DelaySeconds);
         Closed += (_, _) => _lifetime.Cancel();
     }
 
@@ -47,8 +47,8 @@ public partial class IntegratorWindow : Window
             Result.Text = Describe(tuning);
             BlockValues.IsEnabled = true;
             Status.Text = tuning.Warnings.Contains("tight_response")
-                ? "Réponse plus rapide que le retard : dépassement important, voir les réserves."
-                : "Réglage théorique calculé.";
+                ? Loc.T("cs.reponse_plus_rapide_que_le")
+                : Loc.T("cs.reglage_theorique_calcule");
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }
@@ -57,27 +57,27 @@ public partial class IntegratorWindow : Window
     private string Describe(IntegratorPi pi)
     {
         var text = new StringBuilder();
-        text.AppendLine($"PI intégrateur · règle {pi.Rule} · τc = {pi.ResponseSeconds:G6} s");
-        text.AppendLine($"Kp = {pi.Kp:G6} {_model.MvUnit}/{_model.PvUnit}   Ti = {pi.TiSeconds:G6} s   Ki parallèle = {pi.ParallelKi:G6}");
+        text.AppendLine(Loc.T("cs.pi_integrateur_regle_c_s", pi.Rule, pi.ResponseSeconds));
+        text.AppendLine(Loc.T("cs.kp_ti_s_ki_parallele_2", pi.Kp, _model.MvUnit, _model.PvUnit, pi.TiSeconds, pi.ParallelKi));
         var m = pi.Margins;
         text.AppendLine($"Marge de gain : {(m.GainMargin is { } g ? g.ToString("G4", CultureInfo.CurrentCulture) : "—")}   " +
                         $"marge de phase : {(m.PhaseMarginDegrees is { } p ? p.ToString("G4", CultureInfo.CurrentCulture) + " °" : "—")}   " +
                         $"sensibilité maximale : {m.PeakSensitivity:G4}");
         text.AppendLine();
-        text.AppendLine("Réserves :");
+        text.AppendLine(Loc.T("cs.reserves"));
         foreach (var warning in pi.Warnings) text.AppendLine("  · " + Warning(warning));
         return text.ToString();
     }
 
     private static string Warning(string code) => code switch
     {
-        "exploratory_model" => "modèle exploratoire : à confirmer sur l'installation.",
-        "actuator_limits_unassessed" => "limites et vitesse de l'actionneur non évaluées.",
-        "integrating_process_simc" => "règle SIMC des procédés intégrateurs (Skogestad 2003) ; marges de la boucle nominale seulement.",
-        "tight_response" => "τc inférieur au retard : le dépassement croît nettement (environ 69 % pour τc = θ/5 en simulation).",
-        "low_phase_margin" => "marge de phase inférieure à 30°.",
-        "low_gain_margin" => "marge de gain inférieure à 2 (6 dB).",
-        "high_sensitivity" => "sensibilité maximale supérieure à 2.",
+        "exploratory_model" => Loc.T("cs.modele_exploratoire_a_confirmer_sur"),
+        "actuator_limits_unassessed" => Loc.T("cs.limites_et_vitesse_de_l"),
+        "integrating_process_simc" => Loc.T("cs.regle_simc_des_procedes_integrateurs_2"),
+        "tight_response" => Loc.T("cs.c_inferieur_au_retard_le"),
+        "low_phase_margin" => Loc.T("cs.marge_de_phase_inferieure_a"),
+        "low_gain_margin" => Loc.T("cs.marge_de_gain_inferieure_a"),
+        "high_sensitivity" => Loc.T("cs.sensibilite_maximale_superieure_a_2"),
         _ => code
     };
 
@@ -90,9 +90,9 @@ public partial class IntegratorWindow : Window
             var result = await _workspace.ConvertIntegratorToPidffAsync(_model, tuning, token);
             token.ThrowIfCancellationRequested();
             var text = result.Conversion is { } conversion
-                ? conversion.Describe("SIMC intégrateur", _model.MvUnit, _model.PvUnit)
-                : "Conversion refusée : " + result.RefusalText;
-            new BlockValuesWindow("ORIAS — Valeurs du bloc PIDFF (non qualifiées)", text) { Owner = this }.ShowDialog();
+                ? conversion.Describe(Loc.T("cs.simc_integrateur"), _model.MvUnit, _model.PvUnit)
+                : Loc.T("cs.conversion_refusee") + result.RefusalText;
+            new BlockValuesWindow(Loc.T("cs.orias_valeurs_du_bloc_pidff"), text) { Owner = this }.ShowDialog();
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }

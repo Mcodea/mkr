@@ -47,9 +47,9 @@ public partial class WindowView : Window
         ReflectTheme();       // Initialize() ran at startup: reflect the active choice in the menu
         BuildToolbar();
         var (versionNumber, _) = ProductIdentity.VersionOf(typeof(WindowView).Assembly);
-        VersionText.Text = $"{ProductIdentity.CommercialName} {versionNumber} · application Windows";
+        VersionText.Text = Loc.T("cs.application_windows", ProductIdentity.CommercialName, versionNumber);
         HomeTagline.Text = ProductIdentity.Tagline;
-        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? "Survolez le graphique pour lire les valeurs au curseur." : text;
+        Chart.CursorTextChanged += text => CursorText.Text = text.Length == 0 ? Loc.T("cs.survolez_le_graphique_pour_lire") : text;
         TitleBar.SizeChanged += (_, e) => LayoutTitle(e.NewSize.Width);
         StateChanged += (_, _) => ReflectWindowState();
         Loaded += (_, _) => ReflectWindowState();
@@ -140,14 +140,14 @@ public partial class WindowView : Window
             Toolbar.Children.Add(button);
         }
         void Separator() => Toolbar.Children.Add(new Border { Width = 1, Margin = new Thickness(6, 4, 6, 4), Background = (Brush)FindResource("MkrBorder") });
-        Add("\uE80F", "Accueil", "Liste des projets", () => { if (StudyView.Visibility == Visibility.Visible) LeaveStudy(); }, false);
-        Add("\uE81C", "Journal d'audit", "Journal chaîné des actions du projet", () => { if (StudyView.Visibility == Visibility.Visible) OpenAudit(); }, true);
+        Add("\uE80F", "Accueil", Loc.T("cs.liste_des_projets"), () => { if (StudyView.Visibility == Visibility.Visible) LeaveStudy(); }, false);
+        Add("\uE81C", Loc.T("cs.journal_d_audit"), Loc.T("cs.journal_chaine_des_actions_du"), () => { if (StudyView.Visibility == Visibility.Visible) OpenAudit(); }, true);
         Separator();
-        Add("\uE768", "Acquisition", "Données du procédé : import CSV, acquisition en lecture seule", () => SelectTab(1), true);
-        Add("\uE9D9", "Identifier", "Identification du modèle et validation sur un essai indépendant", () => SelectTab(3), true);
-        Add("\uE9F5", "Régler PID", "Réglage guidé : objectif de robustesse, comparaison, courbes", () => SelectTab(5), true);
-        Add("\uE916", "Simuler", "Simulation en boucle fermée du réglage", () => SelectTab(8), true);
-        Add("\uE749", "Rapport", "Fiche d'étude", () => SelectTab(9), true);
+        Add("\uE768", "Acquisition", Loc.T("cs.donnees_du_procede_import_csv"), () => SelectTab(1), true);
+        Add("\uE9D9", "Identifier", Loc.T("cs.identification_du_modele_et_validation"), () => SelectTab(3), true);
+        Add("\uE9F5", Loc.T("cs.regler_pid"), Loc.T("cs.reglage_guide_objectif_de_robustesse"), () => SelectTab(5), true);
+        Add("\uE916", "Simuler", Loc.T("cs.simulation_en_boucle_fermee_du"), () => SelectTab(8), true);
+        Add("\uE749", "Rapport", Loc.T("cs.fiche_d_etude"), () => SelectTab(9), true);
         foreach (var button in _toolbarButtons) button.IsEnabled = false;
     }
 
@@ -175,7 +175,7 @@ public partial class WindowView : Window
             NextButton.Visibility = Visibility.Visible;
             NextButton.Content = Loc.T("nav.next", ShortTitles[target]) + "  \u203A";
             NextButton.IsEnabled = step.State != StepState.Blocked;
-            NextButton.ToolTip = step.State == StepState.Blocked ? $"Étape indisponible : {step.Detail}" : $"{step.Title}. {step.Detail}";
+            NextButton.ToolTip = step.State == StepState.Blocked ? Loc.T("cs.etape_indisponible", step.Detail) : $"{step.Title}. {step.Detail}";
             return;
         }
         var next = StudyJourney.NextStep(_steps);
@@ -215,7 +215,7 @@ public partial class WindowView : Window
     private void ProjectSelected(object sender, SelectionChangedEventArgs args)
     {
         _project = ProjectList.SelectedItem as Project;
-        ActiveProject.Text = _project is null ? "aucun projet sélectionné" : _project.Name;
+        ActiveProject.Text = _project is null ? Loc.T("cs.aucun_projet_selectionne") : _project.Name;
         OpenStudy.IsEnabled = _project is not null;
     }
 
@@ -224,7 +224,7 @@ public partial class WindowView : Window
     {
         if (ProjectList.SelectedItem is not Project)
         {
-            if (sender is not DataGrid) MessageBox.Show(this, "Sélectionnez un projet dans la liste.", "MKR");
+            if (sender is not DataGrid) MessageBox.Show(this, Loc.T("cs.selectionnez_un_projet_dans_la"), "MKR");
             return;
         }
         EnterStudy(sender, args);
@@ -239,7 +239,7 @@ public partial class WindowView : Window
         HomeView.Visibility = Visibility.Collapsed;
         StudyView.Visibility = Visibility.Visible;
         SetToolbarEnabled(true);
-        Title = $"ORIAS — {project.Name}";
+        Title = Loc.T("cs.orias", project.Name);
         LoadStudy();
     }
 
@@ -250,11 +250,11 @@ public partial class WindowView : Window
         SetToolbarEnabled(false);
         NextButton.Visibility = Visibility.Collapsed;
         HomeView.Visibility = Visibility.Visible;
-        Title = "ORIAS — Espace projets";
+        Title = Loc.T("cs.orias_espace_projets");
     }
 
     private static string StateGlyph(StepState state) => state switch { StepState.Done => "", StepState.Ready => "", _ => "" };
-    private static string StateName(StepState state) => state switch { StepState.Done => "terminée", StepState.Ready => "disponible", _ => "fermée" };
+    private static string StateName(StepState state) => state switch { StepState.Done => Loc.T("cs.terminee"), StepState.Ready => "disponible", _ => Loc.T("cs.fermee") };
 
     private void LoadStudy(bool keepIdentification = false)
     {
@@ -270,10 +270,10 @@ public partial class WindowView : Window
             var accepted = studies.Count(study => study.IsAcceptedForTuning);
             var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
             _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
-            _defaultFacts = $"Enregistrements : {imports}   ·   Études : {studies.Count}   ·   Modèles acceptés : {accepted}";
+            _defaultFacts = Loc.T("cs.enregistrements_etudes_modeles_acceptes", imports, studies.Count, accepted);
             StatusFacts.Text = _defaultFacts;
             InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}" +
-                (StudyJourney.NextStep(_steps) is { } next ? $"\n\nProchaine étape : {next.Number}. {next.Title}\n{next.Detail}" : "");
+                (StudyJourney.NextStep(_steps) is { } next ? Loc.T("cs.prochaine_etape", next.Number, next.Title, next.Detail) : "");
             var rows = studies.OrderByDescending(study => study.CalculatedAt).Select(Row).ToList();
             StudyGrid.ItemsSource = rows;
             StudyPicker.ItemsSource = rows;
@@ -284,7 +284,7 @@ public partial class WindowView : Window
         {
             Trace.TraceError("project.facts {0}", error.GetType().Name);
             _steps = StudyJourney.Evaluate(null);
-            InspectorFacts.Text = "Impossible de lire l'état du projet. Vérifiez le stockage local.";
+            InspectorFacts.Text = Loc.T("cs.impossible_de_lire_l_etat");
             BuildTabs();
         }
     }
@@ -300,7 +300,7 @@ public partial class WindowView : Window
             Tau = result.TauSeconds is { } tau ? (result.SecondTauSeconds is { } fast ? $"{F(tau)} / {F(fast)}" : F(tau)) : "—",
             Delay = F(result.DelaySeconds),
             Error = $"{F(result.Validation.Rmse)} {study.PvUnit}",
-            Decision = study.IsAcceptedForTuning ? "Accepté" : "Refusé",
+            Decision = study.IsAcceptedForTuning ? Loc.T("cs.accepte_2") : Loc.T("cs.refuse_4"),
             When = study.CalculatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
         };
     }
@@ -322,7 +322,7 @@ public partial class WindowView : Window
             if (step.State != StepState.Ready)
                 content.Children.Add(new TextBlock { Text = step.State == StepState.Done ? "\uE73E" : "\uE72E", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), Opacity = 0.75 });
             var tab = new RadioButton { Style = (Style)FindResource("MkrNavItem"), GroupName = "Steps", IsChecked = index == _tab, Content = content };
-            System.Windows.Automation.AutomationProperties.SetName(tab, $"Étape {step.Number} {step.Title}, {StateName(step.State)}");
+            System.Windows.Automation.AutomationProperties.SetName(tab, Loc.T("cs.etape", step.Number, step.Title, StateName(step.State)));
             System.Windows.Automation.AutomationProperties.SetAutomationId(tab, "Step" + step.Number);
             tab.ToolTip = step.Detail;
             tab.Checked += (_, _) => { _tab = index; BuildRibbon(); };
@@ -336,8 +336,8 @@ public partial class WindowView : Window
     /// <summary>The seven stages of a regulation study as chevrons, like the reference screens: done, current, ahead.</summary>
     private static readonly (string Title, int[] Steps, int Tab)[] StageMap =
     {
-        ("Données", new[] { 0, 1 }, 1), ("Diagnostic", new[] { 2 }, 2), ("Identification", new[] { 3 }, 3), ("Validation", new[] { 4 }, 4),
-        ("Réglage", new[] { 5, 6, 7 }, 5), ("Simulation", new[] { 8 }, 8), ("Rapport", new[] { 9 }, 9)
+        (Loc.T("cs.donnees"), new[] { 0, 1 }, 1), ("Diagnostic", new[] { 2 }, 2), ("Identification", new[] { 3 }, 3), ("Validation", new[] { 4 }, 4),
+        (Loc.T("cs.reglage_2"), new[] { 5, 6, 7 }, 5), ("Simulation", new[] { 8 }, 8), ("Rapport", new[] { 9 }, 9)
     };
 
     private void BuildStages()
@@ -371,7 +371,7 @@ public partial class WindowView : Window
             cell.Children.Add(label);
             var target = tab;
             cell.MouseLeftButtonUp += (_, _) => SelectTab(target);
-            System.Windows.Automation.AutomationProperties.SetName(cell, $"Étape {title}");
+            System.Windows.Automation.AutomationProperties.SetName(cell, Loc.T("cs.etape_2", title));
             System.Windows.Automation.AutomationProperties.SetAutomationId(cell, "Stage" + (i + 1));
             cell.ToolTip = _steps.Count > 0 ? _steps[steps[0]].Detail : title;
             Grid.SetColumn(cell, i);
@@ -402,9 +402,9 @@ public partial class WindowView : Window
         switch (_tab)
         {
             case 0:
-                RibbonCommands.Children.Add(Command("", "Accueil", "Retourner à la liste des projets", LeaveStudy));
-                RibbonCommands.Children.Add(Command("", "Description de la boucle", "Repère, grandeur réglée, point de fonctionnement, objectif", () => GoToDescription()));
-                RibbonCommands.Children.Add(Command("", "Journal d'audit", "Journal chaîné des actions du projet", OpenAudit));
+                RibbonCommands.Children.Add(Command("", "Accueil", Loc.T("cs.retourner_a_la_liste_des"), LeaveStudy));
+                RibbonCommands.Children.Add(Command("", Loc.T("cs.description_de_la_boucle"), Loc.T("cs.repere_grandeur_reglee_point_de"), () => GoToDescription()));
+                RibbonCommands.Children.Add(Command("", Loc.T("cs.journal_d_audit"), Loc.T("cs.journal_chaine_des_actions_du"), OpenAudit));
                 break;
             case 1:
                 break;                      // shown in the workspace itself: the data and process view (UpdateStepHost)
@@ -412,19 +412,19 @@ public partial class WindowView : Window
             case 3:
                 break;                      // shown in the workspace itself: the identification view (UpdateStepHost)
             case 4:
-                RibbonCommands.Children.Add(Command("", "Revue de l'étude", "Statut de revue (calculé, vérifié, approuvé) avec quatre yeux", OpenReview, selected is not null));
+                RibbonCommands.Children.Add(Command("", Loc.T("cs.revue_de_l_etude"), Loc.T("cs.statut_de_revue_calcule_verifie"), OpenReview, selected is not null));
                 break;
             case 5:
                 break;                      // the guided tuning is shown in the workspace itself (UpdateStepHost)
             case 6:
-                RibbonCommands.Children.Add(Command("\uE8F1", "Catalogue des blocs constructeurs", "Schneider et Siemens, compatibilités et sources", () => OpenCatalogue(this, new RoutedEventArgs())));
+                RibbonCommands.Children.Add(Command("\uE8F1", Loc.T("cs.catalogue_des_blocs_constructeurs"), Loc.T("cs.schneider_et_siemens_compatibilites_et"), () => OpenCatalogue(this, new RoutedEventArgs())));
                 break;
             case 7:
                 if (selected is { Family: ModelFamily.Integrateur })
-                    RibbonCommands.Children.Add(Command("\uE9D2", "Réglage intégrateur", "Règle SIMC des procédés intégrateurs", () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
+                    RibbonCommands.Children.Add(Command("\uE9D2", Loc.T("cs.reglage_integrateur"), Loc.T("cs.regle_simc_des_procedes_integrateurs_3"), () => OpenWindow(() => new IntegratorWindow(_workspace!, selected)), open));
                 break;
             case 8:
-                RibbonCommands.Children.Add(Command("\uE916", _openLoop ? "Boucle fermée" : "Boucle ouverte", _openLoop ? "Revenir à la comparaison PI en boucle fermée" : "Réponse du modèle à un échelon, sans régulateur", () => { _openLoop = !_openLoop; BuildRibbon(); }, open && selected is not null));
+                RibbonCommands.Children.Add(Command("\uE916", _openLoop ? Loc.T("cs.boucle_fermee") : Loc.T("cs.boucle_ouverte"), _openLoop ? Loc.T("cs.revenir_a_la_comparaison_pi") : Loc.T("cs.reponse_du_modele_a_un"), () => { _openLoop = !_openLoop; BuildRibbon(); }, open && selected is not null));
                 break;
             case 9:
                 break;                      // shown in the workspace itself: the final validation view (UpdateStepHost), which exports the study sheet
@@ -436,12 +436,12 @@ public partial class WindowView : Window
         if (StepHost.Visibility != Visibility.Visible)
         {
             RibbonCommands.Children.Add(new Border { Width = 1, Margin = new Thickness(8, 6, 8, 6), Background = (Brush)FindResource("MkrBorder") });
-            RibbonCommands.Children.Add(Command("\uE740", _focusChart ? "Réduire" : "Agrandir", "Donner tout l'espace au graphique (masque le panneau de valeurs et le tableau)", () => { ToggleChartFocus(); BuildRibbon(); }));
-            RibbonCommands.Children.Add(Command("\uE71E", "Vue complète", "Revenir à l'horizon complet du graphique (double-clic ou Origine)", () => Chart.ResetView()));
-            RibbonCommands.Children.Add(Command("\uEB9F", "Exporter l'image", "Enregistrer le graphique en PNG", () => ExportImage(this, new RoutedEventArgs())));
-            RibbonCommands.Children.Add(Command("\uE74E", "Exporter les données", "Enregistrer toutes les courbes en CSV avec leurs unités", () => ExportData(this, new RoutedEventArgs())));
+            RibbonCommands.Children.Add(Command("\uE740", _focusChart ? Loc.T("cs.reduire") : "Agrandir", Loc.T("cs.donner_tout_l_espace_au"), () => { ToggleChartFocus(); BuildRibbon(); }));
+            RibbonCommands.Children.Add(Command("\uE71E", Loc.T("cs.vue_complete"), Loc.T("cs.revenir_a_l_horizon_complet"), () => Chart.ResetView()));
+            RibbonCommands.Children.Add(Command("\uEB9F", Loc.T("cs.exporter_l_image"), Loc.T("cs.enregistrer_le_graphique_en_png"), () => ExportImage(this, new RoutedEventArgs())));
+            RibbonCommands.Children.Add(Command("\uE74E", Loc.T("cs.exporter_les_donnees"), Loc.T("cs.enregistrer_toutes_les_courbes_en"), () => ExportData(this, new RoutedEventArgs())));
         }
-        RibbonNote.Text = open ? step.Detail : $"Étape fermée. {step.Detail}";
+        RibbonNote.Text = open ? step.Detail : Loc.T("cs.etape_fermee", step.Detail);
         RibbonHost.Visibility = RibbonCommands.Children.Count == 0 ? Visibility.Collapsed : Visibility.Visible;     // no empty command band
         ApplyFacts();
         UpdateNext();
@@ -522,7 +522,7 @@ public partial class WindowView : Window
             catch (Exception error)
             {
                 Trace.TraceError("step.host {0}", error.GetType().Name);
-                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+                StepHost.Child = Placeholder(Loc.T("cs.impossible_d_afficher_cette_etape"));
             }
             return;
         }
@@ -540,7 +540,7 @@ public partial class WindowView : Window
             catch (Exception error)
             {
                 Trace.TraceError("step.host {0}", error.GetType().Name);
-                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+                StepHost.Child = Placeholder(Loc.T("cs.impossible_d_afficher_cette_etape"));
             }
             return;
         }
@@ -568,7 +568,7 @@ public partial class WindowView : Window
             catch (Exception error)
             {
                 Trace.TraceError("step.host {0}", error.GetType().Name);
-                StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+                StepHost.Child = Placeholder(Loc.T("cs.impossible_d_afficher_cette_etape"));
             }
             return;
         }
@@ -585,8 +585,8 @@ public partial class WindowView : Window
         if (!open || selected is null || !selected.IsAcceptedForTuning)
         {
             StepHost.Child = Placeholder(selected is null
-                ? "Aucune étude affichée. Identifiez le procédé (onglet Identification) puis faites accepter le modèle (onglet Validation)."
-                : "Le modèle affiché n'a pas été accepté à la validation indépendante : aucun réglage ni simulation n'est autorisé. Choisissez une étude acceptée ou refaites l'identification.");
+                ? Loc.T("cs.aucune_etude_affichee_identifiez_le")
+                : Loc.T("cs.le_modele_affiche_n_a"));
             return;
         }
         try
@@ -606,7 +606,7 @@ public partial class WindowView : Window
             else if (_tab == 8 && _openLoop)
             {
                 if (selected.Family != ModelFamily.FOPDT)
-                    StepHost.Child = Placeholder("La simulation en boucle ouverte porte sur un modèle du premier ordre avec retard (FOPDT).");
+                    StepHost.Child = Placeholder(Loc.T("cs.la_simulation_en_boucle_ouverte_2"));
                 else
                 {
                     var view = new OpenLoopView(_workspace, selected);
@@ -615,7 +615,7 @@ public partial class WindowView : Window
                 }
             }
             else if (tuning is null)
-                StepHost.Child = Placeholder("Aucun réglage PI enregistré pour cette étude. Calculez-en un dans l'onglet Réglage, puis revenez ici.");
+                StepHost.Child = Placeholder(Loc.T("cs.aucun_reglage_pi_enregistre_pour"));
             else if (_tab == 6)
             {
                 var view = new BlockTargetView(_workspace, selected, tuning) { ShowClose = false };
@@ -632,7 +632,7 @@ public partial class WindowView : Window
         catch (Exception error)
         {
             Trace.TraceError("step.host {0}", error.GetType().Name);
-            StepHost.Child = Placeholder("Impossible d'afficher cette étape. Vérifiez le stockage local.");
+            StepHost.Child = Placeholder(Loc.T("cs.impossible_d_afficher_cette_etape"));
         }
     }
 
@@ -662,7 +662,7 @@ public partial class WindowView : Window
         catch (Exception error)
         {
             Trace.TraceError("window.open {0}", error.GetType().Name);
-            MessageBox.Show(this, "Impossible d’ouvrir cette fenêtre. Vérifiez le stockage local.", "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, Loc.T("cs.impossible_douvrir_cette_fenetre_verifiez"), "MKR", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         LoadStudy();
     }
@@ -674,7 +674,7 @@ public partial class WindowView : Window
         var tuning = _workspace.PiStudies(study.Id).OrderByDescending(item => item.CalculatedAt).FirstOrDefault();
         if (tuning is null)
         {
-            RibbonNote.Text = "Aucun réglage PI enregistré pour cette étude. Calculez-en un à l'étape 8 (Calculer les réglages).";
+            RibbonNote.Text = Loc.T("cs.aucun_reglage_pi_enregistre_pour_2");
             return;
         }
         OpenWindow(() => create(tuning));
@@ -710,7 +710,7 @@ public partial class WindowView : Window
     {
         var show = StudyGrid.Visibility != Visibility.Visible;
         StudyGrid.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        TableToggle.Content = (show ? "▾ " : "▸ ") + "Tableau des études d'identification";
+        TableToggle.Content = (show ? "▾ " : "▸ ") + Loc.T("cs.tableau_des_etudes_d_identification");
     }
 
     private bool _focusChart;
@@ -723,7 +723,7 @@ public partial class WindowView : Window
         ValuesPanel.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         TableToggle.Visibility = _focusChart ? Visibility.Collapsed : Visibility.Visible;
         if (_focusChart) StudyGrid.Visibility = Visibility.Collapsed;
-        CursorText.Text = _focusChart ? "Graphique agrandi. Cliquez de nouveau sur « Agrandir » pour retrouver les valeurs et le tableau." : CursorText.Text;
+        CursorText.Text = _focusChart ? Loc.T("cs.graphique_agrandi_cliquez_de_nouveau") : CursorText.Text;
     }
     private void TrialChanged(object sender, RoutedEventArgs args) { if (IsLoaded) ShowStudy((StudyGrid.SelectedItem as StudyRow)?.Study); }
 
@@ -737,46 +737,46 @@ public partial class WindowView : Window
     {
         if (study is null)
         {
-            ActiveStudy.Text = "Étude : aucune";
-            VerdictText.Text = "AUCUNE ÉTUDE";
+            ActiveStudy.Text = Loc.T("cs.etude_aucune");
+            VerdictText.Text = Loc.T("cs.aucune_etude");
             ValuesText.Text = "";
-            ValuesNote.Text = _steps.Count > 3 && _steps[3].State == StepState.Blocked ? "Importez des données (onglet Données), puis identifiez le procédé." : "Aucune identification enregistrée. Ouvrez l'onglet Identification.";
+            ValuesNote.Text = _steps.Count > 3 && _steps[3].State == StepState.Blocked ? Loc.T("cs.importez_des_donnees_onglet_donnees") : Loc.T("cs.aucune_identification_enregistree_ouvrez_l");
             Chart.SetTracks(Array.Empty<ChartTrack>());
             UpdateVerdictColour();
             BuildRibbon();
             return;
         }
         var result = study.Result;
-        ActiveStudy.Text = $"Étude : {study.Family} · {study.CalculatedAt.ToLocalTime():g} · " + (study.IsAcceptedForTuning ? "modèle accepté" : "modèle refusé");
-        VerdictText.Text = study.IsAcceptedForTuning ? "MODÈLE ACCEPTÉ" : "MODÈLE REFUSÉ";
+        ActiveStudy.Text = Loc.T("cs.etude_2", study.Family, study.CalculatedAt.ToLocalTime()) + (study.IsAcceptedForTuning ? Loc.T("cs.modele_accepte") : Loc.T("cs.modele_refuse_3"));
+        VerdictText.Text = study.IsAcceptedForTuning ? Loc.T("cs.modele_accepte_2") : Loc.T("cs.modele_refuse_2");
         UpdateVerdictColour();
         string F(double v) => v.ToString("G5", CultureInfo.CurrentCulture);
-        var lines = new List<string> { $"Famille  {study.Family}", $"K  {F(result.Gain)} {study.PvUnit}/{study.MvUnit}" };
+        var lines = new List<string> { Loc.T("cs.famille", study.Family), $"K  {F(result.Gain)} {study.PvUnit}/{study.MvUnit}" };
         if (result.TauSeconds is { } tau) lines.Add(result.SecondTauSeconds is { } fast ? $"τ₁  {F(tau)} s\nτ₂  {F(fast)} s" : $"τ  {F(tau)} s");
         lines.Add($"θ  {F(result.DelaySeconds)} s");
-        lines.Add($"θ prudent  {F(result.TuningDelaySeconds)} s");
-        lines.Add($"RMSE valid.  {F(result.Validation.Rmse)} {study.PvUnit}");
-        if (result.Validation.RSquared is { } r2) lines.Add($"R² valid.  {F(r2)}");
+        lines.Add(Loc.T("cs.prudent_s_2", F(result.TuningDelaySeconds)));
+        lines.Add(Loc.T("cs.rmse_valid", F(result.Validation.Rmse), study.PvUnit));
+        if (result.Validation.RSquared is { } r2) lines.Add(Loc.T("cs.r2_valid", F(r2)));
         ValuesText.Text = string.Join("\n", lines);
         ValuesNote.Text = study.IsAcceptedForTuning
-            ? "Validé sur un essai indépendant. Les réglages restent à qualifier sur banc."
+            ? Loc.T("cs.valide_sur_un_essai_independant")
             : $"Refusé : {(study.Assessment is { Reasons.Length: > 0 } a ? string.Join(", ", a.Reasons) : "critères non satisfaits")}. Aucun réglage n'en est déduit.";
 
         var fit = ShowValidation.IsChecked == true ? result.Validation : result.Training;
         var seconds = fit.Points.Select(p => p.Seconds).ToArray();
         var step = fit.InputStep;
         var horizon = seconds.Length > 0 ? seconds[^1] : 1;
-        Chart.XLabel = "Temps depuis l'échelon de la sortie de commande (s)";
+        Chart.XLabel = Loc.T("cs.temps_depuis_l_echelon_de");
         Chart.SetTracks(new[]
         {
-            new ChartTrack(ShowValidation.IsChecked == true ? "Réponse observée et modèle – essai de validation" : "Réponse observée et modèle – essai d'estimation", study.PvUnit, new[]
+            new ChartTrack(ShowValidation.IsChecked == true ? Loc.T("cs.reponse_observee_et_modele_essai") : Loc.T("cs.reponse_observee_et_modele_essai_2"), study.PvUnit, new[]
             {
-                new ChartSeries("Observée", "MkrSignal1", seconds, fit.Points.Select(p => p.Observed).ToArray()),
-                new ChartSeries("Modèle", "MkrSignal2", seconds, fit.Points.Select(p => p.Predicted).ToArray())
-            }) { Weight = 2, YLabel = $"Mesure ({study.PvUnit})" },
-            new ChartTrack("Commande (sortie du régulateur, écart)", study.MvUnit, new[]
+                new ChartSeries(Loc.T("cs.observee"), "MkrSignal1", seconds, fit.Points.Select(p => p.Observed).ToArray()),
+                new ChartSeries(Loc.T("cs.modele_2"), "MkrSignal2", seconds, fit.Points.Select(p => p.Predicted).ToArray())
+            }) { Weight = 2, YLabel = Loc.T("cs.mesure", study.PvUnit) },
+            new ChartTrack(Loc.T("cs.commande_sortie_du_regulateur_ecart"), study.MvUnit, new[]
             {
-                new ChartSeries("Échelon appliqué", "MkrSignal3", new[] { -horizon * 0.05, 0, 0, horizon }, new[] { 0, 0, step, step })
+                new ChartSeries(Loc.T("cs.echelon_applique"), "MkrSignal3", new[] { -horizon * 0.05, 0, 0, horizon }, new[] { 0, 0, step, step })
             }) { YLabel = $"MV ({study.MvUnit})" }
         });
         BuildRibbon();
@@ -786,20 +786,20 @@ public partial class WindowView : Window
 
     private void ExportImage(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "Image PNG (*.png)|*.png", FileName = "courbes-etude.png" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = Loc.T("cs.image_png_png_png"), FileName = "courbes-etude.png" };
         if (dialog.ShowDialog(this) != true) return;
-        try { Chart.ExportPng(dialog.FileName); CursorText.Text = "Image exportée."; }
+        try { Chart.ExportPng(dialog.FileName); CursorText.Text = Loc.T("cs.image_exportee"); }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
-        { CursorText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+        { CursorText.Text = Loc.T("cs.export_impossible_verifiez_le_dossier"); }
     }
 
     private void ExportData(object sender, RoutedEventArgs args)
     {
-        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "courbes-etude.csv" };
+        var dialog = new Microsoft.Win32.SaveFileDialog { Filter = Loc.T("cs.csv_csv_csv"), FileName = "courbes-etude.csv" };
         if (dialog.ShowDialog(this) != true) return;
-        try { Chart.ExportCsv(dialog.FileName); CursorText.Text = "Données exportées."; }
+        try { Chart.ExportCsv(dialog.FileName); CursorText.Text = Loc.T("cs.donnees_exportees"); }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
-        { CursorText.Text = "Export impossible : vérifiez le dossier choisi et vos droits d'écriture."; }
+        { CursorText.Text = Loc.T("cs.export_impossible_verifiez_le_dossier"); }
     }
 }
 

@@ -15,7 +15,7 @@ public sealed record JourneyStep(int Number, string Title, StepState State, stri
 /// </summary>
 public static class StudyJourney
 {
-    public const string NoProject = "Sélectionnez un projet pour voir les conditions de chaque étape.";
+    public static string NoProject = Loc.T("core.selectionnez_un_projet_pour_voir");
 
     public static IReadOnlyList<JourneyStep> Evaluate(ProjectFacts? facts)
     {
@@ -25,33 +25,33 @@ public static class StudyJourney
         var data = facts.Imports > 0;
         var identified = facts.Studies > 0;
         var accepted = facts.AcceptedModels > 0;
-        const string needModel = "Aucun modèle accepté à la validation. Un réglage sur un modèle non validé n'est pas autorisé : identifiez le procédé (étape 4) puis faites accepter le modèle (étape 5).";
+        string needModel = Loc.T("core.aucun_modele_accepte_a_la");
         return new[]
         {
             new JourneyStep(1, Titles[0], facts.HasLoopDescription ? StepState.Done : StepState.Ready,
-                "Repère de la boucle, grandeur réglée, point de fonctionnement et objectif. " + (facts.HasLoopDescription ? "Description enregistrée." : "Description à compléter.")),
+                Loc.T("core.repere_de_la_boucle_grandeur") + (facts.HasLoopDescription ? Loc.T("core.description_enregistree") : Loc.T("core.description_a_completer"))),
             new JourneyStep(2, Titles[1], data ? StepState.Done : StepState.Ready,
-                "Import d'un CSV ou acquisition en lecture seule depuis l'automate. " + (data ? $"{facts.Imports} enregistrement(s) dans le projet." : "Aucun enregistrement dans le projet.")),
+                Loc.T("core.import_d_un_csv_ou") + (data ? Loc.T("core.enregistrement_s_dans_le_projet", facts.Imports) : Loc.T("core.aucun_enregistrement_dans_le_projet"))),
             new JourneyStep(3, Titles[2], data ? StepState.Done : StepState.Blocked,
-                data ? "Qualité temporelle, saturation, excitation et trous sont contrôlés à l'import et consultables." :
-                    "Aucune donnée à analyser. Importez un CSV ou lancez une acquisition (étape 2)."),
+                data ? Loc.T("core.qualite_temporelle_saturation_excitation_et") :
+                    Loc.T("core.aucune_donnee_a_analyser_importez")),
             new JourneyStep(4, Titles[3], !data ? StepState.Blocked : identified ? StepState.Done : StepState.Ready,
-                !data ? "Aucune donnée. Importez ou acquérez au moins un essai en échelon (étape 2)." :
-                    identified ? $"{facts.Studies} étude(s) d'identification enregistrée(s)." : "Choisissez un essai d'identification et un essai de validation distinct."),
+                !data ? Loc.T("core.aucune_donnee_importez_ou_acquerez") :
+                    identified ? Loc.T("core.etude_s_d_identification_enregistree", facts.Studies) : Loc.T("core.choisissez_un_essai_d_identification")),
             new JourneyStep(5, Titles[4], !identified ? StepState.Blocked : accepted ? StepState.Done : StepState.Ready,
-                !identified ? "Aucune identification à valider (étape 4)." :
-                    accepted ? $"{facts.AcceptedModels} modèle(s) accepté(s) sur un essai indépendant." :
-                        "Les modèles identifiés n'ont pas passé la validation. Consultez les critères refusés ; il faut un essai de validation plus informatif ou un autre type de modèle."),
+                !identified ? Loc.T("core.aucune_identification_a_valider_etape") :
+                    accepted ? Loc.T("core.modele_s_accepte_s_sur", facts.AcceptedModels) :
+                        Loc.T("core.les_modeles_identifies_n_ont")),
             new JourneyStep(6, Titles[5], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Choix de la méthode de réglage (Lambda ou SIMC) et du type de régulateur adapté au modèle accepté." : needModel),
+                accepted ? Loc.T("core.choix_de_la_methode_de") : needModel),
             new JourneyStep(7, Titles[6], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Catalogue Schneider et Siemens : les valeurs préparées restent « non qualifiées »." : needModel),
+                accepted ? Loc.T("core.catalogue_schneider_et_siemens_les") : needModel),
             new JourneyStep(8, Titles[7], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Calcul des paramètres et conversion vers la structure du bloc choisi." : needModel),
+                accepted ? Loc.T("core.calcul_des_parametres_et_conversion") : needModel),
             new JourneyStep(9, Titles[8], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Simulation en boucle fermée, sensibilité, marges de stabilité, saturation." : needModel),
+                accepted ? Loc.T("core.simulation_en_boucle_fermee_sensibilite") : needModel),
             new JourneyStep(10, Titles[9], accepted ? StepState.Ready : StepState.Blocked,
-                accepted ? "Fiche d'étude PDF. Les résultats simulés y sont distingués des mesures." : needModel),
+                accepted ? Loc.T("core.fiche_d_etude_pdf_les") : needModel),
         };
     }
 
@@ -63,7 +63,7 @@ public static class StudyJourney
 
     public static readonly IReadOnlyList<string> Titles = new[]
     {
-        "Configuration du procédé", "Acquisition des données", "Analyse et qualification des signaux", "Identification du modèle",
-        "Validation du modèle", "Stratégie de régulation", "Bloc constructeur", "Calcul des paramètres", "Simulation et robustesse", "Validation et rapport"
+        Loc.T("core.configuration_du_procede"), Loc.T("core.acquisition_des_donnees"), Loc.T("core.analyse_et_qualification_des_signaux"), Loc.T("core.identification_du_modele"),
+        Loc.T("core.validation_du_modele"), Loc.T("core.strategie_de_regulation"), Loc.T("core.bloc_constructeur"), Loc.T("core.calcul_des_parametres"), Loc.T("core.simulation_et_robustesse"), Loc.T("core.validation_et_rapport")
     };
 }

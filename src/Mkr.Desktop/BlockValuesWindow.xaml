@@ -1,6 +1,7 @@
 <Window x:Class="Mkr.Desktop.BlockValuesWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Mkr.Desktop"
         Width="860" Height="760" MinWidth="560" MinHeight="420" WindowStartupLocation="CenterOwner">
     <Grid Margin="24,18,24,18">
         <Grid.RowDefinitions>
@@ -11,14 +12,14 @@
         <Border Background="{DynamicResource MkrAccentPale}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1"
                 CornerRadius="6" Padding="12,8" Margin="0,0,0,12">
             <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
-                       Text="Valeurs documentaires, non qualifiées. Elles sont issues de la documentation officielle du constructeur et n'ont pas été essayées sur automate : relisez-les et saisissez-les à la main, jamais par copie automatique."/>
+                       Text="{local:Loc ui.valeurs_documentaires_non_qualifiees_elles}"/>
         </Border>
         <TextBox x:Name="Values" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
-                 AutomationProperties.Name="Valeurs du bloc"/>
+                 AutomationProperties.Name="{local:Loc ui.valeurs_du_bloc}"/>
         <WrapPanel Grid.Row="2" Margin="0,12,0,0">
-            <Button Content="_Copier" Click="CopyContent"/>
-            <Button Content="_Fermer" Margin="8,0,0,0" IsCancel="True"/>
+            <Button Content="{local:Loc ui.copier}" Click="CopyContent"/>
+            <Button Content="{local:Loc ui.fermer}" Margin="8,0,0,0" IsCancel="True"/>
             <TextBlock x:Name="CopyStatus" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource MkrMuted}"/>
         </WrapPanel>
     </Grid>

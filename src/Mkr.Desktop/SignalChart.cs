@@ -86,7 +86,7 @@ internal sealed class SignalChart : FrameworkElement
         ThemeService.Changed += () => InvalidateVisual();
     }
 
-    public string XLabel { get; set; } = "Temps (s)";
+    public string XLabel { get; set; } = Loc.T("cs.temps_s");
     public bool SelectionEnabled { get; set; }
     /// <summary>Reference layout: centred title, rotated axis label, boxed legend inside the plot, lettered range markers.</summary>
     public bool ReferenceStyle { get; set; }
@@ -214,7 +214,7 @@ internal sealed class SignalChart : FrameworkElement
         dc.DrawRectangle(Theme("MkrSurface"), null, new Rect(0, 0, ActualWidth, ActualHeight));
         if (!HasData || ActualWidth < 200 || ActualHeight < (ReferenceStyle ? 96 : 160))
         {
-            var empty = Text(HasData ? "Zone trop petite pour tracer." : "Aucune donnée à afficher.", 13, Theme("MkrPlotLabel"));
+            var empty = Text(HasData ? Loc.T("cs.zone_trop_petite_pour_tracer") : Loc.T("cs.aucune_donnee_a_afficher"), 13, Theme("MkrPlotLabel"));
             dc.DrawText(empty, new Point(LeftMargin, TopMargin + 8));
             return;
         }
