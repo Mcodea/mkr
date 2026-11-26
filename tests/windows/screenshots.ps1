@@ -176,6 +176,44 @@ function Check($label, [scriptblock]$body) {
         if (& $body) { Write-Host "##CHECK PASS $label" } else { $script:failures += $label; Write-Host "##CHECK FAIL $label" }
     } catch { $script:failures += $label; Write-Host "##CHECK FAIL $label : $($_.Exception.Message)" }
 }
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+// Windows display scaling (100 %, 125 %, 150 %) of the primary display, applied without signing out (DisplayConfig DPI scale, relative to the recommended scale).
+public static class MkrDpi {
+    [StructLayout(LayoutKind.Sequential)] struct LUID { public uint Low; public int High; }
+    [StructLayout(LayoutKind.Sequential)] struct Header { public int Type; public uint Size; public LUID Adapter; public uint Id; }
+    [StructLayout(LayoutKind.Sequential)] struct GetScale { public Header H; public int Min; public int Cur; public int Max; }
+    [StructLayout(LayoutKind.Sequential)] struct SetScale { public Header H; public int Rel; }
+    [DllImport("user32.dll")] static extern int GetDisplayConfigBufferSizes(uint flags, out uint paths, out uint modes);
+    [DllImport("user32.dll")] static extern int QueryDisplayConfig(uint flags, ref uint paths, byte[] pathArray, ref uint modes, byte[] modeArray, IntPtr topology);
+    [DllImport("user32.dll")] static extern int DisplayConfigGetDeviceInfo(ref GetScale info);
+    [DllImport("user32.dll")] static extern int DisplayConfigSetDeviceInfo(ref SetScale info);
+    [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr window);
+    static bool Source(out LUID adapter, out uint id) {
+        adapter = new LUID(); id = 0;
+        uint p, m;
+        if (GetDisplayConfigBufferSizes(2, out p, out m) != 0 || p == 0) return false;
+        byte[] paths = new byte[p * 72]; byte[] modes = new byte[m * 64];
+        if (QueryDisplayConfig(2, ref p, paths, ref m, modes, IntPtr.Zero) != 0) return false;
+        adapter.Low = BitConverter.ToUInt32(paths, 0); adapter.High = BitConverter.ToInt32(paths, 4); id = BitConverter.ToUInt32(paths, 8);
+        return true;
+    }
+    // "code:min:cur:max" (relative steps around the recommended scale) or "none"
+    public static string Get() {
+        LUID a; uint id; if (!Source(out a, out id)) return "none";
+        GetScale g = new GetScale(); g.H.Type = -3; g.H.Size = (uint)Marshal.SizeOf(typeof(GetScale)); g.H.Adapter = a; g.H.Id = id;
+        int r = DisplayConfigGetDeviceInfo(ref g);
+        return r + ":" + g.Min + ":" + g.Cur + ":" + g.Max;
+    }
+    public static int Set(int rel) {
+        LUID a; uint id; if (!Source(out a, out id)) return -1;
+        SetScale s = new SetScale(); s.H.Type = -4; s.H.Size = (uint)Marshal.SizeOf(typeof(SetScale)); s.H.Adapter = a; s.H.Id = id; s.Rel = rel;
+        return DisplayConfigSetDeviceInfo(ref s);
+    }
+    public static uint WindowDpi(IntPtr window) { return GetDpiForWindow(window); }
+}
+"@
 Add-Type -Name Mouse -Namespace Mkr -MemberDefinition @"
 [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
 [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
@@ -569,10 +607,76 @@ try {
         }
         Set-Resolution $original.Width $original.Height
     }
+    Step '23-echelles-windows' {
+        # Windows display scaling 100 / 125 / 150 %: the application is restarted at each scale (as after a scale change) and three dense screens are captured.
+        if ($Theme -ne 'light') { return }
+        $original = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
+        $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+        $script:SettleMs = 2500
+        foreach ($size in @(@(1920,1080), @(1366,768))) {
+            Set-Resolution $size[0] $size[1]
+            Start-Sleep -Milliseconds 1500
+            [void][MkrDpi]::Set(0); Start-Sleep -Milliseconds 2500
+            $state = [MkrDpi]::Get().Split(':')
+            Write-Host "##DIAG echelle $($size[0])x$($size[1]) etat=$([MkrDpi]::Get())"
+            $maximum = if ($state.Length -ge 4 -and $state[0] -eq '0') { [int]$state[3] } else { 0 }
+            foreach ($rel in 0, 1, 2) {
+                if ($rel -gt $maximum) { Write-Host "##DIAG echelle +$rel non proposee a $($size[0])x$($size[1])"; continue }
+                $code = [MkrDpi]::Set($rel)
+                Start-Sleep -Milliseconds 3500
+                if (-not $script:process.HasExited) { Stop-Process -Id $script:process.Id; Start-Sleep -Milliseconds 800 }
+                $start.EnvironmentVariables.Remove('MKR_STARTUP_HOLD_MS')
+                $script:process = [System.Diagnostics.Process]::Start($start)
+                $m2 = Find $root $name 'ORIAS — Espace projets'
+                $dpi = [MkrDpi]::WindowDpi([IntPtr]$m2.Current.NativeWindowHandle)
+                $percent = [int][Math]::Round($dpi * 100 / 96)
+                Write-Host "##DIAG echelle rel=+$rel code=$code dpi=$dpi soit $percent % a $($size[0])x$($size[1])"
+                $row = Find (Find $m2 $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
+                $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+                Press $m2 'Ouvrir le projet sélectionné'
+                $null = Find $m2 $id 'StudyPicker'
+                Select-Option $m2 'StudyPicker' "*$modelId"
+                Start-Sleep -Milliseconds 800
+                foreach ($screen in @(@('acquisition','Step2'), @('identification','Step4'), @('simulation','Step9'))) {
+                    (Find $m2 $id $screen[1]).GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+                    Start-Sleep -Milliseconds 900
+                    if ($screen[0] -eq 'identification') { Show-Page $m2 'PageResults' }
+                    Capture $m2 ("23-echelle-{0}pct-{1}-{2}x{3}" -f $percent, $screen[0], $size[0], $size[1])
+                }
+            }
+        }
+        [void][MkrDpi]::Set(0); Start-Sleep -Milliseconds 2000
+        Set-Resolution $original.Width $original.Height
+    }
+    Step '24-anglais' {
+        # English interface chrome (central texts): navigation, « Next » button and About window, started with MKR_LANGUAGE=en.
+        if ($Theme -ne 'light') { return }
+        if (-not $script:process.HasExited) { Stop-Process -Id $script:process.Id; Start-Sleep -Milliseconds 800 }
+        $start.EnvironmentVariables['MKR_LANGUAGE'] = 'en'
+        $script:process = [System.Diagnostics.Process]::Start($start)
+        $m3 = Find $root $name 'ORIAS — Espace projets'
+        $row = Find (Find $m3 $id 'ProjectList') $type ([System.Windows.Automation.ControlType]::DataItem)
+        $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Press $m3 'Ouvrir le projet sélectionné'
+        $null = Find $m3 $id 'StudyPicker'
+        $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+        Select-Option $m3 'StudyPicker' "*$modelId"
+        (Find $m3 $id 'Step9').GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        Start-Sleep -Milliseconds 1000
+        Capture $m3 '24-english-simulation'
+        $apos = [string][char]0x2019
+        (Find $m3 $name 'Aide').GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand()
+        (Find $m3 $name "À propos d${apos}ORIAS").GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        $about = Find $root $name 'ORIAS — About'
+        Capture $about '24-english-about'
+        Close-Window $about
+        $start.EnvironmentVariables.Remove('MKR_LANGUAGE')
+    }
 } catch {
     Write-Host "##CAPTURE-ABORTED $($_.Exception.Message)"
 } finally {
-    if (-not $process.HasExited) { Stop-Process -Id $process.Id }
+    [void][MkrDpi]::Set(0)
+    if (-not $script:process.HasExited) { Stop-Process -Id $script:process.Id }
 }
 if ($script:failures.Count -gt 0) {
     Write-Host "##CHECKS-FAILED $($script:failures -join ' | ')"

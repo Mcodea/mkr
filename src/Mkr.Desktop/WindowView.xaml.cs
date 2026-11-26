@@ -25,8 +25,8 @@ public sealed class StudyRow
 
 public partial class WindowView : Window
 {
-    private static readonly string[] ShortTitles =
-        { "Projet", "Données", "Diagnostic", "Identification", "Validation", "Réglage PID", "Bloc", "Paramètres PI", "Simulation", "Rapport" };
+    private static string[] ShortTitles =>
+        new[] { Loc.T("step.project"), Loc.T("step.data"), Loc.T("step.diagnostic"), Loc.T("step.identification"), Loc.T("step.validation"), Loc.T("step.tuning"), Loc.T("step.block"), Loc.T("step.pi"), Loc.T("step.simulation"), Loc.T("step.report") };
 
     private readonly IImportStore _store;
     private readonly ICsvEngine _engine;
@@ -173,7 +173,7 @@ public partial class WindowView : Window
             var step = _steps[target];
             _nextTab = target;
             NextButton.Visibility = Visibility.Visible;
-            NextButton.Content = $"Suivant : {ShortTitles[target]}  \u203A";
+            NextButton.Content = Loc.T("nav.next", ShortTitles[target]) + "  \u203A";
             NextButton.IsEnabled = step.State != StepState.Blocked;
             NextButton.ToolTip = step.State == StepState.Blocked ? $"Étape indisponible : {step.Detail}" : $"{step.Title}. {step.Detail}";
             return;
@@ -182,7 +182,7 @@ public partial class WindowView : Window
         NextButton.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
         if (next is null) return;
         _nextTab = next.Number - 1;
-        NextButton.Content = $"Suivant : {ShortTitles[next.Number - 1]}  \u203A";
+        NextButton.Content = Loc.T("nav.next", ShortTitles[next.Number - 1]) + "  \u203A";
         NextButton.ToolTip = $"{next.Title}. {next.Detail}";
         NextButton.IsEnabled = _tab != next.Number - 1;
     }
@@ -200,6 +200,13 @@ public partial class WindowView : Window
     }
 
     private void OpenHelp(object sender, RoutedEventArgs args) => new HelpWindow { Owner = this }.ShowDialog();
+
+    private void MenuLanguage(object sender, RoutedEventArgs args)
+    {
+        if (sender is not MenuItem { Tag: string language }) return;
+        Loc.Remember(language);
+        MessageBox.Show(this, Loc.T("menu.language.restart"), ProductIdentity.CommercialName, MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 
     private void OpenAbout(object sender, RoutedEventArgs args) => new AboutWindow { Owner = this }.ShowDialog();
     private void OpenCatalogue(object sender, RoutedEventArgs args) => BlockCatalogueWindow.OpenFor(this, _csv is null ? null : _csv.ReadLoopBrief);

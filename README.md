@@ -1,5 +1,10 @@
 # MKR
 
+> **ORIAS** (Optimisation de la Régulation Industrielle et Assistance aux Systèmes asservis — « De la mesure à la maîtrise du procédé. ») est le nom commercial du produit
+> affiché à l’utilisateur. **MKR** reste le nom technique du projet : dépôt, espaces de noms, assemblies (`Mkr.Desktop.exe`), dossier de données et formats ne changent pas.
+> Les textes visibles et l’identité sont centralisés dans `src/Mkr.Core/ProductIdentity.cs` et `Localization.cs` (français de référence, anglais pour l’interface).
+> Voir `docs/ui/matrice-conformite-orias.md` pour l’état de conformité et les preuves.
+
 MKR est un logiciel Windows d’assistance à l’ingénierie de la régulation industrielle. Le socle permet de créer et rouvrir des projets locaux, de décrire un procédé et d’importer un CSV avec conservation de l’original et rapport de qualité descriptive. Il permet aussi d’enregistrer une étude FOPDT, SOPDT ou intégrateur exploratoire avec deux essais historiques distincts et de comparer les réglages PI IMC/Lambda et SIMC sur FOPDT, y compris en simulation fermée.
 
 ## Essayer la version portable sous Windows x64

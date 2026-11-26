@@ -1,3 +1,4 @@
+using Mkr.Core;
 using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Markup;
@@ -50,22 +51,31 @@ public partial class App : Application
             Trace.Listeners.Add(new TextWriterTraceListener(Path.Combine(directory, "mkr.log")));
             Trace.AutoFlush = true;
             Mkr.Core.CurrentUser.Provider = new WindowsIdentityProvider();
+            Loc.Initialize(directory);
             ThemeService.RegisterWindowDefaults();
             ThemeService.Initialize(directory);              // the start-up window already follows the chosen theme
             startup = new StartupWindow();
             startup.Show();
-            startup.Report("Ouverture de la base de projets (SQLite)…");
+            startup.Report(Loc.T("startup.step.database"));
             var store = new SqliteProjectStore(Path.Combine(directory, "projects.db"));
-            startup.Report("Préparation du moteur de calcul…");
+            startup.Report(Loc.T("startup.step.engine"));
             var bundled = Path.Combine(AppContext.BaseDirectory, "python", "python.exe");
             var python = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? (File.Exists(bundled) ? bundled : "python");
             var engine = new PythonDiagnostics(python, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
             var model = new WorkspaceViewModel(store, engine);
             MainWindow = new WindowView(store, engine, project => new IdentificationWorkspace(project, store, store, engine, store, engine, engine, engine)) { DataContext = model };
             MainWindow.Closed += (_, _) => model.CancelDiagnostics();
-            startup.Report("Ouverture de l’espace de travail…");
+            startup.Report(Loc.T("startup.step.workspace"));
             // Automated captures only: keep the start-up window visible for the given time (never set in normal use).
-            if (int.TryParse(Environment.GetEnvironmentVariable("MKR_STARTUP_HOLD_MS"), out var hold) && hold > 0) Thread.Sleep(Math.Min(hold, 10_000));
+            if (int.TryParse(Environment.GetEnvironmentVariable("MKR_STARTUP_HOLD_MS"), out var hold) && hold > 0)
+            {
+                // wait while keeping the message loop alive, so that the window stays responsive (UI automation and screen capture need it)
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Min(hold, 10_000)) };
+                timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+                timer.Start();
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+            }
             MainWindow.Show();
             startup.Close();
         }

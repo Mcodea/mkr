@@ -11,13 +11,12 @@ public partial class AboutWindow : Window
         var (number, build) = ProductIdentity.VersionOf(typeof(AboutWindow).Assembly);
         Tagline.Text = ProductIdentity.Tagline;
         Meaning.Text = $"{ProductIdentity.CommercialName} : {ProductIdentity.Meaning}.";
-        Description.Text = ProductIdentity.Description;
-        VersionLine.Text = build is null ? $"Version {number}" : $"Version {number} · compilation {build}";
-        TechnicalLine.Text = $"Nom technique du projet : {ProductIdentity.TechnicalName} (dépôt, modules et formats de données inchangés).";
-        Qualification.Text = ProductIdentity.QualificationNotice;
-        ThirdParty.Text = "PDFsharp / MigraDoc (génération des fiches PDF) · Microsoft.Data.Sqlite et SQLitePCLRaw (stockage local) · " +
-            "System.Security.Cryptography.Pkcs · composants Python du moteur de calcul listés dans engine/requirements.txt. " +
-            "Les licences sont celles de chaque composant, fournies avec sa distribution.";
+        Description.Text = Loc.T("product.description");
+        VersionLine.Text = build is null ? Loc.T("about.version.line", number) : Loc.T("about.version.build", number, build);
+        Title = ProductIdentity.Title(Loc.T("about.title"));
+        TechnicalLine.Text = Loc.T("about.technical", ProductIdentity.TechnicalName);
+        Qualification.Text = Loc.T("product.qualification");
+        ThirdParty.Text = Loc.T("about.thirdparty.text");
     }
 
     private void Close(object sender, RoutedEventArgs args) => base.Close();

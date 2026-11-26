@@ -421,6 +421,18 @@ try
     }
 
     {
+        // Central texts: every English text has its French reference, with the same placeholders; a gap falls back instead of breaking the screen.
+        var french = Loc.FrenchTexts; var english = Loc.EnglishTexts;
+        Require(english.Keys.All(french.ContainsKey), "Every English text has a French reference.");
+        static int Placeholders(string text) => System.Text.RegularExpressions.Regex.Matches(text, @"\{\d+\}").Select(m => m.Value).Distinct().Count();
+        Require(english.All(pair => Placeholders(pair.Value) == Placeholders(french[pair.Key])), "French and English texts use the same placeholders.");
+        Require(french.Values.All(value => !string.IsNullOrWhiteSpace(value)), "No empty French text.");
+        Require(Loc.Lookup(Loc.English, "product.description") == Loc.Lookup(Loc.French, "product.description"), "A text without English version falls back to French.");
+        Require(Loc.Lookup(Loc.English, "nav.next") == "Next: {0}" && Loc.Lookup(Loc.French, "nav.next") == "Suivant : {0}", "The language selects the text.");
+        Require(Loc.Lookup(Loc.French, "no.such.key") == "no.such.key", "An unknown key is shown as itself.");
+    }
+
+    {
         // The journey is derived from stored facts only; tuning is closed until a model is accepted.
         var none = StudyJourney.Evaluate(null);
         Require(none.Count == 10 && none.All(s => s.State == StepState.Blocked), "Without a project every step is closed and says why.");

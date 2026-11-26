@@ -12,7 +12,8 @@ public partial class StartupWindow : Window
         InitializeComponent();
         var (number, build) = ProductIdentity.VersionOf(typeof(StartupWindow).Assembly);
         Tagline.Text = ProductIdentity.Tagline;
-        VersionLine.Text = build is null ? $"Version {number}" : $"Version {number} · compilation {build}";
+        VersionLine.Text = build is null ? Loc.T("about.version.line", number) : Loc.T("about.version.build", number, build);
+        Title = ProductIdentity.Title(Loc.T("startup.title"));
     }
 
     /// <summary>Shows the step being carried out and lets the window paint before the work continues on the UI thread.</summary>

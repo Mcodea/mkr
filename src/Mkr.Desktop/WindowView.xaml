@@ -139,6 +139,9 @@
                 <MenuItem x:Name="MenuThemeSystem" Header="Thème : suivre _Windows" IsCheckable="True" Click="MenuTheme" Tag="System"/>
                 <MenuItem x:Name="MenuThemeLight" Header="Thème : _clair" IsCheckable="True" Click="MenuTheme" Tag="Light"/>
                 <MenuItem x:Name="MenuThemeDark" Header="Thème : _sombre" IsCheckable="True" Click="MenuTheme" Tag="Dark"/>
+                <Separator/>
+                <MenuItem Header="Langue : _français" Click="MenuLanguage" Tag="fr"/>
+                <MenuItem Header="Language: _English" Click="MenuLanguage" Tag="en"/>
             </MenuItem>
             <MenuItem Header="_Projet">
                 <MenuItem Header="_Description de la boucle" Click="MenuDescription"/>

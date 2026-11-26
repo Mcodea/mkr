@@ -9,32 +9,30 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,6">
+        <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="10,5">
             <Border.Resources><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="10,2"/></Style>
 <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style>
 <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="6,2"/></Style></Border.Resources>
-            <StackPanel>
-                <TextBlock x:Name="Units" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <WrapPanel Margin="0">
-                        <Button Content="_Simuler et enregistrer" Click="Run" />
-                        <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}" Margin="12,0,0,0"/>
-                        <TextBox x:Name="Variation" Width="62" Text="20"
-                                 ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
-                        <Button Content="_Comparer la robustesse" Click="RunRobustness"
-                                Style="{StaticResource MkrPrimaryButton}" Margin="8,0,0,0"
-                                ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
-                        <Button Content="Analyser 27 _combinaisons" Click="RunCombined"
-                                Margin="8,0,0,0"
-                                ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
-                        <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
-                                Margin="8,0,0,0"
-                                ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
-                        <Label Content="Simulation à exporter" Target="{Binding ElementName=Saved}" Margin="10,0,0,0" />
-                        <ComboBox x:Name="Saved" Width="215" DisplayMemberPath="Label" SelectionChanged="ShowSaved" />
-                        <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="8,0,0,0"/>
-                        <Button x:Name="ExportButton" Content="_Exporter les séries enregistrées…" Click="Export" IsEnabled="False" Margin="8,0,0,0" />
-                    </WrapPanel>
-            </StackPanel>
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <Button x:Name="ResetZoomButton" Style="{StaticResource MkrToolButton}" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation (double-clic)" AutomationProperties.Name="Réinitialiser le zoom"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
+                    <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+                <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <Button Content="_Simuler et enregistrer" Click="Run" Margin="0,0,8,0"/>
+                    <Label Content="_Variation (%)" Target="{Binding ElementName=Variation}"/>
+                    <TextBox x:Name="Variation" Width="56" Text="20" Margin="0,0,8,0"
+                             ToolTip="Analyse de sensibilité : de 0 à 50 %, sans recalcul des coefficients PI"/>
+                    <Button Content="_Comparer la robustesse" Click="RunRobustness" Style="{StaticResource MkrPrimaryButton}" Margin="0,0,8,0"
+                            ToolTip="Sept cas : nominal et variations individuelles de K, τ et θ"/>
+                    <Button Content="Analyser 27 _combinaisons" Click="RunCombined" Margin="0,0,8,0"
+                            ToolTip="Grille déterministe 3 × 3 × 3 de K, τ, θ ; coefficients PI fixes"/>
+                    <Button Content="Essai _PID manuel…" Click="OpenPidPrototype"
+                            ToolTip="Laboratoire hors ligne sans sauvegarde ni correspondance constructeur"/>
+                </WrapPanel>
+            </DockPanel>
         </Border>
         <Grid Grid.Row="1" Margin="0,6,0,0">
             <Grid.ColumnDefinitions>
@@ -49,14 +47,6 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <StackPanel>
-                    <Border Background="{DynamicResource MkrSurfaceAlt}" BorderBrush="{DynamicResource MkrBorder}" BorderThickness="1" Padding="4,2" Margin="0,0,0,4">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Style="{StaticResource MkrToolButton}" Click="ZoomIn" ToolTip="Zoom avant (ou molette)" AutomationProperties.Name="Zoom avant"><TextBlock Text="&#xE8A3;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                            <Button Style="{StaticResource MkrToolButton}" Click="ZoomOut" ToolTip="Zoom arrière" AutomationProperties.Name="Zoom arrière"><TextBlock Text="&#xE71F;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                            <Button x:Name="ResetZoomButton" Style="{StaticResource MkrToolButton}" Click="ResetZoom" ToolTip="Revenir à toute la durée de la simulation (double-clic)" AutomationProperties.Name="Réinitialiser le zoom"><TextBlock Text="&#xE9A6;" FontFamily="Segoe MDL2 Assets" FontSize="15"/></Button>
-                            <TextBlock x:Name="ZoomStatus" Text="Horizon complet" Foreground="{DynamicResource MkrMuted}" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
                 <local:SignalChart x:Name="Chart" Grid.Row="1" MinHeight="300" ReferenceStyle="True" ShowValueBoxes="False"
                         AutomationProperties.Name="Réponses de la consigne et de la mesure, commandes calculées et appliquées, IMC et SIMC, en fonction du temps"
@@ -77,6 +67,17 @@
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="Redimensionner le panneau"/>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="ScenarioForm">
+                    <Expander Style="{StaticResource MkrPanel}" Header="Simulation enregistrée et exports">
+                        <StackPanel Margin="10,8">
+                            <TextBlock x:Name="Units" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Label Content="Simulation à exporter" Target="{Binding ElementName=Saved}" Padding="0" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="Saved" DisplayMemberPath="Label" SelectionChanged="ShowSaved" MinHeight="28" Margin="0,0,0,8"/>
+                            <WrapPanel>
+                                <Button x:Name="SheetButton" Content="Fiche de mise au point (PDF)…" Click="ExportSheet" IsEnabled="False" Margin="0,0,8,6" MinHeight="28" Padding="10,2"/>
+                                <Button x:Name="ExportButton" Content="_Exporter les séries enregistrées…" Click="Export" IsEnabled="False" Margin="0,0,0,6" MinHeight="28" Padding="10,2"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Expander>
                     <Expander Style="{StaticResource MkrPanel}" Header="Comparaison des méthodes de réglage">
                         <StackPanel>
                             <Grid x:Name="IndicatorGrid"/>
