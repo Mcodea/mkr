@@ -27,7 +27,11 @@ try {
         Write-Host "##DIAG exited=$($process.HasExited) exitcode=$(if ($process.HasExited) { $process.ExitCode })"
         try { Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2 } -MaxEvents 4 | ForEach-Object { $m = ($_.Message -replace "`r?`n", ' | '); Write-Host ("##DIAG " + $_.ProviderName + ' ' + $m.Substring(0, [Math]::Min(1500, $m.Length))) } } catch { Write-Host '##DIAG no event log' }
         $log = Join-Path $env:LOCALAPPDATA 'MKR\mkr.log'
-        if (Test-Path $log) { Get-Content -LiteralPath $log -Tail 30 | ForEach-Object { Write-Host "##DIAG mkr.log $_" } } else { Write-Host '##DIAG no mkr.log' }
+        if (Test-Path $log) {
+            $lines = @(Get-Content -LiteralPath $log)
+            $at = [Array]::FindIndex($lines, [Predicate[string]]{ param($l) $l -like '*startup detail*' })
+            if ($at -ge 0) { $lines[$at..([Math]::Min($at + 14, $lines.Count - 1))] | ForEach-Object { Write-Host "##DIAG mkr.log $_" } } else { $lines | Select-Object -Last 15 | ForEach-Object { Write-Host "##DIAG mkr.log $_" } }
+        } else { Write-Host '##DIAG no mkr.log' }
         throw
     }
     $button = Wait-Element $main $nameProperty 'Ouvrir le catalogue des blocs'
