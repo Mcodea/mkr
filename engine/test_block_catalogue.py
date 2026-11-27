@@ -5,7 +5,7 @@ from block_catalogue import convert, lookup
 class CatalogueTests(unittest.TestCase):
     def test_unknown_target_is_visible_but_blocked(self):
         entries = lookup({"cpu": "M580"})["entries"]
-        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PIFINT", "PID_INT", "PID_Compact"})
+        self.assertEqual({e["name"] for e in entries}, {"PI_B", "PIDFF", "PID_INT", "PID_Compact"})
         self.assertTrue(all(not e["selectable"] and "cpu" in e["unverifiedTargetFields"] for e in entries))
         # Siemens PID_Compact is listed with no equation, parameter or fact: nothing is claimed
         # about them until the official documentation is read (AGENTS.md §7).
@@ -89,7 +89,9 @@ class VendorRulesTests(unittest.TestCase):
     def test_sign_conventions_that_a_conversion_must_handle_are_recorded(self):
         pidff, = lookup({"name": "PIDFF"})["entries"]
         text = " ".join(f["claim"] for f in pidff["facts"])
-        self.assertIn("kp négatif n’est donc pas accepté", text)
+        self.assertIn("kp négatif n’est donc pas utilisable : le signe passe par rev_dir", text)
+        self.assertIn("remplacé par 0 avec le bit 4", text)               # 33002535 p. 188-189 : avertissement, pas un refus
+        self.assertNotIn("ne produit pas de sortie", text)                # ancienne lecture de la FAQ, contredite par le manuel
         self.assertIn("ovs_att", text)
         compact = next(e for e in lookup({"name": "PID_Compact"})["entries"] if e["libraryVersion"] is None)
         claims = " ".join(f["claim"] for f in compact["facts"])

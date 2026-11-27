@@ -21,7 +21,7 @@ Le PID idéal de MKR est u = Kp (e + 1/Ti ∫e + Td de/dt) avec un filtre Tf sur
 
 **Sens d'action (p. 182).** `rev_dir = 1` : un écart positif PV − SP donne une sortie supérieure. `rev_dir = 0` : une sortie inférieure. MKR calcule u = Kp·(SP − PV) :
 - Kp > 0 (gain du procédé positif) → **`rev_dir = 0`** ;
-- Kp < 0 (gain du procédé négatif) → **`rev_dir = 1`**, avec `kp = |Kp|`. Le bloc refuse un kp négatif (statut 080, FAQ FA410692).
+- Kp < 0 (gain du procédé négatif) → **`rev_dir = 1`**, avec `kp = |Kp|`. Le bloc remplace un kp négatif par 0 avec le bit 4 (33002535 p. 188-189 ; statut 080 = bits 4 + 6, FAQ FA410692) : le signe passe toujours par `rev_dir`.
 
 **Valeurs neutres à régler** pour que l'équation ci-dessus soit la seule en jeu :
 

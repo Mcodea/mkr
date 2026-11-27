@@ -258,7 +258,7 @@
         },
         {
           "source": "SE-FAQ-FA410692",
-          "claim": "Statut 080 : si kp, dband ou gain_kp est négatif, le bloc substitue 0 à la valeur invalide et ne produit pas de sortie (OUT, OUTD, MA_O et INFO restent inchangées). Un kp négatif n’est donc pas accepté."
+          "claim": "Statut 080 = bit 4 (une valeur de paramètre a été bornée) + bit 6 (OUT a atteint out_max). Un kp, dband, gain_kp ou outrate négatif est remplacé par 0 avec le bit 4 à 1 (avertissement) ; les sorties ne restent inchangées que sur erreur (entrée non flottante, calcul flottant, pv_inf = pv_sup) (manuel 33002535 p. 35, 188-189 ; image de la FAQ identique à la p. 188). Un kp négatif n’est donc pas utilisable : le signe passe par rev_dir."
         },
         {
           "source": "SE-FAQ-FA410692",
@@ -333,21 +333,6 @@
           "claim": "Régulateur PI de base à structure mixte dans le catalogue Premium."
         }
       ]
-    },
-    {
-      "name": "PIFINT",
-      "manufacturer": "Schneider Electric",
-      "software": "Control Expert",
-      "library": null,
-      "cpu": null,
-      "firmware": null,
-      "softwareVersion": null,
-      "libraryVersion": null,
-      "equation": null,
-      "parameters": [],
-      "modes": [],
-      "status": "to_verify",
-      "facts": []
     },
     {
       "name": "PID_INT",

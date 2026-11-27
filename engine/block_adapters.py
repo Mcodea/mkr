@@ -39,7 +39,7 @@ def pidff(parameters):
     IN = PV - SP, physical units. It equals MKR's ideal form with Kp = kp, Ti = ti, Td = td, filter Tf = td/kd.
     Direction (p. 182): rev_dir = 1 raises the output for a positive deviation PV - SP, rev_dir = 0 lowers it. MKR's
     u = Kp (SP - PV) with Kp > 0 lowers the output when PV rises: rev_dir = 0. A negative Kp gives rev_dir = 1.
-    The block refuses a negative kp (status 080, FAQ FA410692): the sign always goes through rev_dir.
+    A negative kp is replaced by 0 with bit 4 set (33002535 p. 188-189; status 080 = bits 4 + 6, FAQ FA410692): the sign always goes through rev_dir.
     """
     if not isinstance(parameters, dict) or not {"kp", "tiSeconds", "tdSeconds"} <= parameters.keys() <= \
             {"kp", "tiSeconds", "tdSeconds", "filterSeconds", "structure"}:

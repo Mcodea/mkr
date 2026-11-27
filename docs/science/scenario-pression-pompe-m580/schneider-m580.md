@@ -1,5 +1,7 @@
 # Schneider M580 / EcoStruxure Control Expert — blocs PIDFF, PID_INT et « PIFINT »
 
+> **Correction du 2026-11-27 (arbitrage du client).** « PIFINT » était une erreur de nomenclature : le bloc visé est **PID_INT**. La fiche vide « PIFINT » a été retirée du catalogue (`engine/catalogue/schneider.json`) ; PID_INT est documenté dans `docs/science/schneider/pid_int.md` et modélisé dans `engine/block_pid_int.py`. Les sections ci-dessous sur « PIFINT » sont conservées pour la traçabilité de la recherche et ne décrivent plus un bloc à implémenter.
+
 **Statut : vérification documentaire PARTIELLE. Aucune vérification sur automate, aucune qualification.** Il n'existe aucun banc, aucun M580 et aucune licence Control Expert dans cet environnement.
 
 ## 0. Ce qui a pu être lu, et ce qui ne l'a pas été (27/11/2026)

@@ -34,13 +34,13 @@ Les recherches sur les sites Schneider et Siemens ont renvoyé des **résumés d
 
 | Règle | Source |
 |---|---|
-| `kp`, `dband` ou `gain_kp` négatif : statut 080, valeur remplacée par 0, **pas de sortie**. **Un Kp négatif est refusé.** | [FAQ FA410692](https://www.se.com/us/en/faqs/FA410692/) |
+| `kp`, `dband` ou `gain_kp` négatif : valeur remplacée par 0 avec le bit 4 (avertissement ; 080 = bits 4 + 6) ; seules les erreurs (entrée non flottante, pv_inf = pv_sup) laissent les sorties inchangées (33002535 p. 188-189). **Un Kp négatif n'est pas utilisable.** | [FAQ FA410692](https://www.se.com/us/en/faqs/FA410692/) |
 | `kd` < 1 avec `td` non nul : le bloc utilise 1. `ovs_att` hors de [0, 1] est ramené à 0 ou à 1. | [FAQ FA410692](https://www.se.com/us/en/faqs/FA410692/) |
 | `ovs_att` va de **0 (aucune atténuation)** à 1 (maximale). La valeur neutre pour l'essai E0 est donc 0. | [FAQ FAQ000279181](https://www.se.com/us/en/faqs/FAQ000279181/) |
 | `pv_inf` = `pv_sup` ou entrée non flottante : erreur. | [FAQ FA410692](https://www.se.com/us/en/faqs/FA410692/) |
 | Les équations détaillées de la structure mixte sont dans l'aide en ligne. Le support signale le schéma mixte manquant. | [FAQ FAQ000256113](https://www.se.com/us/en/faqs/FAQ000256113/) |
 
-**Conséquence directe pour MKR.** MKR calcule un Kp **signé** (négatif pour un procédé à gain négatif). Le PIDFF refuse un Kp négatif : le sens d'action doit passer par `rev_dir`, avec |Kp|. La correspondance exacte `rev_dir` ↔ signe n'est pas lue dans une source ; elle est donc un essai du protocole (E4).
+**Conséquence directe pour MKR.** MKR calcule un Kp **signé** (négatif pour un procédé à gain négatif). Le PIDFF remplace un Kp négatif par 0 : le sens d'action doit passer par `rev_dir`, avec |Kp|. La correspondance exacte `rev_dir` ↔ signe n'est pas lue dans une source ; elle est donc un essai du protocole (E4).
 
 ## 2. PID_Compact (Siemens, TIA Portal)
 

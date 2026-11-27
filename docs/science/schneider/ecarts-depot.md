@@ -57,3 +57,10 @@ Gravité :
 | FA226088 (PID_INT, ARRAY[1..43]) | Non lu (HTTP 404). Le manuel confirme 43 entiers (M20 p. 139). |
 | Table de correspondance du convertisseur PL7 (aide en ligne) | **Non lue** |
 | Catalogue Control Expert (`iportal.se.com`) | Non lu ; remplacé par les tables de disponibilité des manuels |
+
+## Suivi des corrections (2026-11-27)
+
+- **E1** corrigé : fiche « PIFINT » retirée du catalogue ; `test_block_catalogue.py` et `test_pidff_conversion.py` mis à jour (« PIFINT » reste refusé comme bloc inconnu) ; `docs/catalogue/qualification.md` corrigé.
+- **E2** corrigé : `kp` négatif remplacé par 0 avec le bit 4 (avertissement), pas un refus ; `block_adapters.py`, `schneider.json`, `docs/catalogue/pidff-conversion.md` et `blocs-observes.md` réécrits. Le test du catalogue vérifie désormais la lecture corrigée et l'absence de l'ancienne.
+- Modèles exécutables ajoutés : `engine/block_pi_b.py`, `engine/block_pidff.py`, `engine/block_pid_int.py` (documentaires, non qualifiés ; lectures non tranchées par le manuel listées en INTERPRÉTATIONS dans chaque module). Vérification de bout en bout des conversions : `engine/test_block_conversion_closed_loop.py`.
+- Constat PID_INT : la troncature entière laisse une erreur statique jusqu'à 1000·TI/(KP·TS) comptes (interprétation I3 du modèle) ; à afficher dans l'avertissement de conversion.
