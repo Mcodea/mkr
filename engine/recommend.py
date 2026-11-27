@@ -24,7 +24,7 @@ import math
 from pi_tuning_integrator import loop_margins
 from stability_margins import analyze
 
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -73,9 +73,13 @@ def _corners(gain, tau1, delay, tau2, errors, variation=None):
     hg, ht, hd = _half_widths(gain, tau1, delay, errors, variation)
     if tau1 - ht <= 0 or abs(gain) - hg <= 0:
         raise ValueError("recommend_uncertainty")          # the gain sign or a positive time constant is no longer established
-    for g, t, d in itertools.product((-1, 1), repeat=3):
-        plants.append((f"gain{'+' if g > 0 else '-'},tau{'+' if t > 0 else '-'},delay{'+' if d > 0 else '-'}",
-                       gain + g * hg, tau1 + t * ht, max(delay + d * hd, 0.0), tau2))
+    fast_lags = [("", tau2)]
+    if tau2 is not None and variation is not None:
+        fraction = variation / 100.0
+        fast_lags = [(",tau2-", tau2 * (1 - fraction)), (",tau2+", tau2 * (1 + fraction))]
+    for (g, t, d), (suffix, fast_lag) in itertools.product(itertools.product((-1, 1), repeat=3), fast_lags):
+        plants.append((f"gain{'+' if g > 0 else '-'},tau{'+' if t > 0 else '-'},delay{'+' if d > 0 else '-'}{suffix}",
+                       gain + g * hg, tau1 + t * ht, max(delay + d * hd, 0.0), fast_lag))
     return plants, True
 
 
@@ -155,7 +159,7 @@ def calculate(payload):
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
     if not quantified:
         notes.append("uncertainty_not_quantified")
-    elif family == "SOPDT":
+    elif family == "SOPDT" and variation is None:
         notes.append("second_pole_uncertainty_not_propagated")
 
     # Phase 1: the fastest grid point that is stable with Ms within the limit on every corner (rejecting early on the first violation).
