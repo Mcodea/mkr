@@ -1,2 +1,7 @@
 samples/synthetic/*.csv text eol=lf
 samples/synthetic/truth.json text eol=lf
+
+# Jeu de mesures TCLab sous CC BY 4.0 : les octets doivent rester ceux de l extrait documente (SHA-256 verifie par engine/test_real_tclab_cc_by.py) ; pas de conversion de fins de ligne
+tests/reference/tclab_cc_by/*.csv -text
+# Jeux synthetiques du scenario pression/pompe : empreintes SHA256SUMS verifiees octet pour octet
+tests/reference/scenario_pression_pompe/data/* -text
