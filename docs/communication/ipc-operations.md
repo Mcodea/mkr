@@ -9,7 +9,7 @@ Conventions : charge utile JSON stricte (clés exactes ; une clé inconnue ou ma
 | Opération | Module | Clés d'entrée | Rôle |
 |---|---|---|---|
 | `ping` | `mkr_engine.py` | aucune (charge utile vide) | `{"status":"ready"}` |
-| `describe_contract` | `mkr_engine.py` | aucune | version du protocole, révision du contrat, liste des opérations |
+| `describe_contract` | `mkr_engine.py` | aucune | version du protocole, révision du contrat, liste des opérations, **versions de calcul** `libraries` (`python`, `numpy`, `scipy` : lues dans les métadonnées d'installation sans importer les bibliothèques ; `null` si absente, jamais devinée) — traçabilité du LOT 1 ; leur enregistrement avec chaque étude reste à faire côté C# |
 | `identify_broida` | `broida.py` | comme `identify_fopdt` (`training`, `validation`, `mvTolerance`, `pvTolerance`) | méthode d'estimation graphique d'un FOPDT (abscisses à 28 % et 40 %) ; **sera reclassée en méthode du FOPDT au LOT 3** |
 | `identify_arx` | `arx.py` | `training`, `validation`, `mvTolerance`, `maximumRmse`, `loop` (`"open"` exigé) | ARX/OE avec excitation quelconque ; `selected.firstOrder` n'est publié que si le pôle est distinct de 1 et si τ ≤ durée enregistrée (P0-2) |
 | `identify_closed_loop` | `closed_loop.py` | `source`, `training`, `validation`, `mvLower`, `mvUpper`, `spTolerance`, `pvTolerance` | identification en boucle fermée, **expérimentale** (ADR 0006) |

@@ -37,7 +37,24 @@ class IpcContract(unittest.TestCase):
 
     def test_describe_contract_reports_the_same_list(self):
         reply = respond(json.dumps(dict(version=1, requestId="c-1", operation="describe_contract", payload={})).encode())
-        self.assertEqual(reply["result"], dict(protocolVersion=1, contractRevision=CONTRACT_REVISION, operations=list(OPERATIONS)))
+        result = dict(reply["result"])
+        libraries = result.pop("libraries")
+        self.assertEqual(result, dict(protocolVersion=1, contractRevision=CONTRACT_REVISION, operations=list(OPERATIONS)))
+        # traçabilité des versions de calcul : celles réellement installées, lues par une autre voie que le moteur (import direct)
+        import platform
+        import numpy
+        import scipy
+        self.assertEqual(libraries, dict(python=platform.python_version(), numpy=numpy.__version__, scipy=scipy.__version__))
+
+    def test_a_missing_library_is_reported_as_none_never_guessed(self):
+        from importlib import metadata
+        from unittest import mock
+        import mkr_engine
+        with mock.patch.object(metadata, "version", side_effect=metadata.PackageNotFoundError("numpy")):
+            libraries = mkr_engine.library_versions()
+        self.assertIsNone(libraries["numpy"])
+        self.assertIsNone(libraries["scipy"])
+        self.assertTrue(libraries["python"])
 
     def test_describe_contract_refuses_a_payload(self):
         reply = respond(json.dumps(dict(version=1, requestId="c-2", operation="describe_contract", payload={"x": 1})).encode())

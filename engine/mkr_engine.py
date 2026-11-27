@@ -21,6 +21,20 @@ OPERATIONS = (
 MAX_REQUEST_BYTES = 2_900_000
 
 
+def library_versions():
+    """Versions des bibliothèques qui font les calculs (traçabilité, cahier directeur LOT 1) : lues dans les métadonnées d'installation, sans importer
+    numpy ni scipy (le démarrage du moteur ne doit pas payer leur import). Une bibliothèque absente vaut None, jamais une version devinée."""
+    import platform
+    from importlib import metadata
+
+    def installed(name):
+        try:
+            return metadata.version(name)
+        except metadata.PackageNotFoundError:
+            return None
+    return {"python": platform.python_version(), "numpy": installed("numpy"), "scipy": installed("scipy")}
+
+
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -208,7 +222,8 @@ def respond(raw):
     elif request["payload"]:
         code = "invalid_request"
     elif request["operation"] == "describe_contract":
-        return {**response, "result": {"protocolVersion": 1, "contractRevision": CONTRACT_REVISION, "operations": list(OPERATIONS)}}
+        return {**response, "result": {"protocolVersion": 1, "contractRevision": CONTRACT_REVISION, "operations": list(OPERATIONS),
+                                       "libraries": library_versions()}}
     else:
         return {**response, "result": {"status": "ready"}}
 
