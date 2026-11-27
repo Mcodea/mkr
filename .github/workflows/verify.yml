@@ -25,7 +25,8 @@ env:
 jobs:
   windows:
     runs-on: windows-2025
-    timeout-minutes: 25
+    # La même machine compile, exécute les essais scientifiques et vérifie les deux thèmes du paquet extrait.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - name: Vérifier la syntaxe des scripts PowerShell
