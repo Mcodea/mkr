@@ -63,12 +63,14 @@ try {
                              'en_rcpy [33002535K01000', 'tolérance fixée avant essai', 'trace de mesure')) {
         if (!$sheet.Contains($required)) { throw "Champ du relevé absent : $required" }
     }
-    $filter.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('PIFINT')
+    # Bloc sans propriété documentée : « PIFINT » (erreur de nomenclature du client, c'est PID_INT) a été retiré le 2026-11-27 ; PI_B n'a pas encore
+    # de paramètres dans le catalogue. Quand ils y seront, choisir une autre entrée sans propriété ou adapter ce contrôle (état vide + relevé propre au bloc).
+    $filter.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('PI_B')
     $null = Wait-Element $catalogue $nameProperty 'Aucune propriété documentée dans cette édition du catalogue.'
     $copy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    $null = Wait-Element $catalogue $nameProperty 'Relevé PIFINT copié.'
+    $null = Wait-Element $catalogue $nameProperty 'Relevé PI_B copié.'
     $other = Get-Clipboard -Raw
-    if (!$other.Contains('Relevé de banc · PIFINT') -or $other.Contains('mix_par')) {
+    if (!$other.Contains('Relevé de banc · PI_B') -or $other.Contains('mix_par')) {
         throw 'Le relevé doit correspondre au bloc sélectionné.'
     }
     Write-Output 'Accueil, ouverture du catalogue, filtre PIDFF et statut vérifiés.'
