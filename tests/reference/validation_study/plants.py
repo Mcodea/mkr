@@ -41,7 +41,7 @@ class Plant:
         x = np.zeros((a.shape[0], 1))
         out = np.empty(n)
         for k in range(n):
-            out[k] = float(c @ x + d * delayed[k * fine])
+            out[k] = float((c @ x + d * delayed[k * fine]).item())
             for j in range(fine):
                 x = a @ x + b * delayed[k * fine + j]
         return out
@@ -84,7 +84,7 @@ class Stepper:
         self.last = 0.0
 
     def output(self):
-        return float(self.c @ self.x + self.d * (self.queue[0] if self.queue else self.last))
+        return float((self.c @ self.x + self.d * (self.queue[0] if self.queue else self.last)).item())
 
     def advance(self, u):
         effective = float(self.plant.effective_input(u))
