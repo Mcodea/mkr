@@ -35,7 +35,9 @@ def behaviour(plant, ts, controller):
     return dict(stable=stable, ms=truth.true_ms(plant, ts, kp, ti, td, tf), itae=itae)
 
 
-def run_case(population, snr, index):
+def build_case(population, snr, index):
+    """Construit un cas (procédé vrai, essais bruités) de façon DÉTERMINISTE ; l'ordre de consommation du générateur aléatoire est figé (ne pas le modifier :
+    l'identité des cas entre exécutions en dépend)."""
     rng = case_rng(population, snr, index)
     plant, info = study.draw_plant(population, rng)
     ts = max(round(info["tau"] / 50, 3), 0.04)
@@ -50,6 +52,15 @@ def run_case(population, snr, index):
         validation_plant = plants.fopdt(info["gain"] * (1 + info["gain_change"]), info["tau"], info["theta"])
     source_t, u_t, pv_t, _ = study.make_trial(plant, ts, n_post, AMPLITUDE, sigma, rng, phi, drift, day=1)
     source_v, u_v, pv_v, _ = study.make_trial(validation_plant, ts, n_post, -AMPLITUDE * ratio, sigma, rng, phi, -drift, day=2)
+    return dict(rng=rng, plant=plant, info=info, ts=ts, n_post=n_post, secant=secant, sigma=sigma, phi=phi, ratio=ratio, validation_plant=validation_plant,
+                source_t=source_t, u_t=u_t, pv_t=pv_t, source_v=source_v, u_v=u_v, pv_v=pv_v)
+
+
+def run_case(population, snr, index):
+    c = build_case(population, snr, index)
+    rng, plant, info, ts, n_post, secant, sigma, phi, ratio = (c[k] for k in ("rng", "plant", "info", "ts", "n_post", "secant", "sigma", "phi", "ratio"))
+    validation_plant = c["validation_plant"]
+    source_t, u_t, pv_t, source_v, u_v, pv_v = (c[k] for k in ("source_t", "u_t", "pv_t", "source_v", "u_v", "pv_v"))
     tolerance = 3 * sigma
     payload = dict(training=source_t, validation=source_v, mvTolerance=1e-3 * AMPLITUDE, pvTolerance=tolerance)
     row = dict(info=info, snr=snr, index=index, ts=ts, sigma=sigma, phi=phi)
