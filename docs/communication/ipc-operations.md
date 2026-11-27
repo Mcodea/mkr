@@ -1,6 +1,6 @@
-# Contrat WPF–Python : référence des opérations (révision 2)
+# Contrat WPF–Python : référence des opérations (révision 3)
 
-Complète `ipc-v1.md` (enveloppe, limites, historique par version du moteur). **Cette référence est vérifiée par `engine/test_ipc_contract.py`** : toute opération servie par `engine/mkr_engine.py` doit figurer dans `OPERATIONS` et être décrite dans `docs/communication/`. L'opération `describe_contract` renvoie `protocolVersion` (1), `contractRevision` (2) et la liste exacte des opérations ; l'application peut s'en servir pour refuser un moteur incompatible (contrôle C# prévu au LOT 1).
+Complète `ipc-v1.md` (enveloppe, limites, historique par version du moteur). **Cette référence est vérifiée par `engine/test_ipc_contract.py`** : toute opération servie par `engine/mkr_engine.py` doit figurer dans `OPERATIONS` et être décrite dans `docs/communication/`. L'opération `describe_contract` renvoie `protocolVersion` (1), `contractRevision` (3) et la liste exacte des opérations ; l'application peut s'en servir pour refuser un moteur incompatible (contrôle C# prévu au LOT 1).
 
 Conventions : charge utile JSON stricte (clés exactes ; une clé inconnue ou manquante donne un code d'erreur du module) ; nombres finis ; unités de la grandeur (`bar`, `%`, `s`…) portées par la requête ; résultats structurés avec `algorithmVersion`. Délai accordé par le client : 30 s pour `identify_*`, `recommend_tuning`, `assess_model`, `compare_models`, `suggest_criteria`, `find_steps`, `check_model_drift` ; 10 s pour les autres.
 
@@ -15,6 +15,7 @@ Conventions : charge utile JSON stricte (clés exactes ; une clé inconnue ou ma
 | `identify_closed_loop` | `closed_loop.py` | `source`, `training`, `validation`, `mvLower`, `mvUpper`, `spTolerance`, `pvTolerance` | identification en boucle fermée, **expérimentale** (ADR 0006) |
 | `check_model_drift` | `model_drift.py` | `family`, `model`, `trial`, `mvTolerance`, `pvTolerance`, `maximumRmse`, `maximumResidualLagOne` | compare un nouvel essai à un modèle validé |
 | `recommend_tuning` | `recommend.py` via `mkr_engine.py` | `family`, `gain`, `tauSeconds`, `delaySeconds`, `secondTauSeconds`, `sampleSeconds`, `standardErrors`, `objective`, `derivativeFilterRatio`, `processVariationPercent`, `optimise` ; facultatif `controllerPeriodSeconds` ; **obligatoire `modelValidation`** (`accepted: true`, sans `drift`) | réglage guidé : refus `recommend_model_not_validated` sans preuve ; Ms jugé sur la boucle échantillonnée (P0-3, P0-4) |
+| `assess_trial` | `trial_assistant.py` | `seconds`, `mv`, `pv`, `mvTolerance`, `pvTolerance` ; facultatifs `sp`, `manual`, `loopMode` (`open_loop` seul traité), `processKind` (`self_regulating` seul traité), `mvLow`, `mvHigh`, `maxDurationSeconds`, `hasValidationTrial` | assistant d'essai en temps réel (section 42.2-42.4), tranche 1 : lit un tampon d'acquisition et renvoie l'état de l'essai (régime initial, échelon détecté, réponse en cours, données supplémentaires nécessaires, exploitable…), les passages 28 %/40 % et la durée restante **conditionnelle au modèle**. Estimation toujours provisoire ; `safetyAuthorization` toujours `false` ; aucune écriture. Codes d'erreur `assess_mapping`, `assess_data`, `assess_tolerance` |
 | `calculate_integrator_pi` | `pi_tuning_integrator.py` | `gain`, `delaySeconds`, `responseSeconds` | PI SIMC d'un procédé intégrateur |
 | `simulate_pi_transition` | `pi_mode_transition.py` | `gain`, `tauSeconds`, `delaySeconds`, `sampleSeconds`, `durationSeconds`, `setpoint`, `minimumMv`, `maximumMv`, `manualMv`, `automaticAtSeconds`, `kp`, `tiSeconds` ; facultatif `maximumMvRate` | passage manuel → automatique |
 | `simulate_pi_robustness` | `pi_robustness.py` | `gain`, `tauSeconds`, `delaySeconds`, `imc`, `simc`, `sampleSeconds`, `durationSeconds`, `setpoint`, `minimumMv`, `maximumMv`, `disturbance`, `disturbanceAtSeconds`, … (liste complète : `expected` dans le module) | sensibilité d'un PI aux variations des paramètres |
@@ -27,7 +28,7 @@ Conventions : charge utile JSON stricte (clés exactes ; une clé inconnue ou ma
 | `recommend_blocks` | `block_catalogue.py` | `target`, `strategy` (`P`/`PI`/`PID`), `functions`, `studyId`, `modelRunId` | blocs éligibles (aucun appelant C# à ce jour) |
 
 ## Codes d'erreur propres à cette révision
-`recommend_model_not_validated` (P0-4), `conversion_version_mismatch` (P0-7), `invalid_request` pour `describe_contract` ou `ping` avec charge utile non vide.
+`recommend_model_not_validated` (P0-4), `conversion_version_mismatch` (P0-7), `broida_not_established` (Broïda 1.2.0 : plateau pas encore établi selon le bruit déclaré), `assess_mapping` / `assess_data` / `assess_tolerance` (assistant d'essai), `invalid_request` pour `describe_contract` ou `ping` avec charge utile non vide.
 
 ## Ce qui reste à faire au LOT 1
 Schémas JSON formels par opération (aujourd'hui : clés relevées dans le code), unités et hypothèses dans les réponses, erreurs avec détail, contrôle de révision par le client C#.

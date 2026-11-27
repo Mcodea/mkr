@@ -34,7 +34,9 @@ def crossing(times, normalized, fraction):
     return float(times[index - 1] + weight * (times[index] - times[index - 1]))
 
 
-def estimate(step, tolerance):
+def estimate(step, tolerance, require_established=True):
+    """Estimation à deux points. `require_established=False` (assistant d'essai, estimation PROVISOIRE) ne refuse pas un plateau pas encore établi
+    et renvoie le reste prévu ; le défaut (identification définitive) refuse."""
     times, pv = step.times, step.observations
     if len(pv) < TAIL_SIZE + 12:
         raise ValueError("broida_horizon")
@@ -67,7 +69,7 @@ def estimate(step, tolerance):
     gain = step_response / step.amplitude
     if not math.isfinite(gain) or gain == 0:
         raise ValueError("broida_response")
-    if float(times[-1]) - delay < LEGACY_HORIZON_TAUS * tau:
+    if require_established and float(times[-1]) - delay < LEGACY_HORIZON_TAUS * tau:
         raise ValueError("broida_horizon")
     # Variation finale « suffisamment établie » (cahier directeur, section 42.2). Le niveau final est la moyenne de la fenêtre de plateau :
     # si le procédé est bien le FOPDT identifié, son biais est la moyenne du reste |réponse| exp(-(t - L)/tau) sur cette fenêtre, majorée par
@@ -75,7 +77,7 @@ def estimate(step, tolerance):
     # plateau) ; sinon le niveau final lu est biaisé de plus que le bruit et les passages à 28 % et 40 % sont normalisés par un niveau trop bas.
     # Le refus n'est donc pas un seuil arbitraire : il dépend du rapport signal/bruit de l'essai.
     residual = abs(step_response) * math.exp(-(float(times[-TAIL_SIZE]) - delay) / tau)
-    if residual > 2 * tolerance:
+    if require_established and residual > 2 * tolerance:
         raise ValueError("broida_not_established")
     return gain, tau, delay, t28, t40, tail_level, step_response, residual
 

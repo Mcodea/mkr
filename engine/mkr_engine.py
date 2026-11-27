@@ -10,9 +10,9 @@ from csv_quality import process_csv
 ENGINE_VERSION = "0.10.0"
 # Contract of the WPF-Python bridge. The protocol version stays 1 (message envelope); the revision counts additions to the operation set and
 # the payload fields (LOT 1). Every operation served by respond() MUST be listed here and documented in docs/communication/ (a test enforces both).
-CONTRACT_REVISION = 2
+CONTRACT_REVISION = 3
 OPERATIONS = (
-    "analyze_csv", "assess_model", "calculate_integrator_pi", "calculate_pi", "calculate_simc_pid", "check_model_drift", "compare_models",
+    "analyze_csv", "assess_model", "assess_trial", "calculate_integrator_pi", "calculate_pi", "calculate_simc_pid", "check_model_drift", "compare_models",
     "compare_tunings", "convert_block_settings", "describe_contract", "find_steps", "identify_arx", "identify_broida", "identify_closed_loop",
     "identify_fopdt", "identify_integrator", "identify_sopdt", "inspect_csv", "lookup_blocks", "ping", "preview_trial", "recommend_blocks",
     "recommend_tuning", "select_strategy", "simulate_open_loop", "simulate_pi", "simulate_pi_combined", "simulate_pi_robustness",
@@ -152,6 +152,14 @@ def respond(raw):
         except ValueError as error:
             error_code = str(error)
             code = error_code if error_code.startswith(("fit_", "csv_", "broida_")) else "fit_data"
+        else:
+            return {**response, "result": result}
+    elif request["operation"] == "assess_trial":
+        try:
+            from trial_assistant import assess
+            result = assess(request["payload"])
+        except ValueError as error:
+            code = str(error) if str(error).startswith("assess_") else "assess_data"
         else:
             return {**response, "result": result}
     elif request["operation"] == "simulate_pid_experimental":
