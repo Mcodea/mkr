@@ -39,6 +39,15 @@ def lookup(payload):
                 entries=entries, sources=data["sources"])
 
 
+def _same_library_version(declared, given):
+    """A catalogue family such as "V3.x" covers "V3.0"; otherwise the versions must be identical."""
+    if not isinstance(declared, str) or not isinstance(given, str):
+        return False
+    if declared.endswith(".x"):
+        return given.split(".")[0] == declared.split(".")[0]
+    return declared == given
+
+
 def convert(payload):
     """Documented conversion when an adapter exists for the block; otherwise the conversion is refused."""
     if set(payload) != {"name", "target", "parameters"} or not isinstance(payload["target"], dict):
@@ -49,11 +58,24 @@ def convert(payload):
     adapter = ADAPTERS.get(payload["name"])
     if adapter is None or not result["entries"]:
         return refusal
+    # The library version of the declared target must be the one the parameters are given for (a V3.x target never receives V2.x parameters).
+    declared_version = payload["target"].get("libraryVersion")
+    given_version = payload["parameters"].get("version") if isinstance(payload["parameters"], dict) else None
+    if declared_version is not None and given_version is not None and not _same_library_version(declared_version, given_version):
+        return {**refusal, "reason": "conversion_version_mismatch"}
     try:
         converted = adapter(payload["parameters"])
     except ValueError as error:
         return {**refusal, "reason": str(error)}
-    return dict(catalogueVersion=result["catalogueVersion"], converted=True, reason=None,
+    # A target field the catalogue could not check is UNVERIFIED, never "compatible": the verdict is explicit and travels with the conversion
+    # (LOT 0b, P0-7). `verified_target` needs a catalogue entry verified for every field of the declared target.
+    unverified = sorted({field for entry in result["entries"] for field in entry["unverifiedTargetFields"]} | {field for field in TARGET if field not in payload["target"]})
+    verified = any(entry["selectable"] for entry in result["entries"])
+    compatibility = dict(status="verified_target" if verified else "not_verified", unverifiedTargetFields=unverified,
+                         targetProvided=sorted(payload["target"]))
+    if not verified:
+        converted = {**converted, "warnings": list(converted.get("warnings", [])) + ["hardware_compatibility_not_verified"]}
+    return dict(catalogueVersion=result["catalogueVersion"], converted=True, reason=None, compatibility=compatibility,
                 parameters=converted["parameters"], conversion=converted)
 
 

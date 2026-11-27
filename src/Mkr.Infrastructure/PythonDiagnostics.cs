@@ -312,10 +312,10 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return pid;
     }
 
-    public Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token) =>
-        Guard(() => RecommendTuningAsyncCore(family, model, objective, processVariationPercent, token));
+    public Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, bool modelAccepted, string objective, double? processVariationPercent, CancellationToken token) =>
+        Guard(() => RecommendTuningAsyncCore(family, model, modelAccepted, objective, processVariationPercent, token));
 
-    private async Task<GuidedTuning> RecommendTuningAsyncCore(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token)
+    private async Task<GuidedTuning> RecommendTuningAsyncCore(ModelFamily family, IdentificationResult model, bool modelAccepted, string objective, double? processVariationPercent, CancellationToken token)
     {
         if (family is not (ModelFamily.FOPDT or ModelFamily.SOPDT or ModelFamily.Integrateur))
             throw new InvalidOperationException("Le réglage guidé couvre les modèles FOPDT, SOPDT et intégrateur.");
@@ -330,7 +330,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             family = family == ModelFamily.Integrateur ? "Integrateur" : family.ToString(), gain = model.Gain,
             tauSeconds = family == ModelFamily.Integrateur ? (double?)null : model.TauSeconds,
             delaySeconds = model.TuningDelaySeconds, secondTauSeconds = family == ModelFamily.SOPDT ? model.SecondTauSeconds : null,
-            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true
+            sampleSeconds = sample, standardErrors = errors, objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true,
+            modelValidation = new { accepted = modelAccepted, drift = false }      // the engine refuses to tune a model without this proof (LOT 0b, P0-4)
         };
         return await RecommendCoreAsync(payload, objective, limit, model.Gain, token).ConfigureAwait(false);
     }
@@ -390,7 +391,8 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         {
             family = "FOPDT", gain = first.Gain, tauSeconds = (double?)first.TauSeconds, delaySeconds = selected.Nk * sample, secondTauSeconds = (double?)null,
             sampleSeconds = sample, standardErrors = (object?)new { gain = gainError, tauSeconds = tauError, delaySeconds = sample / 2 },
-            objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true
+            objective, derivativeFilterRatio = (double?)null, processVariationPercent, optimise = true,
+            modelValidation = new { accepted = study.IsAccepted, drift = false }
         };
         return await RecommendCoreAsync(payload, objective, limit, first.Gain, token).ConfigureAwait(false);
     }

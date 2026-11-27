@@ -1,0 +1,68 @@
+{
+  "_DONNEES_SYNTHETIQUES": "DONNÉES SYNTHÉTIQUES — aucune mesure industrielle ; ne pas présenter comme telles.",
+  "csvFormat": {
+    "decimal": ".",
+    "delimiter": ",",
+    "modeColumn": "MANUAL",
+    "mvColumn": "MV",
+    "pvColumn": "PV",
+    "spColumn": "SP",
+    "strptime": "%Y-%m-%dT%H:%M:%S.%f%z",
+    "timeColumn": "timestamp"
+  },
+  "dataset": "ol_disturbance",
+  "disturbance": {
+    "recorded": false,
+    "timeSeconds": 35.0,
+    "type": "ouverture vanne aval",
+    "valveAfter": 0.6,
+    "valveBefore": 0.5
+  },
+  "durationSeconds": 80.0,
+  "generator": "tests/reference/scenario_pression_pompe/generate.py",
+  "generatorVersion": "1.0.0",
+  "integration": "RK4 pas fixe 0.005 s",
+  "intent": "refused",
+  "intentReason": "Ouverture de vanne aval 0,50 -> 0,60 à t = 35 s pendant la réponse : la PV n'est plus la réponse à MV seule ; un modèle ajusté serait biaisé (gain sous-estimé). Doit être refusé ou signalé par l'analyse des résidus.",
+  "label": "DONNÉES SYNTHÉTIQUES — générées par simulation, jamais mesurées sur une installation réelle",
+  "mvAfter": 90.0,
+  "mvBefore": 85.0,
+  "noiseStdBar": 0.003,
+  "numpyVersion": "2.3.5",
+  "operatingPoint": {
+    "mv": 85.0,
+    "p_bar": 4.0,
+    "valve": 0.5
+  },
+  "quantizationBar": 0.001,
+  "rng": "numpy.random.default_rng (PCG64)",
+  "role": "estimation",
+  "rows": 801,
+  "samplePeriodSeconds": 0.1,
+  "scipyVersion": "1.17.0",
+  "seed": 20261104,
+  "start": "2026-03-02T14:00:00+00:00",
+  "staticSecantGain_bar_per_applied_pct": 0.0968858131487889,
+  "staticSecantGain_bar_per_recorded_pct": 0.0968858131487889,
+  "stepTimeSeconds": 20.0,
+  "trueParameters": {
+    "delay_s": 1.2565194840280627,
+    "gain_bar_per_pct": 0.09706459131579505,
+    "linear_local_gain_bar_per_pct": 0.0941176470452941,
+    "sopdt": {
+      "delay_s": 0.44059741713929107,
+      "gain_bar_per_pct": 0.0969347206950227,
+      "rmse_bar": 0.0006300496354806299,
+      "tau1_s": 4.361164973614939,
+      "tau2_s": 1.0342664395216012
+    },
+    "tau_s": 4.666607674690015
+  },
+  "units": {
+    "MANUAL": "1 = manuel (boucle ouverte), 0 = automatique",
+    "MV": "% de la vitesse nominale (100 % = 50 Hz = N0)",
+    "PV": "bar (relatif)",
+    "SP": "bar (relatif)",
+    "timestamp": "ISO 8601 UTC, millisecondes"
+  }
+}

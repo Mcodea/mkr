@@ -5,7 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="../Mkr.Core/Mkr.Core.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.8" />
-    <PackageReference Include="PDFsharp-MigraDoc" Version="6.2.4" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="[6.2.4]" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <!-- Monochrome ORIAS logo used by the study sheet (PDF header). One copy of the asset: it lives in the application's Assets folder. -->

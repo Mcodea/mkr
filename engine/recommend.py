@@ -22,9 +22,10 @@ import itertools
 import math
 
 from pi_tuning_integrator import loop_margins
+from sampled_loop import worst_peak_sensitivity
 from stability_margins import analyze
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -93,6 +94,32 @@ def _evaluate(controller, plants, sampling_delay, stop_above=None):
     return rows, worst
 
 
+def _sampled_worst(controller, plants, sample):
+    """Worst peak sensitivity of the SAMPLED loop over the plant set and the two integral discretisations: (value, plant name, scheme)."""
+    worst = (0.0, None, None)
+    for name, k, t1, d, t2 in plants:
+        taus = [t1] if t2 is None else [t1, t2]
+        value, scheme = worst_peak_sensitivity(abs(k), taus, d, sample, controller)
+        if value > worst[0]:
+            worst = (value, name, scheme)
+    return worst
+
+
+def _sampled_safe(search, limit, plants, sample):
+    """Optimum of `search(design_limit)` whose SAMPLED loop meets `limit`: the continuous optimum sits exactly on its design limit, so the design
+    limit is tightened by 3 % steps (at most 8) until the loop that is really executed respects the objective. None when it never does."""
+    for step in range(9):
+        design = limit * (1.0 - 0.03 * step)
+        candidate = search(design)
+        if candidate is None:
+            return None
+        if _sampled_worst(candidate["controller"], plants, sample)[0] <= limit:
+            if step > 0:
+                candidate["designPeakSensitivityLimit"] = design
+            return candidate
+    return None
+
+
 def _is_stable(rows):
     return all("nominal_unstable" not in m["warnings"] and m["phaseMarginDegrees"] is not None and m["phaseMarginDegrees"] > 0 for _, m in rows)
 
@@ -100,7 +127,11 @@ def _is_stable(rows):
 def calculate(payload):
     required = {"family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds", "standardErrors", "objective", "derivativeFilterRatio",
                 "processVariationPercent", "optimise"}
-    if not isinstance(payload, dict) or payload.keys() != required:
+    optional = {"controllerPeriodSeconds"}          # execution period of the controller block, when the user knows it (LOT 0b, P0-3c)
+    if not isinstance(payload, dict) or not required <= payload.keys() <= required | optional:
+        raise ValueError("recommend_input")
+    controller_period = payload.get("controllerPeriodSeconds")
+    if controller_period is not None and (not _number(controller_period) or controller_period <= 0):
         raise ValueError("recommend_input")
     family, gain, tau, delay, second, sample = (payload[k] for k in ("family", "gain", "tauSeconds", "delaySeconds", "secondTauSeconds", "sampleSeconds"))
     errors, objective = payload["standardErrors"], payload["objective"]
@@ -133,9 +164,15 @@ def calculate(payload):
         raise ValueError("recommend_domain")
 
     limit = OBJECTIVES[objective]
+    # The sampling that matters is the controller's execution period, not the cadence of the recorded data (LOT 0b, P0-3c): when it is not
+    # declared, the data cadence is used and the result says so.
+    period_note = "controller_period_assumed_equal_to_data_cadence" if controller_period is None else None
+    if controller_period is not None:
+        sample = float(controller_period)
     if family == "Integrateur":
         return _integrator(gain, delay, sample, errors, objective, limit, variation, optimise, ratio)
-    notes, tau1, tau2, theta = [], tau, None, delay
+    notes, tau1, tau2, theta = [] if period_note is None else [period_note], tau, None, delay
+    notes.append("sampled_loop_checked_on_the_worst_of_forward_and_backward_euler_integral")
     # The plant on which robustness is JUDGED is the identified model. The half rule only serves to COMPUTE the PI from a reduced model: judging
     # the loop on that reduced model announced a peak sensitivity the true second-order process then exceeded (LOT 0b, P0-3a).
     judged_tau, judged_delay, judged_second = tau, delay, None
@@ -171,8 +208,10 @@ def calculate(payload):
         except ValueError:
             continue
         if _is_stable(rows) and len(rows) == len(plants) and worst[1]["peakSensitivity"] <= limit:
-            chosen_index = index
-            break
+            # the loop that is really executed is sampled: the h/2 delay of the continuous analysis is optimistic when h is not small (LOT 0b, P0-3b)
+            if _sampled_worst(controller, plants, sample)[0] <= limit:
+                chosen_index = index
+                break
     # Phase 2: complete evidence (all corners) for the chosen tuning and its neighbours on the speed / robustness trade-off.
     window = range(len(MULTIPLES) - 3, len(MULTIPLES)) if chosen_index is None else range(max(0, chosen_index - 2), min(len(MULTIPLES), chosen_index + 4))
     evaluated, chosen = [], None
@@ -184,8 +223,10 @@ def calculate(payload):
             rows, worst = _evaluate(controller, plants, sampling_delay)
         except ValueError:
             continue
+        sampled_ms, sampled_case, sampled_scheme = _sampled_worst(controller, plants, sample)
         entry = dict(responseSeconds=tauc, multipleOfEffectiveDelay=multiple, controller=controller, stableOnAllCorners=_is_stable(rows),
-                     worstPeakSensitivity=worst[1]["peakSensitivity"], worstCase=worst[0], nominalMargins=rows[0][1])
+                     worstPeakSensitivity=worst[1]["peakSensitivity"], worstCase=worst[0], nominalMargins=rows[0][1],
+                     sampledWorstPeakSensitivity=sampled_ms, sampledWorstCase=sampled_case, sampledDiscretisation=sampled_scheme)
         evaluated.append(entry)
         if index == chosen_index:
             chosen = entry
@@ -202,13 +243,17 @@ def calculate(payload):
         warnings.append("closed_loop_slower_than_the_process")
     optimized = None
     if optimise and tau2 is None:
-        optimized = optimise_pi(family, gain, tau1, effective, plants, limit, sampling_delay)
-        if optimized is not None:
+        optimized = _sampled_safe(lambda design: optimise_pi(family, gain, tau1, effective, plants, design, sampling_delay), limit, plants, sample)
+        if optimized is None:
+            warnings.append("optimized_pi_unavailable_on_the_sampled_loop")
+        else:
             c = chosen["controller"]
             optimized["integralGainRatio"] = optimized["integralGain"] / (abs(c["kp"]) / c["tiSeconds"])
     optimized_pid, performance = None, None
     if optimise:
-        optimized_pid = optimise_pid(gain, tau1, tau2, effective, plants, limit, sampling_delay, ratio)
+        optimized_pid = _sampled_safe(lambda design: optimise_pid(gain, tau1, tau2, effective, plants, design, sampling_delay, ratio), limit, plants, sample)
+        if optimized_pid is None:
+            warnings.append("optimized_pid_unavailable_on_the_sampled_loop")
         if optimized_pid is not None and optimized is not None:
             optimized_pid["integralGainRatioToOptimalPi"] = optimized_pid["integralGain"] / optimized["integralGain"]
             optimized_pid["pidNotBetterThanPi"] = optimized_pid["integralGain"] <= optimized["integralGain"]

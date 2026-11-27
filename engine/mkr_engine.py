@@ -71,10 +71,17 @@ def respond(raw):
             code = str(error) if str(error).startswith("arx_") else "fit_data"
     elif request["operation"] == "recommend_tuning":
         from recommend import calculate as recommend
-        try:
-            return {**response, "result": recommend(request["payload"])}
-        except ValueError as error:
-            code = str(error) if str(error).startswith("recommend_") else "recommend_input"
+        payload = request["payload"]
+        # A tuning is never computed for a model whose independent validation is not declared accepted (LOT 0b, P0-4). The engine has no state:
+        # the proof travels in the request (modelValidation.accepted is exactly True, no declared drift) and is refused otherwise.
+        validation = payload.get("modelValidation", "missing") if isinstance(payload, dict) else "missing"
+        if not (isinstance(validation, dict) and validation.get("accepted") is True and validation.get("drift") in (None, False)):
+            code = "recommend_model_not_validated"
+        else:
+            try:
+                return {**response, "result": recommend({k: v for k, v in payload.items() if k != "modelValidation"})}
+            except ValueError as error:
+                code = str(error) if str(error).startswith("recommend_") else "recommend_input"
     elif request["operation"] == "check_model_drift":
         from model_drift import check
         try:

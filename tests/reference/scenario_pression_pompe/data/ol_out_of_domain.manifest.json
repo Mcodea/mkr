@@ -1,0 +1,79 @@
+{
+  "_DONNEES_SYNTHETIQUES": "DONNÉES SYNTHÉTIQUES — aucune mesure industrielle ; ne pas présenter comme telles.",
+  "csvFormat": {
+    "decimal": ".",
+    "delimiter": ",",
+    "modeColumn": "MANUAL",
+    "mvColumn": "MV",
+    "pvColumn": "PV",
+    "spColumn": "SP",
+    "strptime": "%Y-%m-%dT%H:%M:%S.%f%z",
+    "timeColumn": "timestamp"
+  },
+  "dataset": "ol_out_of_domain",
+  "durationSeconds": 80.0,
+  "generator": "tests/reference/scenario_pression_pompe/generate.py",
+  "generatorVersion": "1.0.0",
+  "integration": "RK4 pas fixe 0.005 s",
+  "intent": "refused",
+  "intentReason": "Échelon −30 % : la pression traverse une large plage, le gain local passe de 0.0941 à 0.0609 bar/% et la capacité du réservoir varie ; un FOPDT unique ne représente pas le point nominal. Doit être refusé comme modèle du point nominal (ou accepté seulement comme modèle moyen, explicitement non local).",
+  "label": "DONNÉES SYNTHÉTIQUES — générées par simulation, jamais mesurées sur une installation réelle",
+  "linearizationAt55": {
+    "capacitance_m3_per_m": 0.003396541262959993,
+    "conductance_m3h_per_m": 1.1428285549719326,
+    "eigen_imag_max": 0.0,
+    "flow_m3h": 8.387423318462158,
+    "gain_analytic_bar_per_pct": 0.06089965397923876,
+    "gain_bar_per_pct": 0.060899653983166935,
+    "mv": 55.0,
+    "p_bar": 1.6747404844290656,
+    "tau_tank_s": 10.699372616705643,
+    "time_constants_s": [
+      10.514758121206775,
+      0.49999999998562217,
+      0.23392303775163423,
+      0.19999999998984463
+    ],
+    "valve": 0.5
+  },
+  "mvAfter": 55.0,
+  "mvBefore": 85.0,
+  "noiseStdBar": 0.003,
+  "numpyVersion": "2.3.5",
+  "operatingPoint": {
+    "mv": 85.0,
+    "p_bar": 4.0,
+    "valve": 0.5
+  },
+  "quantizationBar": 0.001,
+  "rng": "numpy.random.default_rng (PCG64)",
+  "role": "estimation",
+  "rows": 801,
+  "samplePeriodSeconds": 0.1,
+  "scipyVersion": "1.17.0",
+  "seed": 20261107,
+  "start": "2026-03-02T20:00:00+00:00",
+  "staticSecantGain_bar_per_applied_pct": 0.07750865051903114,
+  "staticSecantGain_bar_per_recorded_pct": 0.07750865051903114,
+  "stepTimeSeconds": 20.0,
+  "trueParameters": {
+    "delay_s": 1.2565194840280627,
+    "gain_bar_per_pct": 0.09706459131579505,
+    "linear_local_gain_bar_per_pct": 0.0941176470452941,
+    "sopdt": {
+      "delay_s": 0.44059741713929107,
+      "gain_bar_per_pct": 0.0969347206950227,
+      "rmse_bar": 0.0006300496354806299,
+      "tau1_s": 4.361164973614939,
+      "tau2_s": 1.0342664395216012
+    },
+    "tau_s": 4.666607674690015
+  },
+  "units": {
+    "MANUAL": "1 = manuel (boucle ouverte), 0 = automatique",
+    "MV": "% de la vitesse nominale (100 % = 50 Hz = N0)",
+    "PV": "bar (relatif)",
+    "SP": "bar (relatif)",
+    "timestamp": "ISO 8601 UTC, millisecondes"
+  }
+}

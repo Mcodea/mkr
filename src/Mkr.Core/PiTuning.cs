@@ -60,7 +60,7 @@ public interface IPiEngine
     Task<IntegratorPi> CalculateIntegratorPiAsync(double slope, double delaySeconds, double responseSeconds, CancellationToken token);
 
     /// <summary>Guided tuning of an ACCEPTED model for a robustness objective (see <see cref="DesignObjectives"/>), with refusal when the data do not support one.</summary>
-    Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, string objective, double? processVariationPercent, CancellationToken token);
+    Task<GuidedTuning> RecommendTuningAsync(ModelFamily family, IdentificationResult model, bool modelAccepted, string objective, double? processVariationPercent, CancellationToken token);
 
     /// <summary>Guided tuning from an ACCEPTED ARX / OE study (first-order equivalent only; refusals explained). ADR 0008.</summary>
     Task<GuidedTuning> RecommendTuningFromArxAsync(ArxStudy study, string objective, double? processVariationPercent, CancellationToken token);

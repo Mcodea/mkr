@@ -1,0 +1,80 @@
+# Jeux de données pour l'identification de procédés : droits d'usage
+
+- **Date de consultation** : 26/11/2026, pour toutes les URL ci-dessous, sauf mention contraire.
+- **Nature du document** : relevé factuel, **pas un avis juridique**.
+- **Règle du client, appliquée telle quelle** : une donnée accessible publiquement n'est pas forcément redistribuable. **Sans autorisation claire, elle n'est ni intégrée ni redistribuée dans le produit** : usage de test interne seulement, avec citation de la source.
+
+## Méthode et niveaux de preuve
+
+- **V** : texte de licence ou de conditions lu directement, sur la page officielle, dans les métadonnées de l'archive ou dans le fichier livré.
+- **V-sec** : licence lue dans des métadonnées secondaires : OpenAlex (`api.openalex.org`, champ `locations[].license`, qui reprend DataCite) ou un résumé de moteur de recherche citant la page officielle. Il faut la **confirmer sur la page officielle** avant toute intégration.
+- **NT** : aucune licence trouvée. Par défaut, le droit d'auteur et, dans l'UE, le droit *sui generis* des bases de données peuvent s'appliquer **[JURISTE]**. On traite donc le jeu comme **non redistribuable**.
+
+**Hôtes refusés par le proxy de la session** (aucun contournement tenté) :
+- `ftp.esat.kuleuven.be` : fichiers et fiches descriptives DaISy ;
+- `data.4tu.nl` ;
+- `data.openei.org`, `www.osti.gov` ;
+- `data.mendeley.com`, `api.data.mendeley.com` ;
+- `sites.ualberta.ca`, `figshare.com`, `research.tue.nl` ;
+- `api.datacite.org`, `catalog-beta.data.gov` ;
+- `ndcbe.github.io`, `sqlite.org`, et l'API GitHub pour les dépôts non attachés.
+
+**Renvois aux articles de la licence CC BY 4.0** (§2.a.5.B, §3) : ils sont cités de mémoire, car le texte juridique sur creativecommons.org n'a pas été relu dans cette session. Un juriste doit les vérifier.
+
+Le clonage git public de `github.com` a fonctionné.
+
+**Classement des droits** :
+- **Utilisation** : recherche ou test interne.
+- **Modification** : transformer, extraire, rééchantillonner.
+- **Redistribution** : republier, y compris dans un produit commercial.
+
+## 1. Jeux déjà employés par le dépôt
+
+| Jeu | Emploi dans MKR | URL / identifiant | Licence relevée (citation) | Utilisation | Modification | Redistribution (dont commerciale) | Recommandation |
+|---|---|---|---|---|---|---|---|
+| **TCLab APMonitor « tclab_dyn_data2.txt »** (essai dynamique en boucle ouverte, 2 chauffages, 2 températures, pas de 1 s, 602 lignes dont l'en-tête `Time,H1,H2,T1,T2`, téléchargé le 26/11/2026) | **Extrait de 121 points versionné dans le dépôt** : `tests/reference/tclab_dyn_data2_extract.csv`, lu par `engine/test_real_tclab_dynamic.py` | https://apmonitor.com/do/uploads/Main/tclab_dyn_data2.txt ; protocole : https://apmonitor.com/do/index.php/Main/TCLabD | **NT.** Aucune mention de licence, de copyright ni de conditions d'usage sur la page TCLabD (recherche de « licen », « copyright », « © », « terms », « creative ») ni sur la page d'accueil d'apmonitor.com. Le dépôt de code `APMonitor/TCLab` est sous Apache-2.0 (`LICENSE.txt`, commit `962a244`, 23/10/2026), mais il **ne contient pas ce fichier** | Test interne : toléré, avec citation | Non établi | **Non établie** | **Test interne uniquement.** **Le dépôt `Mcodea/mkr` contient déjà une copie partielle** : si le dépôt est ou devient public, ou est transmis à un tiers, c'est une redistribution non autorisée **[JURISTE]**. Recommandation : retirer l'extrait du dépôt, le **télécharger en CI** comme pour CBE30338, ou demander une autorisation écrite à APMonitor / BYU (J. Hedengren) |
+| **Notre Dame CBE30338 « tclab-data.csv »** (`jckantor/CBE30338-book`, commit `bec88ef9f6d9…`, 20/04/2023) | Téléchargé en CI par `verify.yml` (`sparse-checkout`), lu par `tests/reference/tclab_observed_step.py` ; **non versionné, non livré** | https://github.com/jckantor/CBE30338-book (même fichier dans `ndcbe/controls`, commit `40bd61d`, 25/04/2026) | **NT.** Aucun fichier `LICENSE` à la racine des deux dépôts (arbre git lu). Le `Readme.md` dit seulement : « These materials are maintained and archived at https://github.com/jckantor/cbe30338-book ». Le `_config.yml` indique « author: Jeffrey Kantor » | Test interne en CI : toléré | Non établi | **Non établie** | **Test interne uniquement** (pratique actuelle correcte : téléchargement à la volée, pas de copie) |
+| **NAWI Seedling Project** (Villez et al., données en ligne d'actionneurs et de capteurs, traitement de l'eau, essais en boucle ouverte, MPC, etc.) | `tests/reference/nawi_inventory.py` (workflow manuel `nawi.yml`) : téléchargement et inventaire, **non versionné** | DOI 10.7481/1963162 ; https://data.openei.org/submissions/6474 | **V-sec : CC BY 4.0.** Le résumé de recherche cite les métadonnées OpenEI (« license of https://creativecommons.org/licenses/by/4.0/ »). OpenAlex ne donne pas de licence. Page officielle **non lue** (hôte refusé) | Oui | Oui (CC BY) | Oui, y compris commerciale, **avec attribution** et mention des modifications (CC BY 4.0 §3), **sous réserve de confirmation** | **Intégrable après confirmation** de la licence sur la page OpenEI ou OSTI |
+| **Moteur CC (Von Chong & Cárdenas)** : étalonnage du courant, identification APRBS, validation du correcteur | `tests/reference/openmct.py` (workflow manuel `openmct.yml`), **non versionné** | DOI 10.17632/5xvg43r9r8.2 ; https://data.mendeley.com/datasets/5xvg43r9r8/2 | **V-sec : « cc-by »** (OpenAlex, versions .1 et .2). Page Mendeley **non lue** (hôte refusé) ; le résumé de recherche n'a pas affiché la valeur du champ licence | Oui | Oui (si CC BY confirmée) | Oui avec attribution, **sous réserve** de lire la version exacte de la licence | **Intégrable après confirmation.** Hors champ procédé (moteur électrique) |
+
+## 2. Jeux demandés
+
+| Jeu | URL exacte | Licence / conditions (citation) | Utilisation | Modification | Redistribution | Recommandation |
+|---|---|---|---|---|---|---|
+| **DaISy** (KU Leuven, ESAT/STADIUS, éd. B. De Moor). Jeux procédés pertinents : 96-010 évaporateur, 96-016 sécheur industriel, 97-002 échangeur vapeur-liquide, 98-002 CSTR, 99-001 système de chauffage, 96-006 « hair dryer » de laboratoire, etc. | https://homes.esat.kuleuven.be/~smc/daisy/ ; https://homes.esat.kuleuven.be/~smc/daisy/daisydata.html ; https://homes.esat.kuleuven.be/~smc/daisy/submit.html | **NT.** Seule exigence écrite, une citation : « Important: if you use one of the following datasets, you should refer to it in your publications (because of the reproducibility). » Forme demandée : « De Moor B.L.R. (ed.), DaISy: Database for the Identification of Systems, Department of Electrical Engineering, ESAT/STADIUS, KU Leuven, Belgium, URL: http://homes.esat.kuleuven.be/~smc/daisy/, date of visit. [Used dataset: …] ». Page de dépôt : « For each dataset, we take it for granted that it has been cleared from any confidentiality agreement between the owner of the system … and the person and/or organization that submitted this dataset ». Plusieurs jeux viennent d'industriels (Philips, Cambridge Control Ltd, centrale de Pont-sur-Sambre). **Fiches descriptives `.txt` non lues** (`ftp.esat.kuleuven.be` refusé) : elles peuvent contenir des conditions propres | Oui (finalité affichée : recherche, reproductibilité), avec citation | Non établi | **Non établie** (aucune licence ; titulaires multiples, dont des industriels) | **Test interne uniquement**, avec citation au format demandé. Pour une intégration : autorisation écrite de STADIUS **et**, le cas échéant, du fournisseur d'origine de chaque jeu |
+| **Nonlinear Benchmark** (site) | https://www.nonlinearbenchmark.org/ ; https://www.nonlinearbenchmark.org/disclaimer | **Aucune licence générale.** La page « Disclaimer » ne traite que de la garantie : « The website authors give no warranty and accept no responsibility… ». Chaque benchmark demande une citation (« Cite: Please refer to the … benchmark as: … »). Les données sont hébergées ailleurs : 4TU, KTH, Uppsala, Google Drive, GitHub, fichiers du site | Oui, avec citation | Selon le jeu | Selon le jeu | Examiner **jeu par jeu** (ci-dessous) |
+| └ **Cascaded Tanks** (niveau, deux cuves, débordement) | DOI 10.4121/12960104 (4TU.ResearchData) ; page : https://www.nonlinearbenchmark.org/benchmarks/cascaded-tanks | **V-sec : CC BY-SA 4.0.** Deux sources concordent : OpenAlex (« cc-by-sa » sur 10.4121/12960104 et .v1) et le résumé de recherche citant l'export CFF de data.4tu.nl (« license: CC BY-SA 4.0 »). Page 4TU **non lue** (refusée). Citation demandée : Schoukens & Noël, IFAC WC 2017, doi 10.1016/j.ifacol.2017.08.071, et Schoukens, Mattsson, Wigren, Noël, doi 10.4121/12960104 | Oui | Oui | Oui, y compris commerciale, **mais en partage à l'identique (ShareAlike)** : les données modifiées doivent rester sous CC BY-SA. Effet sur un produit fermé qui les embarque **[JURISTE]** | **Test interne uniquement** par défaut. Une intégration exige l'avis d'un juriste sur la portée du ShareAlike (données séparées et identifiées, sans fusion avec le code) |
+| └ **Silverbox**, **Wiener-Hammerstein**, **EMPS**, **Coupled Electric Drives**, **F-16**, **Parallel WH** | URL de téléchargement relevées dans `nonlinear_benchmarks/benchmarks.py`, par exemple http://www.nonlinearbenchmark.org/FILES/BENCHMARKS/SILVERBOX/SilverboxFiles.zip, http://www.ee.kth.se/~hjalmars/ifac_tc11_benchmarks/2009_wienerhammerstein/WienerHammerBenchMark.mat, http://www.it.uu.se/research/publications/reports/2017-024/CoupledElectricDrivesDataSetAndReferenceModels.zip | **NT** pour les fichiers hébergés hors 4TU : aucune licence lue. Les deux autres identifiants 4TU du chargeur (EMPS, WH avec bruit de procédé, probablement) n'ont pas été qualifiés | Oui, avec citation | Non établi | Non établie | **Test interne uniquement.** Systèmes électroniques et mécaniques : pertinence faible pour les procédés |
+| **TCLab** (APMonitor / BYU) : logiciel et matériel | https://github.com/APMonitor/TCLab ; PyPI `tclab` 1.0.0 | **Code : Apache-2.0** (V : `LICENSE.txt`). Les données publiées sur apmonitor.com ne sont **pas** couvertes (voir §1) | Oui | Oui (code) | Oui (code, notice Apache) | Code utilisable. Données apmonitor.com : **test interne uniquement** |
+| **TCLab « Take-Home Labs »** (Goubej, **Hedengren**, Sukovatý, 2026) : essais TCLab réels SISO en boucle ouverte (`experiment_siso_model_validation.csv` : `time_s, Q1_pct, Q2_pct, T1_meas_C, T2_meas_C`), essais MIMO en boucle fermée (correcteur robuste) et simulations associées | DOI 10.5281/zenodo.24286966 ; https://zenodo.org/records/24286966 | **V : CC BY 4.0.** Métadonnées Zenodo (`license.id = cc-by-4.0`). Le `readme.md` de l'archive dit : « Unless stated otherwise, the data are provided under the Creative Commons Attribution 4.0 International license (CC BY 4.0). » L'archive contient aussi des **réponses d'enquête et des notes d'examen anonymisées** | Oui | Oui | Oui, y compris commerciale, **avec attribution**, mention des modifications et lien vers la licence. CC BY 4.0 §2.a.5.B interdit d'ajouter des restrictions techniques (DRM) qui empêcheraient les destinataires d'exercer la licence **[JURISTE]** pour l'embarquement dans un produit fermé | **Intégrable**, sur les **seuls fichiers d'essais TCLab**. Ne jamais reprendre les fichiers d'enquête ni de notes. **Meilleure alternative documentée** à l'extrait APMonitor |
+
+## 3. Autres jeux recherchés (procédés : niveau, température, pression, débit)
+
+| Jeu | URL | Licence (citation / source) | Utilisation | Modification | Redistribution | Recommandation |
+|---|---|---|---|---|---|---|
+| **InTaSet** : banc réel de quatre cuves interconnectées (niveau), boucle ouverte **et** fermée, découpage apprentissage/test, défauts de capteurs (Putri, Villacrés, Raza, Iwakin, Moazeni, 2025) | DOI 10.5281/zenodo.17652851 | **V : CC BY 4.0** (métadonnées Zenodo, `license.id = cc-by-4.0`, accès « open »). L'archive `InTaSet.zip` (6,1 Mo) ne contient **ni readme ni licence** | Oui | Oui | Oui avec attribution (même réserve DRM) | **Intégrable** (attribution). Très pertinent : niveau, boucle fermée |
+| **PRONTO heterogeneous benchmark** : installation d'écoulement polyphasique « industrial-scale » (description Zenodo) ; pressions, débits, alarmes, journal d'exploitation, vidéo (Stief, Tan, Cao, Ottewill, Thornhill, Baranowski) | DOI 10.5281/zenodo.1341583 | **V : CC BY 4.0** (métadonnées Zenodo). Citation demandée : J. Process Control 79 (2019) 41–55, doi 10.1016/j.jprocont.2019.04.009 | Oui | Oui | Oui avec attribution | **Intégrable** pour des extraits de pression et de débit. Archive de 1,7 Go ; vérifier qu'aucune vidéo ni donnée personnelle n'est reprise |
+| **CONSENS, cas d'étude 1** : pilote continu de lithiation (Kern, Wander, Meyer, Guhl, Gottu Mukkula et al.), données du système de conduite (`PCS_data_csv.zip`) | DOI 10.5281/zenodo.1438233 | **V : CC BY 4.0** (métadonnées Zenodo) | Oui | Oui | Oui avec attribution | Intégrable. Pertinence moyenne : données d'exploitation, peu d'échelons francs |
+| **Stiction compensation for low-cost electric valves** (Garrido et al.) : script, modèle Simulink, données de vanne `.dat` | DOI 10.5281/zenodo.14790612 | **V : CC BY 4.0** (métadonnées Zenodo) | Oui | Oui | Oui avec attribution | Intégrable. Petit volume, formats MATLAB |
+| **ISDB, International Stiction Data Base** (Jelali & Huang, 2009 ; 93 boucles industrielles selon une source secondaire) | https://sites.ualberta.ca/~bhuang/Stiction-Book.htm (refusé) | **NT** : aucune condition trouvée (recherche web) | Test interne, citation | Non établi | Non établie | **Test interne uniquement** ; contacter l'Université de l'Alberta pour toute intégration |
+| **SACAC Industrial PID control loop data repository** (Bauer et al., Ind. Eng. Chem. Res. 58(26), 2019) | sacac.org.za/resources/ (non consulté) | **NT** : le champ « License URL » du dépôt Imperial est vide (résumé de recherche) | Test interne, citation | Non établi | Non établie | **Test interne uniquement** ; demander les conditions à SACAC ou à l'Université de Pretoria |
+| **Tennessee Eastman, données additionnelles** (Rieth et al., 2017), Harvard Dataverse | DOI 10.7910/DVN/6C3JR1 (non consulté) | **NT** : seul un extrait renvoyant aux conditions générales du Dataverse a été vu | Test interne | Non établi | Non établie | Test interne uniquement. Simulation, pertinence faible pour l'identification FOPDT |
+
+**Non retenus** :
+- **DaRUS 10.18419/darus-2905** (mouvements de navire simulés) : hors champ, licence non relevée.
+- **Fichiers de démonstration de `samples/synthetic/`** : ils sont **synthétiques**, générés par `samples/synthetic/generate.py`. Ils appartiennent au projet et ne posent aucun problème de licence.
+
+## 4. Synthèse des recommandations
+
+| Recommandation | Jeux |
+|---|---|
+| **Intégrable** (CC BY 4.0 lue sur Zenodo, avec attribution, mention des modifications et lien vers la licence) | TCLab Take-Home Labs (fichiers d'essais seulement), InTaSet, PRONTO, CONSENS, Stiction low-cost valves |
+| **Intégrable après confirmation** de la licence sur la page officielle (licence vue seulement en source secondaire) | NAWI (OpenEI, CC BY 4.0), moteur CC Mendeley (CC BY) |
+| **Test interne uniquement, juriste requis pour aller plus loin** | Cascaded Tanks (CC BY-SA 4.0 : ShareAlike) |
+| **Test interne uniquement** (aucune licence ; citation obligatoire) | DaISy, données TCLab apmonitor.com (dont l'extrait versionné), CBE30338/ndcbe `tclab-data.csv`, autres jeux Nonlinear Benchmark hors 4TU, ISDB, SACAC, Tennessee Eastman Rieth |
+| **Exclu** | Aucun jeu exclu par principe. **L'extrait APMonitor actuellement versionné** doit sortir du dépôt ou obtenir une autorisation (voir §1) |
+
+**Obligations pratiques pour tout jeu CC BY intégré** :
+- conserver un fichier `SOURCE` à côté de la donnée, avec : auteurs, titre, DOI, version, date de téléchargement, licence et URL de la licence, liste des modifications ;
+- vérifier l'empreinte SHA-256, comme le fait déjà `nawi_inventory.py` ;
+- reprendre l'attribution dans la notice tierce du produit.

@@ -5,8 +5,8 @@ Chaque fiche documente : anomalie, preuve, impact, référence scientifique, cor
 | Fiche | Anomalie | État |
 |---|---|---|
 | [P0-1](P0-1-erreur-type-gain-fopdt.md) | Erreur-type du gain FOPDT sous-estimée ≈ ×2 | corrigée |
-| P0-2 | ARX accepte un intégrateur comme premier ordre | à faire |
-| P0-3 | Robustesse optimiste (règle de la moitié, Ms échantillonné, période du régulateur) | à faire |
-| P0-4 | Refus du modèle non validé uniquement côté C# | à faire |
-| P0-6 | `loop="open"` forcé, MANUAL ignoré | à faire |
-| P0-7 | Compatibilité constructeur non contrôlée | à faire |
+| [P0-2](P0-2-arx-integrateur.md) | ARX publie un intégrateur comme premier ordre | corrigée |
+| [P0-3](P0-3-robustesse-reglage-guide.md) | Robustesse optimiste (règle de la moitié, Ms échantillonné, période du régulateur) | 3a, 3b corrigées ; 3c moteur corrigé, interface à relier (LOT 1) |
+| [P0-4](P0-4-refus-moteur-modele-non-valide.md) | Refus du modèle non validé uniquement côté C# | corrigée |
+| [P0-6](P0-6-boucle-et-mode-manuel.md) | `loop="open"` forcé, MANUAL ignoré | **reportée au LOT 2** (justifiée) |
+| [P0-7](P0-7-compatibilite-constructeur.md) | Compatibilité constructeur non contrôlée | corrigée côté moteur ; interface (saisie de la cible) au LOT 7 |

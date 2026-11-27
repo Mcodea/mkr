@@ -65,5 +65,6 @@
  "facts.duration": "Duration: {0} s",
  "facts.window": "Window:",
  "facts.points": "Points: {0}",
- "cs.methode": "Method"
+ "cs.methode": "Method",
+ "core.hardware_compatibility_not_verified": "hardware compatibility not verified (CPU, firmware and library version not checked against the catalogue): conversion not qualified."
 }

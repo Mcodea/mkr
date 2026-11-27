@@ -141,7 +141,8 @@ try
     Require(Math.Abs(fit.Gain + 3) < 1e-5 && fit.TauSeconds is { } firstTau && Math.Abs(firstTau - 4) < 1e-5 &&
         Math.Abs(fit.DelaySeconds - 2.5) < 1e-5 && fit.Validation.Rmse < 1e-6,
         "Analytic FOPDT parameters and holdout prediction agree through the process boundary.");
-    var guided = await engine.RecommendTuningAsync(ModelFamily.FOPDT, fit, DesignObjectives.Balanced, null, default);
+    var guided = await engine.RecommendTuningAsync(ModelFamily.FOPDT, fit, true, DesignObjectives.Balanced, null, default);     // the fixture fit is exact (RMSE < 1e-6) and accepted by the independent holdout
+    await ThrowsAsync<CsvInputException>(() => engine.RecommendTuningAsync(ModelFamily.FOPDT, fit, false, DesignObjectives.Balanced, null, default));     // the engine itself refuses a model without proof of validation (LOT 0b, P0-4)
     Require(guided.IsRecommended && guided.Recommendation is { Controller: { Structure: "PI", Kp: < 0, TiSeconds: > 0 } } &&
             guided.Recommendation.WorstPeakSensitivity <= 1.7 + 1e-9 && guided.Qualification == "model_based_unqualified",
         "Guided tuning through the process boundary: a signed, bounded, unqualified PI for the balanced objective.");

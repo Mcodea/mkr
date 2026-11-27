@@ -1,0 +1,166 @@
+{
+  "_DONNEES_SYNTHETIQUES": "DONNÉES SYNTHÉTIQUES — aucune mesure industrielle ; ne pas présenter comme telles.",
+  "constants": {
+    "bulk_modulus_Pa": 2200000000.0,
+    "g": 9.80665,
+    "p_atm_Pa": 101325.0,
+    "rho": 998.2
+  },
+  "csvFormat": {
+    "decimal": ".",
+    "delimiter": ",",
+    "modeColumn": "MANUAL",
+    "mvColumn": "MV",
+    "pvColumn": "PV",
+    "spColumn": "SP",
+    "strptime": "%Y-%m-%dT%H:%M:%S.%f%z",
+    "timeColumn": "timestamp"
+  },
+  "drive": {
+    "comm_delay_samples": 1,
+    "mv_max": 100.0,
+    "mv_min": 30.0,
+    "ramp": 10.0,
+    "tau_mech": 0.5
+  },
+  "fopdtFitNoiseless": {
+    "delay_s": 1.2565194840280627,
+    "gain_bar_per_pct": 0.09706459131579505,
+    "rmse_bar": 0.002722261395120573,
+    "tau_s": 4.666607674690015
+  },
+  "generator": "tests/reference/scenario_pression_pompe/generate.py",
+  "generatorVersion": "1.0.0",
+  "halfRule": {
+    "fopdt": {
+      "delay_s": 1.0026247039899912,
+      "tau_s": 4.884731617680202
+    },
+    "pure_delays_s": {
+      "communication": 0.1,
+      "ramp_equivalent": 0.25,
+      "sampling_half_period": 0.05
+    },
+    "sopdt": {
+      "delay_s": 0.6526247040000557,
+      "tau1_s": 4.6347316176873905,
+      "tau2_s": 0.5999999999827466
+    }
+  },
+  "integration": "RK4 pas fixe 0.005 s",
+  "label": "DONNÉES SYNTHÉTIQUES — générées par simulation, jamais mesurées sur une installation réelle",
+  "linearization80": {
+    "capacitance_m3_per_m": 0.0011823617451352032,
+    "conductance_m3h_per_m": 0.7856946315432036,
+    "eigen_imag_max": 0.0,
+    "flow_m3h": 12.199888463217686,
+    "gain_analytic_bar_per_pct": 0.08858131487889274,
+    "gain_bar_per_pct": 0.08858131487064996,
+    "mv": 80.0,
+    "p_bar": 3.5432525951557095,
+    "tau_tank_s": 5.4175020569078125,
+    "time_constants_s": [
+      5.289530847207013,
+      0.49999999998562217,
+      0.199999999990259,
+      0.16187083334978528
+    ],
+    "valve": 0.5
+  },
+  "linearization90": {
+    "capacitance_m3_per_m": 0.0008123432899131533,
+    "conductance_m3h_per_m": 0.6983952280384034,
+    "eigen_imag_max": 0.0,
+    "flow_m3h": 13.724874521119894,
+    "gain_analytic_bar_per_pct": 0.09965397923875431,
+    "gain_bar_per_pct": 0.09965397924511013,
+    "mv": 90.0,
+    "p_bar": 4.484429065743944,
+    "tau_tank_s": 4.18736515697748,
+    "time_constants_s": [
+      4.073069570960506,
+      0.49999999998562217,
+      0.2000000000143973,
+      0.14442858491188287
+    ],
+    "valve": 0.5
+  },
+  "linearizationNominal": {
+    "capacitance_m3_per_m": 0.0009768188650158328,
+    "conductance_m3h_per_m": 0.7394773002759565,
+    "eigen_imag_max": 0.0,
+    "flow_m3h": 12.96238149216879,
+    "gain_analytic_bar_per_pct": 0.09411764705882351,
+    "gain_bar_per_pct": 0.0941176470452941,
+    "mv": 85.0,
+    "p_bar": 3.9999999999999996,
+    "tau_tank_s": 4.755450793073297,
+    "time_constants_s": [
+      4.6347316176873905,
+      0.49999999998562217,
+      0.19999999999424883,
+      0.15262470400293132
+    ],
+    "valve": 0.5
+  },
+  "maxPressureAtFullSpeed_bar": 5.536332179930795,
+  "numpyVersion": "2.3.5",
+  "operatingPoint": {
+    "mv": 85.0,
+    "p_bar": 4.0,
+    "valve": 0.5
+  },
+  "piClosedLoop": {
+    "Kc_pct_per_bar": 12.75410472263376,
+    "Ti_s": 4.666607674690015,
+    "note": "PI générique de scénario, forme idéale u = Kc·(e + 1/Ti ∫e).",
+    "rule": "SIMC, tau_c = 2·theta"
+  },
+  "pipe": {
+    "area": 0.0033183072403542195,
+    "diameter": 0.065,
+    "length": 30.0,
+    "r_loss": 0.01171875,
+    "wall": 0.005,
+    "wave_speed": 1388.6072949071709,
+    "young": 200000000000.0
+  },
+  "pump": {
+    "H0": 72.0,
+    "H_bep": 58.0,
+    "N0": 2900.0,
+    "Q_bep": 16.0,
+    "a": 0.0546875
+  },
+  "purpose": "Paramètres théoriques de référence du scénario (vérité terrain synthétique).",
+  "rng": "numpy.random.default_rng (PCG64)",
+  "samplePeriodSeconds": 0.1,
+  "scipyVersion": "1.17.0",
+  "sensor": {
+    "high": 10.0,
+    "low": 0.0,
+    "resolution": 0.001,
+    "tau": 0.2
+  },
+  "sopdtFitNoiseless": {
+    "delay_s": 0.44059741713929107,
+    "gain_bar_per_pct": 0.0969347206950227,
+    "rmse_bar": 0.0006300496354806299,
+    "tau1_s": 4.361164973614939,
+    "tau2_s": 1.0342664395216012
+  },
+  "tank": {
+    "V_ref": 0.05,
+    "kappa": 1.0,
+    "p_pre_bar": 1.0,
+    "p_ref_bar": 4.0
+  },
+  "units": {
+    "MANUAL": "1 = manuel (boucle ouverte), 0 = automatique",
+    "MV": "% de la vitesse nominale (100 % = 50 Hz = N0)",
+    "PV": "bar (relatif)",
+    "SP": "bar (relatif)",
+    "timestamp": "ISO 8601 UTC, millisecondes"
+  },
+  "valveCq_m3h_per_sqrt_m": 4.055588841359654
+}

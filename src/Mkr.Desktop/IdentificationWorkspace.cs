@@ -180,7 +180,7 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
     public Task<GuidedTuning> RecommendTuningAsync(IdentificationStudy model, string objective, double? processVariationPercent, CancellationToken token)
     {
         model.RequireAcceptedForTuning();
-        return Traced(piEngine.RecommendTuningAsync(model.Family, model.Result, objective, processVariationPercent, token), "tuning.guided", Short(model.Id),
+        return Traced(piEngine.RecommendTuningAsync(model.Family, model.Result, model.IsAcceptedForTuning, objective, processVariationPercent, token), "tuning.guided", Short(model.Id),
             r => r.IsRecommended ? Loc.T("cs.c_s_ms_pire_cas", objective, r.Recommendation!.ResponseSeconds, r.Recommendation.WorstPeakSensitivity)
                                  : $"{objective} : refusé ({string.Join(", ", r.Reasons ?? [])})");
     }

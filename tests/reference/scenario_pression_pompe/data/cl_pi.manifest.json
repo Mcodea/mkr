@@ -1,0 +1,103 @@
+{
+  "_DONNEES_SYNTHETIQUES": "DONNÉES SYNTHÉTIQUES — aucune mesure industrielle ; ne pas présenter comme telles.",
+  "controller": {
+    "Kc_pct_per_bar": 12.75410472263376,
+    "Ti_s": 4.666607674690015,
+    "antiWindup": "blocage conditionnel",
+    "limits": [
+      30.0,
+      100.0
+    ],
+    "manualUntilSeconds": 30.0,
+    "type": "PI idéal générique"
+  },
+  "csvFormat": {
+    "decimal": ".",
+    "delimiter": ",",
+    "modeColumn": "MANUAL",
+    "mvColumn": "MV",
+    "pvColumn": "PV",
+    "spColumn": "SP",
+    "strptime": "%Y-%m-%dT%H:%M:%S.%f%z",
+    "timeColumn": "timestamp"
+  },
+  "dataset": "cl_pi",
+  "durationSeconds": 600.0,
+  "generator": "tests/reference/scenario_pression_pompe/generate.py",
+  "generatorVersion": "1.0.0",
+  "integration": "RK4 pas fixe 0.005 s",
+  "intent": "accepted_with_conditions",
+  "intentReason": "Boucle fermée sous PI (SIMC τc = 2θ), manuel 0–30 s puis automatique sans à-coup. Échelons de consigne 4,0 -> 4,3 (60 s) -> 3,8 (200 s) -> 6,0 (330 s, inatteignable : MV saturée à 100 %) -> 4,0 (420 s) ; vanne aval 0,50 -> 0,62 (120 s) -> 0,50 (270 s), non enregistrée. Pour les lots ultérieurs (identification en boucle fermée, évaluation du réglage, anti-saturation) : à NE PAS traiter comme un essai en boucle ouverte.",
+  "label": "DONNÉES SYNTHÉTIQUES — générées par simulation, jamais mesurées sur une installation réelle",
+  "noiseStdBar": 0.003,
+  "numpyVersion": "2.3.5",
+  "operatingPoint": {
+    "mv": 85.0,
+    "p_bar": 4.0,
+    "valve": 0.5
+  },
+  "quantizationBar": 0.001,
+  "rng": "numpy.random.default_rng (PCG64)",
+  "role": "boucle fermée",
+  "rows": 6001,
+  "samplePeriodSeconds": 0.1,
+  "scipyVersion": "1.17.0",
+  "seed": 20261108,
+  "setpointSchedule": [
+    [
+      0,
+      4.0
+    ],
+    [
+      60,
+      4.3
+    ],
+    [
+      200,
+      3.8
+    ],
+    [
+      330,
+      6.0
+    ],
+    [
+      420,
+      4.0
+    ]
+  ],
+  "start": "2026-03-02T22:00:00+00:00",
+  "trueParameters": {
+    "delay_s": 1.2565194840280627,
+    "gain_bar_per_pct": 0.09706459131579505,
+    "linear_local_gain_bar_per_pct": 0.0941176470452941,
+    "sopdt": {
+      "delay_s": 0.44059741713929107,
+      "gain_bar_per_pct": 0.0969347206950227,
+      "rmse_bar": 0.0006300496354806299,
+      "tau1_s": 4.361164973614939,
+      "tau2_s": 1.0342664395216012
+    },
+    "tau_s": 4.666607674690015
+  },
+  "units": {
+    "MANUAL": "1 = manuel (boucle ouverte), 0 = automatique",
+    "MV": "% de la vitesse nominale (100 % = 50 Hz = N0)",
+    "PV": "bar (relatif)",
+    "SP": "bar (relatif)",
+    "timestamp": "ISO 8601 UTC, millisecondes"
+  },
+  "valveSchedule": [
+    [
+      0,
+      0.5
+    ],
+    [
+      120,
+      0.62
+    ],
+    [
+      270,
+      0.5
+    ]
+  ]
+}

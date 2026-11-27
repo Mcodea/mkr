@@ -60,6 +60,7 @@ public sealed record BlockConversion(string Block, string Structure, string Qual
         "label_inconsistency_rev_dir" => "la documentation libelle rev_dir différemment en deux endroits (comportements concordants) : vérifier le sens sur banc.",
         "sampled_behaviour_unqualified" => "limiteurs, anti-enroulement, suivi et discrétisation ne sont pas reproduits : comportement échantillonné à qualifier sur banc.",
         "time_rounded_to_milliseconds" => "un temps a été arrondi à la milliseconde (résolution du type TIME).",
+        "hardware_compatibility_not_verified" => Loc.T("core.hardware_compatibility_not_verified"),
         _ => code
     };
 }
@@ -125,6 +126,7 @@ public sealed record BlockSettings(string Block, string Structure, string Qualif
         "output_in_percent" => "la sortie du bloc est en pourcentage : vérifier le facteur d'échelle saisi.",
         "dead_zone_set_to_zero" => "zone morte de la version 3 réglée à 0 : elle ne fait pas partie du réglage de MKR.",
         "sampled_behaviour_unqualified" => "comportement échantillonné à qualifier sur banc.",
+        "hardware_compatibility_not_verified" => Loc.T("core.hardware_compatibility_not_verified"),
         _ => code
     };
 }
