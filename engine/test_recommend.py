@@ -500,6 +500,24 @@ class Refusals(unittest.TestCase):
         self.assertEqual(result["decision"], "recommended")
         self.assertIn("closed_loop_slower_than_the_process", result["warnings"])
 
+    def test_declared_variation_includes_the_fast_lag_of_the_identified_plant(self):
+        for nominal_fast in (8.0, 15.0):
+            with self.subTest(second_tau=nominal_fast):
+                result = calculate(request(family="SOPDT", secondTauSeconds=nominal_fast,
+                                           standardErrors=None, processVariationPercent=20.0))
+                self.assertEqual(result["decision"], "recommended")
+                self.assertIsNone(result["uncertaintyCoverageSigma"])
+                self.assertNotIn("second_pole_uncertainty_not_propagated", result["warnings"])
+                chosen = result["recommendation"]
+                c = chosen["controller"]
+                plants = [(2.0, 40.0, 10.0, nominal_fast)]
+                plants.extend((k, slow, delay, fast) for k in (1.6, 2.4) for slow in (32.0, 48.0)
+                              for delay in (8.0, 12.0) for fast in (0.8 * nominal_fast, 1.2 * nominal_fast))
+                peaks = [sensitivity_peak(k, [slow, fast], delay + 0.5, c["kp"], c["tiSeconds"],
+                                          c["tdSeconds"], c["filterSeconds"]) for k, slow, delay, fast in plants]
+                self.assertAlmostEqual(chosen["worstPeakSensitivity"], max(peaks), delta=0.002)
+                self.assertLessEqual(max(peaks), OBJECTIVES["balanced"] + 0.005)
+
     def test_second_order_uncertainty_is_flagged_as_partly_propagated(self):
         result = calculate(request(family="SOPDT", secondTauSeconds=3.0))
         self.assertIn("second_pole_uncertainty_not_propagated", result["warnings"])
