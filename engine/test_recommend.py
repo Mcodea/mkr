@@ -92,6 +92,24 @@ class Equations(unittest.TestCase):
         self.assertAlmostEqual(chosen["nominalMargins"]["peakSensitivity"], nominal, delta=0.002)
         self.assertAlmostEqual(chosen["worstPeakSensitivity"], max(nominal, *corners), delta=0.002)
 
+    def test_optimised_controllers_on_a_negative_gain_reduced_sopdt(self):
+        result = calculate(request(family="SOPDT", gain=-2.0, secondTauSeconds=8.0, optimise=True))
+        self.assertEqual(result["decision"], "recommended")
+        plants = [(-2.0, 40.0, 10.0)]
+        plants.extend((gain, slow_tau, delay)
+                      for gain in (-2.1, -1.9) for slow_tau in (36.0, 44.0) for delay in (8.0, 12.0))
+        for key in ("optimized", "optimizedPid"):
+            with self.subTest(controller=key):
+                tuning = result[key]
+                self.assertIsNotNone(tuning)
+                c = tuning["controller"]
+                self.assertLess(c["kp"], 0.0)
+                peaks = [sensitivity_peak(gain, [slow_tau, 8.0], delay + 0.5, c["kp"],
+                                          c["tiSeconds"], c["tdSeconds"], c["filterSeconds"])
+                         for gain, slow_tau, delay in plants]
+                self.assertAlmostEqual(tuning["worstPeakSensitivity"], max(peaks), delta=0.002)
+                self.assertLessEqual(max(peaks), OBJECTIVES["balanced"] + 0.005)
+
     def test_second_pole_above_the_delay_gives_a_pid_whose_ideal_form_is_the_series_form(self):
         result = calculate(request(family="SOPDT", secondTauSeconds=15.0))
         controller, tauc = result["recommendation"]["controller"], result["recommendation"]["responseSeconds"]
