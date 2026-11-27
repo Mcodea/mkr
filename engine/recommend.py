@@ -24,7 +24,7 @@ import math
 from pi_tuning_integrator import loop_margins
 from stability_margins import analyze
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -148,7 +148,8 @@ def calculate(payload):
     sampling_delay = sample / 2        # effective delay includes half the sampling period (Skogestad 2003)
     effective = theta + sampling_delay
     try:
-        plants, quantified = _corners(gain, tau1, theta, tau2, errors, variation)
+        # Reduce the plant for SIMC synthesis only. Judge each controller on the identified dynamics.
+        plants, quantified = _corners(gain, tau, delay, second, errors, variation)
     except ValueError as error:
         return _refusal(family, objective, limit, ["parameter_uncertainty_excludes_the_model"] if str(error) == "recommend_uncertainty" else [str(error)],
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
@@ -212,8 +213,8 @@ def calculate(payload):
                                  ("optimizedPid", optimized_pid and optimized_pid["controller"])):
             if controller is not None:
                 try:
-                    performance[name] = closed_loop_performance(gain, tau1, tau2, effective, controller)
-                    performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau1, tau2, effective, controller, sample)
+                    performance[name] = closed_loop_performance(gain, tau, second, delay + sampling_delay, controller)
+                    performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau, second, delay + sampling_delay, controller, sample)
                 except ValueError:
                     warnings.append("performance_simulation_failed_" + name)
         warnings.append("performance_is_nominal_without_actuator_limits")
@@ -337,6 +338,8 @@ def _loop(w, kp, ti, plants, integrating):
     gains = np.array([p[1] for p in plants], dtype=float)[:, None]
     delays = np.array([p[3] for p in plants], dtype=float)[:, None]
     process = gains / s if integrating else gains / (np.array([p[2] for p in plants], dtype=float)[:, None] * s + 1)
+    if not integrating and plants[0][4] is not None:
+        process /= 1 + np.array([p[4] for p in plants])[:, None] * s
     return kp * (1 + 1 / (ti * s)) * process * np.exp(-s * delays)
 
 
@@ -350,6 +353,8 @@ def _feasible(kp, ti, plants, limit, integrating, w):
     w2 = w[None, :]
     delays = np.array([p[3] for p in plants], dtype=float)[:, None]
     lag = -math.pi / 2 if integrating else -np.arctan(np.array([p[2] for p in plants], dtype=float)[:, None] * w2)
+    if not integrating and plants[0][4] is not None:
+        lag -= np.arctan(np.array([p[4] for p in plants])[:, None] * w2)
     phase = -np.arctan2(1.0, ti * w2) + lag - w2 * delays
     for row in range(loop.shape[0]):
         if phase[row, 0] <= -math.pi and abs(loop[row, 0]) >= 1:
@@ -429,7 +434,7 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
                     _, pm, peak = loop_margins(k, d, kp, ti)
                     ok = pm is not None and pm > 0
                 else:
-                    m = analyze(k, [t1], d, kp, ti, 0.0, 0.0)
+                    m = analyze(k, [t1] if t2 is None else [t1, t2], d, kp, ti, 0.0, 0.0)
                     peak, ok = m["peakSensitivity"], "nominal_unstable" not in m["warnings"] and m["phaseMarginDegrees"] is not None and m["phaseMarginDegrees"] > 0
                 if not ok:
                     peak = math.inf
@@ -438,9 +443,14 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
             return None
         if max(peaks) <= limit:
             nominal = scaled[0]
+            if nominal[4] is None:
+                overshoot = _nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating)
+            else:
+                control = dict(kp=kp, tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0)
+                overshoot = closed_loop_performance(nominal[1], nominal[2], nominal[4], nominal[3], control)["setpointStep"]["overshootPercent"]
             return dict(controller=dict(structure="PI", kp=math.copysign(kp, gain), tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0),
                         integralGain=kp / ti, worstPeakSensitivity=max(peaks),
-                        nominalOvershootPercent=_nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating))
+                        nominalOvershootPercent=overshoot)
         kp *= 0.995
     return None
 
