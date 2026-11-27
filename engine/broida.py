@@ -10,9 +10,10 @@ import numpy as np
 
 from fopdt import basis, delay_interval, delay_warnings, diagnostics, read_trials
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 FRACTIONS = (0.28, 0.40)
 TAIL_SIZE = 6
+LEGACY_HORIZON_TAUS = 4        # plancher conservé de la version 1.1 (non-régression) ; le critère justifié est settled_residual_pv
 
 
 def crossing(times, normalized, fraction):
@@ -66,15 +67,30 @@ def estimate(step, tolerance):
     gain = step_response / step.amplitude
     if not math.isfinite(gain) or gain == 0:
         raise ValueError("broida_response")
-    if float(times[-1]) - delay < 4 * tau:
+    if float(times[-1]) - delay < LEGACY_HORIZON_TAUS * tau:
         raise ValueError("broida_horizon")
-    return gain, tau, delay, t28, t40, tail_level
+    # Variation finale « suffisamment établie » (cahier directeur, section 42.2). Le niveau final est la moyenne de la fenêtre de plateau :
+    # si le procédé est bien le FOPDT identifié, son biais est la moyenne du reste |réponse| exp(-(t - L)/tau) sur cette fenêtre, majorée par
+    # sa valeur au DÉBUT de la fenêtre. Ce majorant doit tenir dans la bande de bruit déclarée (2 x tolérance PV, la même que le test de
+    # plateau) ; sinon le niveau final lu est biaisé de plus que le bruit et les passages à 28 % et 40 % sont normalisés par un niveau trop bas.
+    # Le refus n'est donc pas un seuil arbitraire : il dépend du rapport signal/bruit de l'essai.
+    residual = abs(step_response) * math.exp(-(float(times[-TAIL_SIZE]) - delay) / tau)
+    if residual > 2 * tolerance:
+        raise ValueError("broida_not_established")
+    return gain, tau, delay, t28, t40, tail_level, step_response, residual
+
+
+def required_duration_seconds(step_response, tolerance, tau, delay, window_seconds):
+    """Durée d'essai (depuis l'échelon) pour que le reste prévu au début de la fenêtre de plateau tienne dans la bande de bruit :
+    L + tau ln(|réponse| / (2 tol)) + durée de la fenêtre. Sert à dire à l'utilisateur combien de temps attendre encore (assistant d'essai,
+    section 42.2) ; c'est une estimation conditionnelle au modèle FOPDT supposé, pas une garantie."""
+    return delay + tau * math.log(abs(step_response) / (2 * tolerance)) + window_seconds
 
 
 def identify(payload):
     training, validation = read_trials(payload)
     tolerance = payload["pvTolerance"]
-    gain, tau, delay, t28, t40, plateau = estimate(training, tolerance)
+    gain, tau, delay, t28, t40, plateau, step_response, residual = estimate(training, tolerance)
     warnings = ["two_point_estimator", "measured_tail_plateau", "interpolated_crossings"]
     warnings.extend(delay_warnings(delay, training))
     # Estimate is independent of validation: use only pre-existing parameters.
@@ -90,6 +106,14 @@ def identify(payload):
         broidaEvidence=dict(
             crossing28Seconds=t28, crossing40Seconds=t40,
             terminalPv=plateau, terminalSamples=TAIL_SIZE,
+            baselinePv=float(training.baseline),
+            crossing28Pv=float(training.baseline + FRACTIONS[0] * step_response),
+            crossing40Pv=float(training.baseline + FRACTIONS[1] * step_response),
+            plateauWindowStartSeconds=float(training.times[-TAIL_SIZE]), plateauWindowEndSeconds=float(training.times[-1]),
+            settledResidualBoundPv=float(residual),
+            requiredDurationSeconds=float(required_duration_seconds(step_response, tolerance, tau, delay,
+                                                                    float(training.times[-1] - training.times[-TAIL_SIZE]))),
+            observedDurationSeconds=float(training.times[-1]),
             timeOrigin="mv_step_first_changed_sample",
             thresholdFractions=list(FRACTIONS),
         ),
