@@ -44,7 +44,7 @@ def _plain(value):
 
 
 def _number(x):
-    return type(x) in (int, float) and math.isfinite(x) and abs(x) <= 1e100
+    return type(x) in (int, float) and abs(x) <= 1e100
 
 
 def _simc(gain, tau1, delay, tauc, tau2=None, filter_ratio=DEFAULT_FILTER_RATIO):
@@ -114,7 +114,10 @@ def calculate(payload):
     variation = payload["processVariationPercent"]
     if variation is not None and (not _number(variation) or not 0 < variation <= 50):
         raise ValueError("recommend_input")
-    if family not in ("FOPDT", "SOPDT", "Integrateur") or objective not in OBJECTIVES:
+    if family not in ("FOPDT", "SOPDT", "Integrateur") or not isinstance(objective, str) or objective not in OBJECTIVES:
+        raise ValueError("recommend_input")
+    if errors is not None and (not isinstance(errors, dict) or errors.keys() != {"gain", "tauSeconds", "delaySeconds"} or
+                               not all(_number(v) and v >= 0 for v in errors.values())):
         raise ValueError("recommend_input")
     if family == "Integrateur":
         if tau is not None or second is not None or not all(_number(x) for x in (gain, delay, sample)):
@@ -125,9 +128,6 @@ def calculate(payload):
     elif not all(_number(x) for x in (gain, tau, delay, sample)) or (family == "SOPDT") != (second is not None):
         raise ValueError("recommend_input")
     if second is not None and not _number(second):
-        raise ValueError("recommend_input")
-    if errors is not None and (not isinstance(errors, dict) or errors.keys() != {"gain", "tauSeconds", "delaySeconds"} or
-                               not all(_number(v) and v >= 0 for v in errors.values())):
         raise ValueError("recommend_input")
     if gain == 0 or tau <= 0 or delay < 0 or sample <= 0 or (second is not None and not 0 < second <= tau):
         raise ValueError("recommend_domain")
