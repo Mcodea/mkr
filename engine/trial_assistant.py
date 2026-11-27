@@ -16,12 +16,18 @@ Critères (aucun seuil universel : tout est ramené aux tolérances déclarées 
   * la réponse est analysée par broida.estimate en mode provisoire ; « établie » = critère de broida (reste prévu <= 2 x pvTolerance et plancher 4 tau) ;
   * durée restante = durée requise (L + tau ln(|réponse|/(2 tol)) + fenêtre, au moins L + 4 tau) - durée observée. Elle est CONDITIONNELLE au modèle
     FOPDT supposé et n'est donnée que lorsque l'estimation existe (plateau observé) : sinon `remainingSeconds` est None, jamais une fausse précision (42.4).
-Limites de cette tranche : boucle fermée, procédé intégrateur, grand temps mort, oscillant, réponse inverse : état `not_supported_yet` / `analysis_not_supported`."""
+Procédé INTÉGRATEUR (tranche 2) : aucun plateau n'est attendu (section 42.3). La réponse est une rampe après le retard, ajustée par integrator.estimate ;
+« exploitable » quand (a) le PV a varié de plus de 4 x pvTolerance en fin de fenêtre (règle d'integrator.identify), (b) le retard est localisé dans la
+première moitié de l'horizon (l'estimateur signale sinon `parameter_bound`) et (c) la pente est significativement non nulle au niveau 99 % (z = 2,576) :
+|pente| > 2,576 x erreur type, erreur type = sigma / racine(somme (t - t moyen)^2) sur les lignes après le retard, sigma = max(bruit de ligne de base mesuré,
+tolérance PV / racine 3) (résolution déclarée). La durée restante n'est PAS estimée (`remainingSeconds` None) : sans plateau, aucune durée n'est fondée.
+Limites de cette tranche : boucle fermée, grand temps mort, oscillant, réponse inverse : état `not_supported_yet` / `analysis_not_supported`."""
 import math
 
 import numpy as np
 
 import broida
+import integrator
 from fopdt import Step
 
 VERSION = "1.0.0"
@@ -98,7 +104,7 @@ def assess(payload):
 
     if not (np.all(np.isfinite(mv)) and np.all(np.isfinite(pv))):
         return _result("measurement_anomaly", ["non_finite_values"], n)
-    if loop_mode != "open_loop" or kind != "self_regulating":
+    if loop_mode != "open_loop" or kind not in ("self_regulating", "integrating"):
         # Boucle fermée (excitation SP), intégrateur sans plateau, grand temps mort, oscillant, réponse inverse : aucune règle justifiée ici.
         return _result("not_supported_yet", ["mode_or_process_kind_not_supported_by_this_version"], n)
     if manual is not None and any(float(v) != 1.0 for v in manual):
@@ -140,6 +146,8 @@ def assess(payload):
     step = Step(seconds[k:end] - seconds[k], pv[k:end], baseline, amplitude, float(seconds[k] - seconds[k - 1]), None, None,
                 float(np.std(pv[:k], ddof=1)), k)
     exhausted = max_duration is not None and observed >= max_duration
+    if kind == "integrating":
+        return _integrating(step, k, n, amplitude, observed, exhausted, validated, pv_tol, notes)
     try:
         gain, tau, delay, t28, t40, level, response, residual = broida.estimate(step, pv_tol, require_established=False)
     except ValueError as error:
@@ -169,3 +177,40 @@ def assess(payload):
         return _result("unusable", ["response_not_established_at_max_duration"] + notes, n, **base)
     return _result("more_data_needed", ["more_data_needed", "remaining_conditional_on_fopdt_model"] + notes, n,
                    remainingSeconds=max(0.0, required - observed), remainingConditionalOnModel=True, **base)
+
+
+SLOPE_Z_99 = 2.576                 # pente significative au niveau 99 % (même niveau que fopdt.LJUNG_Z_99)
+
+
+def _integrating(step, k, n, amplitude, observed, exhausted, validated, pv_tol, notes):
+    """Procédé intégrateur : rampe après le retard, sans plateau. Voir le docstring du module."""
+    base = dict(stepRow=k, amplitude=amplitude, observedSeconds=observed)
+    y = step.observations - step.baseline
+    if float(np.max(np.abs(y))) <= 4 * pv_tol:
+        if exhausted:
+            return _result("unusable", ["excitation_insufficient_no_measurable_response_at_max_duration"] + notes, n, **base)
+        return _result("response_in_progress", ["no_measurable_response_yet", "remaining_not_reliable", "no_plateau_expected_for_integrating"] + notes, n, **base)
+    try:
+        gain, delay, fraction = integrator.estimate(step)
+    except ValueError as error:
+        return _result("analysis_not_supported", [str(error)] + notes, n, **base)
+    window = max(2, len(y) // 8)
+    tail_change = float(np.mean(step.observations[-window:]) - np.mean(step.observations[-2 * window:-window]))
+    sign = math.copysign(1.0, gain * amplitude)
+    ramp = step.times > delay
+    rows = int(np.count_nonzero(ramp))
+    sigma = max(step.baseline_noise, pv_tol / math.sqrt(3))
+    spread = float(np.sum((step.times[ramp] - np.mean(step.times[ramp])) ** 2)) if rows >= 3 else 0.0
+    slope = gain * amplitude
+    significant = spread > 0 and abs(slope) > SLOPE_Z_99 * sigma / math.sqrt(spread)
+    estimate = dict(gain=gain, delaySeconds=delay, method="integrator_ramp_fit", provisional=True)
+    evidence = dict(delayFractionOfHorizon=fraction, slopePvPerSecond=slope, rampRows=rows, slopeSigma=sigma,
+                    tailChangePv=tail_change, baselinePv=float(step.baseline))
+    base.update(estimate=estimate, evidence=evidence)
+    notes = notes + ["no_plateau_expected_for_integrating"]
+    if sign * tail_change > 4 * pv_tol and fraction < 0.49 and significant:
+        return _result("usable", ["trial_usable_provisional"] + (["independent_validation_trial_needed"] if not validated else []) + notes, n,
+                       validationTrialNeeded=not validated, **base)
+    if exhausted:
+        return _result("unusable", ["ramp_not_established_at_max_duration"] + notes, n, **base)
+    return _result("more_data_needed", ["more_data_needed", "remaining_not_reliable"] + notes, n, **base)

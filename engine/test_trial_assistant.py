@@ -162,8 +162,9 @@ class Excitation(unittest.TestCase):
 
 
 class ScopeAndInput(unittest.TestCase):
-    def test_closed_loop_and_integrating_are_declared_not_supported_not_guessed(self):
-        for extra in (dict(loopMode="closed_loop"), dict(processKind="integrating")):
+    def test_closed_loop_and_unknown_kind_are_declared_not_supported_not_guessed(self):
+        # « integrating » est traité depuis la tranche 2 (classe IntegratingProcess) ; boucle fermée et nature inconnue restent non traitées
+        for extra in (dict(loopMode="closed_loop"), dict(processKind="unknown")):
             s = stream(30.0)
             s.update(extra)
             self.assertEqual(assess(s)["state"], "not_supported_yet")
@@ -192,6 +193,74 @@ class ScopeAndInput(unittest.TestCase):
     def test_the_assistant_never_writes_and_never_authorises(self):
         for upto in (0.0, 2.0, 20.0, 45.0, 70.0):
             self.assertIs(assess(stream(upto))["safetyAuthorization"], False)
+
+
+K_INT, L_INT = 0.05, 4.0
+
+
+def ramp_stream(upto, noise=0.0, seed=0, dt=0.5, tolerance=0.01):
+    """Intégrateur avec retard exact : y = base + K A (t - L)+ ; aucun plateau."""
+    rows = 6 + int(round(upto / dt)) + 1
+    t = (np.arange(rows) - 6) * dt
+    rng = np.random.default_rng(seed)
+    pv = BASE + K_INT * AMP * np.maximum(t - L_INT, 0) + rng.normal(0.0, noise, rows)
+    return dict(seconds=(np.arange(rows) * dt).tolist(), mv=np.where(t >= 0, AMP, 0.0).tolist(), pv=pv.tolist(),
+                mvTolerance=0.01, pvTolerance=tolerance, processKind="integrating")
+
+
+class IntegratingProcess(unittest.TestCase):
+    """Tranche 2 : aucun plateau attendu (42.3). Oracle : rampe exacte K A (t - L)+, pente K A = 0,075 par seconde, retard L = 4 s."""
+
+    def test_no_plateau_is_awaited_and_the_ramp_parameters_match_the_closed_form(self):
+        r = assess(ramp_stream(20.0))
+        self.assertEqual(r["state"], "usable")
+        self.assertIn("no_plateau_expected_for_integrating", r["messages"])
+        self.assertAlmostEqual(r["estimate"]["gain"], K_INT, delta=1e-6)
+        self.assertAlmostEqual(r["estimate"]["delaySeconds"], L_INT, delta=1e-3)
+        self.assertIsNone(r["remainingSeconds"])           # sans plateau, aucune durée n'est fondée
+        self.assertTrue(r["provisional"])
+        self.assertIs(r["safetyAuthorization"], False)
+
+    def test_states_as_the_ramp_emerges(self):
+        self.assertEqual(assess(ramp_stream(3.0))["state"], "step_detected")                 # 7 lignes de réponse < 12
+        self.assertEqual(assess(ramp_stream(5.5))["state"], "more_data_needed")              # 12 lignes de réponse, 1,5 s de rampe : analysé mais pas établi
+        early = assess(ramp_stream(7.0))
+        self.assertEqual(early["state"], "more_data_needed")                                 # retard vrai 4 s > moitié de l'horizon : borne de l'estimateur
+        self.assertEqual(assess(ramp_stream(20.0))["state"], "usable")
+
+    def test_flat_response_gives_no_estimate_until_max_duration(self):
+        s = ramp_stream(30.0)
+        s["pv"] = [BASE] * len(s["pv"])
+        self.assertEqual(assess(s)["state"], "response_in_progress")
+        s["maxDurationSeconds"] = 20.0
+        self.assertEqual(assess(s)["state"], "unusable")
+
+    def test_a_settling_self_regulating_response_is_not_accepted_as_an_integrator(self):
+        s = stream(70.0)                                    # FOPDT qui atteint son plateau : la fin de fenêtre est plate
+        s["processKind"] = "integrating"
+        self.assertNotEqual(assess(s)["state"], "usable")
+
+    def test_noisy_ramp_parameters_within_the_statistical_criterion_fixed_beforehand(self):
+        # Critère a priori : écart <= 4 écarts types théoriques d'un moindre carré de rampe (P(dépassement) < 1e-4 par graine, 20 graines).
+        sigma, dt, upto = 0.01, 0.5, 40.0
+        t = np.arange(int(round(upto / dt)) + 1) * dt
+        active = t[t > L_INT]
+        spread = float(np.sum((active - active.mean()) ** 2))
+        se_slope = sigma / math.sqrt(spread)
+        se_intercept = sigma * math.sqrt(1 / len(active) + active.mean() ** 2 / spread)
+        slope = K_INT * AMP
+        # Refus attendus : la règle de ligne de base de fopdt.read_step (écart max <= tolérance = 3 sigma sur 6 points) rejette un essai propre avec la
+        # probabilité 1 - 0,9973^6 = 1,6 % : en 20 graines l'espérance est 0,32 refus ; P(4 refus ou plus) < 1e-3. Tout refus doit avoir ce motif.
+        usable = 0
+        for seed in range(20):
+            r = assess(ramp_stream(upto, noise=sigma, seed=seed, tolerance=3 * sigma))
+            if r["state"] != "usable":
+                self.assertEqual((r["state"], r["messages"][0]), ("unusable", "baseline_not_stable_before_step"))
+                continue
+            usable += 1
+            self.assertLessEqual(abs(r["estimate"]["gain"] * AMP - slope), 4 * se_slope)
+            self.assertLessEqual(abs(r["estimate"]["delaySeconds"] - L_INT), 4 * se_intercept / slope)
+        self.assertGreaterEqual(usable, 17)
 
 
 if __name__ == "__main__":
