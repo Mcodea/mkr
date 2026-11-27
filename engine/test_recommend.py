@@ -496,6 +496,20 @@ class Refusals(unittest.TestCase):
     def test_the_result_is_always_marked_unqualified(self):
         self.assertEqual(calculate(request())["qualification"], "model_based_unqualified")
 
+    def test_invalid_guided_inputs_return_a_specific_ipc_error(self):
+        import json
+        from mkr_engine import serve
+
+        for changes in ({"objective": []}, {"gain": 10 ** 400},
+                        {"family": "Integrateur", "tauSeconds": None, "standardErrors": []}):
+            with self.subTest(fields=tuple(changes)):
+                message = dict(version=1, requestId="guided-check", operation="recommend_tuning",
+                               payload=request(**changes))
+                reply = json.loads(serve(json.dumps(message).encode()))
+                self.assertEqual(reply["requestId"], "guided-check")
+                self.assertEqual(reply["error"]["code"], "recommend_input")
+                self.assertNotIn("result", reply)
+
     def test_hostile_inputs_are_rejected(self):
         for changes in ({"derivativeFilterRatio": 0.5}, {"processVariationPercent": 0}, {"processVariationPercent": 60}, {"processVariationPercent": "30"}, {"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},
                         {"objective": "fast"}, {"family": "ARX"}, {"family": "SOPDT"}, {"secondTauSeconds": 3.0},
