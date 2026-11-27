@@ -63,14 +63,22 @@ try {
                              'en_rcpy [33002535K01000', 'tolérance fixée avant essai', 'trace de mesure')) {
         if (!$sheet.Contains($required)) { throw "Champ du relevé absent : $required" }
     }
-    # Bloc sans propriété documentée : « PIFINT » (erreur de nomenclature du client, c'est PID_INT) a été retiré le 2026-11-27 ; PI_B n'a pas encore
-    # de paramètres dans le catalogue. Quand ils y seront, choisir une autre entrée sans propriété ou adapter ce contrôle (état vide + relevé propre au bloc).
+    # Fiche sans paramètre documenté : « PIFINT » (erreur de nomenclature du client, c'est PID_INT) a été retiré le 2026-11-27. PI_B n'a pas encore
+    # de paramètres dans le catalogue mais porte un fait (catalogue Premium) : l'état vide « Aucune propriété documentée » (ni paramètre ni fait)
+    # n'est donc plus atteignable avec le catalogue actuel et n'est plus vérifié ici (couverture réduite, à rétablir si une fiche vide revient).
+    # Ce qui reste vérifié : le relevé copié est celui du bloc sélectionné et signale l'absence de paramètre documenté.
     $filter.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('PI_B')
-    $null = Wait-Element $catalogue $nameProperty 'Aucune propriété documentée dans cette édition du catalogue.'
-    $copy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    $null = Wait-Element $catalogue $nameProperty 'Relevé PI_B copié.'
+    # Le filtre peut mettre un instant à changer la sélection : recopier jusqu'au message propre à PI_B (jamais celui de PIDFF).
+    $copied = [System.Windows.Automation.PropertyCondition]::new($nameProperty, 'Relevé PI_B copié.')
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    do {
+        $copy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        Start-Sleep -Milliseconds 300
+        $done = $null -ne $catalogue.FindFirst($scope, $copied)
+    } while (-not $done -and [DateTime]::UtcNow -lt $deadline)
+    if (-not $done) { throw "Le relevé PI_B n'a pas été copié : la sélection n'a pas suivi le filtre." }
     $other = Get-Clipboard -Raw
-    if (!$other.Contains('Relevé de banc · PI_B') -or $other.Contains('mix_par')) {
+    if (!$other.Contains('Relevé de banc · PI_B') -or $other.Contains('mix_par') -or !$other.Contains('Aucun paramètre documenté dans cette fiche.')) {
         throw 'Le relevé doit correspondre au bloc sélectionné.'
     }
     Write-Output 'Accueil, ouverture du catalogue, filtre PIDFF et statut vérifiés.'
