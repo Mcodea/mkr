@@ -48,13 +48,13 @@ Le texte prêt à citer est dans `ATTRIBUTION.txt`. Il doit accompagner le fichi
   - à 20 s : **H1 passe de 0 à 70 %**, H2 reste à 0 % ;
   - à 300 s : **H2 passe de 0 à 30 %**, H1 reste à 70 % ;
   - jusqu'à 1 000 s : pas d'autre changement.
-- Températures : T1 part d'environ 18,9 °C et culmine à 83,9 °C. T2 monte avec H1 seul, par couplage thermique entre les deux chauffages, puis avec H2, jusqu'à 61,4 °C à 1 000 s.
+- Températures : T1 part d’environ 18,9 °C et culmine à 83,9 °C (à 951 s). T2 monte avec H1 seul, par couplage thermique entre les deux chauffages, puis avec H2, jusqu'à 61,4 °C à 1 000 s.
 - Usage dans l'article : validation de modèle (figure 3), comparée à deux simulations (`simulation_siso_model_validation_par1/par2.csv`, non reprises ici).
 
 ## Limites
 
 - **Deux échelons seulement**, un par chauffage. Ils sont montants, sans retour à 0 et sans échelon descendant. L'ancien extrait APMonitor avait quatre changements de H1 (10, 200, 280 et 400 s) au pas de 5 s. Les assertions de `engine/test_real_tclab_dynamic.py` (lignes de changement 2, 40, 56, 80, première valeur 19.29, etc.) **ne s'appliquent pas** à ce fichier. Il faudra un nouveau test, pas un simple remplacement de chemin.
-- **Couplage MIMO** : après 300 s, T1 et T2 dépendent des deux chauffages. Une identification SISO H1→T1 propre se limite à la fenêtre 20–299 s. Sur cette fenêtre, T1 n'a pas atteint son régime permanent (65,8 °C à 299 s, encore en hausse).
+- **Couplage MIMO** : après 300 s, T1 et T2 dépendent des deux chauffages. Une identification SISO H1→T1 propre se limite à la fenêtre 20–299 s. Sur cette fenêtre, T1 n'a pas atteint son régime permanent (65,8 °C à 299 s, en hausse lente).
 - **Quantification** : les températures sont sur la grille du convertisseur 10 bits, avec un pas d'environ 0,49 °C (par exemple 18,915 / 19,404). Le bruit apparent est donc en paliers.
 - **Une seule réalisation**, un seul kit. Pas de répétition, pas de mesure de la température ambiante, pas d'incertitude publiée.
 - Les colonnes `parameter_set=initial_parameters` et la valeur initiale 23/23 laissent penser que le fichier a été mis en forme avec le code de simulation des auteurs. Le `readme.md` le présente néanmoins comme une mesure brute (« Raw experimental data »).

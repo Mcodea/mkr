@@ -18,4 +18,4 @@
 `tests/reference/tclab_observed_step.py` est exécuté par la CI sur un fichier cloné à l'exécution depuis le dépôt public `jckantor/CBE30338-book` (aucune copie dans ce dépôt). Sa licence n'est pas établie : usage de test interne seulement ; équivalent synthétique ajouté dans `test_two_heater_unmodelled_input.py`.
 
 ## Alternative recherchée
-Jeu réel sous licence permissive (recherche en cours : Zenodo « TCLab Take-Home Labs », CC BY 4.0 annoncée, à confirmer sur la page officielle) : `docs/science/licences/`.
+Jeu réel sous **CC BY 4.0, licence confirmée le 2026-11-27** (Zenodo « TCLab Take-Home Labs », DOI 10.5281/zenodo.24286966 ; métadonnées Zenodo relues deux fois) : `tests/reference/tclab_cc_by/` (extrait, README, ATTRIBUTION.txt) et `docs/science/licences/tclab-cc-by.md`. Test : `engine/test_real_tclab_cc_by.py` (régression observée, couverture plus faible que l'ancien jeu : deux échelons montants, un par chauffage).
