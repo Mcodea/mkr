@@ -1,5 +1,7 @@
 # LOT 0 — Matrice de qualification scientifique (état initial)
 
+> **Après le LOT 0b (2026-11-27)** — niveaux inchangés (aucun élément n'est « Qualifié dans un domaine »), mais les anomalies suivantes sont corrigées avec tests à oracle indépendant : erreur-type du gain FOPDT (P0-1), équivalent premier ordre de l'ARX (P0-2), robustesse du réglage guidé sur le SOPDT identifié et sur la boucle échantillonnée (P0-3a/b, `recommend.py` 1.2.0, `sampled_loop.py` : **vérifié numériquement**, indépendamment), refus du moteur sans preuve de validation (P0-4), compatibilité constructeur explicite (P0-7). Le tableau ci-dessous reste l'état audité à `c7915cd`.
+
 Niveaux : Non implémenté · Expérimental · Implémenté · Vérifié numériquement · Validé sur données indépendantes · Vérifié sur banc · **Qualifié dans un domaine défini** · Non qualifié · Bloqué.
 **Règle :** aucun niveau n'est attribué sans preuve. Toute case « Qualifié » exige des tolérances justifiées, un jeu réservé et une référence indépendante (cahier §27). **À ce jour, aucun élément n'est « Qualifié dans un domaine ».**
 

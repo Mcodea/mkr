@@ -1,5 +1,7 @@
 # LOT 0 — Audit scientifique initial : synthèse
 
+> **Mise à jour 2026-11-27 :** P0-1, P0-2, P0-3, P0-4 et P0-7 ont été traités au LOT 0b (`../lot0b/`) ; P0-6 est reporté au LOT 2 ; P0-5 et P0-8 relèvent des LOT 1 et 2. Le texte ci-dessous décrit l'état **audité** (`c7915cd`).
+
 **Révision auditée :** `c7915cd` (révision UI/UX réceptionnée ; tag local `ui-ux-recue-2026-11-26`, push du tag à retenter).
 **Branche de travail :** `claude/science-engine-dev` (aucune fusion dans `main`).
 **Nature du document :** état des lieux factuel et proposition de plan. **Aucun algorithme n'a été modifié.** Le plan n'est pas adopté tant qu'il n'est pas arbitré (AGENTS.md §2).
