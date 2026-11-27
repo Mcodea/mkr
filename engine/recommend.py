@@ -595,6 +595,8 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
     steps = int(min(horizon / dt, 1.5e6))
     dt = horizon / steps if steps == int(horizon / dt) else dt
 
+    horizon = steps * dt  # actual duration if the integration step count was capped
+
     def run(setpoint, load):
         n_delay = int(round(delay / dt))
         buffer = [0.0] * (n_delay + 1)
@@ -602,7 +604,7 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         states = [0.0] * max(len(lags), 1)
         integral = yf = 0.0
         iae = ise = itae = peak = peak_mv = 0.0
-        last_outside = 0.0
+        settling_time = None
         trace_t, trace_y, trace_u = [], [], []
         stride = max(1, steps // 4000)
         y = 0.0
@@ -632,11 +634,14 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             ise += e * e * dt
             itae += t * e * dt
             peak = max(peak, y if setpoint else -y * (1 if gain > 0 else 1))
-            if setpoint and e > 0.02 * abs(setpoint):
-                last_outside = t
+            if setpoint:
+                if e > 0.02 * abs(setpoint):
+                    settling_time = None
+                elif settling_time is None:
+                    settling_time = (i + 1) * dt  # y is the state after this integration step
             if not math.isfinite(y) or abs(y) > 1e6:
                 raise ValueError("recommend_simulation_diverged")
-        return iae, ise, itae, peak, last_outside, peak_mv, (trace_t, trace_y, trace_u)
+        return iae, ise, itae, peak, settling_time, peak_mv, (trace_t, trace_y, trace_u)
 
     iae, ise, itae, peak, settle, peak_mv, trace = run(1.0, 0.0)
     l_iae, l_ise, l_itae, _, _, load_peak_mv, load_trace = run(0.0, 1.0)
@@ -649,7 +654,7 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         picked = keep[::step]
         return dict(seconds=[float(t[k]) for k in picked], pv=[float(y[k]) for k in picked], mv=[float(u[k]) for k in picked])
 
-    window = min(horizon, max(8.0 * scale, 1.6 * settle))
+    window = horizon if settle is None else min(horizon, max(8.0 * scale, 1.6 * settle))
     return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle,
                                   peakMv=peak_mv, initialMvStep=abs(kp)),
                 loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae, peakMv=load_peak_mv),

@@ -182,7 +182,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             void Line(string name, LoopPerformance? l)
             {
                 if (l is null) return;
-                text.AppendLine(Loc.T("cs.consigne_iae_depassement_etablissement_a", name, F(l.SetpointStep.Iae), F(l.SetpointStep.OvershootPercent ?? 0), F(l.SetpointStep.SettlingSeconds ?? 0), F(l.LoadDisturbanceStep.Iae), F(l.HighFrequencyGain)));
+                text.AppendLine(Loc.T("cs.consigne_iae_depassement_etablissement_a", name, F(l.SetpointStep.Iae), l.SetpointStep.OvershootPercent is { } overshoot ? F(overshoot) : "—", l.SetpointStep.SettlingSeconds is { } settling ? F(settling) : "—", F(l.LoadDisturbanceStep.Iae), F(l.HighFrequencyGain)));
                 if (l.SetpointStep.PeakMv is { } peak && l.SetpointStep.InitialMvStep is { } kick)
                     text.AppendLine(Loc.T("cs.commande_a_un_echelon_de", pv, F(kick), mv, F(peak), mv));
                 if (l.NoiseToControlGain is { } noise)
@@ -192,6 +192,8 @@ public partial class GuidedTuningView : UserControl, IStepView
             Line(Loc.T("cs.recommande"), perf.Recommended);
             Line(Loc.T("cs.pi_optimise"), perf.OptimizedPi);
             Line(Loc.T("cs.pid_optimise"), perf.OptimizedPid);
+            if (new[] { perf.Recommended, perf.OptimizedPi, perf.OptimizedPid }.Any(p => p is not null && p.SetpointStep.SettlingSeconds is null))
+                text.AppendLine(Loc.T("cs.indicateur_non_disponible_la_reponse"));
         }
         if (tuning.Warnings is { Length: > 0 })
         {

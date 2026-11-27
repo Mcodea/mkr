@@ -444,6 +444,15 @@ class ClosedLoopPerformance(unittest.TestCase):
     set-point error e(t) = exp(-t / T), T = tau / a  ->  IAE = T, ISE = T / 2, ITAE = T^2, no overshoot, 2 % settling at 3.912 T;
     load step at the plant input: y(t) = K / (a - 1) (exp(-t / tau) - exp(-a t / tau))  ->  IAE = K tau / a."""
 
+    def test_settling_is_unobserved_when_the_window_ends_before_band_entry(self):
+        # Ti = tau, Kp K = 1: analytical entry at tau * log(50), beyond one tau.
+        result = recommend.closed_loop_performance(
+            1.0, 10.0, None, 0.0, dict(kp=1.0, tiSeconds=10.0, tdSeconds=0.0, filterSeconds=0.0),
+            horizon_multiple=1.0)
+        self.assertIsNone(result["setpointStep"]["settlingSeconds"])
+        self.assertEqual(result["horizonSeconds"], 10.0)
+        self.assertGreater(len(result["curves"]["setpoint"]["seconds"]), 1)
+
     def test_closed_form_values(self):
         gain, tau, a = 2.0, 30.0, 3.0
         kp = a / gain
