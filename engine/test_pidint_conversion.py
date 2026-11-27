@@ -105,5 +105,13 @@ class DocumentedRules(unittest.TestCase):
         self.assertIn("document_inconsistencies", result["conversion"]["warnings"])
 
 
+class IntegerDeadZone(unittest.TestCase):
+    def test_floor_is_published_and_matches_the_hand_computation(self):
+        # KP = 3 -> register 300, Ti = 10 s -> 100, Ts = 0,1 s -> 10 : 1000 x 100 / (300 x 10) = 33,33 comptes (calcul à la main)
+        result = pid_int(dict(kp=3.0, tiSeconds=10.0, tdSeconds=0, tsSeconds=0.1, pvSpan=10000, mvSpan=10000))
+        self.assertAlmostEqual(result["parameters"]["integerDeadZoneCounts"], 100000 / 3000, places=9)
+        self.assertIn("integer_dead_zone", result["warnings"])
+
+
 if __name__ == "__main__":
     unittest.main()

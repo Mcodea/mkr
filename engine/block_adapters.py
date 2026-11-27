@@ -120,9 +120,15 @@ def pid_int(parameters):
                (("KP", 100, gain), ("TI", 10, ti), ("TS", 100, ts))]
     if any(rounded):
         warnings.append("register_rounding")
+    # Integer arithmetic (33002520 p. 141): the increment KP (TS/(10 TI)) eps / 100 is truncated toward zero, so the integral action
+    # stops while |eps| < 1000 TI / (|KP| TS) counts (INTERPRETATION of the truncation, see block_pid_int.py I3 and
+    # test_block_conversion_closed_loop.py). It is a steady-state error floor the user must see before loading anything.
+    dead_zone = 1000 * registers["TI"] / (abs(registers["KP"]) * registers["TS"])
+    warnings.append("integer_dead_zone")
     return dict(
         block="PID_INT", structure="mixed", qualification=QUALIFICATION, readyToLoad=False, source=PIDINT_SOURCE,
         parameters=dict(KP=registers["KP"], TI=registers["TI"], TD=0, TS=registers["TS"], PV_DEV=False, gain=gain,
+                        integerDeadZoneCounts=dead_zone,
                         units=dict(KP="gain x100", TI="0.1 s", TS="0.01 s")),
         neutral=dict(),
         toDetermine=["OUT_MAX", "OUT_MIN", "NO_BUMP", "PV_SUP", "PV_INF", "task period (TS is rounded to a multiple)",
