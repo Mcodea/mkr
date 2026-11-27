@@ -6,7 +6,7 @@
 1. Entrée : un modèle **accepté** à la validation (FOPDT, SOPDT ou intégrateur), la période d'échantillonnage, les erreurs-types si elles existent et l'objectif : *robuste* (Ms ≤ 1,4), *équilibré* (≤ 1,7) ou *performance* (≤ 2,0). Ces valeurs sont des **objectifs de conception** choisis par l'utilisateur dans la plage usuelle de 1,2 à 2,0 (Åström et Hägglund, 2006), pas des seuils cachés.
 2. Retard effectif : retard prudent du modèle + ½ période d'échantillonnage (Skogestad, 2003).
 3. Structure : modèle du premier ordre → PI ; second ordre avec second pôle supérieur au retard → PID (règle SIMC, forme série convertie en forme idéale) ; second pôle ≤ retard → règle de la moitié, puis PI ; intégrateur → PI (SIMC intégrateur).
-4. Recherche : constante de temps de boucle fermée τc sur une grille de 0,25 à environ 53 retards effectifs. MKR retient la **plus petite** τc (réglage le plus rapide) pour laquelle la boucle est stable et Ms ≤ limite **sur le modèle nominal et sur les huit coins** de l'incertitude (±2 erreurs-types : gain, constante de temps lente, retard).
+4. Recherche : constante de temps de boucle fermée τc sur une grille de 0,25 à environ 53 retards effectifs. MKR retient la **plus petite** τc (réglage le plus rapide) pour laquelle la boucle est stable et Ms ≤ limite **sur le modèle nominal et sur tous les coins** de l'incertitude (±2 erreurs-types : gain, constante de temps lente, retard).
 4bis. Filtre de la dérivée (PID) : Tf = Td/N, N = 10 par défaut (usuel : 2 à 20) ; il est inclus dans les marges évaluées sur chaque coin.
 5. Sortie : le réglage, ses marges au pire cas, les réglages voisins pour comparer vitesse et robustesse, les avertissements (`closed_loop_slower_than_the_process`, `uncertainty_not_quantified`…).
 
@@ -16,7 +16,7 @@ En plus du réglage SIMC, MKR calcule le PI qui **maximise le gain intégral Ki 
 Méthode : pour chaque Ti d'une grille, plus grand Kp stable respectant la contrainte (balayage puis dichotomie, car l'ensemble admissible peut être un intervalle pour un procédé intégrateur), puis affinage de Ti et vérification finale avec la recherche de marges en pleine résolution.
 
 ## Variation du procédé sur la plage de fonctionnement
-Le champ facultatif « Variation attendue du procédé (%) » élargit la boîte d'incertitude à ±v % du gain, de la constante de temps et du retard (maximum entre cette valeur et ±2 erreurs-types). C'est le moyen de tenir compte d'un procédé dont la dynamique change avec le point de fonctionnement, sans modèle non linéaire.
+Le champ facultatif « Variation attendue du procédé (%) » élargit la boîte d'incertitude à ±v % du gain, de la constante de temps et du retard (maximum entre cette valeur et ±2 erreurs-types). Pour le second ordre, la variation déclarée s’applique aussi à la constante de temps rapide. Le moteur évalue alors le modèle nominal et les seize combinaisons extrêmes des quatre paramètres. La fourchette du pôle rapide provient du pourcentage saisi. Une erreur-type propre à ce pôle reste à établir. Sans variation déclarée, le pôle rapide reste fixe. C'est le moyen de tenir compte d'un procédé dont la dynamique change avec le point de fonctionnement, sans modèle non linéaire.
 
 Mesure du 25/11/2026 (5 procédés synthétiques : débit, pression, température, dosage, chloration), réglage calculé **sans** variation déclarée, jugé ensuite sur le procédé dont gain, constante de temps et retard varient simultanément de ±30 % (huit coins, balayage fréquentiel indépendant) :
 
