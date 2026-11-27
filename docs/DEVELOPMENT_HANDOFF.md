@@ -32,6 +32,14 @@
 - `docs/science/licences/` : inventaire des dépendances et licences des jeux de données (brouillons, non relus ; sections bibliothèques candidates et README manquantes).
 - `docs/science/scenario-pression-pompe-m580/` et `tests/reference/scenario_pression_pompe/` : scénario pression/pompe/M580 (brouillon, non relu) ; manuels Schneider (PIDFF, « PIFINT » à vérifier) non encore lus.
 
+## LOT 1 — état (dossier : `docs/science/lot1/DOSSIER.md`)
+| Élément | État |
+|---|---|
+| Contrat IPC versionné et documenté | **fait (1re tranche)** : `OPERATIONS`, `CONTRACT_REVISION = 2`, opération `describe_contract`, `docs/communication/ipc-operations.md` (16 opérations jusque-là non documentées), test `engine/test_ipc_contract.py` ; client C# `VerifyContractAsync` (refus explicite d'un moteur trop ancien ou incomplet, message affiché au démarrage), test dans le smoke avec un faux moteur ancien |
+| Schémas JSON formels, unités et détail d'erreur dans les réponses | à faire |
+| Orchestration (8 statuts), invalidation en cascade, traçabilité des versions, sauvegarde avant migration, période du régulateur, règles hors des vues | à faire |
+| Section 42 du cahier | texte non reçu : répartition dans les lots à faire dès réception |
+
 ## Preuves du LOT 0b
 - CI « Vérification MKR » [run 331](https://github.com/Mcodea/mkr/actions/runs/45975387738), commit `f6c87f0` : **vert à la tentative 2** (compilation, 338 tests Python, smoke .NET, SQLite, Modbus/S7, paquet autonome, tests graphiques). La tentative 1 avait échoué sur `CheckInterruptedSession` (`AcquisitionChecks.cs:261`, `EndOfStreamException`) : **test intermittent**, code d'acquisition non modifié, cause non démontrée ; à stabiliser au LOT 2 (acquisition) sans affaiblir son assertion.
 - Fiches : `docs/science/lot0b/`. Aucun test existant supprimé ni modifié.

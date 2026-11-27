@@ -20,4 +20,7 @@ public interface IProjectStore
 public interface IEngineDiagnostics
 {
     Task<string> GetVersionAsync(CancellationToken cancellationToken);
+
+    /// <summary>Refuses an engine whose WPF–Python contract is older than the one this application speaks (InvalidDataException with an explicit message).</summary>
+    Task VerifyContractAsync(CancellationToken cancellationToken);
 }

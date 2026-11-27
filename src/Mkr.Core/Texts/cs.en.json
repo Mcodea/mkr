@@ -758,5 +758,6 @@
  "cs.vue_s": "View [{0:G6} ; {1:G6}] s",
  "cs.yyyy_mm_dd_hh_mm": "yyyy-MM-dd HH:mm:ss",
  "cs.z_motif_preuve": "{0:yyyy-MM-dd HH:mm:ss}Z  {1} {2}\n    reason: {3} · evidence: {4}",
- "cs.zone_trop_petite_pour_tracer": "Area too small to plot."
+ "cs.zone_trop_petite_pour_tracer": "Area too small to plot.",
+ "cs.moteur_python_incompatible_avec_le_contrat": "Python engine incompatible with the application contract: {0}"
 }

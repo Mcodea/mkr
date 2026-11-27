@@ -50,6 +50,22 @@ try
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
     Require(await engine.GetVersionAsync(default) == "0.10.0", "Python round trip returns the expected version.");
+    await engine.VerifyContractAsync(default);                         // the real engine speaks the contract revision the application requires (LOT 1)
+    {
+        // An engine that predates the contract description is refused with an explicit message, not later in a screen.
+        var oldEngine = Path.Combine(Path.GetTempPath(), "mkr-old-engine-" + Guid.NewGuid().ToString("N") + ".py");
+        File.WriteAllText(oldEngine, "import sys, json\nr = json.loads(sys.stdin.read())\nprint(json.dumps({'version': 1, 'requestId': r['requestId'], 'engineVersion': '0.2.0', 'error': {'code': 'unsupported_operation'}}))\n");
+        try
+        {
+            await new PythonDiagnostics(interpreter, oldEngine).VerifyContractAsync(default);
+            throw new InvalidOperationException("An engine without contract description must be refused.");
+        }
+        catch (InvalidDataException contractRefusal)
+        {
+            Require(contractRefusal.Message.Contains("trop ancien"), "An engine without contract description is refused with an explicit message.");
+        }
+        finally { File.Delete(oldEngine); }
+    }
 
     var legacyPath = Path.Combine(directory.FullName, "legacy.db");
     using (var legacy = new SqliteConnection(new SqliteConnectionStringBuilder

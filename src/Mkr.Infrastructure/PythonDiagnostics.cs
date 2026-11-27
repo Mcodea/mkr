@@ -21,6 +21,43 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         return version;
     }
 
+    /// <summary>Oldest bridge contract this application can talk to (docs/communication/ipc-operations.md).</summary>
+    public const int MinimumContractRevision = 2;
+
+    /// <summary>Operations the application calls: an engine that does not serve all of them is refused at start-up instead of failing later in a screen.</summary>
+    private static readonly string[] RequiredOperations =
+    [
+        "analyze_csv", "assess_model", "calculate_integrator_pi", "calculate_pi", "calculate_simc_pid", "check_model_drift", "compare_models",
+        "convert_block_settings", "find_steps", "identify_arx", "identify_broida", "identify_fopdt", "identify_integrator", "identify_sopdt", "inspect_csv",
+        "ping", "preview_trial", "recommend_tuning", "simulate_open_loop", "simulate_pi", "simulate_pi_combined", "simulate_pi_robustness",
+        "simulate_pi_transition", "simulate_pid_experimental", "suggest_criteria"
+    ];
+
+    public async Task VerifyContractAsync(CancellationToken cancellationToken) =>
+        _ = await Guard(() => VerifyContractAsyncCore(cancellationToken)).ConfigureAwait(false);
+
+    private async Task<bool> VerifyContractAsyncCore(CancellationToken cancellationToken)
+    {
+        JsonElement result;
+        try
+        {
+            (result, _) = await CallAsync("describe_contract", new { }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (CsvInputException error) when (error.Code == "unsupported_operation")
+        {
+            throw new InvalidDataException("Moteur Python trop ancien : il ne décrit pas son contrat (révision " + MinimumContractRevision + " exigée).");
+        }
+        if (!result.TryGetProperty("protocolVersion", out var protocol) || protocol.ValueKind != JsonValueKind.Number || protocol.GetInt32() != 1 ||
+            !result.TryGetProperty("contractRevision", out var revision) || revision.ValueKind != JsonValueKind.Number || revision.GetInt32() < MinimumContractRevision ||
+            !result.TryGetProperty("operations", out var operations) || operations.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException("Contrat du moteur Python incompatible (protocole 1, révision " + MinimumContractRevision + " au moins exigés).");
+        var served = operations.EnumerateArray().Where(o => o.ValueKind == JsonValueKind.String).Select(o => o.GetString()!).ToHashSet();
+        var missing = RequiredOperations.Where(o => !served.Contains(o)).ToArray();
+        if (missing.Length > 0)
+            throw new InvalidDataException("Moteur Python incomplet : opérations absentes (" + string.Join(", ", missing) + ").");
+        return true;
+    }
+
     public Task<CsvResult> InspectAsync(byte[] original, string delimiter, CancellationToken token) =>
         Guard(() => InspectAsyncCore(original, delimiter, token));
 

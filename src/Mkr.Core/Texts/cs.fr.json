@@ -758,5 +758,6 @@
  "cs.vue_s": "Vue [{0:G6} ; {1:G6}] s",
  "cs.yyyy_mm_dd_hh_mm": "yyyy-MM-dd HH:mm:ss",
  "cs.z_motif_preuve": "{0:yyyy-MM-dd HH:mm:ss}Z  {1} {2}\n    motif : {3} · preuve : {4}",
- "cs.zone_trop_petite_pour_tracer": "Zone trop petite pour tracer."
+ "cs.zone_trop_petite_pour_tracer": "Zone trop petite pour tracer.",
+ "cs.moteur_python_incompatible_avec_le_contrat": "Moteur Python incompatible avec le contrat de l'application : {0}"
 }

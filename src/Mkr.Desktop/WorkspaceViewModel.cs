@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -85,7 +86,14 @@ public sealed class WorkspaceViewModel : INotifyPropertyChanged
         Status = Loc.T("cs.verification_du_moteur_python");
         try
         {
-            Status = Loc.T("cs.moteur_python_disponible_version", await _engine.GetVersionAsync(_lifetime.Token));
+            var version = await _engine.GetVersionAsync(_lifetime.Token);
+            await _engine.VerifyContractAsync(_lifetime.Token);
+            Status = Loc.T("cs.moteur_python_disponible_version", version);
+        }
+        catch (InvalidDataException error)
+        {
+            Trace.TraceError("engine.contract {0}", error.Message);
+            Status = Loc.T("cs.moteur_python_incompatible_avec_le_contrat", error.Message);
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
         {

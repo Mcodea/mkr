@@ -8,6 +8,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from csv_quality import process_csv
 
 ENGINE_VERSION = "0.10.0"
+# Contract of the WPF-Python bridge. The protocol version stays 1 (message envelope); the revision counts additions to the operation set and
+# the payload fields (LOT 1). Every operation served by respond() MUST be listed here and documented in docs/communication/ (a test enforces both).
+CONTRACT_REVISION = 2
+OPERATIONS = (
+    "analyze_csv", "assess_model", "calculate_integrator_pi", "calculate_pi", "calculate_simc_pid", "check_model_drift", "compare_models",
+    "compare_tunings", "convert_block_settings", "describe_contract", "find_steps", "identify_arx", "identify_broida", "identify_closed_loop",
+    "identify_fopdt", "identify_integrator", "identify_sopdt", "inspect_csv", "lookup_blocks", "ping", "preview_trial", "recommend_blocks",
+    "recommend_tuning", "select_strategy", "simulate_open_loop", "simulate_pi", "simulate_pi_combined", "simulate_pi_robustness",
+    "simulate_pi_transition", "simulate_pid_experimental", "suggest_criteria",
+)
 MAX_REQUEST_BYTES = 2_900_000
 
 
@@ -185,10 +195,12 @@ def respond(raw):
             code = str(error) if str(error).startswith(("csv_", "invalid_request")) else "invalid_request"
         else:
             return {**response, "result": result}
-    elif request["operation"] != "ping":
+    elif request["operation"] not in ("ping", "describe_contract"):
         code = "unsupported_operation"
     elif request["payload"]:
         code = "invalid_request"
+    elif request["operation"] == "describe_contract":
+        return {**response, "result": {"protocolVersion": 1, "contractRevision": CONTRACT_REVISION, "operations": list(OPERATIONS)}}
     else:
         return {**response, "result": {"status": "ready"}}
 
