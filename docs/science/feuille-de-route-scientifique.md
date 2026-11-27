@@ -11,7 +11,7 @@
 | LOT 3 | Identification scientifique | 42.2 Broïda automatique (variation finale établie, repères graphiques, enregistrement) ; 42.3 intégrateur sans plateau, grand temps mort ; méthodes adaptées au mode ; reclassement de Broïda en méthode du FOPDT (migration) | à venir |
 | LOT 4 | Sélection et validation | 42.2 essai de validation accompagné ; 42.3 refus si modèles indiscernables | à venir |
 | LOT 5-6 | Stratégies, réglages, optimisation, robustesse | Réglages à partir de données en boucle fermée (une fois identifiables) | à venir |
-| LOT 7 | Adaptateurs constructeurs | Blocs Schneider PIDFF, PI_B, PID_INT (non interchangeables ; recherche en cours) | à venir |
+| LOT 7 | Adaptateurs constructeurs | Blocs Schneider PIDFF, PI_B, PID_INT (non interchangeables) : manuels lus (fiches `docs/science/schneider/`) ; à faire : corriger la description du `kp` négatif dans le catalogue et les docs, fusion de « PIFINT » dans PID_INT, adaptateur documentaire PI_B (sous réserve de l'unité de `kp`, de l'ordre du limiteur et d'un oracle), saisie de la cible, banc ou simulateur Control Expert | à venir |
 | LOT 8 | Mise au point et rapport | Rapport : preuves des essais en direct et événements | à venir |
 | LOT 9 | Scénario complet pression / pompe / M580 | 42.6 : parcours bout en bout sur automates simulés | à venir |
 | LOT 10 | Qualification indépendante | Tests de refus, perte de communication, changement de mode, saturation | à venir |

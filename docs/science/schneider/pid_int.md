@@ -1,82 +1,91 @@
-# PID_INT — fiche (Control Expert, bibliothèque standard)
+# PID_INT — fiche (Control Expert, bibliothèque standard, famille CLC_INT)
 
-**Statut : documentaire partiel. « Conversion non qualifiée ».** Je n'ai lu aucune page du manuel 33002520 : le PDF est refusé par le proxy. Ce nom remplace « PIFINT », erreur de nomenclature corrigée par le client le 27/11/2026.
+**Statut : documentaire, lu dans le manuel. « Conversion non qualifiée ».** Ce nom remplace « PIFINT », erreur de nomenclature corrigée par le client.
 
-## 1. Sources
+Sources de cette fiche :
+- **M20** : 33002520.20, 09/2020, *EcoStruxure™ Control Expert — Standard, Bibliothèque de blocs* :
+  - partie III « CLC_INT » (p. 127) ;
+  - chap. 29 « Introduction aux fonctions de régulation d'entiers » (p. 129–134) ;
+  - chap. 30 « PID_INT : automate PID » (p. 135–141) ;
+  - disponibilité, chap. 2 (p. 34).
+- **FAQ** : FA137704 (PID de PL7 Pro).
 
-| Source | Niveau | Contenu |
-|---|---|---|
-| 33002520K01000 (a) : page du document lue | D2 (métadonnées) | « EcoStruxure™ Control Expert - Standard, Bibliothèque de blocs », FR, version 20, 05 Sept 2020, 33002520_K01_000_20.pdf, 2,7 MB, checkSum ec6f7f27dbc57547eaca7d91142adda3 |
-| 33002519K01000 (édition EN) | D2 (métadonnées, copie du 26/11) | Standard Block Library, v20, 06 Sept 2020 |
-| Contenu de 33002520 transcrit dans le dépôt (chap. 30, p. 135–141) | D1m | `docs/catalogue/pidint-conversion.md`, `engine/catalogue/schneider.json:124-131, 353-438` |
-| FA137704 « Quels sont les paramètres de la fonction PID sous PL7 Pro ? » | D2 (texte ; tableaux en image non lus) | « PID (TAG, UNIT, PV, OUT, AUTO, PARA) ». « Le paramètre PARA est une table de 43 mots ». « Les autres paramètres… ne doivent jamais être modifiés par l'application ». |
-| FA226088 « …ARRAY[1..43] OF INT variable to the 'PID_INT' PARA pin? » | D1s (page en HTTP 404 sur deux sites régionaux) | D'après l'extrait : la broche PARA du PID_INT est de type ANY_ARRAY et prend ARRAY[1..43] OF INT. Une variable créée par défaut en ARRAY[1..2] OF INT empêche la liaison : il faut supprimer le bloc et le réinsérer. |
-| FA16760, FA289143, FA138003, FA17369, FA17396 | D2 | Procédure générale de conversion PL7 → Unity Pro (détail au §5) |
-| FA403904 | D2 | Intégrale d'un « PID » Unity/Control Expert : %MW en ms (1000 = 1 s), TIME en ms. **Le bloc n'est pas nommé** : ne pas l'appliquer au registre TI du PID_INT, que le dépôt donne en 0,1 s. |
+## 1. Disponibilité, version, exécution
 
-## 2. Structure mathématique (D1m uniquement)
-
-D'après le dépôt (p. 137 et 141, transcrites depuis des images) :
-- ε = SP − PV, en comptes [0..10000].
-- TI = 0 : OUT = KP·ε/100 + 5000.
-- TI > 0 : ΔOUT = KP·[Δε + TS/(10·TI)·ε + ΔDt]/100, puis OUT = OUT + ΔOUT. C'est une forme incrémentale de type mixte.
-- « Dt » est l'action dérivée, **sans équation** : elle est inexploitable.
-- Le sens d'action est donné par le signe de KP. Les libellés « avant / arrière » ne sont pas définis.
-- Le dépôt relève des incohérences internes du document : « TI < 0 », « série / parallèle » sans paramètre de choix, échelle [0-1000] contre [0..10000].
-
-**Aucune de ces équations n'a été relue par moi.**
-
-## 3. Paramètres et unités (D1m)
-
-| Registre | Unité / plage (dépôt) | Remarque |
-|---|---|---|
-| KP (PARA[2]) | ×100, de −10000 à +10000 | Signé |
-| TI (PARA[3]) | 0,1 s, de 0 à 20000 | 0 : pas d'intégrale, et décalage de 5000 |
-| TD (PARA[4]) | 0,1 s, de 0 à 10000 | Équation absente |
-| TS (PARA[5]) | 0,01 s, de 1 à 32000 | Ramené au multiple de la période de la tâche |
-| PV_DEV (PARA[8].0) | 0 : dérivée sur la mesure, 1 : sur l'écart | — |
-
-La taille de PARA (43 mots) est **suggérée** par FA226088 (D1s) et par l'analogie avec le PID de PL7 Pro (FA137704, D2). La correspondance mot à mot entre le PARA de PL7 et celui du PID_INT est **NV**.
-
-## 4. Disponibilité par gamme et version
-
-| Gamme / logiciel | État |
+| Fait | Source |
 |---|---|
-| M340 | **NV** |
-| M580 | **NV**. Aucune source lue. Le scénario pression/pompe M580 ne doit pas supposer le PID_INT disponible. |
-| Premium / Quantum | **NV** |
-| Unity Pro / Control Expert | FA226088 (D1s) parle de Unity Pro. Aucune version minimale n'est lue. |
+| Famille CLC_INT, type « Procédure » : M340 +, M580 +, Quantum +, Momentum +, Premium + ; non défini par la CEI 61131-3 | M20 p. 34 |
+| Appelé « fonction élémentaire (EF) » à la p. 136 : le libellé n'est pas cohérent avec « Procédure » (p. 34) | M20 p. 34, 136 |
+| Manuel applicable à Control Expert ≥ 15.0 ; CPU et micrologiciel non donnés | M20 p. 19 |
+| Programmation obligatoire dans une tâche **MAST ou FAST périodique**. La fonction est inopérante en MAST cyclique. La section ne doit pas être conditionnée. | M20 p. 133, 136 |
+| Pas de limite au nombre de PID_INT : les modules d'E/S limitent en pratique | M20 p. 130 |
+| Si la longueur du tableau de paramètres est insuffisante, la fonction n'est pas exécutée | M20 p. 133 |
+
+## 2. Interface et paramètres
+
+- **Appel** (p. 138–139) : PID_INT(Input_Tag STRING[8], Input_Unit STRING[6], Input_PV INT [0..10000], In_Out_Auto EBOOL, In_Out_Para ARRAY[n..m] OF INT, PID_Out INT [0..10000]).
+  - In_Out_Auto : 0 = manuel, 1 = automatique.
+  - In_Out_Para : « Tableau de 43 entiers » ; « Les 16 premières valeurs sont décrites ».
+  - Si TI = 0, un décalage de 5000 est ajouté à OUT en automatique.
+
+**Table PARA** (p. 140) :
+
+| Rang | Paramètre | Unité / plage lue |
+|---|---|---|
+| PARA[0] | SP | Consigne interne, 0–10 000 |
+| PARA[1] | OUT_MAN | Sortie manuelle, 0–10 000 |
+| PARA[2] | KP | ×100, signé, sans unité, **−10 000 < KP < +10 000** (bornes strictes). Le signe fixe le sens : « négatif : avant, positif : arrière ». |
+| PARA[3] | TI | Dixièmes de seconde, 0–20 000 |
+| PARA[4] | TD | Dixièmes de seconde, 0–10 000 |
+| PARA[5] | TS | Centièmes de seconde, 1–32 000. La période réelle est le multiple de la période de tâche le plus proche de TS. |
+| PARA[6], [7] | OUT_MAX, OUT_MIN | Limites de sortie **en automatique**, 0–10 000 |
+| PARA[8].0 | PV_DEV | Dérivée : 0 sur la mesure, 1 sur l'écart |
+| PARA[8].4 | NO_BUMP | 0 : par à-coups, 1 : sans à-coups |
+| PARA[9], [11–16] | PV_SUP, PV_INF, PV_MMI, SP_MMI | Valeurs ×100 pour le terminal (DINT sur deux mots). **PARA[10] n'est pas décrit** (lacune du tableau). |
+
+## 3. Équations lues (p. 137 et 141 ; la p. 141 mêle texte et images)
+
+- **Écart** : ε = SP − PV. Le schéma p. 137 montre la consigne bornée [0..10000] en entrée + et la mesure en entrée −.
+- **Structure** (schéma p. 137) : intégrale (TI) et dérivée (TD·d/dt, sur la mesure ou sur l'écart selon PV_DEV) s'ajoutent à l'écart, puis le tout est multiplié par **KP** (forme mixte). Ensuite viennent le limiteur OUT_MAX/OUT_MIN et le commutateur AUTO/OUT_MAN.
+- **TI = 0** : OUT = KP·[ε(t) + Dt]/100 + 5000, avec Dt = action dérivée.
+- **TI > 0** : ΔOUT = KP·[Δε(t) + (TS/10·TI)·ε(t) + ΔDt]/100, puis OUT = OUT + ΔOUT. Le texte écrit « TI < 0 » : **coquille**, puisque TI = 0 est le cas sans intégrale.
+- **Dérivée** : « Dt = action dérivée », **sans équation ni filtre**.
+- **Unités cohérentes** : TS est en 0,01 s et TI en 0,1 s, donc TS/(10·TI) = Ts/Ti, sans dimension.
+
+## 4. Modes, démarrage, limites
+
+- **Démarrage à froid** : mode manuel, sorties à 0 (p. 134, 141). L'initialisation voulue se programme **après** l'appel (p. 141).
+- **Reprise à chaud** : la fonction repart dans l'état d'avant la coupure (p. 134).
+- **Ajout en ligne** : un ajout est vu comme nouveau seulement avec une **nouvelle** table de paramètres (p. 134).
+- **Conserver les réglages au démarrage à froid** : supprimer la RAZ des %MWi (p. 133).
+- **Mode manuel** : pas d'alignement de la consigne interne sur la mesure (p. 141). Suivi sans à-coup de la commande au passage Auto → Manu (schéma p. 137).
+- **Fonctions annoncées sans équation** : anti-saturation de l'intégrale, mode manuel/auto sans à-coup, mode intégrateur pour KP = TD = 0 (p. 136).
+- **Échelle** : la p. 136 dit que le bon fonctionnement exige de rester dans l'échelle [0-1000] pour les mesures et les consignes, alors que le format est [0..10000] partout ailleurs (p. 133, 136, 139). C'est une **incohérence du document**.
 
 ## 5. Migration PL7 → Control Expert
 
-Lu (D2), procédure générale seulement :
-- exporter l'application PL7 en .FEF, puis l'ouvrir dans Unity Pro, qui convertit et produit un rapport (FA16760) ;
-- PL7 ≥ V4.3 est requis, et une application antérieure à V4.0 doit d'abord être mise à jour (FA289143) ;
-- une application TSX37 s'importe vers M340, une application Premium PL7 vers Premium Unity. TSX37 vers Premium Unity n'est possible qu'après changement de processeur dans PL7 (FA138003) ;
-- une application PL7-2 (TSX17) passe d'abord par PL7, puis par Unity Pro V4.0 ou plus (FA17369) ;
-- la table de correspondance PL7 ↔ Unity se trouve dans l'aide en ligne, « Unity > Logiciel Unity Pro > Convertisseur PL7 > Correspondance entre PL7 et Unity Pro » (FA17396). **Elle n'est pas lue.**
+- **Manuel (M20 p. 141)** : « Le paramètre PL7 parameter DEVAL_MMI n'est pas disponible dans Control Expert ». **C'est la seule mention du PL7 au sujet du PID_INT.**
+- **FAQ FA137704** : le PID de PL7 Pro a la même interface (TAG, UNIT, PV, OUT, AUTO, PARA de 43 mots).
+- **Ce n'est pas une règle de conversion.** La table de correspondance du convertisseur PL7 (aide en ligne, citée par FA17396) n'est pas lue. Pour une application migrée, il faut relever PARA avant et après la conversion, et retenir **« Conversion non qualifiée »**.
 
-**Non établi :**
-- que le PID de PL7 soit converti en PID_INT ;
-- que PARA soit recopié à l'identique ;
-- que les unités (TI, TS) et le comportement (arrondis, mode sans à-coups) soient conservés.
+## 6. Comparaison ligne à ligne avec le dépôt (lecture seule)
 
-Le PID de PL7 et le PID_INT ont l'air de partager un PARA de 43 mots, mais cela ne suffit pas. Sans la table de correspondance, la règle est **« Conversion non qualifiée »**, et une migration doit être vérifiée sur banc avec les valeurs relevées avant et après.
+| Élément du dépôt | Manuel | Verdict |
+|---|---|---|
+| `engine/block_adapters.py:96` : ΔOUT = KP[Δe + TS/(10 TI) e]/100, e = SP − PV | p. 137, 141 | **Conforme** (ΔDt = 0 quand TD = 0) |
+| `block_adapters.py:99,111` : KP = Kp·pv_span/mv_span, signe conservé, KP > 0 si Kp > 0 | p. 140–141 | **Conforme** à l'équation. KP > 0 augmente la sortie quand PV baisse : c'est « arrière ». |
+| `block_adapters.py:109-110` : refus si td > 0 | p. 141 (Dt sans équation) | **Justifié** |
+| `block_adapters.py:114-116` : registres KP×100, TI×10, TS×100 ; bornes \|KP\| ≤ 10000, TI 1–20000, TS 1–32000 | p. 140 | Unités et plages **conformes**. **Écart mineur** : le manuel exclut ±10000 (« −10 000 < KP < +10 000 »), que l'adaptateur accepte. |
+| `block_adapters.py:117,128` : avertissement de période multiple de la tâche ; NO_BUMP, OUT_MAX/OUT_MIN à déterminer | p. 140 | **Conforme.** Ajouter que la tâche doit être périodique (p. 133). |
+| `block_adapters.py:133` : « page=140, units » ; `docs/catalogue/pidint-conversion.md:3` : ch. 30, p. 135–141 | M20 | **Exact** |
+| `pidint-conversion.md:7-9` (format, ε, équations) et `:19-23` (incohérences « TI < 0 », « série / parallèle », [0-1000]) | p. 136, 137, 141 | **Confirmé** |
+| `engine/catalogue/schneider.json:356` (bibliothèque « Standard ») | M20 p. 34, 127 | À compléter avec la famille **CLC_INT** et le type « Procédure » |
 
-## 6. Écarts avec le dépôt
+## 7. Ce qui manque pour qualifier
 
-Le détail est dans [ecarts-depot.md](ecarts-depot.md) :
-- **E1.** La fiche `PIFINT` doit fusionner avec `PID_INT`.
-- **E8.** `blocs-observes.md:69` dit « 33002520… (non lu) », alors que `:84` dit « Oui ».
-- **E9.** La disponibilité sur M340 et M580 est absente du catalogue : elle doit rester absente, et non être déduite.
-- **E10.** Le lien avec le PID de PL7 (43 mots) n'est pas consigné.
-- **E11.** Le registre TI est en 0,1 s d'après le dépôt, alors que FA403904 donne des ms pour un « PID » non nommé. Ne pas les confondre.
-
-## 7. Ce qui manque pour un adaptateur qualifiable
-
-1. Relire les p. 135–141 de 33002520 (FR) ou les pages correspondantes de 33002519 (EN) : tableau PARA complet, arithmétique entière et arrondis, bornes OUT_MAX/OUT_MIN, anti-emballement, sans à-coups, démarrage.
-2. Disponibilité par CPU et version de Control Expert.
-3. La table de correspondance du convertisseur PL7, pour les installations migrées.
-4. Les essais de banc E0 à E6.
-
-L'adaptateur actuel (`engine/block_adapters.py:93`) refuse à juste titre toute dérivée (`td > 0`).
+1. L'arithmétique entière exacte, les arrondis et la saturation : non décrits.
+2. La forme de l'anti-saturation : non décrite.
+3. La dérivée : non décrite.
+4. La cible : CPU, micrologiciel, version ≥ 15.0.
+5. La table de correspondance PL7 pour les installations migrées.
+6. Les essais de banc E0 à E6.

@@ -1,52 +1,107 @@
-# PI_B — fiche (Control Expert, bibliothèque de régulation)
+# PI_B — fiche (Control Expert, bibliothèque Control)
 
-**Statut : NON DOCUMENTÉ au niveau requis. Spécification insuffisante pour un adaptateur. « Conversion non qualifiée ».** MKR refuse toute conversion vers PI_B (`engine/test_pidff_conversion.py:120-123`). Ce refus est correct et doit rester tel quel.
+**Statut : documentaire, lu dans le manuel. Spécification suffisante pour un adaptateur DOCUMENTAIRE de PI (structure mixte, ti > 0, `en_rcpy = 0`). « Conversion non qualifiée ».** Le dépôt refuse toujours toute conversion vers PI_B (`engine/test_pidff_conversion.py:120-123`). Ce lot n'écrit pas d'adaptateur.
 
-## 1. Sources
+Sources de cette fiche :
+- **M35** : 33002535.16, 09/2020, chap. 16 « PI_B: Simple PI controller », p. 151–162. C'est la référence principale.
+- **M36** : 33002536.16, chap. 16, p. 153–164 (pages EN + 2).
 
-| Source | Niveau | Contenu |
-|---|---|---|
-| 33002535K01000 (EN) et 33002536K01000 (FR) : pages des documents | D2 (métadonnées) | Manuels de la bibliothèque de régulation. **Contenu non lu** : PDF refusé par le proxy. |
-| Dépôt, `engine/catalogue/schneider.json:297` | D1m, **mal cité** | « Le PI_B (p. 4805 du texte) numérote l'inverse de la table du PIDFF ». « p. 4805 du texte » est un numéro de ligne d'extraction, pas une page (déjà relevé dans `docs/science/lot0/annexes/D-constructeurs-rapports.md:69`). |
-| Dépôt, `schneider.json:331-334` (catalogue Modicon Premium 2012, p. 6/14) | Non relu par moi (`iportal.se.com` refusé) | « Régulateur PI de base à structure mixte » |
-| Catalogue Control Expert (`iportal.se.com`), extrait d'un moteur de recherche | D1s | PI_B = algorithme PI à structure mixte (série/parallèle). AUTOTUNE peut régler PIDFF ou PI_B. La bibliothèque CONT_CTL est compatible M340, M580, M580 Safety, Momentum, Premium et Quantum. |
-| FAQ FA377379 « Why do I get a value of 128 in the status word of my PI_B function block? » | D1s : page en HTTP 503 aux 4 essais | D'après l'extrait : statut 128 lorsque `pv_inf` = `pv_sup` dans PARA ; concerne Control Expert et Unity Pro. |
-| Forums `community.se.com` (type `Para_PI_B`, liaison AUTOTUNE.PARA_C → PI_B.PARA) | **Écartés** (non officiels) | — |
+## 1. Disponibilité, version, exécution
 
-## 2. Ce qui est établi, et ce qui ne l'est pas
-
-| Aspect | État |
+| Fait | Source |
 |---|---|
-| Existence et bibliothèque | Probable (D1s concordants avec le dépôt), non lue au manuel |
-| Disponibilité M340/M580/Premium/Quantum | **NV** (D1s seulement) |
-| Version de Control Expert / Unity | **NV** |
-| Équation, forme mixte exacte, signe de l'écart | **NV**. Rien n'indique la forme de l'entrée (PV − SP ou SP − PV). |
-| `rev_dir` | Le dépôt annonce une numérotation inverse de celle du PIDFF (D1m, sans page). **NV.** |
-| Unités de kp, type de ti (TIME ou REAL), plages | **NV** |
-| Anti-emballement, suivi, manuel/auto, bornes | **NV** |
-| Période d'exécution, tâche | **NV** |
-| Statut et erreurs | Statut 128 lorsque `pv_inf` = `pv_sup` (D1s) |
-| Migration PL7 | **NV** |
+| EFB de la famille *Controller* : M340 +, M580 +, Quantum +, Momentum +, Premium + | M35 p. 28 |
+| Manuel valable pour Control Expert ≥ 15.0 ; CPU et micrologiciel non donnés | M35 p. 13 |
+| Fonctions dérivées de celles du PIDFF ; « for difficult control tasks… the PIDFF block should be used » | M35 p. 152 |
+| dt = temps depuis la dernière exécution, calculé par le bloc ; pas d'exigence de tâche écrite | M35 p. 34, 160 |
 
-## 3. Différences avec PIDFF et PID_INT
+## 2. Interface et paramètres (M35 p. 154–155)
 
-Ne pas réutiliser l'adaptateur `pidff` en lui donnant le nom PI_B :
-- la numérotation de `rev_dir` serait inverse (D1m), avec un risque de **boucle divergente** ;
-- la structure de PARA est différente : un PARA de type `Para_PI_B` est cité par des forums seulement, `Para_PIDFF` existe pour le PIDFF (FA273873) ;
-- le bloc n'a ni dérivée ni anticipation (D1s), et ses bornes et son anti-emballement ne sont pas lus.
+- **Entrées et sorties.**
+  - Entrées : PV, SP, RCPY, TR_I (REAL) ; MAN_AUTO, TR_S (BOOL) ; PARA (`Para_PI_B`).
+  - Entrée/sortie : OUT (REAL).
+  - Sorties : OUTD (REAL), MA_O (BOOL), **DEV = PV − SP** (REAL), STATUS (WORD).
+- **Para_PI_B** :
+  - id (UINT) ;
+  - pv_inf, pv_sup, out_inf, out_sup (REAL) ;
+  - **rev_dir** (BOOL) : « 0 : direct action », « 1 : opposite action » ;
+  - en_rcpy (BOOL) ;
+  - **kp** (REAL) ;
+  - **ti** (TIME) ;
+  - dband, outbias (REAL).
+- **Absents par rapport au PIDFF** : td, kd, pv_dev, mix_par, aw_type, bump, ovs_att, gain_kp, outrate, out_min/out_max, FF.
 
-PI_B n'est pas non plus un PID_INT sans dérivée : le PID_INT travaille sur des entiers normalisés (D1m), alors que le type des grandeurs de PI_B n'est pas lu.
+## 3. Équations lues (images des p. 156, 158, 160–161)
 
-## 4. Ce qui manque pour écrire un adaptateur
+- **Fonction de transfert** : OUT = kp·(1 + 1/(ti·p))·IN (p. 156).
+- **Formes de calcul** (p. 156) :
+  - ti = 0 : OUT = TermP + outbias, puis OUTD = OUT(new) − OUT(old) ;
+  - ti > 0 : OUTD = TermP + TermI, puis OUT = OUT(old) + OUTD(new).
+- **Sens d'action** (p. 160) : sense = +1 pour `rev_dir = 1` (« opposite action »), et un écart PV − SP positif augmente la sortie ; sense = −1 pour `rev_dir = 0` (« direct action »). **Les libellés de la table p. 155 sont cohérents avec cette page**, contrairement au PIDFF.
+- **Algorithme absolu** (ti = 0, p. 160) :
+  - TermP = sense·kp·DEV ;
+  - OUT = TermP + outbias, puis OUT = limiter(OUT).
+- **Algorithme incrémental** (ti > 0, p. 161) :
+  - OUTD = TermP + TermI ; OUT = limiter(OUT) ;
+  - OUT = OUT(old) + OUTD(new), ou RCPY + OUTD(new) si `en_rcpy = 1` ;
+  - TermP = sense·kp·Δ(DEV) ;
+  - TermI = sense·kp·(dt/ti)·DEV si kp > 0 ;
+  - TermI = sense·(out_sup − out_inf)/(pv_sup − pv_inf)·(dt/ti)·DEV si kp = 0 (intégral pur).
+- **Zone morte** : sous dband en valeur absolue, l'écart utilisé est nul (p. 158). Il n'y a pas de gain_kp.
 
-1. **Le chapitre PI_B du manuel** de régulation, dans l'édition de l'installation. Il en faut :
-   - l'équation, avec la forme de l'écart et la place de kp ;
-   - la table de PARA : noms, types et unités de kp et ti, plages ;
-   - la définition de `rev_dir` ;
-   - l'algorithme par cycle (incrémental ou absolu), les bornes et l'anti-emballement ;
-   - les modes (manuel, automatique, suivi) et l'initialisation.
-2. Le texte de FA377379 (statut 128) et la table complète des bits de statut.
-3. Les versions de Control Expert, de CPU et de bibliothèque de la cible.
-4. Un oracle écrit depuis ces équations, puis les essais de banc E0 à E6 sur l'automate réel.
+**Équivalence avec MKR** (lecture, non vérifiée numériquement). Avec ti > 0, `en_rcpy = 0` et dband = 0, la forme est celle de la structure mixte du PIDFF sans dérivée. La correspondance serait :
+- kp = |Kp| ;
+- ti = Ti ;
+- rev_dir = 1 si Kp < 0, sinon 0 (MKR : u = Kp·(SP − PV) = −Kp·DEV).
 
-Tant que ces éléments manquent, la fiche `PI_B` du catalogue doit rester `to_verify`, sans équation, et la conversion doit rester refusée.
+## 4. Limites, modes, statut
+
+- **Bornes** (p. 159) :
+  - OUT est borné à [out_inf, out_sup] **dans tous les modes** ;
+  - OUTD ne tient pas compte de ce bornage ;
+  - la consigne est bornée à [pv_inf, pv_sup].
+- **Anti-emballement.** Il n'y a pas de paramètre. Le schéma p. 157 porte « Anti-Windup-Reset ». L'effet anti-emballement vient du limiteur appliqué à la forme incrémentale. **L'ordre exact entre le limiteur et OUT(old) n'est pas explicite** à la p. 161 : « OUT = limiter(OUT) » y est écrit avant « OUT = OUT(old) + OUTD ».
+- **Modes** (p. 159) :
+  - Automatique : TR_S = 0, MAN_AUTO = 1 ;
+  - Manuel : TR_S = 0, MAN_AUTO = 0 ;
+  - Tracking : TR_S = 1, prioritaire.
+  - Le passage vers automatique est **sans à-coup si ti > 0** et **avec à-coup si ti = 0**. Il n'y a pas de paramètre `bump`.
+- **Statut** (p. 162) :
+  - bit 4 : SP hors de [pv_inf, pv_sup], kp ou dband négatif (remplacé par 0), ou outbias hors de plage ;
+  - bits 5 et 6 : seuils « out_min » et « out_max » atteints ;
+  - bit 7 : pv_inf = pv_sup. **128 = bit 7**, ce qui concorde avec l'extrait de la FAQ FA377379.
+  - En cas d'erreur, OUT, OUTD, MA_O et DEV restent inchangés.
+  - Codes : 30110 et −30121 (p. 354).
+- **Migration PL7** : aucune mention.
+
+## 5. Incohérences relevées dans le chapitre
+
+1. Le **schéma p. 157** est générique : ERR = SP − PV, « gain », YMAN, ymax/ymin, qmax/qmin. Il ne correspond ni aux noms de Para_PI_B ni à DEV = PV − SP (p. 155). Le même schéma est publié comme « Mixed structure of the PIDFF » dans la FAQ000256113. **Ne pas s'en servir.**
+2. Les bits 5 et 6 (p. 162) citent **out_min/out_max**, qui n'existent pas dans Para_PI_B. Les limites réelles sont out_inf/out_sup (p. 159).
+3. La p. 156 ne définit pas IN ; les équations détaillées utilisent DEV.
+
+## 6. Suffisance pour un adaptateur : verdict
+
+**Suffisante pour un adaptateur documentaire limité à :**
+- PI ;
+- ti > 0 ;
+- `en_rcpy = 0` ;
+- dband = 0 ;
+- kp > 0 ;
+- sens par `rev_dir`.
+
+Ce domaine reprend celui de l'adaptateur `pidff` en PI.
+
+**Ce qui manque encore**, et qui interdit toute qualification :
+1. **L'unité de kp** : elle n'est pas écrite. Elle se déduit des unités physiques de PV et OUT (p. 152), mais ce n'est qu'une déduction. Il faut l'exiger explicitement de l'utilisateur.
+2. **L'ordre du limiteur dans l'algorithme incrémental** (p. 161), donc le comportement exact en saturation.
+3. **L'initialisation de Δ(DEV)** au premier cycle et après un passage Manuel ou Tracking → Auto.
+4. **La résolution de TIME** pour ti : elle n'est pas donnée par ce manuel.
+5. **La période** : dt est mesuré par le bloc, et la boucle échantillonnée réelle dépend de la tâche, que le manuel n'impose pas.
+6. **La cible** : CPU, micrologiciel, version de Control Expert ≥ 15.0 sur l'installation.
+7. **Les preuves** : un oracle écrit depuis p. 160–161, une vérification numérique de convergence (comme pour PIDFF), puis les essais de banc E0 à E6.
+8. **La décision sur les incohérences** du §5 (schéma p. 157, bits 5/6).
+
+**À ne pas faire :**
+- réutiliser l'adaptateur `pidff` tel quel, car les paramètres et les limites diffèrent (pas d'out_min/out_max, pas d'ovs_att) ;
+- confondre PI_B avec PID_INT, dont l'écart et les unités sont opposés.
