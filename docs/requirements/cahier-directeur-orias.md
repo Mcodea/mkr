@@ -1827,3 +1827,143 @@ La qualité scientifique, la sécurité industrielle et la vérifiabilité des r
 ---
 
 *Note de transcription : dans le texte source, plusieurs listes numérotées étaient toutes numérotées « 0. » ; elles sont numérotées 1., 2., 3., … dans ce fichier (sections 4, 6, 14, 25, 30 et 35). Le contenu, l'ordre et le libellé des sections sont conservés tels que transmis ; seule la mise en forme Markdown (titres, puces) a été adaptée. Le bloc « 41. BENCHMARK SCIENTIFIQUE ET COMPÉTITIVITÉ INDUSTRIELLE » a été transmis avant la section 1 et est reproduit en tête. La section 4 cite « MKR-SPEC-001 » : ce document n'est pas dans le dépôt (voir docs/science/lot0/).*
+
+---
+
+# COMPLÉMENT AU CAHIER DES CHARGES DIRECTEUR ORIAS — VERSION 1.1
+
+*Transmis par le client le 2026-11-27. La section 42 constitue une extension obligatoire des 41 sections précédentes ; toutes les exigences précédentes restent applicables. Déposée telle que reçue.*
+
+## SECTION 42 — ASSISTANT INTELLIGENT D'ESSAIS ET D'IDENTIFICATION INDUSTRIELLE EN DIRECT
+
+ORIAS ne doit pas être uniquement un logiciel d'analyse de données et de calcul de paramètres PID. Il doit également accompagner intelligemment l'automaticien pendant la réalisation de ses essais industriels.
+
+### 42.1 — Modes d'identification
+
+Permettre à l'utilisateur de choisir entre :
+
+* Identification en boucle ouverte : excitation de MV, régulateur en manuel.
+* Identification en boucle fermée : excitation de SP, régulateur en automatique.
+
+Ces deux modes doivent être compatibles avec les différentes sources de données : acquisition en direct, historique enregistré et import de fichiers.
+
+Les données historiques ne constituent pas une troisième famille d'identification. ORIAS doit déterminer ou faire confirmer les conditions dans lesquelles elles ont été acquises.
+
+Adapter automatiquement les méthodes scientifiques au mode d'identification et aux données disponibles.
+
+Ne pas appliquer directement une méthode d'identification en boucle ouverte à des données issues d'une boucle fermée.
+
+### 42.2 — Assistant d'essai en temps réel
+
+Développer un assistant capable de :
+
+* Vérifier la connexion à l'automate.
+* Contrôler la disponibilité, la cohérence, la fraîcheur et la synchronisation des signaux SP, MV, PV et du mode de fonctionnement.
+* Vérifier les conditions initiales nécessaires à la méthode envisagée.
+* Détecter automatiquement la stabilisation initiale lorsque celle-ci est nécessaire.
+* Aider l'utilisateur à définir une excitation exploitable, compatible avec les limites d'exploitation renseignées et validées humainement.
+* Indiquer à l'opérateur quand les préconditions scientifiques de réalisation de l'échelon sont satisfaites.
+* Détecter automatiquement l'excitation réalisée.
+* Analyser continuellement la réponse du procédé.
+* Réévaluer dynamiquement la durée d'acquisition nécessaire.
+* Détecter les perturbations observables, saturations, changements de mode et anomalies de mesure, sans prétendre identifier avec certitude une cause non mesurable.
+* Déterminer si les données acquises sont suffisantes pour une identification fiable.
+* Informer l'utilisateur lorsque l'essai est terminé ou inexploitable.
+* Sauvegarder automatiquement les données brutes et les événements de l'essai, y compris en cas d'interruption.
+* Accompagner la réalisation d'un essai indépendant de validation.
+* Prévoir une durée maximale d'essai, des limites d'exploitation et des conditions d'interruption validées par l'opérateur.
+
+L'utilisateur ne doit pas avoir à déterminer manuellement les instants caractéristiques, notamment les passages à 28 % et 40 % pour Broïda.
+
+Ces passages doivent être calculés automatiquement à partir de la variation finale suffisamment établie, puis présentés graphiquement et enregistrés pour assurer leur traçabilité.
+
+### 42.3 — Intelligence scientifique
+
+Ne pas appliquer systématiquement les mêmes conditions d'essai à tous les procédés.
+
+Distinguer notamment :
+
+* Les procédés autorégulants.
+* Les procédés intégrateurs.
+* Les procédés à grand temps mort.
+* Les procédés oscillants.
+* Les réponses inverses.
+* Les procédés présentant plusieurs dynamiques significatives.
+* Les procédés ne pouvant pas être étudiés en boucle ouverte.
+
+Les critères de stabilisation, d'excitation, de durée et d'arrêt doivent être scientifiquement justifiés et adaptés à la dynamique du procédé.
+
+Ne pas attendre systématiquement un plateau final pour les procédés intégrateurs.
+
+Ne pas imposer de durée fixe universelle ni de seuil arbitraire.
+
+Distinguer clairement les estimations provisoires réalisées pendant l'acquisition des résultats définitifs obtenus après validation.
+
+Si les données disponibles ne permettent pas de distinguer plusieurs modèles ou d'établir suffisamment leurs paramètres, ORIAS doit expliquer cette incertitude et refuser une recommandation injustifiée.
+
+### 42.4 — Assistance utilisateur
+
+Employer des instructions simples, compréhensibles par un technicien ou un automaticien :
+
+* Acquisition du régime initial.
+* Conditions initiales non satisfaites.
+* Préconditions scientifiques satisfaites : vous pouvez réaliser l'échelon préalablement autorisé.
+* Échelon détecté.
+* Réponse du procédé en cours d'analyse.
+* Données supplémentaires nécessaires.
+* Excitation insuffisante.
+* Saturation détectée.
+* Essai exploitable.
+* Essai de validation nécessaire.
+
+L'utilisateur ne doit pas être obligé de maîtriser les méthodes mathématiques d'identification pour utiliser correctement ORIAS.
+
+Présenter en temps réel les courbes SP, MV et PV, les événements détectés, la qualité des mesures et l'état d'avancement de l'essai.
+
+Lorsque la durée restante ne peut pas être estimée de manière fiable, le signaler plutôt que d'afficher une fausse précision.
+
+### 42.5 — Sécurité industrielle
+
+Maintenir impérativement les communications automates en lecture seule.
+
+ORIAS ne doit jamais modifier directement :
+
+* La consigne SP.
+* La commande MV.
+* Le mode manuel ou automatique.
+* Les paramètres PID.
+* Le programme automate.
+
+Toute action physique reste sous la responsabilité de l'opérateur habilité, conformément aux procédures d'exploitation.
+
+Une précondition scientifique satisfaite ne constitue jamais une autorisation de sécurité industrielle.
+
+ORIAS ne doit jamais suggérer de dépasser les limites d'exploitation, de neutraliser une protection ou de provoquer une instabilité volontaire sur une installation réelle.
+
+### 42.6 — Intégration et qualification
+
+Intégrer cet assistant dans l'architecture existante sans dégrader l'interface UI/UX réceptionnée.
+
+Vérifier que l'identification en boucle ouverte et en boucle fermée est réellement accessible depuis l'interface, et pas uniquement implémentée dans le moteur Python.
+
+Développer les tests indépendants, les scénarios synthétiques reproductibles, les tests de refus et les essais sur automates simulés nécessaires.
+
+Vérifier notamment les parcours complets suivants :
+
+* Acquisition en boucle ouverte avec excitation MV.
+* Acquisition en boucle fermée avec excitation SP.
+* Identification à partir d'un historique exploitable.
+* Identification automatique de Broïda avec détection des passages à 28 % et 40 %.
+* Procédé intégrateur sans plateau final.
+* Procédé à grand temps mort.
+* Excitation insuffisante.
+* Perte de communication pendant un essai.
+* Changement de mode pendant l'acquisition.
+* Saturation de l'actionneur.
+* Sauvegarde et reprise d'une étude interrompue.
+* Validation indépendante du modèle.
+
+Distinguer les fonctionnalités implémentées, intégrées, testées et industriellement qualifiées.
+
+Intégrer ces exigences dans la matrice de traçabilité et dans les lots de développement concernés.
+

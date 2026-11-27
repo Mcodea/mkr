@@ -1,0 +1,31 @@
+tclab_takehome_siso_openloop_extract.csv
+
+This file is an excerpt of the dataset:
+
+  Martin Goubej, John Hedengren, Daniel Sukovaty (2026).
+  "Dataset for: Hands-On Beyond Classrooms: Elevating Control Engineering
+  Education with Take-Home Labs", version 1.1. Zenodo.
+  https://doi.org/10.5281/zenodo.24286966
+  Source file: data/experiment_siso_model_validation.csv
+  (inside tclab_takehome_labs_dataset_v1.0.zip)
+
+Associated preprint:
+  M. Goubej, J. Hedengren, D. Sukovaty, "Hands-On Beyond Classrooms:
+  Elevating Control Engineering Education with Take-Home Labs",
+  arXiv:2611.21200. https://arxiv.org/abs/2611.21200
+
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+  https://creativecommons.org/licenses/by/4.0/
+  Legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Modifications by the ORIAS project (2026-11-27):
+  - kept only the contiguous rows with time_s = 1 .. 1000 (row time_s = 0 dropped);
+  - kept only columns time_s, Q1_pct, Q2_pct, T1_meas_C, T2_meas_C,
+    renamed to timestamp, H1, H2, T1, T2;
+  - time_s converted to an ISO 8601 timestamp on the arbitrary origin
+    2000-01-01T00:00:00+00:00 (timestamp = origin + time_s seconds);
+  - H1, H2, T1, T2 values copied verbatim (same character strings), no
+    filtering, resampling, rounding or other change.
+
+The data are provided by the licensors "as-is", without warranty
+(CC BY 4.0, Section 5). The licensors do not endorse ORIAS.

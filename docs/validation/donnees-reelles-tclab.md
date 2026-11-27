@@ -1,3 +1,5 @@
+> **Mise à jour 2026-11-27 — données retirées du dépôt courant** (licence de redistribution non établie ; décision du client). Les résultats ci-dessous sont l'**historique d'une régression** sur ces mesures ; le test correspondant est ignoré tant que la donnée est absente, et la couverture équivalente sans donnée réelle est `engine/test_two_heater_unmodelled_input.py` (synthétique, à ne pas présenter comme expérimental). Voir `tests/reference/README-tclab.md`.
+
 # Premier essai de MKR sur des mesures réelles à excitation variée (TCLab)
 
 Date : 25/11/2026. Données : [tests/reference/README-tclab.md](../../tests/reference/README-tclab.md) (extrait de 121 points, transcription fournie par le mainteneur, fidélité à la source non recoupée). Test : `engine/test_real_tclab_dynamic.py`.

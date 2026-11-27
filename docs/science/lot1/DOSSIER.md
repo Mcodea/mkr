@@ -39,5 +39,10 @@ Projets de test anciens (à générer par les versions successives du schéma, s
 ## Preuves impossibles à obtenir ici
 Rendu réel des statuts à l'écran (CI Windows uniquement) ; migration sur de vrais projets utilisateurs.
 
-## Dépendance avec la section 42
-La section 42 du cahier (complément v1.1) n'a pas été reçue au moment de la rédaction : sa répartition dans les lots reste à faire et pourra modifier ce périmètre.
+## Dépendance avec la section 42 (reçue le 2026-11-27)
+La section 42 (assistant d'essai en direct) est répartie dans les lots (`docs/science/feuille-de-route-scientifique.md`, matrice de traçabilité). Le LOT 1 fournit les **prérequis structurels** de l'assistant, sans le construire :
+- **Fiche d'étude** : limites d'exploitation, durée maximale d'essai et conditions d'interruption **saisies et validées par l'humain** (42.2) ; période d'exécution du régulateur ; mode d'identification déclaré (boucle ouverte / fermée) et origine des données.
+- **Journal d'événements d'essai** persistant (démarrage, échelon détecté, saturation, changement de mode, perte de communication, interruption, reprise), sans écrasement, pour la sauvegarde et la reprise d'une étude interrompue (42.2, 42.6).
+- **Statuts** : ajout de « provisoire » vs « définitif » pour les estimations (42.3) en plus des huit statuts du cahier §26.
+- **Critères d'acceptation supplémentaires** : (8) une étude interrompue puis rouverte retrouve ses données brutes et son journal d'événements ; (9) aucune action d'écriture vers l'automate n'existe dans les nouveaux contrats (test de lecture seule inchangé) ; (10) aucune formulation de l'interface ne présente une précondition scientifique comme une autorisation de sécurité (relecture des textes fr/en).
+Hors LOT 1 : détection en direct, assistant et messages d'essai (LOT 2), Broïda automatique (LOT 3).

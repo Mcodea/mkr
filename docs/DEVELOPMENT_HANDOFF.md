@@ -38,7 +38,7 @@
 | Contrat IPC versionné et documenté | **fait (1re tranche)** : `OPERATIONS`, `CONTRACT_REVISION = 2`, opération `describe_contract`, `docs/communication/ipc-operations.md` (16 opérations jusque-là non documentées), test `engine/test_ipc_contract.py` ; client C# `VerifyContractAsync` (refus explicite d'un moteur trop ancien ou incomplet, message affiché au démarrage), test dans le smoke avec un faux moteur ancien |
 | Schémas JSON formels, unités et détail d'erreur dans les réponses | à faire |
 | Orchestration (8 statuts), invalidation en cascade, traçabilité des versions, sauvegarde avant migration, période du régulateur, règles hors des vues | à faire |
-| Section 42 du cahier | texte non reçu : répartition dans les lots à faire dès réception |
+| Section 42 du cahier | **reçue et intégrée** (2026-11-27) : cahier, matrice de traçabilité (`docs/science/lot0/01-matrice-tracabilite.md`, complément v1.1), feuille de route (`docs/science/feuille-de-route-scientifique.md`) ; prérequis structurels au LOT 1 (fiche d'étude, journal d'événements, statut provisoire/définitif), assistant et boucle ouverte/fermée en interface au LOT 2, Broïda automatique au LOT 3 |
 
 ## Preuves du LOT 0b
 - CI « Vérification MKR » [run 331](https://github.com/Mcodea/mkr/actions/runs/45975387738), commit `f6c87f0` : **vert à la tentative 2** (compilation, 338 tests Python, smoke .NET, SQLite, Modbus/S7, paquet autonome, tests graphiques). La tentative 1 avait échoué sur `CheckInterruptedSession` (`AcquisitionChecks.cs:261`, `EndOfStreamException`) : **test intermittent**, code d'acquisition non modifié, cause non démontrée ; à stabiliser au LOT 2 (acquisition) sans affaiblir son assertion.
@@ -46,8 +46,8 @@
 
 ## Derniers résultats de tests
 - Suite Python locale : 338 tests, 313 sous-tests verts (commit `f6c87f0`) ; CI Windows : voir ci-dessus.
-- Section 42 du cahier directeur (complément v1.1) : **annoncée par le client mais texte non reçu** ; à intégrer au cahier, à la matrice de traçabilité, à la feuille de route et à ce document dès réception, puis à répartir dans les lots.
-- Décisions en attente du client : sort du fichier `tests/reference/tclab_dyn_data2_extract.csv` (données APMonitor sans licence claire, versionné) ; sens de « PIFINT » (aucune source officielle sous ce nom).
+- **Arbitrages du 2026-11-27 reçus** : (1) TCLab : `tests/reference/tclab_dyn_data2_extract.csv` **retiré** du dépôt courant (provenance et licence documentées, test ignoré mais conservé, couverture synthétique équivalente `test_two_heater_unmodelled_input.py`) ; **historique Git non réécrit** (le fichier reste dans le commit `0a7407e` des branches publiées : voir `docs/science/licences/tclab-historique-git.md`, autorisation requise) ; recherche d'un jeu réel CC BY en cours. (2) « PIFINT » = erreur de nomenclature : blocs Schneider à étudier **PIDFF, PI_B, PID_INT** (sources officielles fournies par le client) ; recherche en cours dans `docs/science/schneider/`. (3) Section 42 intégrée.
+- Le CI exécute encore `tests/reference/tclab_observed_step.py` sur un fichier cloné à l'exécution depuis `jckantor/CBE30338-book` (licence non établie, aucune copie dans le dépôt) ; équivalent synthétique ajouté.
 
 ## Règles à respecter à chaque session
 Lire `AGENTS.md` et `docs/science/lot0/`. Ne pas refaire l'audit. Ne jamais fusionner dans `main`. Ne jamais affaiblir un test. Lecture seule sur les automates. Aucune déclaration de qualification ou de supériorité sans preuve. Opus pour les travaux scientifiques complexes, Sonnet pour le courant.

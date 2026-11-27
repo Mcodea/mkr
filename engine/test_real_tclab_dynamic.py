@@ -26,6 +26,8 @@ def source(first=None, last=None):
     return result
 
 
+@unittest.skipUnless(DATA.exists(), "Données réelles TCLab retirées du dépôt le 2026-11-27 (licence de redistribution non établie, tests/reference/README-tclab.md) : "
+                     "assertions conservées intactes pour un jeu réel autorisé ; couverture équivalente sans donnée réelle : test_two_heater_unmodelled_input.py")
 class RealTclab(unittest.TestCase):
     def test_the_fixture_is_the_published_extract_shape(self):
         rows = list(csv.DictReader(DATA.read_text(encoding="utf-8").splitlines()))
