@@ -79,6 +79,19 @@ class Equations(unittest.TestCase):
         self.assertEqual(result["structure"], "PI")
         self.assertAlmostEqual(result["recommendation"]["controller"]["kp"], tau1 / (2.0 * (tauc + theta)), places=12)
 
+    def test_reduced_pi_is_assessed_on_the_identified_two_pole_plant(self):
+        result = calculate(request(family="SOPDT", secondTauSeconds=8.0))
+        chosen = result["recommendation"]
+        controller = chosen["controller"]
+
+        def peak(k, tau, delay):
+            return sensitivity_peak(k, [tau, 8.0], delay + 0.5, controller["kp"], controller["tiSeconds"], 0.0)
+
+        corners = [peak(k, tau, delay) for k in (1.9, 2.1) for tau in (36.0, 44.0) for delay in (8.0, 12.0)]
+        nominal = peak(2.0, 40.0, 10.0)
+        self.assertAlmostEqual(chosen["nominalMargins"]["peakSensitivity"], nominal, delta=0.002)
+        self.assertAlmostEqual(chosen["worstPeakSensitivity"], max(nominal, *corners), delta=0.002)
+
     def test_second_pole_above_the_delay_gives_a_pid_whose_ideal_form_is_the_series_form(self):
         result = calculate(request(family="SOPDT", secondTauSeconds=15.0))
         controller, tauc = result["recommendation"]["controller"], result["recommendation"]["responseSeconds"]
