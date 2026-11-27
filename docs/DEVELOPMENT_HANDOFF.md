@@ -36,8 +36,9 @@
 | Élément | État |
 |---|---|
 | Contrat IPC versionné et documenté | **fait (1re tranche)** : `OPERATIONS`, `CONTRACT_REVISION = 2`, opération `describe_contract`, `docs/communication/ipc-operations.md` (16 opérations jusque-là non documentées), test `engine/test_ipc_contract.py` ; client C# `VerifyContractAsync` (refus explicite d'un moteur trop ancien ou incomplet, message affiché au démarrage), test dans le smoke avec un faux moteur ancien |
+| Sauvegarde automatique avant migration SQLite | **faite** (`BackupBeforeMigration`, API de sauvegarde en ligne ; test dans le smoke depuis un schéma v1) ; tests de migration depuis v8–v11 à compléter |
 | Schémas JSON formels, unités et détail d'erreur dans les réponses | à faire |
-| Orchestration (8 statuts), invalidation en cascade, traçabilité des versions, sauvegarde avant migration, période du régulateur, règles hors des vues | à faire |
+| Orchestration (8 statuts), invalidation en cascade, traçabilité des versions, fiche d'étude (limites, durée max, arrêt), journal d'événements d'essai, période du régulateur, règles hors des vues | à faire |
 | Section 42 du cahier | **reçue et intégrée** (2026-11-27) : cahier, matrice de traçabilité (`docs/science/lot0/01-matrice-tracabilite.md`, complément v1.1), feuille de route (`docs/science/feuille-de-route-scientifique.md`) ; prérequis structurels au LOT 1 (fiche d'étude, journal d'événements, statut provisoire/définitif), assistant et boucle ouverte/fermée en interface au LOT 2, Broïda automatique au LOT 3 |
 
 ## Preuves du LOT 0b

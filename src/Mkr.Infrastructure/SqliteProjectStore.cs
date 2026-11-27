@@ -10,8 +10,32 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
 {
     private readonly string _connectionString;
 
+    /// <summary>Newest schema this build understands (PRAGMA user_version).</summary>
+    public const long CurrentSchemaVersion = 11;
+
+    /// <summary>
+    /// A project database older than the current schema is copied, with the SQLite online backup API (consistent even while the file is
+    /// open), to "{path}.backup-v{version}-{UTC time}" BEFORE any migration; the migration comments refer to this copy as the rollback. A new or
+    /// empty database, and a database already at the current schema, are not copied. A failure to back up stops the migration: nothing is migrated without it.
+    /// </summary>
+    private static void BackupBeforeMigration(string path)
+    {
+        if (!File.Exists(path) || new FileInfo(path).Length == 0) return;
+        using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
+        source.Open();
+        using var probe = source.CreateCommand();
+        probe.CommandText = "PRAGMA user_version";
+        var version = (long)probe.ExecuteScalar()!;
+        if (version >= CurrentSchemaVersion) return;
+        var backup = $"{path}.backup-v{version}-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+        using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = backup, Pooling = false }.ToString());
+        destination.Open();
+        source.BackupDatabase(destination);
+    }
+
     public SqliteProjectStore(string path)
     {
+        BackupBeforeMigration(path);
         _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = true }.ToString();
         using var connection = Open();
         using var transaction = connection.BeginTransaction();
