@@ -30,7 +30,7 @@ from scipy.stats import norm
 
 from csv_format import from_payload
 from csv_quality import read_table
-from fopdt import LJUNG_Z_99, is_round_off, number
+from fopdt import LJUNG_Z_99, is_round_off, number, require_manual
 
 VERSION = "1.0.0"
 MAXIMUM_DELAY_SAMPLES = 60
@@ -58,6 +58,7 @@ def read_series(source, mv_tolerance):
     columns = [source[k] for k in ("timeColumn", "mvColumn", "pvColumn")]
     if any(not isinstance(c, str) or c not in headers for c in columns) or len(set(columns)) != 3:
         raise ValueError("arx_mapping")
+    require_manual(headers, rows, fmt, "arx_not_manual")
     ti, ui, yi = (headers.index(c) for c in columns)
     try:
         dates = [fmt.timestamp(row[ti]) for row in rows]

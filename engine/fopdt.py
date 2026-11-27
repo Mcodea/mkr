@@ -27,6 +27,27 @@ class Step:
     baseline_samples: int = 0
 
 
+MANUAL_COLUMN = "MANUAL"     # écrite par l'acquisition automate de MKR : 1 quand le mode lu est la valeur déclarée « manuel »
+
+
+def require_manual(headers, rows, fmt, code):
+    """Refuse une fenêtre d'identification en boucle ouverte qui contient une ligne hors mode manuel (audit P0-6, protection côté moteur).
+
+    Sans colonne MANUAL, rien n'est supposé sur le mode (comportement inchangé : la limite P0-6 subsiste pour ces données) ; avec la colonne,
+    une valeur absente, illisible ou différente de 1 n'est PAS « manuel » (même convention que step_finder). Renvoie True si le mode a été vérifié."""
+    if MANUAL_COLUMN not in headers:
+        return False
+    index = headers.index(MANUAL_COLUMN)
+    for row in rows:
+        try:
+            manual = number(row[index], fmt) == 1.0
+        except (ValueError, IndexError):
+            manual = False
+        if not manual:
+            raise ValueError(code)
+    return True
+
+
 def number(cell, fmt=None):
     value = (fmt or DEFAULT_FORMAT).number(cell)
     if not math.isfinite(value) or abs(value) > 1e100:
@@ -55,6 +76,7 @@ def read_step(source, input_tolerance, output_tolerance):
     columns = [source[field] for field in ("timeColumn", "mvColumn", "pvColumn")]
     if any(not isinstance(column, str) or column not in headers for column in columns) or len(set(columns)) != 3:
         raise ValueError("fit_mapping")
+    require_manual(headers, rows, fmt, "fit_not_manual")
     ti, ui, yi = [headers.index(column) for column in columns]
     dates = []
     for row in rows:

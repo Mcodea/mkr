@@ -28,7 +28,7 @@ Conventions : charge utile JSON stricte (clés exactes ; une clé inconnue ou ma
 | `recommend_blocks` | `block_catalogue.py` | `target`, `strategy` (`P`/`PI`/`PID`), `functions`, `studyId`, `modelRunId` | blocs éligibles (aucun appelant C# à ce jour) |
 
 ## Codes d'erreur propres à cette révision
-`recommend_model_not_validated` (P0-4), `conversion_version_mismatch` (P0-7), `broida_not_established` (Broïda 1.2.0 : plateau pas encore établi selon le bruit déclaré), `assess_mapping` / `assess_data` / `assess_tolerance` (assistant d'essai), `invalid_request` pour `describe_contract` ou `ping` avec charge utile non vide.
+`recommend_model_not_validated` (P0-4), `conversion_version_mismatch` (P0-7), `broida_not_established` (Broïda 1.2.0 : plateau pas encore établi selon le bruit déclaré), `assess_mapping` / `assess_data` / `assess_tolerance` (assistant d'essai), `fit_not_manual` / `arx_not_manual` (une fenêtre d'identification contient une ligne hors mode manuel, colonne `MANUAL` présente ; P0-6), `invalid_request` pour `describe_contract` ou `ping` avec charge utile non vide.
 
 ## Ce qui reste à faire au LOT 1
 Schémas JSON formels par opération (aujourd'hui : clés relevées dans le code), unités et hypothèses dans les réponses, erreurs avec détail, contrôle de révision par le client C#.
