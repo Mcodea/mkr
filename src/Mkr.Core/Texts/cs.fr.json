@@ -77,6 +77,8 @@
  "cs.broida_refusee_passages_28_40": "Broïda refusée : passages 28 % / 40 % indéterminables ou incohérents.",
  "cs.broida_refusee_reponse_non_monotone": "Broïda refusée : réponse non monotone ou dépassement incompatibles avec l’hypothèse.",
  "cs.broida_refusee_variation_finale_de": "Broïda refusée : variation finale de la mesure insuffisante.",
+ "cs.broida_niveau_28": "Niveau à 28 % de la variation finale",
+ "cs.broida_niveau_40": "Niveau à 40 % de la variation finale",
  "cs.broida_t28_s_t40_s": "Broïda : t28 = {0:G6} s ; t40 = {1:G6} s ; Mesure terminale observée = {2:G6} {3} sur {4} échantillons.\n",
  "cs.bruit_commande": "Bruit → commande",
  "cs.bruit_inferieur_a_la_resolution": "Bruit inférieur à la résolution déclarée : RMSE maximale = moitié de la tolérance de la mesure.",

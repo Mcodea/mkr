@@ -1023,13 +1023,22 @@ public partial class IdentificationView : UserControl, IStepView
         foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) chart.XLabel = Loc.T("cs.temps_apres_l_echelon_s");
         var horizon = seconds.Length > 0 ? seconds[^1] : 1;
         var first = seconds.Length > 0 ? seconds[0] : 0;
+        // Broïda (section 42.2): the 28 % and 40 % crossings are computed by the engine, not entered by the user; they are drawn on the estimation trial
+        // (levels as horizontal lines, instants as vertical markers) and recorded with the study. Only studies that carry the levels draw the lines.
+        var broidaEvidence = PlotSource.SelectedIndex == 0 && study.Family == ModelFamily.BroidaFOPDT ? study.Result.BroidaEvidence : null;
+        var responseSeries = new List<ChartSeries>
+        {
+            new ChartSeries(Loc.T("cs.mesure_observee"), "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
+            new ChartSeries(Loc.T("cs.modele_identifie"), "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
+        };
+        if (broidaEvidence is { Crossing28Pv: { } level28, Crossing40Pv: { } level40 } && seconds.Length > 1)
+        {
+            responseSeries.Add(new ChartSeries(Loc.T("cs.broida_niveau_28"), "MkrSignal3", new[] { first, horizon }, new[] { level28, level28 }));
+            responseSeries.Add(new ChartSeries(Loc.T("cs.broida_niveau_40"), "MkrSignal4", new[] { first, horizon }, new[] { level40, level40 }));
+        }
         Chart.SetTracks(new[]
         {
-            new ChartTrack(Loc.T("cs.reponse_du_procede_et_modele"), study.PvUnit, new[]
-            {
-                new ChartSeries(Loc.T("cs.mesure_observee"), "MkrSignal1", seconds, points.Select(p => p.Observed).ToArray()),
-                new ChartSeries(Loc.T("cs.modele_identifie"), "MkrSignal2", seconds, points.Select(p => p.Predicted).ToArray())
-            }) { YLabel = Loc.T("cs.mesure", study.PvUnit) }
+            new ChartTrack(Loc.T("cs.reponse_du_procede_et_modele"), study.PvUnit, responseSeries) { YLabel = Loc.T("cs.mesure", study.PvUnit) }
         });
         CommandChart.SetTracks(new[]
         {
@@ -1050,7 +1059,13 @@ public partial class IdentificationView : UserControl, IStepView
         var interval = _window ?? (first, horizon);
         if (seconds.Length > 1)
         {
-            Chart.SetEvents(new[] { (interval.Item1, "A"), (interval.Item2, "B") });
+            var markers = new List<(double X, string Label)> { (interval.Item1, "A"), (interval.Item2, "B") };
+            if (broidaEvidence is not null)
+            {
+                markers.Add((broidaEvidence.Crossing28Seconds, "28 %"));
+                markers.Add((broidaEvidence.Crossing40Seconds, "40 %"));
+            }
+            Chart.SetEvents(markers);
             // the markers always show the interval the figures cover; the tint appears only for a range the user selected
             foreach (var chart in new[] { Chart, CommandChart, ResidualChart }) { if (_window is null) chart.SetHighlight(null, null); else chart.SetHighlight(interval.Item1, interval.Item2); }
             PlotLegend.Text += _window is null

@@ -77,6 +77,8 @@
  "cs.broida_refusee_passages_28_40": "Broïda refused: 28 % / 40 % crossings undeterminable or inconsistent.",
  "cs.broida_refusee_reponse_non_monotone": "Broïda refused: non-monotonic response or overshoot incompatible with the assumption.",
  "cs.broida_refusee_variation_finale_de": "Broïda refused: final measurement variation insufficient.",
+ "cs.broida_niveau_28": "Level at 28 % of the final variation",
+ "cs.broida_niveau_40": "Level at 40 % of the final variation",
  "cs.broida_t28_s_t40_s": "Broïda: t28 = {0:G6} s; t40 = {1:G6} s; observed terminal measurement = {2:G6} {3} over {4} samples.\n",
  "cs.bruit_commande": "Noise → control",
  "cs.bruit_inferieur_a_la_resolution": "Noise below the declared resolution: maximum RMSE = half the measurement tolerance.",

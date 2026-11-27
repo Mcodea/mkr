@@ -10,6 +10,21 @@ try
     var path = Path.Combine(directory.FullName, "test.db");
     var store = new SqliteProjectStore(path);
     Require(store.List().Count == 0, "The migrated database is empty.");
+    // Broïda 1.2.0 adds the 28 % / 40 % PV levels to the evidence: a study recorded before it must still load, and a new one must round-trip intact.
+    var evidenceOld = System.Text.Json.JsonSerializer.Serialize(new { Crossing28Seconds = 3.3, Crossing40Seconds = 4.1, TerminalPv = 9.0, TerminalSamples = 6,
+        TimeOrigin = "mv_step_first_changed_sample", ThresholdFractions = new[] { 0.28, 0.40 } });
+    var oldEvidence = System.Text.Json.JsonSerializer.Deserialize<BroidaEvidence>(evidenceOld)!;
+    Require(oldEvidence.Crossing28Seconds == 3.3 && oldEvidence.Crossing28Pv is null && oldEvidence.Crossing40Pv is null,
+        "Broida evidence recorded before the PV levels existed deserializes with no levels.");
+    var newEvidence = System.Text.Json.JsonSerializer.Deserialize<BroidaEvidence>(System.Text.Json.JsonSerializer.Serialize(
+        new BroidaEvidence(3.3, 4.1, 9.0, 6, "mv_step_first_changed_sample", new[] { 0.28, 0.40 }, 7.0, 7.84, 8.2)))!;
+    Require(newEvidence.BaselinePv == 7.0 && newEvidence.Crossing28Pv == 7.84 && newEvidence.Crossing40Pv == 8.2,
+        "Broida evidence with PV levels round-trips.");
+    var engineEvidence = System.Text.Json.JsonSerializer.Deserialize<BroidaEvidence>(
+        """{"crossing28Seconds":3.3,"crossing40Seconds":4.1,"terminalPv":9.0,"terminalSamples":6,"timeOrigin":"mv_step_first_changed_sample","thresholdFractions":[0.28,0.4],"baselinePv":7.0,"crossing28Pv":7.84,"crossing40Pv":8.2,"settledResidualBoundPv":0.01}""",
+        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+    Require(engineEvidence.Crossing28Pv == 7.84 && engineEvidence.Crossing40Pv == 8.2,
+        "The engine JSON (camelCase, extra fields) is read with the PV levels.");
     var project = Project.Create("  Banc d’essai  ");
     Require(project.Name == "Banc d’essai", "Project name is trimmed.");
     Throws<ArgumentException>(() => Project.Create(" "));

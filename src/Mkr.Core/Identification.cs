@@ -15,7 +15,9 @@ public sealed record FitDiagnostics(int Samples, double InputStep, double Baseli
     double HorizonSeconds, double Rmse, double Mae, double? RSquared, double? ResidualLagOne, FitPoint[] Points);
 public sealed record FitStandardErrors(double Gain, double TauSeconds, double DelaySeconds);
 public sealed record BroidaEvidence(double Crossing28Seconds, double Crossing40Seconds,
-    double TerminalPv, int TerminalSamples, string TimeOrigin, double[] ThresholdFractions);
+    double TerminalPv, int TerminalSamples, string TimeOrigin, double[] ThresholdFractions,
+    // Added with Broïda 1.2.0 (levels for the chart markers). Optional: studies recorded before it deserialize with null and draw no level lines.
+    double? BaselinePv = null, double? Crossing28Pv = null, double? Crossing40Pv = null);
 
 public sealed record IdentificationResult(string AlgorithmVersion, double Gain, double? TauSeconds, double DelaySeconds,
     double? TauLowerSeconds, double? TauUpperSeconds, double DelayUpperSeconds, string[] Warnings,
