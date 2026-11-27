@@ -38,7 +38,10 @@ public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid Validati
     StepColumns ValidationColumns, string MvUnit, string PvUnit, double MvTolerance, double PvTolerance,
     DateTimeOffset CalculatedAt, string EngineVersion, IdentificationResult Result, ModelFamily Family = ModelFamily.FOPDT,
     StepWindow? TrainingWindow = null, StepWindow? ValidationWindow = null, ModelComparison? Comparison = null,
-    ValidationAssessment? Assessment = null)
+    ValidationAssessment? Assessment = null,
+    // Versions of the libraries that did the computation (Python, numpy, scipy), recorded with the study for traceability (LOT 1). Optional: studies recorded
+    // before it, or computed while the engine could not report them, carry null ("unknown"), never a guessed value.
+    string? EngineLibraries = null)
 {
     public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}" +
         (IsAcceptedForTuning ? "" : " · refusée");
@@ -205,6 +208,9 @@ public interface IIdentificationEngine
         double pvTolerance, CancellationToken token);
     Task<(IdentificationResult Result, string EngineVersion)> IdentifyAsync(ModelFamily family, StepImport training, StepImport validation,
         double mvTolerance, double pvTolerance, CancellationToken token);
+
+    /// <summary>Versions of the computing libraries reported by the engine (e.g. "Python 3.12.10 · numpy 2.3.5 · scipy 1.17.0"), or null when it cannot report them.</summary>
+    Task<string?> GetEngineLibrariesAsync(CancellationToken token) => Task.FromResult<string?>(null);
 
     /// <summary>Identifies the model and applies the validation gate on the independent trial.</summary>
     Task<(IdentificationResult Result, ValidationAssessment Assessment, string EngineVersion)> AssessAsync(ModelFamily family,

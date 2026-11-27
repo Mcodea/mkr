@@ -469,7 +469,7 @@ public partial class IdentificationView : UserControl, IStepView
             $"{timeConstants} · θ = {result.DelaySeconds:G5} s (intervalle {result.DelaySeconds:G5} – {result.TuningDelaySeconds:G5} s)\n" +
             $"Estimation ({trainingName}) : {Metrics(result.Training, study.PvUnit)}\n" +
             $"Validation ({validationName}) : {Metrics(result.Validation, study.PvUnit)}\n" +
-            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
+            $"Méthode {result.AlgorithmVersion} · moteur {study.EngineVersion}{(study.EngineLibraries is { } libraries ? $" ({libraries})" : "")}\n{windows}{broida}{uncertainty}\n{string.Join(" ", warnings)}";
         FitReport.Text += study.Assessment is { } decision
             ? Loc.T("cs.validation_independante_version_rmse_r1", decision.AlgorithmVersion, decision.Criteria.MaximumRmse, study.PvUnit, decision.Criteria.MaximumResidualLagOne) +
               (decision.Accepted ? Loc.T("cs.modele_accepte") : Loc.T("cs.modele_refuse") + string.Join(", ", decision.Reasons.Select(ReasonText)) +

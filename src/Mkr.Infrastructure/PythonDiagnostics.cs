@@ -33,6 +33,28 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
         "simulate_pi_transition", "simulate_pid_experimental", "suggest_criteria"
     ];
 
+    private string? _libraries;
+
+    /// <summary>Versions of Python, numpy and scipy as reported by the engine's contract (cached after the first successful read; null when unavailable).</summary>
+    public async Task<string?> GetEngineLibrariesAsync(CancellationToken token)
+    {
+        if (_libraries is not null) return _libraries;
+        try
+        {
+            var (result, _) = await CallAsync("describe_contract", new { }, token).ConfigureAwait(false);
+            if (!result.TryGetProperty("libraries", out var libraries) || libraries.ValueKind != JsonValueKind.Object) return null;
+            var parts = new List<string>();
+            foreach (var (key, label) in new[] { ("python", "Python"), ("numpy", "numpy"), ("scipy", "scipy") })
+                if (libraries.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString()))
+                    parts.Add($"{label} {value.GetString()}");
+            return _libraries = parts.Count == 0 ? null : string.Join(" · ", parts);
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            return null;      // traceability information only: never blocks an identification
+        }
+    }
+
     public async Task VerifyContractAsync(CancellationToken cancellationToken) =>
         _ = await Guard(() => VerifyContractAsyncCore(cancellationToken)).ConfigureAwait(false);
 

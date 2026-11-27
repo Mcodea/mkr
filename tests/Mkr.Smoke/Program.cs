@@ -65,6 +65,9 @@ try
     var interpreter = Environment.GetEnvironmentVariable("MKR_PYTHON") ?? "python";
     var engine = new PythonDiagnostics(interpreter, Path.Combine(AppContext.BaseDirectory, "engine", "mkr_engine.py"));
     Require(await engine.GetVersionAsync(default) == "0.10.0", "Python round trip returns the expected version.");
+    var libraries = await engine.GetEngineLibrariesAsync(default);
+    Require(libraries is not null && libraries.StartsWith("Python ") && libraries.Contains(" · numpy ") && libraries.Contains(" · scipy "),
+        "The engine reports the versions of the computing libraries (traceability).");
     await engine.VerifyContractAsync(default);                         // the real engine speaks the contract revision the application requires (LOT 1)
     {
         // An engine that predates the contract description is refused with an explicit message, not later in a screen.

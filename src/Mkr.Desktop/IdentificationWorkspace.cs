@@ -165,9 +165,10 @@ internal sealed class IdentificationWorkspace(Project project, IImportStore impo
         // Every study carries the validation decision; a refused study is kept for traceability but cannot be tuned.
         var (result, assessment, version) = await engine.AssessAsync(family, train, check, mvTolerance, pvTolerance, criteria, token);
         token.ThrowIfCancellationRequested();
+        var libraries = await engine.GetEngineLibrariesAsync(token);
         var study = new IdentificationStudy(Guid.NewGuid(), training.Id, validation.Id, trainColumns, valColumns,
             mvUnit, pvUnit, mvTolerance, pvTolerance, DateTimeOffset.UtcNow, version, result,
-            family, trainingWindow, validationWindow, comparison, assessment);
+            family, trainingWindow, validationWindow, comparison, assessment, libraries);
         studies.SaveStudy(project.Id, study);
         Audit("identification.saved", Short(study.Id),
             $"{family} sur {training.FileName} / {validation.FileName} : " + (assessment.Accepted ? Loc.T("cs.accepte") : Loc.T("cs.refuse_2") + string.Join(", ", assessment.Reasons) + ")"));
