@@ -32,7 +32,8 @@ from csv_format import from_payload
 from csv_quality import read_table
 from fopdt import LJUNG_Z_99, is_round_off, number, require_manual
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+BURN_IN_DECAY = 0.01      # 1.1.0 : les tests de résidus de SIMULATION ignorent le transitoire initial (décroissance à 1 %) ; None = comportement 1.0.0 (étude de vérification)
 MAXIMUM_DELAY_SAMPLES = 60
 DEFAULT_ORDERS = ((1, 1), (2, 2))
 UNIFORM_SAMPLING_TOLERANCE = 1e-3         # relative jitter of the sampling period accepted without resampling (never interpolate data)
@@ -171,18 +172,27 @@ def evaluate(theta, na, nb, nk, u, y, maximum_rmse, estimator):
     rmse = math.sqrt(float(sim_error @ sim_error) / len(sim_error))
     if not math.isfinite(rmse) or rmse > maximum_rmse:
         reasons.append("validation_simulation_rmse")
+    burn = 0
     if estimator == "ARX":
         phi, target, _ = regressors(u, y, na, nb, nk)
         e = target - phi @ theta                                   # one-step prediction residuals (white under equation-error noise)
     else:
         e = sim_error                                              # simulation residuals (white under output-error noise)
+        if BURN_IN_DECAY is not None:
+            # The free-run simulation is seeded with the first MEASURED (noisy) samples: the initial-state error decays with the dominant pole and makes the
+            # first residuals autocorrelated, which the whiteness test would read as a structure error (F-ARX-2: the TRUE model failed in 35 % of high-SNR cases).
+            # The tests below skip the samples until that transient has decayed to BURN_IN_DECAY (1 %); the RMSE above still uses the whole series.
+            radius = float(np.max(np.abs(p))) if len(p) else 0.0
+            if 0.0 < radius < 1.0:
+                burn = min(len(e) // 3, int(math.ceil(math.log(1.0 / BURN_IN_DECAY) / -math.log(radius))))
+            e = e[burn:]
     bound = min(1.0, LJUNG_Z_99 / math.sqrt(len(e)))
     scale = max(abs(float(np.max(np.abs(y)))), 1e-300)
     exact = is_round_off(math.sqrt(float(e @ e) / len(e)), scale)
     lag_one = lag_correlation(e[1:], e[:-1], 0) if len(e) > 2 else 0.0
     if not exact and abs(lag_one) > bound:
         reasons.append("validation_residuals_not_white")
-    k0 = len(y) - len(e)
+    k0 = len(y) - len(e)             # residuals are aligned to the END of the series: the burn-in samples are skipped at the start
     lags = min(21, len(e) // 4)
     worst = max(abs(lag_correlation(e, u[k0:], lag)) for lag in range(0, lags))
     # 21 correlations are tested together: Bonferroni keeps the overall level at 99 % (a single-lag bound would reject a correct model one time in five)
