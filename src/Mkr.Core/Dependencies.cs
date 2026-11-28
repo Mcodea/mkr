@@ -11,7 +11,9 @@ namespace Mkr.Core;
 public enum ConfigurationFacet
 {
     Dataset, SignalMapping, UnitsAndConversions, IdentificationWindow, Preprocessing, IdentificationMethod,
-    ProcessParameters, ControlStrategy, ManufacturerBlock, PidParameters, OperatingLimits
+    ProcessParameters, ControlStrategy, ManufacturerBlock, PidParameters, OperatingLimits,
+    /// <summary>Versions of the algorithms and of the scientific criteria, restricted to those whose change AFFECTS results (a cosmetic release does not alter this fingerprint).</summary>
+    AlgorithmVersions
 }
 
 public enum ResultKind { Model, Tuning, Simulation, BlockConversion, Report }
@@ -20,6 +22,28 @@ public enum ResultKind { Model, Tuning, Simulation, BlockConversion, Report }
 public enum ResultStatus { NotStarted, InProgress, ToComplete, ToVerify, ValidatedForDomain, Blocked, NotApplicable, Obsolete }
 
 public enum ObsolescenceCause { FacetChanged, UpstreamObsolete, UpstreamMissing }
+
+/// <summary>What the user needs to tell apart at a glance: valid, not validated, refused, obsolete.</summary>
+public enum ValidityClass { Valid, NotValidated, Refused, Obsolete }
+
+public enum ProofProblem { None, Missing, NotAuthentic, DoesNotMatchRevision }
+
+/// <summary>
+/// Proof that a result passed validation, TECHNICALLY BOUND to the exact revision of the result, the data and the assumptions it was computed with ; it cannot be replaced by
+/// an unverified boolean. The seal detects any inconsistency (a changed field, a proof moved to another result or revision). It is an INTEGRITY seal, not a signature: it uses no secret.
+/// </summary>
+public sealed record ValidationProof(Guid ResultId, string RevisionFingerprint, string DataFingerprint, string AssumptionsFingerprint, string CriteriaVersion, bool Accepted,
+    DateTimeOffset At, string Seal)
+{
+    public static ValidationProof Issue(Guid resultId, string revision, string data, string assumptions, string criteriaVersion, bool accepted, DateTimeOffset at) =>
+        new(resultId, revision, data, assumptions, criteriaVersion, accepted, at, ComputeSeal(resultId, revision, data, assumptions, criteriaVersion, accepted, at));
+
+    private static string ComputeSeal(Guid id, string revision, string data, string assumptions, string criteria, bool accepted, DateTimeOffset at) =>
+        Fingerprint.Of(("id", id.ToString("N")), ("revision", revision), ("data", data), ("assumptions", assumptions), ("criteria", criteria),
+            ("accepted", accepted ? "1" : "0"), ("at", at.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+    public bool IsAuthentic => Seal == ComputeSeal(ResultId, RevisionFingerprint, DataFingerprint, AssumptionsFingerprint, CriteriaVersion, Accepted, At);
+}
 
 /// <summary>One change of a configuration facet, kept forever (append-only history).</summary>
 public sealed record ConfigurationChange(ConfigurationFacet Facet, string? PreviousFingerprint, string Fingerprint, DateTimeOffset At, string Actor, string? Reason);
@@ -66,30 +90,34 @@ public sealed class ProjectConfiguration
         History.LastOrDefault(change => change.Facet == facet && change.Fingerprint == fingerprint);
 }
 
-/// <summary>A stored result as the engine sees it. <see cref="FacetSnapshot"/> is null for a result recorded before dependencies were (a legacy result).</summary>
+/// <summary>
+/// A stored result as the engine sees it. <see cref="FacetSnapshot"/> is null for a result recorded before dependencies were (a legacy result), which carries no proof object:
+/// only then <paramref name="LegacyAccepted"/> (today's stored decision) is read. Otherwise validity needs a <see cref="ValidationProof"/> that matches the exact revision, data and assumptions.
+/// </summary>
 public sealed record ResultNode(Guid Id, ResultKind Kind, DateTimeOffset CalculatedAt, IReadOnlyDictionary<ConfigurationFacet, string>? FacetSnapshot,
-    IReadOnlyList<Guid> UpstreamResults, bool ValidatedByItsOwnGate, bool Blocked = false);
+    IReadOnlyList<Guid> UpstreamResults, string RevisionFingerprint, string DataFingerprint, string AssumptionsFingerprint, ValidationProof? Proof = null,
+    bool Blocked = false, bool LegacyAccepted = false);
 
 public sealed record ObsolescenceReason(ObsolescenceCause Cause, ConfigurationFacet? Facet, Guid? Upstream, string? PreviousFingerprint, string? CurrentFingerprint,
     DateTimeOffset? ChangedAt, string? ChangedBy);
 
 /// <param name="Action">Code of the step to redo (recompute_identification, recompute_tuning, rerun_simulation, reconvert_block, regenerate_report) ; null when nothing is to redo.</param>
 /// <param name="LegacyWithoutDependencyRecord">True when the result predates dependency recording: neither obsolescence nor freshness can be asserted for it.</param>
-public sealed record NodeStatus(Guid Id, ResultStatus Status, IReadOnlyList<ObsolescenceReason> Reasons, bool OperationalExportAllowed, string? Action,
-    bool LegacyWithoutDependencyRecord = false);
+public sealed record NodeStatus(Guid Id, ResultStatus Status, ValidityClass Validity, ProofProblem ProofProblem, IReadOnlyList<ObsolescenceReason> Reasons, bool OperationalExportAllowed,
+    string? Action, bool LegacyWithoutDependencyRecord = false);
 
 /// <summary>Which configuration facets each kind of result depends on. Explicit, versioned and tested: a facet not listed for a kind NEVER invalidates it.</summary>
 public static class DependencyRules
 {
-    public const string Version = "1.0.0";
+    public const string Version = "1.1.0";
 
     private static readonly IReadOnlyDictionary<ResultKind, ConfigurationFacet[]> Table = new Dictionary<ResultKind, ConfigurationFacet[]>
     {
         [ResultKind.Model] = new[] { ConfigurationFacet.Dataset, ConfigurationFacet.SignalMapping, ConfigurationFacet.UnitsAndConversions,
-            ConfigurationFacet.IdentificationWindow, ConfigurationFacet.Preprocessing, ConfigurationFacet.IdentificationMethod },
-        [ResultKind.Tuning] = new[] { ConfigurationFacet.ProcessParameters, ConfigurationFacet.ControlStrategy, ConfigurationFacet.OperatingLimits },
-        [ResultKind.Simulation] = new[] { ConfigurationFacet.ProcessParameters, ConfigurationFacet.PidParameters, ConfigurationFacet.OperatingLimits },
-        [ResultKind.BlockConversion] = new[] { ConfigurationFacet.ManufacturerBlock, ConfigurationFacet.PidParameters },
+            ConfigurationFacet.IdentificationWindow, ConfigurationFacet.Preprocessing, ConfigurationFacet.IdentificationMethod, ConfigurationFacet.AlgorithmVersions },
+        [ResultKind.Tuning] = new[] { ConfigurationFacet.ProcessParameters, ConfigurationFacet.ControlStrategy, ConfigurationFacet.OperatingLimits, ConfigurationFacet.AlgorithmVersions },
+        [ResultKind.Simulation] = new[] { ConfigurationFacet.ProcessParameters, ConfigurationFacet.PidParameters, ConfigurationFacet.OperatingLimits, ConfigurationFacet.AlgorithmVersions },
+        [ResultKind.BlockConversion] = new[] { ConfigurationFacet.ManufacturerBlock, ConfigurationFacet.PidParameters, ConfigurationFacet.AlgorithmVersions },
         [ResultKind.Report] = Array.Empty<ConfigurationFacet>(),   // a report depends on its upstream results only
     };
 
@@ -156,16 +184,44 @@ public static class DependencyEngine
         }
 
         var legacy = node.FacetSnapshot is null;
+        var proofProblem = ProofProblem.None;
+        bool ownGatePassed, refused = false;
+        if (legacy)
+            ownGatePassed = node.LegacyAccepted;                                              // today's stored decision: no proof object exists to verify
+        else if (node.Proof is not { } proof)
+        {
+            proofProblem = ProofProblem.Missing;
+            ownGatePassed = false;
+        }
+        else if (!proof.IsAuthentic)
+        {
+            proofProblem = ProofProblem.NotAuthentic;
+            ownGatePassed = false;
+        }
+        else if (proof.ResultId != node.Id || proof.RevisionFingerprint != node.RevisionFingerprint || proof.DataFingerprint != node.DataFingerprint ||
+                 proof.AssumptionsFingerprint != node.AssumptionsFingerprint)
+        {
+            proofProblem = ProofProblem.DoesNotMatchRevision;                                 // the proof belongs to another revision, other data or other assumptions
+            ownGatePassed = false;
+        }
+        else
+        {
+            ownGatePassed = proof.Accepted;
+            refused = !proof.Accepted;
+        }
+
         ResultStatus status;
         if (reasons.Count > 0) status = ResultStatus.Obsolete;
         else if (node.Blocked) status = ResultStatus.Blocked;
-        else if (legacy) status = ResultStatus.ToVerify;                                   // cannot assert freshness: not obsolete, not "validated for the domain"
-        else status = node.ValidatedByItsOwnGate ? ResultStatus.ValidatedForDomain : ResultStatus.ToVerify;
+        else if (legacy) status = ResultStatus.ToVerify;                                       // freshness cannot be asserted: not obsolete, not "validated for the domain"
+        else status = ownGatePassed ? ResultStatus.ValidatedForDomain : ResultStatus.ToVerify;
 
-        // Operational export and final validation: never for an obsolete or blocked result, nor one whose upstream results are not allowed ;
-        // a legacy result keeps today's behaviour (its own gate) and is flagged so the interface says no dependency was recorded.
-        var allowed = status is ResultStatus.ValidatedForDomain or ResultStatus.ToVerify && node.ValidatedByItsOwnGate && upstreamAllowExport;
-        var result = new NodeStatus(node.Id, status, reasons, allowed, status == ResultStatus.Obsolete ? DependencyRules.ActionFor(node.Kind) : null, legacy);
+        var validity = status == ResultStatus.Obsolete ? ValidityClass.Obsolete : refused ? ValidityClass.Refused : ownGatePassed && status != ResultStatus.Blocked ? ValidityClass.Valid : ValidityClass.NotValidated;
+
+        // Operational export and final validation: never for an obsolete or blocked result, one whose proof is absent, forged or for another revision, a refused one, nor one whose
+        // upstream results are not allowed. A legacy result keeps today's behaviour (its stored decision) and is flagged so the interface says no dependency was recorded.
+        var allowed = status is ResultStatus.ValidatedForDomain or ResultStatus.ToVerify && ownGatePassed && upstreamAllowExport;
+        var result = new NodeStatus(node.Id, status, validity, proofProblem, reasons, allowed, status == ResultStatus.Obsolete ? DependencyRules.ActionFor(node.Kind) : null, legacy);
         visiting.Remove(node.Id);
         done[node.Id] = result;
         return result;
