@@ -160,7 +160,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             text.AppendLine(Loc.T("cs.reglage_optimise_pour_le_rejet"));
             text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.IntegralGain)));
             text.AppendLine(Loc.T("cs.gain_integral_par_rapport_au", opt.IntegralGainRatio));
-            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent));
+            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent is { } overshootPercent ? F3(overshootPercent) : "—"));
             text.AppendLine(Loc.T("cs.compromis_integrale_plus_vive_donc"));
         }
         if (tuning.OptimizedPid is { } pid)

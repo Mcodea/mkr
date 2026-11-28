@@ -262,6 +262,7 @@ class Optimisation(unittest.TestCase):
                 rec, opt = result["recommendation"]["controller"], result["optimized"]
                 self.assertGreaterEqual(opt["integralGain"], abs(rec["kp"]) / rec["tiSeconds"] * 0.99)
                 self.assertGreaterEqual(opt["integralGainRatio"], 0.99)
+                self.assertEqual(opt["nominalOvershootPercent"], result["performance"]["optimizedPi"]["setpointStep"]["overshootPercent"])
                 # the cost is announced: the nominal set-point overshoot agrees with the independent time-domain simulation
                 kp, ti = abs(opt["controller"]["kp"]), opt["controller"]["tiSeconds"]
                 k, tau, delay = plants[-1]

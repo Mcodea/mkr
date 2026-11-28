@@ -24,7 +24,7 @@ import math
 from pi_tuning_integrator import loop_margins
 from stability_margins import analyze
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -218,6 +218,8 @@ def calculate(payload):
             if controller is not None:
                 try:
                     performance[name] = closed_loop_performance(gain, tau, second, delay + sampling_delay, controller)
+                    if name == "optimizedPi":
+                        optimized["nominalOvershootPercent"] = performance[name]["setpointStep"]["overshootPercent"]
                     performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau, second, delay + sampling_delay, controller, sample)
                 except ValueError:
                     warnings.append("performance_simulation_failed_" + name)
@@ -315,6 +317,8 @@ def _integrator(slope, delay, sample, errors, objective, limit, variation=None, 
             if controller is not None:
                 try:
                     performance[name] = closed_loop_performance(slope, 1.0, None, effective, controller, integrating=True)
+                    if name == "optimizedPi":
+                        optimized["nominalOvershootPercent"] = performance[name]["setpointStep"]["overshootPercent"]
                     performance[name]["noiseToControlGain"] = noise_to_control_gain(slope, 1.0, None, effective, controller, sample, integrating=True)
                 except ValueError:
                     notes.append("performance_simulation_failed_" + name)
@@ -385,27 +389,6 @@ def _max_kp(ti, plants, limit, integrating, w, x_grid):
     return float(low)
 
 
-def _nominal_overshoot(gain, tau, delay, kp, ti, integrating):
-    """Overshoot (percent of the unit set-point step) of the nominal loop: explicit Euler simulation, delay buffer."""
-    scale = max(ti, delay, tau if not integrating else 0.0, 1e-9)
-    dt = max(min(scale, delay if delay > 0 else scale) / 40, scale / 4000)
-    steps = int(min(60 * scale, 5e5 * dt) / dt)
-    lag = int(round(delay / dt))
-    buffer, state, integral, output, peak = [0.0] * (lag + 1), 0.0, 0.0, 0.0, 0.0
-    for _ in range(steps):
-        error = 1.0 - output
-        integral += error * dt
-        buffer.append(kp * (error + integral / ti))
-        delayed = buffer.pop(0)
-        if integrating:
-            state += dt * gain * delayed
-        else:
-            state += dt * (gain * delayed - state) / tau
-        output = state
-        peak = max(peak, output)
-    return max(0.0, (peak - 1.0) * 100.0)
-
-
 def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
     """Best PI (largest Ki) for the corner set, or None. `plants` use positive gains; delays include the sampling delay."""
     integrating = family == "Integrateur"
@@ -446,15 +429,9 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
         except ValueError:
             return None
         if max(peaks) <= limit:
-            nominal = scaled[0]
-            if nominal[4] is None:
-                overshoot = _nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating)
-            else:
-                control = dict(kp=kp, tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0)
-                overshoot = closed_loop_performance(nominal[1], nominal[2], nominal[4], nominal[3], control)["setpointStep"]["overshootPercent"]
             return dict(controller=dict(structure="PI", kp=math.copysign(kp, gain), tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0),
                         integralGain=kp / ti, worstPeakSensitivity=max(peaks),
-                        nominalOvershootPercent=overshoot)
+                        nominalOvershootPercent=None)
         kp *= 0.995
     return None
 
