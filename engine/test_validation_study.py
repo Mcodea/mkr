@@ -111,11 +111,15 @@ class StudyTools(unittest.TestCase):
         self.assertTrue(math.isinf(itae))
 
 
-def row(ms, stable=True, accepted=True, nse=0.0, lb_p=0.5, cross=0.0, bound=0.1, reasons=()):
-    return dict(info=dict(population="Px"), snr=100, index=1001,
+def row(ms, stable=True, accepted=True, nse=0.0, lb_p=0.5, cross=0.0, bound=0.1, reasons=(), e_ms=1.5, c7_ms=1.5, population="Px", index=1001):
+    return dict(info=dict(population=population), snr=100, index=index,
                 gate=dict(accepted=accepted, reasons=list(reasons), rmse=0.01, lag1=0.0, max_rmse=0.02, max_lag1=0.1),
                 stats=dict(nse=nse, ljung_box_p=lb_p, cross_max=cross, cross_bound=bound),
-                truth=dict(stable=stable, ms=ms, itae=1.0), reference=dict(stable=True, ms=1.6, itae=1.0))
+                truth=dict(stable=stable, ms=ms, itae=1.0), reference=dict(stable=True, ms=1.6, itae=1.0),
+                E=dict(worst_ms=e_ms), C7=dict(worst_ms=c7_ms))
+
+
+THRESHOLDS = dict(D=0.01, E=1.8, C7=1.8)
 
 
 class AnalysisLogic(unittest.TestCase):
@@ -123,7 +127,7 @@ class AnalysisLogic(unittest.TestCase):
         self.assertTrue(analysis.label(row(1.9), 2.0))
         self.assertFalse(analysis.label(row(2.2), 2.0))
         self.assertTrue(analysis.label(row(2.2), 2.5))
-        self.assertFalse(analysis.label(row(1.5, stable=False), 3.0))          # une boucle instable n'est jamais « apte »
+        self.assertFalse(analysis.label(row(1.5, stable=False), 3.0))          # un réglage instable n'est jamais « apte »
         self.assertIsNone(analysis.label(dict(info={}, snr=1, index=1), 2.0))     # pas de vérité : exclu, pas compté
 
     def test_rates_on_a_hand_built_population(self):
@@ -134,38 +138,65 @@ class AnalysisLogic(unittest.TestCase):
         self.assertAlmostEqual(false_rejection, 1 / 3)  # 1 refusé sur 3 aptes
 
     def test_decisions_follow_the_declared_rules(self):
-        d = analysis.decisions(row(1.5, accepted=False, nse=0.001, reasons=["validation_residuals"]), s_d=0.01)
+        d = analysis.decisions(row(1.5, accepted=False, nse=0.001, reasons=["validation_residuals"]), THRESHOLDS)
         self.assertFalse(d["A"])
         self.assertTrue(d["A1"])                         # erreur quadratique correcte
         self.assertFalse(d["A2"])
         self.assertTrue(d["D"])                          # erreur de structure relative sous le seuil calibré
-        self.assertTrue(d["A_or_D"])
-        blocked = analysis.decisions(row(1.5, accepted=False, reasons=["parameter_bound"]), s_d=1.0)
-        self.assertFalse(blocked["A1"] or blocked["D"])  # un avertissement d'estimation bloquant refuse tous les candidats
-        self.assertFalse(analysis.decisions(row(1.5), s_d=None)["D"])    # non calibré : jamais accepté
+        self.assertTrue(d["E"] and d["C7"])              # pire Ms de l'ensemble / des coins <= seuil calibré
+        self.assertTrue(d["A_or_D"] and d["A_or_E"] and d["A_or_C7"])
+        self.assertFalse(d["A_and_E"])                   # A refuse : l'intersection refuse
+        blocked = analysis.decisions(row(1.5, accepted=False, reasons=["parameter_bound"]), dict(D=1.0, E=9.0, C7=9.0))
+        self.assertFalse(blocked["A1"] or blocked["D"] or blocked["E"] or blocked["C7"])   # un avertissement d'estimation bloquant refuse tous les candidats
+        self.assertFalse(analysis.decisions(row(1.5), dict(D=None, E=None, C7=None))["D"])    # non calibré : jamais accepté
+        worse = analysis.decisions(row(1.5, e_ms=2.5, c7_ms=2.5), THRESHOLDS)
+        self.assertFalse(worse["E"] or worse["C7"])      # robustesse insuffisante sur l'ensemble : refusé même si l'erreur quadratique est bonne
 
-    def test_calibration_gives_the_stated_unsafe_acceptance_and_refuses_when_data_is_thin(self):
-        rows = [row(3.0, nse=0.01 * (i + 1)) for i in range(100)]      # 100 cas inaptes, NSE croissante 0,01 ... 1,00
-        s_d, n = analysis.calibrate_d(rows)
+    def test_calibration_gives_the_stated_unsafe_acceptance_for_each_alpha_and_refuses_when_data_is_thin(self):
+        rows = [row(3.0, nse=0.01 * (i + 1), e_ms=1.0 + 0.01 * i) for i in range(100)]      # 100 réglages inaptes ; NSE croissante 0,01 ... 1,00
+        s05, n = analysis.calibrate(rows, "D", 0.05)
+        s01, _ = analysis.calibrate(rows, "D", 0.01)
         self.assertEqual(n, 100)
-        self.assertAlmostEqual(s_d, 0.05)                 # le 5e centile : au plus 5 inaptes sur 100 sont acceptés
-        self.assertEqual(sum(r["stats"]["nse"] <= s_d for r in rows), 5)
-        self.assertEqual(analysis.calibrate_d(rows[:10])[0], None)   # trop peu d'inaptes : on ne calibre pas
+        self.assertAlmostEqual(s05, 0.05)                 # au plus 5 inaptes sur 100 acceptés
+        self.assertEqual(sum(r["stats"]["nse"] <= s05 for r in rows), 5)
+        self.assertEqual(sum(r["stats"]["nse"] <= s01 for r in rows), 1)       # 1 % : au plus 1 sur 100
+        self.assertLess(s01, s05)                          # un risque plus bas donne un seuil plus strict
+        self.assertEqual(analysis.calibrate(rows[:10], "D", 0.05)[0], None)    # trop peu d'inaptes : on ne calibre pas
+        self.assertIsNotNone(analysis.calibrate(rows, "E", 0.05)[0])
 
-    def test_adoption_rule_requires_safety_gain_and_robustness_to_the_definition(self):
+    def test_unstable_tuning_is_never_counted_as_fit_and_is_reported_among_accepted(self):
+        rows = [row(1.5, stable=True, population="P2") for _ in range(30)] + [row(1.5, stable=False, population="P6") for _ in range(10)]
+        ev = analysis.evaluate(rows, THRESHOLDS, 2.0)
+        self.assertEqual((ev["n_fit"], ev["n_unfit"], ev["n_unstable"]), (30, 10, 10))
+        self.assertEqual(ev["stability"]["A"], dict(accepted=40, accepted_unstable=10))      # A accepte tout : 10 réglages instables acceptés, signalés
+        self.assertAlmostEqual(ev["by"]["A"]["unsafe_acceptance"], 1.0)
+
+    def test_imperfect_model_with_a_fit_tuning_is_reported_apart_from_an_unfit_tuning(self):
+        rows = ([row(1.6, population="P2", accepted=True) for _ in range(20)] +            # modèle imparfait, réglage apte, accepté : bénin
+                [row(2.8, population="P6", accepted=True) for _ in range(10)] +            # modèle imparfait, réglage inapte, accepté : GRAVE
+                [row(1.6, population="P1", accepted=True) for _ in range(20)])
+        cross = analysis.evaluate(rows, THRESHOLDS, 2.0)["cross"]["A"]
+        self.assertEqual((cross["imparfait_reglage_apte_accepte"], cross["imparfait_reglage_apte_total"]), (20, 20))
+        self.assertEqual((cross["imparfait_reglage_inapte_accepte"], cross["imparfait_reglage_inapte_total"]), (10, 10))
+        self.assertEqual(cross["exact_reglage_inapte_total"], 0)
+
+    def test_adoption_never_happens_without_real_data_even_when_the_synthetic_evidence_is_strong(self):
         def table(unsafe_diff, rej_hi, unsafe=0.02):
-            by = {name: dict(unsafe_acceptance=unsafe, false_rejection=0.5,
-                             diff_unsafe=dict(est=unsafe_diff, lo=0, hi=0), diff_false_rejection=dict(est=-0.2, lo=-0.3, hi=rej_hi)) for name in analysis.CANDIDATES}
+            by = {name: dict(unsafe_acceptance=unsafe, false_rejection=0.5, diff_unsafe=dict(est=unsafe_diff, ci=(0, 0)),
+                             diff_false_rejection=dict(est=-0.2, ci=(-0.3, rej_hi))) for name in analysis.CANDIDATES}
             return dict(by=by)
         good = {k: table(0.0, -0.05) for k in ("M<=1.7", "M<=2.0", "M<=2.5", "M<=3.0")}
-        self.assertTrue(analysis.adopt(good)["D"]["adopted"])
+        verdict = analysis.adopt(good)["D"]
+        self.assertTrue(verdict["demonstrated_on_synthetic_only"])
+        self.assertFalse(verdict["adopted"])               # la règle iv (données réelles) n'est pas satisfaite : la porte actuelle est conservée
+        self.assertIn("iv", verdict["reason_not_adopted"])
         unsafe = dict(good, **{"M<=2.0": table(0.05, -0.05, unsafe=0.07)})
-        self.assertFalse(analysis.adopt(unsafe)["D"]["adopted"])       # plus d'acceptations inaptes : refusé
+        self.assertFalse(analysis.adopt(unsafe)["D"]["demonstrated_on_synthetic_only"])       # plus d'acceptations de réglages inaptes : refusé
         no_gain = dict(good, **{"M<=2.0": table(0.0, 0.02)})
-        self.assertFalse(analysis.adopt(no_gain)["D"]["adopted"])      # IC du gain n'exclut pas 0 : refusé
+        self.assertFalse(analysis.adopt(no_gain)["D"]["demonstrated_on_synthetic_only"])      # IC du gain n'exclut pas 0 : refusé
         fragile = {k: table(0.0, 0.02) for k in ("M<=1.7", "M<=2.5", "M<=3.0")}
         fragile["M<=2.0"] = table(0.0, -0.05)
-        self.assertFalse(analysis.adopt(fragile)["D"]["adopted"])      # ne tient que sous la définition primaire : refusé
+        self.assertFalse(analysis.adopt(fragile)["D"]["demonstrated_on_synthetic_only"])      # ne tient que sous la définition primaire : refusé
 
 
 if __name__ == "__main__":
