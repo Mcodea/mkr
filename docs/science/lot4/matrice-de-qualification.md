@@ -8,6 +8,7 @@ Niveaux : 0 non développé · 1 développé non vérifié · 2 vérifié mathé
 | Diagnostic automatique : saturation, perte de capteur possible, cadence (`signal_diagnosis.py`) | 4 (un banc) | rappel 100 % sur 9 812 pertes annotées (B+C), précision ≈ 99 %, bornes de l'actionneur retrouvées sans limite saisie ; **un seul banc, une seule convention de codage ; non intégré à l'application** |
 | Identification FOPDT / SOPDT / intégrateur | 3 | campagnes synthétiques à vérité connue ; données réelles : TCLab (extrait) en régression seulement |
 | Méthode de Broïda (28 %/40 %) | 3 | équations vérifiées, critère de plateau justifié ; capture réelle de l'interface (essai synthétique) |
+| Critère d'erreur ARX automatique (bruit sans modèle, 3σ) | 1 (étudié, non adopté) | domine les limites fixes à bruit faible/modéré, ne maîtrise pas le risque à fort bruit ; critère d'adoption pré-enregistré non satisfait ; non appelé par le moteur |
 | ARX (excitation arbitraire, boucle ouverte) | 3 ; 4 (deux bancs, comportement de refus) | refus justifié sur S03 (non linéaire) ; décision **dépendante d'une limite d'erreur saisie** sur S04 (F-ARX-1) ; fenêtres courtes ; pas d'aptitude à la régulation évaluée |
 | Identification en boucle fermée (2 étapes) | 3, **expérimentale** | simulations seulement (ADR 0006) |
 | Modèles d'ordre supérieur / non linéaires / multivariables | 0 | aucun module trouvé |

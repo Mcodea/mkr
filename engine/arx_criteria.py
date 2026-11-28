@@ -1,4 +1,6 @@
-"""Critère d'erreur AUTOMATIQUE pour l'identification ARX (excitation arbitraire, boucle ouverte) : remplace la limite `maximumRmse` saisie par l'utilisateur.
+"""STATUT : ÉTUDIÉ, NON ADOPTÉ (critère d'adoption pré-enregistré non satisfait ; voir docs/science/lot4/resultats-critere-arx-automatique.md). Ce module n'est PAS appelé par le moteur.
+
+Critère d'erreur AUTOMATIQUE pour l'identification ARX (excitation arbitraire, boucle ouverte) : remplace la limite `maximumRmse` saisie par l'utilisateur.
 
 Principe (comme la voie par échelons, `fopdt.suggest_criteria` : limite = max(3 sigma, ...)) : l'erreur de simulation libre d'un modèle ADÉQUAT est de l'ordre du bruit
 de mesure ; on accepte jusqu'à 3 sigma. Le bruit est estimé SANS MODÈLE, pour ne pas être contaminé par l'erreur de structure (un sigma tiré des résidus d'un modèle
