@@ -418,6 +418,25 @@ class NoiseSensitivity(unittest.TestCase):
 
 
 class Curves(unittest.TestCase):
+    def test_preview_respects_its_limit_and_keeps_the_first_and_last_recorded_samples(self):
+        # One second with one trace record per integration step. In particular,
+        # the former integer stride sent all 400 records to the 300-point desktop reader.
+        for steps in (239, 240, 241, 400, 479, 480, 481):
+            with self.subTest(steps=steps):
+                result = recommend.closed_loop_performance(
+                    1.0, 1.0, None, 0.0, dict(kp=1.0, tiSeconds=1.0, tdSeconds=0.0, filterSeconds=0.0),
+                    horizon_multiple=1.0, resolution=steps)
+                dt = result["stepSeconds"]
+                count = round(result["horizonSeconds"] / dt)
+                for curve in result["curves"].values():
+                    times = curve["seconds"]
+                    self.assertEqual(len(times), min(count, 240))
+                    self.assertEqual(len(times), len(curve["pv"]))
+                    self.assertEqual(len(times), len(curve["mv"]))
+                    self.assertEqual(times[0], 0.0)
+                    self.assertAlmostEqual(times[-1], (count - 1) * dt)
+                    self.assertTrue(all(a < b for a, b in zip(times, times[1:])))
+
     def test_the_response_curves_start_at_zero_end_at_the_setpoint_and_are_plain_floats(self):
         import json
         p = dict(family="FOPDT", gain=-1.5, tauSeconds=40.0, delaySeconds=15.0, secondTauSeconds=None, sampleSeconds=1.0, standardErrors=None,

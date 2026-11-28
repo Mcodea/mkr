@@ -628,8 +628,11 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         """Display window [0, until] resampled to at most 240 points (plain floats: the bridge carries nothing else)."""
         t, y, u = raw
         keep = [k for k, value in enumerate(t) if value <= until] or [0]
-        step = max(1, len(keep) // 240)
-        picked = keep[::step]
+        if len(keep) <= 240:
+            picked = keep
+        else:
+            last = len(keep) - 1
+            picked = [keep[i * last // 239] for i in range(240)]
         return dict(seconds=[float(t[k]) for k in picked], pv=[float(y[k]) for k in picked], mv=[float(u[k]) for k in picked])
 
     window = horizon if settle is None else min(horizon, max(8.0 * scale, 1.6 * settle))
