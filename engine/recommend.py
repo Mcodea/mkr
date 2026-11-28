@@ -611,9 +611,9 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         for i in range(steps):
             t = i * dt
             error = setpoint - y
-            integral += kp / ti * error * dt
             derivative = -kp * td * (y - yf) / tf if tf > 0 and td > 0 else 0.0
             u = kp * error + integral + derivative
+            integral += kp / ti * error * dt  # controller state for the next sample
             peak_mv = max(peak_mv, abs(u))
             if i % stride == 0:
                 trace_t.append(t); trace_y.append(y); trace_u.append(u)
@@ -625,14 +625,15 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             if integrating:
                 states[0] += dt * gain * delayed
             else:
-                states[0] += dt * (gain * delayed - states[0]) / lags[0]
-                for j in range(1, len(lags)):
+                # Forward Euler uses the upstream state from the start of this interval.
+                for j in range(len(lags) - 1, 0, -1):
                     states[j] += dt * (states[j - 1] - states[j]) / lags[j]
+                states[0] += dt * (gain * delayed - states[0]) / lags[0]
             y = states[-1]
             e = abs(setpoint - y)
             iae += e * dt
             ise += e * e * dt
-            itae += t * e * dt
+            itae += (i + 1) * dt * e * dt
             peak = max(peak, y if setpoint else -y * (1 if gain > 0 else 1))
             if setpoint:
                 if e > 0.02 * abs(setpoint):

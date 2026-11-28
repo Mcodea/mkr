@@ -453,6 +453,23 @@ class ClosedLoopPerformance(unittest.TestCase):
         self.assertEqual(result["horizonSeconds"], 10.0)
         self.assertGreater(len(result["curves"]["setpoint"]["seconds"]), 1)
 
+    def test_two_pole_startup_uses_one_time_origin_for_command_and_process_states(self):
+        # From rest, explicit Euler gives u(0)=Kp, y(dt)=0 and
+        # y(2dt)=K*Kp*dt²/(tau1*tau2) for a unit setpoint step.
+        for gain, kp in ((2.0, 1.5), (-2.0, -1.5)):
+            with self.subTest(gain=gain):
+                result = recommend.closed_loop_performance(
+                    gain, 4.0, 2.0, 0.0,
+                    dict(kp=kp, tiSeconds=4.0, tdSeconds=0.0, filterSeconds=0.0),
+                    horizon_multiple=0.25, resolution=40.0)
+                curve = result["curves"]["setpoint"]
+                dt = result["stepSeconds"]
+                self.assertEqual(curve["seconds"][:3], [0.0, dt, 2 * dt])
+                self.assertEqual(curve["mv"][0], kp)
+                self.assertEqual(result["setpointStep"]["initialMvStep"], abs(curve["mv"][0]))
+                self.assertEqual(curve["pv"][:2], [0.0, 0.0])
+                self.assertAlmostEqual(curve["pv"][2], gain * kp * dt**2 / 8.0)
+
     def test_closed_form_values(self):
         gain, tau, a = 2.0, 30.0, 3.0
         kp = a / gain
