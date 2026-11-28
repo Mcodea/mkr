@@ -1,0 +1,170 @@
+{
+ "a_files": [
+  "Baseline/Baseline_80pct.csv",
+  "Disturbance/Disturbance_LowOutflow_50pct.csv",
+  "PassiveOutflow/PassiveOutflow_100pct.csv",
+  "PassiveOutflow/PassiveOutflow_20pct.csv",
+  "PassiveOutflow/PassiveOutflow_40pct.csv",
+  "PassiveOutflow/PassiveOutflow_50pct.csv"
+ ],
+ "files": {
+  "Baseline/Baseline_80pct.csv": {
+   "annotated_dropouts": 1,
+   "engine_csv_quality": {
+    "duplicates": 30084,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 60.0,
+    "min_step": 60.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 4,
+   "mv_at_0": 2,
+   "mv_at_100": 6,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 1,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 4,
+    "level_flagged_not_annotated": 3,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 8,
+    "mv_flagged_saturated": 8
+   }
+  },
+  "Disturbance/Disturbance_LowOutflow_50pct.csv": {
+   "annotated_dropouts": 1,
+   "engine_csv_quality": {
+    "duplicates": 96,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 2.0,
+    "min_step": 1.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 4,
+   "mv_at_0": 0,
+   "mv_at_100": 6,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 1,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 4,
+    "level_flagged_not_annotated": 3,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 6,
+    "mv_flagged_saturated": 6
+   }
+  },
+  "PassiveOutflow/PassiveOutflow_100pct.csv": {
+   "annotated_dropouts": 2470,
+   "engine_csv_quality": {
+    "duplicates": 108,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 2.0,
+    "min_step": 1.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 2472,
+   "mv_at_0": 68,
+   "mv_at_100": 24446,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 2470,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 2472,
+    "level_flagged_not_annotated": 2,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 24514,
+    "mv_flagged_saturated": 24514
+   }
+  },
+  "PassiveOutflow/PassiveOutflow_20pct.csv": {
+   "annotated_dropouts": 581,
+   "engine_csv_quality": {
+    "duplicates": 67,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 2.0,
+    "min_step": 1.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 581,
+   "mv_at_0": 122,
+   "mv_at_100": 11738,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 581,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 581,
+    "level_flagged_not_annotated": 0,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 11860,
+    "mv_flagged_saturated": 11860
+   }
+  },
+  "PassiveOutflow/PassiveOutflow_40pct.csv": {
+   "annotated_dropouts": 1237,
+   "engine_csv_quality": {
+    "duplicates": 72,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 2.0,
+    "min_step": 1.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 1238,
+   "mv_at_0": 39,
+   "mv_at_100": 17681,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 1237,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 1238,
+    "level_flagged_not_annotated": 1,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 17720,
+    "mv_flagged_saturated": 17720
+   }
+  },
+  "PassiveOutflow/PassiveOutflow_50pct.csv": {
+   "annotated_dropouts": 1662,
+   "engine_csv_quality": {
+    "duplicates": 61,
+    "invalid": 0,
+    "invalid_timestamps": 0,
+    "max_step": 2.0,
+    "min_step": 1.0,
+    "missing": 0,
+    "reversed": 0,
+    "windows": 6
+   },
+   "level_exact_zero": 1662,
+   "mv_at_0": 99,
+   "mv_at_100": 17542,
+   "rows": 30600,
+   "signal_quality": {
+    "dropouts_among_flagged": 1662,
+    "dropouts_missed": 0,
+    "level_flagged_at_scale_limit": 1662,
+    "level_flagged_not_annotated": 0,
+    "level_frozen_whole_signal": false,
+    "mv_at_100_or_0": 17641,
+    "mv_flagged_saturated": 17641
+   }
+  }
+ },
+ "window_rows": 6000,
+ "zip_sha256": "e31b41da2376d885774891606d346b26926d93db8483d9d7ac6bfcc23e24128e"
+}

@@ -42,20 +42,23 @@
   },
   {
    "id": "S02",
-   "titre": "Dual-Phase Gas-Liquid Transmembrane Pressure System",
-   "auteurs": "non vérifié",
-   "organisme": "non vérifié (recherche universitaire vietnamienne annoncée)",
+   "titre": "Experimental dataset for system identification of a dual-phase gas–liquid transmembrane pressure system",
+   "auteurs": "Phan T. D., Truong C. T., Nguyen H. N., Ho H. D., Nguyen H. H., Ha J., Marimuthu T., Nguyen T. T., Jung H.-T., Duong V. T.",
+   "organisme": "Ho Chi Minh City University of Technology (Viêt Nam) ; KAIST (Corée)",
    "doi": "10.17632/r92bsc5ksw.2",
    "url": "https://data.mendeley.com/datasets/r92bsc5ksw/2",
-   "version": "2 (annoncée du 2026-09-08, NON vérifiée)",
+   "version": "2",
    "date_telechargement": null,
-   "licence": "CC BY 4.0 annoncée, NON confirmée à la source",
+   "licence": "CC BY 4.0 (notice officielle OAI-PMH DataCite : « Creative Commons Attribution 4.0 International »)",
    "fichiers": [],
-   "statut_acces": "inaccessible",
-   "constat": "Le DOI se résout vers la page Mendeley (HTTP 200) mais la page est une application JavaScript dont les métadonnées et la liste des fichiers sont chargées par une API non joignable (503/404/réponses sans rapport avec ce jeu). Titre, auteurs, version, licence et fichiers NON vérifiés ; rien n'a été téléchargé.",
-   "action": "téléchargement manuel par un humain depuis la page (navigateur), puis dépôt des fichiers pour contrôle MD5/SHA-256 ; ou autre accès officiel à indiquer",
+   "statut_acces": "metadonnees_verifiees_fichiers_non_recuperes",
+   "constat": "Métadonnées VÉRIFIÉES via le point d'accès OAI-PMH officiel https://data.mendeley.com/oai (identifiant oai:data.mendeley.com:10.17632/r92bsc5ksw.2, format oai_datacite) : DOI, titre, auteurs, date 2026-09-08 (version 2), licence CC BY 4.0. L'API officielle des fichiers (https://api.data.mendeley.com/datasets/r92bsc5ksw) répond 401 « Unauthorized » : elle exige un client OAuth2/OIDC enregistré (https://data.mendeley.com/api/docs/), les noms et tailles de fichiers n'étant pas dans les notices OAI. Je n'ai pas créé de compte ni de client.",
+   "action": "un humain enregistre un client API Mendeley Data (ou télécharge à la main les fichiers de la v2) ; les fichiers seront alors contrôlés (SHA-256) et rangés hors dépôt. Les études continuent sans attendre.",
    "destination": "à décider après contrôle",
-   "statut_validation": "non exploité"
+   "statut_validation": "non exploité",
+   "date_publication": "2026-09-08",
+   "periode_echantillonnage_s": 1,
+   "nature": "expérimentale annoncée (banc de laboratoire, automate Siemens S7-1200, transmetteurs de pression industriels)"
   },
   {
    "id": "S03",
@@ -161,9 +164,9 @@
    "boucle": "ouverte (séquence pseudo-aléatoire à 10 niveaux autour de 50 % de pompe), 10 répétitions de la même séquence",
    "signaux": "h1, h2, U (pompe %)",
    "unites": "cm (README) ; operational_parameters.json indique « mm » et nomme h3_op/h4_op : INCOHÉRENCE à lever",
-   "periode_echantillonnage_s": "4 (README) ; ~3,85 observé dans complete_data.csv : à vérifier",
+   "periode_echantillonnage_s": 4,
    "nb_mesures": "81 par essai (h1.csv, h2.csv) ; 4 502 lignes dans complete_data.csv",
-   "limites": "excitation pseudo-aléatoire, pas d'échelon isolé ; autour d'un seul point de fonctionnement ; incohérences d'unités et de période à résoudre avant exploitation",
+   "limites": "excitation pseudo-aléatoire, pas d'échelon isolé ; autour d'un seul point de fonctionnement ; incohérences d'unités et de période à résoudre avant exploitation | Incohérences levées dans levee-incoherences-S04.md : Ts=4 s confirmée ; h1/h2/U.csv sont des extraits de complete_data.csv ; unité (cm/mm) non démontrable.",
    "destination": "A ou B (répétitions = campagnes indépendantes pour la variabilité), pas D",
    "statut_validation": "inventorié, non exploité"
   },
@@ -179,10 +182,47 @@
    "licence": "NON vérifiée ; aucune licence uniforme ne doit être présumée",
    "fichiers": [],
    "statut_acces": "inaccessible",
-   "constat": "L'hôte est autorisé par l'environnement mais la connexion TLS est réinitialisée par l'origine (curl 35, deux essais ; rien n'a pu être lu). Le serveur FTP indiqué n'est pas un hôte HTTPS. Jeux visés non vérifiés : 96-002, 96-003, 96-010, 96-015, 96-016, 97-002, 98-002.",
-   "action": "un humain peut ouvrir le catalogue et relever pour chaque jeu provenance, nature (industrielle/expérimentale/simulée), licence et fichier ; ou indiquer un miroir officiel",
+   "constat": "Les descriptions originales sont annoncées par le client aux adresses https://ftp.esat.kuleuven.be/pub/SISTA/data/process_industry/{glassfurnace,powerplant,evaporator,distill2,dryer2,exchanger,cstr}.txt. Depuis cet environnement la connexion TLS est réinitialisée par l'origine (curl 35, hôtes homes.esat et ftp.esat, TLS 1.2 et 1.3) ; rien n'a pu être lu ni téléchargé. Aucun contournement.",
+   "action": "un humain peut copier les 7 fichiers .txt de description (texte) dans le dossier de travail pour que je relève provenance, nature et licence de chacun ; les fichiers de données ne seront PAS versionnés tant que les droits ne sont pas établis",
    "destination": "à décider",
-   "statut_validation": "non exploité"
+   "statut_validation": "non exploité",
+   "jeux_vises": [
+    {
+     "code": "96-002",
+     "nom": "four industriel (glassfurnace)",
+     "nature_selon_client": "à vérifier dans la description"
+    },
+    {
+     "code": "96-003",
+     "nom": "centrale électrique (powerplant)",
+     "nature_selon_client": "à vérifier"
+    },
+    {
+     "code": "96-010",
+     "nom": "évaporateur (evaporator)",
+     "nature_selon_client": "à vérifier"
+    },
+    {
+     "code": "96-015",
+     "nom": "colonne de distillation (distill2)",
+     "nature_selon_client": "DONNÉES SIMULÉES (indication du client) : ne pas compter comme expérimental physique sans preuve"
+    },
+    {
+     "code": "96-016",
+     "nom": "sécheur (dryer2)",
+     "nature_selon_client": "à vérifier"
+    },
+    {
+     "code": "97-002",
+     "nom": "échangeur (exchanger)",
+     "nature_selon_client": "à vérifier"
+    },
+    {
+     "code": "98-002",
+     "nom": "réacteur CSTR (cstr)",
+     "nature_selon_client": "DÉCRIT COMME MODÈLE DE PROCÉDÉ (indication du client) : ne pas compter comme expérimental physique sans preuve"
+    }
+   ]
   },
   {
    "id": "S06",
