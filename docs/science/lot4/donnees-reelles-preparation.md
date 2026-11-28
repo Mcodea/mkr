@@ -119,3 +119,88 @@ python -I tests/reference/validation_study/real/fetch_and_describe.py screen   -
 - Le script exige `openpyxl`, déjà épinglé dans `engine/requirements.txt`.
 - Les sous-commandes `verify`, `describe` et `screen` ont été exécutées le 28/11/2026 sur les fichiers téléchargés.
 - La sous-commande `fetch`, sous sa forme scriptée, **n'a pas été exécutée** : les téléchargements de cette session ont été faits avec `curl`, avec les mêmes URL et les mêmes MD5.
+
+---
+
+## Addendum (28/11/2026) : boucle fermée réelle avec réglages documentés (règle §7 iv)
+
+**But** : trouver des **mesures** réelles en boucle fermée sous PID dont les réglages sont publiés, avec la consigne et la sortie enregistrées, et si possible un essai en boucle ouverte du même procédé.
+
+**Ce qui n'a pas été fait** : aucune identification ni aucune décision de critère n'a été exécutée. La seule opération de calcul est un contrôle de cohérence : la commande enregistrée a été recalculée à partir des gains et de l'erreur enregistrés.
+
+**Recherche** :
+- API de recherche Zenodo (`/api/records?q=…&type=dataset`) avec 13 requêtes : PID, boucle fermée, TCLab, cuves, pilote, gains, autoréglage par relais ;
+- liste des benchmarks de www.nonlinearbenchmark.org : aucun benchmark en boucle fermée sous PID ;
+- arXiv et apmonitor.com ont déjà été traités plus haut, sans nouveau résultat.
+
+**Données** : téléchargées dans des sous-dossiers neufs du dossier scratchpad `real/` (`twotank_23529910/`, `throttle_23493909/`). Rien n'est versionné, et aucun des scripts livrés dans les archives n'a été exécuté.
+
+### A1. Two-Tank Water System, v2.0 (Gómez-González et al., Univ. A Coruña), DOI 10.5281/zenodo.23529910
+
+- **Licence** :
+  - API Zenodo : `license.id = cc-by-4.0` ;
+  - `README.txt` de l'archive : « Creative Commons Attribution 4.0 International (CC BY 4.0) » ;
+  - article de données associé : Sci Data 13, 1465 (2026), doi 10.1038/s41597-026-07686-2.
+- **Intégrité** :
+  - MD5 publié `3a70e0b3b9d14b4c0520110963c3d33e`, identique au fichier téléchargé ;
+  - SHA-256 ORIAS `e31b41da2376d885774891606d346b26926d93db8483d9d7ac6bfcc23e24128e` ;
+  - archive `Dataset_v2.zip` de 35,5 Mo.
+- **Ce qui est mesuré** (banc de laboratoire réel) :
+  - 25 essais de 30 600 échantillons à 1 Hz (≈ 8,5 h chacun), réalisés du 08/07 au 27/10/2025 ;
+  - procédé SISO : commande de pompe `Control_Signal_pct` (% de 0-10 V, variateur 0-50 Hz) vers le niveau du réservoir haut `Level_pct` (% de 0-25 cm, quantifié sur 8 bits, pas de 0,98 mm) ;
+  - consigne `Setpoint_pct` : escalier de 10 à 90 % par pas de 5 %, 30 min par palier (16 changements par essai) ;
+  - erreur `Error_pct` ;
+  - indicateurs `Sensor_Dropout` (pertes du capteur ultrasonore) et `perturbation` (vanne manuelle déplacée, fichiers Disturbance).
+- **Réglages documentés : oui, et vérifiés.**
+  - Le README donne la loi exacte : PID incrémental, synthèse de Dahlin (λ = 3 s), Ts = 1 s, `u(k) = u(k−1) + Kp[Δe + (Ts/Ti)e + (Td/Ts)Δ²e]`, saturation [0, 100].
+  - Les gains `Kp`, `Ki = Kp/Ti` et `Kd = Kp·Td` sont **enregistrés à chaque échantillon**. Ils ont été corrigés en v2 (Ti et Td étaient inversés en v1, voir `CHANGELOG.md`).
+  - Contrôle ORIAS : la loi, appliquée aux gains et à l'erreur enregistrés **du même échantillon**, reconstruit la commande enregistrée à moins de 10⁻³ % près sur **99,9 à 100 %** des échantillons, dans les 25 fichiers (écart médian ≈ 2·10⁻⁹).
+- **Limites pour la règle iv** :
+  1. **Correcteur adaptatif** : les gains sont recalculés à chaque seconde à partir d'un modèle identifié en ligne par moindres carrés récursifs (RLS). Ils varient fortement, même en fin de palier : le coefficient de variation médian de Kp sur les 600 dernières secondes des paliers vaut de 1,0 à 12 selon le fichier. Ce n'est **pas** un réglage PI ou PID fixe comme celui que recommande MKR.
+  2. **Aucun essai en boucle ouverte** du même banc : le modèle ne pourrait être identifié que sur des données en boucle fermée, ce qui sort du chemin prévu par le protocole (identification sur un essai en boucle ouverte).
+  3. Fichiers PassiveOutflow et Disturbance_HighOutflow : saturation de la pompe sur 17 à 80 % des échantillons et 276 à 2 470 pertes du capteur. Les fichiers Disturbance_LowOutflow ne sont pas saturés et n'ont que 1 à 2 pertes. Les 10 fichiers **Baseline** (13 au 27/10/2025) n'ont ni saturation ni presque aucune perte (0 à 1).
+- **Utilisable pour la règle iv : partiellement.**
+  - C'est une **vraie vérité de commande réelle**, au sens où l'on connaît exactement le correcteur appliqué. On peut donc comparer la réponse en boucle fermée prédite par un modèle, simulé avec la **suite de gains enregistrée**, à la réponse mesurée.
+  - En revanche, on ne peut ni tester « le PI recommandé à partir d'un modèle identifié en boucle ouverte », ni obtenir une identification en boucle ouverte indépendante.
+  - **Usage autorisé** : embarquable sous CC BY 4.0, avec attribution et liste des modifications.
+
+### A2. Iterative Feedback Tuning on Throttle Valves (Martínez-Jiménez, Miller-Murphy, Ondoa-Essomba, Witrant ; soumis à L4DC 2027), DOI 10.5281/zenodo.23493909
+
+- **Licence** : API Zenodo `license.id = cc-by-4.0`. Les données d'identification `data/` viennent de Witrant, Landau et Vaillant, *Control Eng. Practice* 139, 105634 (2023), et sont republiées dans cet enregistrement par un coauteur. Leur licence d'origine n'a pas été vérifiée séparément.
+- **Intégrité** :
+  - MD5 publié `9589262e3ef2d688b96ba6dc7adf83a7`, identique au fichier téléchargé ;
+  - SHA-256 ORIAS `7c1a187563693c7ab41fcd768ed5d107dd386cdd6d9380d87fc84257a2197900` ;
+  - archive `data_code_L4DC2027.zip` de 5,7 Mo.
+- **Ce qui est mesuré** : deux vannes papillon électroniques réelles d'automobile, p0 et p9.
+  - Campagne matérielle des 13 et 15/10/2026 : journaux bruts `code/results/bench_p0` et `bench_p9`.
+  - Ces journaux sont **distincts** des jumeaux numériques simulés (`bench_twin0`, `bench_twin9`). Le backend est choisi par `--port` (matériel, `/dev/ttyACM0` dans tous les journaux `bench_p*`) contre `--twin` (simulation), d'après `make_bench` dans `benchlib.py`.
+  - Chaque essai contient 400 échantillons à Ts = 50 ms : consigne `r` (paliers de 15 et 65°), angle mesuré `y` (en degrés) et commande `u` (MLI de −255 à 255).
+  - Il y a 174 essais matériels, dont des **validations répétées** : par exemple `p0_1565_validate.json` contient 5 réglages × 3 répétitions.
+- **Réglages documentés : oui, fixes par essai.**
+  - Correcteur iP, équivalent à un PI incrémental : `u_k = u_{k−1} − q0·e_k − q1·e_{k−1}`, avec e = y − r, q0 = (1 + Ts·K)/(α·Ts) et q1 = −1/(α·Ts) (README du code).
+  - Les valeurs (K, α) sont enregistrées dans chaque essai.
+  - L'anti-emballement est intégré, d'après `bench/README.md`.
+- **Boucle ouverte du même procédé : oui, mais ancienne** : `data/ident_prbs_p2_ts50_p0.csv` et `_p9.csv` (SBPA), plus `ident_preliminary_gain_multi_p0.csv` et `_p9.csv` (escalier de MLI). Colonnes : temps (ms), MLI (0-255), angle (°). Ces essais datent de la campagne de 2023.
+- **Limites pour la règle iv** :
+  1. **Hors du domaine « procédé »** : il s'agit d'un asservissement électromécanique de position, avec ressort de rappel, frottement et collage (« stiction », que l'article décrit comme variable d'un essai et d'une vanne à l'autre). La pertinence d'un modèle FOPDT ou SOPDT n'est pas établie.
+  2. Les essais en boucle ouverte ont **trois ans de plus** que les essais en boucle fermée, alors que le frottement dérive (avec la température notamment).
+  3. La commande atteint les butées ±255 lors des échelons, ce qui rend la boucle non linéaire.
+  4. Petite incohérence de traçabilité : le journal de campagne de `bench/README.md` date tout du 13/10/2026, alors que plusieurs fichiers p0 sont horodatés du 15/10/2026.
+- **Utilisable pour la règle iv : oui sur le plan formel, mais pas représentatif du domaine.** C'est le seul jeu trouvé qui réunit les trois conditions : une boucle fermée réelle à réglages fixes publiés, la consigne et la sortie enregistrées, et une boucle ouverte du même équipement. Il peut servir de **contrôle de non-contradiction hors domaine**, à condition de le déclarer comme tel. Il ne peut pas soutenir à lui seul une conclusion sur des boucles de procédé (température, niveau, pression, débit). **Usage autorisé** : embarquable sous CC BY 4.0, à confirmer pour `data/` (origine CEP 2023).
+
+### A3. Autres résultats écartés
+
+- **Écartés sans téléchargement, sur la base de leur description Zenodo** :
+  - 14774155 (réglage PID multiboucle) et 13150842 (Error Governor) : **simulations** ;
+  - 20584671 (module de chauffage PID) : fichiers de conception et modèle ANSYS, sans mesure en boucle fermée ;
+  - 24433892 (robot suiveur de ligne) : journaux historiques et nouvelle **simulation**, hors du domaine ;
+  - 24328344 (direction d'un robot agricole, PID à 250 Hz) et 19228319 (véhicule autonome) : mécatronique, hors du domaine, non examinés en détail ;
+  - 15862451 (pompe à chaleur CoBra) : données d'exploitation, sans réglages de régulateur annoncés ;
+  - 22771629 et 22753597 (CSTR de Manipal) : boucle ouverte seulement.
+- **Ce qui n'existe pas dans les sources autorisées** : aucune boucle de **procédé** réelle sous **PID à réglages fixes publiés** accompagnée d'un essai en boucle ouverte du même procédé. Le jeu de procédé le plus proche (A1) est adaptatif et n'a pas de boucle ouverte. Le seul jeu complet (A2) est un servomécanisme hors du domaine.
+
+### A4. Conséquence pour la règle §7 iv (constat, pas décision)
+
+- La conclusion du §4 n'est que **partiellement** levée : il existe désormais une vérité de commande réelle, mais elle est soit adaptative (A1), soit hors du domaine (A2).
+- Sur une boucle de procédé, la condition iv reste **non démontrable** avec les données publiques accessibles.
+- La voie la plus directe reste celle du §5 : un essai TCLab dédié d'ORIAS, avec deux échelons en boucle ouverte et un PI à réglage fixe consigné.
