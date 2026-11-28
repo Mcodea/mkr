@@ -123,6 +123,9 @@ try {
         $null = Wait-Name $main 'Status' '*copié*'
         $report = Get-Clipboard -Raw
         if (-not $report.Contains($studyId)) { throw "Identifiant de l'étude absent du résultat copié." }
+        if (-not $report.Contains("Bruit blanc de mesure") -or $report.Contains("σ ≤")) {
+            throw 'Le réglage doit donner le gain de bruit blanc sans déduire une borne de la qualité du capteur.'
+        }
         foreach ($part in @("Essai de validation ", "Essai d’identification ", "algorithme de réglage ", "algorithme d’identification ")) {
             if (-not $report.Contains($part)) { throw "Provenance absente du résultat copié : $part" }
         }
