@@ -664,7 +664,7 @@ try
             verify.Open();
             using var query = verify.CreateCommand();
             query.CommandText = "PRAGMA user_version";
-            Require((long)query.ExecuteScalar()! == 11, "The database was migrated to version 11 (study table of version 9, audit log of version 10, ARX studies of version 11).");
+            Require((long)query.ExecuteScalar()! == 12, "The database was migrated to version 12 (study table of version 9, audit log of version 10, ARX studies of version 11, configuration history of version 12).");
             query.CommandText = "PRAGMA foreign_key_check";
             using var violations = query.ExecuteReader();
             Require(!violations.Read(), "The migrated database has no orphan reference.");
@@ -683,6 +683,28 @@ try
                 arxBack.TrainingWindow == arxStudy.TrainingWindow && arxBack.MaximumRmse == 0.1, "A refused ARX study is saved and read back whole.");
         Throws<SqliteException>(() => restored.SaveArxStudy(project.Id, arxStudy with { Id = Guid.NewGuid(), ValidationWindow = arxStudy.TrainingWindow }));
         Throws<SqliteException>(() => restored.SaveArxStudy(project.Id, arxStudy with { Id = Guid.NewGuid(), TrainingWindow = null }));
+        // Configuration history (migration 12, ADR 0009): append-only chain, the active configuration is its replay, an identical value is a no-op, tampering is detected.
+        Require(restored.ListConfiguration(project.Id).Count == 0 && restored.VerifyConfiguration(project.Id).Intact,
+            "A study migrated from an older schema has no configuration history yet (its results are 'to verify', never obsolete).");
+        var cfgA = restored.Apply(project.Id, ConfigurationFacet.IdentificationWindow, "win-1", "test", "initial");
+        var cfgSame = restored.Apply(project.Id, ConfigurationFacet.IdentificationWindow, "win-1", "test", null);
+        var cfgB = restored.Apply(project.Id, ConfigurationFacet.IdentificationWindow, "win-2", "test", "fenêtre élargie");
+        restored.Apply(project.Id, ConfigurationFacet.Dataset, "ds-1", "test", null);
+        Require(cfgA is { Sequence: 1 } && cfgSame is null && cfgB is { Sequence: 2 } && cfgB.Change.PreviousFingerprint == "win-1" && cfgB.PreviousHash == cfgA.Hash,
+            "Changes are chained; re-applying the same value creates no entry.");
+        var replayed = ProjectConfiguration.Replay(restored.ListConfiguration(project.Id).Select(r => r.Change));
+        Require(replayed.Current[ConfigurationFacet.IdentificationWindow] == "win-2" && replayed.Current[ConfigurationFacet.Dataset] == "ds-1" && replayed.History.Count == 3 &&
+                restored.VerifyConfiguration(project.Id) is { Intact: true, Entries: 3 }, "The active configuration is the replay of the stored history.");
+        using (var tamper = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = legacyPath, Pooling = false, ForeignKeys = true }.ToString()))
+        {
+            tamper.Open();
+            using var edit = tamper.CreateCommand();
+            edit.CommandText = "UPDATE configuration_versions SET fingerprint='x' WHERE sequence=1";
+            Throws<SqliteException>(() => edit.ExecuteNonQuery());
+            edit.CommandText = "DELETE FROM configuration_versions WHERE sequence=2";
+            Throws<SqliteException>(() => edit.ExecuteNonQuery());
+        }
+        Throws<InvalidDataException>(() => restored.Apply(Guid.NewGuid(), ConfigurationFacet.Dataset, "ds-x", "test", null));
         Throws<InvalidDataException>(() => restored.SaveArxStudy(Guid.NewGuid(), arxStudy with { Id = Guid.NewGuid() }));
         Require(restored.ListArxStudies(project.Id).Count == 1, "Rejected ARX studies leave no trace.");
         Throws<CsvInputException>(() => gate.CalculateAsync(ModelFamily.FOPDT, longSummary, columns, longSummary, columns, "%", "bar",

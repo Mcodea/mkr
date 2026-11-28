@@ -85,6 +85,19 @@ public sealed class ProjectConfiguration
         return new ProjectConfiguration(current, history);
     }
 
+    /// <summary>Rebuilds the active configuration from a stored history (in sequence order). Used on reopening: nothing but the history is persisted.</summary>
+    public static ProjectConfiguration Replay(IEnumerable<ConfigurationChange> history)
+    {
+        var configuration = Empty;
+        foreach (var change in history)
+        {
+            configuration.Current.TryGetValue(change.Facet, out var active);
+            if (active != change.PreviousFingerprint) throw new InvalidDataException($"Historique de configuration incohérent pour {change.Facet}.");
+            configuration = configuration.Apply(change.Facet, change.Fingerprint, change.At, change.Actor, change.Reason);
+        }
+        return configuration;
+    }
+
     /// <summary>The last recorded change of a facet whose new fingerprint is the given one (when and by whom the active value was set), or null.</summary>
     public ConfigurationChange? LastChangeTo(ConfigurationFacet facet, string fingerprint) =>
         History.LastOrDefault(change => change.Facet == facet && change.Fingerprint == fingerprint);
@@ -226,4 +239,30 @@ public static class DependencyEngine
         done[node.Id] = result;
         return result;
     }
+}
+
+/// <summary>A stored change with its place in the project's append-only chain (same chaining principle as the audit log: it detects accidental or partial alteration, not a full rewrite by someone who can recompute every hash).</summary>
+public sealed record ConfigurationRecord(long Sequence, ConfigurationChange Change, string PreviousHash, string Hash);
+
+public sealed record ConfigurationVerification(bool Intact, int Entries, long? FirstBrokenSequence, string HeadHash);
+
+public static class ConfigurationHash
+{
+    public static string Compute(Guid projectId, long sequence, ConfigurationChange change, string previousHash)
+    {
+        static string Field(string? value) => value is null ? "-" : value.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + value;
+        var text = string.Join("|", Field(projectId.ToString()), Field(sequence.ToString(System.Globalization.CultureInfo.InvariantCulture)), Field(change.Facet.ToString()),
+            Field(change.PreviousFingerprint), Field(change.Fingerprint), Field(change.At.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture)),
+            Field(change.Actor), Field(change.Reason), Field(previousHash));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
+    }
+}
+
+/// <summary>Persistence of the configuration history. The ACTIVE configuration is never stored: it is the replay of this history (<see cref="ProjectConfiguration.Replay"/>).</summary>
+public interface IConfigurationHistory
+{
+    /// <summary>Appends a change if (and only if) it differs from the active value ; returns null for a no-op. A failure is never swallowed.</summary>
+    ConfigurationRecord? Apply(Guid projectId, ConfigurationFacet facet, string fingerprint, string actor, string? reason);
+    IReadOnlyList<ConfigurationRecord> ListConfiguration(Guid projectId);
+    ConfigurationVerification VerifyConfiguration(Guid projectId);
 }

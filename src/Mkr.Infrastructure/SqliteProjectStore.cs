@@ -6,12 +6,12 @@ using Mkr.Core;
 
 namespace Mkr.Infrastructure;
 
-public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore, IPiStore, IAuditLog
+public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentificationStore, IPiStore, IAuditLog, IConfigurationHistory
 {
     private readonly string _connectionString;
 
     /// <summary>Newest schema this build understands (PRAGMA user_version).</summary>
-    public const long CurrentSchemaVersion = 11;
+    public const long CurrentSchemaVersion = 12;
 
     /// <summary>
     /// A project database older than the current schema is copied, with the SQLite online backup API (consistent even while the file is
@@ -152,6 +152,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
             case 9:
             case 10:
             case 11:
+            case 12:
                 break;
             default:
                 throw new InvalidDataException($"Version SQLite MKR non prise en charge : {version}.");
@@ -161,6 +162,7 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
         MigrateToVersion9(path);
         MigrateToVersion10(path);
         MigrateToVersion11(path);
+        MigrateToVersion12(path);
     }
 
     /// <summary>
@@ -247,6 +249,119 @@ public sealed class SqliteProjectStore : IProjectStore, IImportStore, IIdentific
             """;
         command.ExecuteNonQuery();
         transaction.Commit();
+    }
+
+    /// <summary>
+    /// Migration 12 (ADR 0009): additive, append-only history of configuration changes (the dependencies of results). No existing table is modified ;
+    /// results recorded before it carry no dependency record and are "to verify", never obsolete. The table refuses UPDATE and DELETE (triggers), like the audit log's intent.
+    /// Rollback: restore the project database backup; an older MKR refuses user_version 12.
+    /// </summary>
+    private static void MigrateToVersion12(string path)
+    {
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false, ForeignKeys = true }.ToString();
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version";
+        if ((long)command.ExecuteScalar()! != 11)
+            return;
+        command.CommandText = """
+            CREATE TABLE configuration_versions (
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                sequence INTEGER NOT NULL CHECK(sequence >= 1),
+                facet TEXT NOT NULL,
+                previous_fingerprint TEXT,
+                fingerprint TEXT NOT NULL CHECK(length(fingerprint) > 0),
+                at TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                reason TEXT,
+                previous_hash TEXT NOT NULL,
+                hash TEXT NOT NULL,
+                PRIMARY KEY (project_id, sequence)
+            );
+            CREATE TRIGGER configuration_versions_no_update BEFORE UPDATE ON configuration_versions BEGIN SELECT RAISE(ABORT, 'configuration_versions est en ajout seul'); END;
+            CREATE TRIGGER configuration_versions_no_delete BEFORE DELETE ON configuration_versions BEGIN SELECT RAISE(ABORT, 'configuration_versions est en ajout seul'); END;
+            PRAGMA user_version = 12;
+            """;
+        command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
+    public ConfigurationRecord? Apply(Guid projectId, ConfigurationFacet facet, string fingerprint, string actor, string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(fingerprint)) throw new ArgumentException("Empreinte requise.", nameof(fingerprint));
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction(deferred: false);
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT fingerprint FROM configuration_versions WHERE project_id=$project AND facet=$facet ORDER BY sequence DESC LIMIT 1";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$facet", facet.ToString());
+        var active = command.ExecuteScalar() as string;
+        if (active == fingerprint) return null;
+        command.Parameters.Clear();
+        command.CommandText = "SELECT sequence, hash FROM configuration_versions WHERE project_id=$project ORDER BY sequence DESC LIMIT 1";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        long sequence = 1; var previousHash = AuditHash.Genesis;
+        using (var reader = command.ExecuteReader())
+            if (reader.Read()) { sequence = reader.GetInt64(0) + 1; previousHash = reader.GetString(1); }
+        var change = new ConfigurationChange(facet, active, fingerprint, DateTimeOffset.UtcNow, actor, reason);
+        var hash = ConfigurationHash.Compute(projectId, sequence, change, previousHash);
+        command.Parameters.Clear();
+        command.CommandText = """
+            INSERT INTO configuration_versions (project_id, sequence, facet, previous_fingerprint, fingerprint, at, actor, reason, previous_hash, hash)
+            SELECT $project, $sequence, $facet, $prevfp, $fp, $at, $actor, $reason, $prev, $hash
+            WHERE EXISTS (SELECT 1 FROM projects WHERE id = $project)
+            """;
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        command.Parameters.AddWithValue("$sequence", sequence);
+        command.Parameters.AddWithValue("$facet", facet.ToString());
+        command.Parameters.AddWithValue("$prevfp", (object?)active ?? DBNull.Value);
+        command.Parameters.AddWithValue("$fp", fingerprint);
+        command.Parameters.AddWithValue("$at", change.At.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$actor", actor);
+        command.Parameters.AddWithValue("$reason", (object?)reason ?? DBNull.Value);
+        command.Parameters.AddWithValue("$prev", previousHash);
+        command.Parameters.AddWithValue("$hash", hash);
+        if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Projet inconnu : changement de configuration refusé.");
+        transaction.Commit();
+        return new ConfigurationRecord(sequence, change, previousHash, hash);
+    }
+
+    public IReadOnlyList<ConfigurationRecord> ListConfiguration(Guid projectId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT sequence, facet, previous_fingerprint, fingerprint, at, actor, reason, previous_hash, hash FROM configuration_versions WHERE project_id=$project ORDER BY sequence";
+        command.Parameters.AddWithValue("$project", projectId.ToString());
+        var records = new List<ConfigurationRecord>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            var change = new ConfigurationChange(Enum.Parse<ConfigurationFacet>(reader.GetString(1)), reader.IsDBNull(2) ? null : reader.GetString(2), reader.GetString(3),
+                DateTimeOffset.Parse(reader.GetString(4), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+                reader.GetString(5), reader.IsDBNull(6) ? null : reader.GetString(6));
+            records.Add(new ConfigurationRecord(reader.GetInt64(0), change, reader.GetString(7), reader.GetString(8)));
+        }
+        return records;
+    }
+
+    public ConfigurationVerification VerifyConfiguration(Guid projectId)
+    {
+        var records = ListConfiguration(projectId);
+        var expectedPrevious = AuditHash.Genesis;
+        long expectedSequence = 1;
+        foreach (var record in records)
+        {
+            if (record.Sequence != expectedSequence || record.PreviousHash != expectedPrevious ||
+                record.Hash != ConfigurationHash.Compute(projectId, record.Sequence, record.Change, record.PreviousHash))
+                return new ConfigurationVerification(false, records.Count, record.Sequence, records.Count > 0 ? records[^1].Hash : AuditHash.Genesis);
+            expectedPrevious = record.Hash;
+            expectedSequence++;
+        }
+        return new ConfigurationVerification(true, records.Count, null, expectedPrevious);
     }
 
     /// <summary>
