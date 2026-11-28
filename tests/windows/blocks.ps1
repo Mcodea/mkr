@@ -138,6 +138,12 @@ try {
         Press $main 'Calculer le réglage guidé'
         $null = Wait-Name $main 'Status' '*au plus 50*'
         if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après le refus de la saisie.' }
+        $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
+        Go-Tab $main 1
+        Select-Option $main 'StudyPicker' "*$integratorId"
+        Go-Tab $main 6
+        $modelLine = Wait-Name $main 'ModelLine' '*bar/s par %*'
+        if ($modelLine -notlike '*pente k′ = -*') { throw "Pente du modèle intégrateur absente ou de signe incorrect. $modelLine" }
         return
     }
     $project = $main      # single window: the project's data are the « Données » tab of the workspace

@@ -49,8 +49,10 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     internal GuidedTuningView(IdentificationWorkspace workspace, IdentificationStudy model)
         : this(workspace, Loc.T("cs.tuning_study_reference", model.Id, model.TrainingId, model.ValidationId, model.Result.AlgorithmVersion), model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
-            Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
-            (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
+            (model.Family == ModelFamily.Integrateur
+                ? Loc.T("cs.modele_pente_k_s_par", model.Result.Gain, model.PvUnit, model.MvUnit, model.Result.DelaySeconds)
+                : Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
+                  (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "")) +
             Loc.T("cs.prudent_s", model.Result.TuningDelaySeconds),
             (objective, variation, token) => workspace.RecommendTuningAsync(model, objective, variation, token))
     {
