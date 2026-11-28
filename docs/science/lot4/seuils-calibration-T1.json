@@ -1,0 +1,33 @@
+{
+ "body": {
+  "alphas": {
+   "0.01": {
+    "thresholds": {
+     "C7": null,
+     "D": null,
+     "E": null
+    },
+    "unfit_cases": {
+     "C7": 0,
+     "D": 15,
+     "E": 15
+    }
+   },
+   "0.05": {
+    "thresholds": {
+     "C7": null,
+     "D": null,
+     "E": null
+    },
+    "unfit_cases": {
+     "C7": 0,
+     "D": 15,
+     "E": 15
+    }
+   }
+  },
+  "calibration_cases": 1856,
+  "rules": "v1.3"
+ },
+ "sha256": "57982b228f47bb18fbdd3041fddf26f2f5b5a7c6832b7f5fb272aea4296fa888"
+}

@@ -171,7 +171,7 @@ def auc(scores_unfit, scores_fit):
 
 # ---------------------------------------------------------------------------------------------------------------------------------- évaluation finale
 def evaluate(rows_eval, thresholds, m_lim, itae_factor=None, seed=20261128):
-    usable = [r for r in rows_eval if label(r, m_lim, itae_factor) is not None and r.get("E") is not None and r.get("C7") is not None]
+    usable = [r for r in rows_eval if label(r, m_lim, itae_factor) is not None]
     fit = np.array([label(r, m_lim, itae_factor) for r in usable])
     stable = np.array([bool(r["stability"]["time_stable"] and r["stability"]["nyquist_stable"] and r["stability"]["agree"]) for r in usable])
     uncertain = np.array([not r["stability"]["agree"] for r in usable])
@@ -224,18 +224,22 @@ def evaluate(rows_eval, thresholds, m_lim, itae_factor=None, seed=20261128):
 
 def discriminating_power(rows_eval, m_lim):
     """Pouvoir discriminant (AUC) de chaque statistique d'ajustement ou orientée commande vis-à-vis de l'aptitude ; 0,5 = aucun (v1.3 §7)."""
-    usable = [r for r in rows_eval if label(r, m_lim) is not None and r.get("E") is not None and r.get("C7") is not None]
+    usable = [r for r in rows_eval if label(r, m_lim) is not None]
     fit = np.array([label(r, m_lim) for r in usable])
     stats = {
-        "erreur_quadratique_validation": [r["gate"]["rmse"] for r in usable],
-        "autocorrelation_lag1_absolue": [abs(r["gate"]["lag1"] or 0.0) for r in usable],
-        "erreur_de_structure_relative_nse": [r["stats"]["nse"] or 0.0 for r in usable],
-        "ljung_box_(1-p)": [1 - r["stats"]["ljung_box_p"] for r in usable],
-        "correlation_croisee_residus_entree": [r["stats"]["cross_max"] / r["stats"]["cross_bound"] for r in usable],
-        "E_pire_Ms_ensemble": [r["E"]["worst_ms"] for r in usable],
-        "C7_pire_Ms_coins": [r["C7"]["worst_ms"] for r in usable],
+        "erreur_quadratique_validation": lambda r: r["gate"]["rmse"],
+        "autocorrelation_lag1_absolue": lambda r: abs(r["gate"]["lag1"] or 0.0),
+        "erreur_de_structure_relative_nse": lambda r: r["stats"]["nse"] or 0.0,
+        "ljung_box_(1-p)": lambda r: 1 - r["stats"]["ljung_box_p"],
+        "correlation_croisee_residus_entree": lambda r: r["stats"]["cross_max"] / r["stats"]["cross_bound"],
+        "E_pire_Ms_ensemble": lambda r: (r.get("E") or {}).get("worst_ms"),
+        "C7_pire_Ms_coins": lambda r: (r.get("C7") or {}).get("worst_ms"),
     }
-    return {name: auc([v for v, f in zip(vals, fit) if not f], [v for v, f in zip(vals, fit) if f]) for name, vals in stats.items()}
+    out = {}
+    for name, getter in stats.items():                  # une statistique indisponible pour un cas ne retire QUE ce cas de CETTE statistique ; le nombre de cas est publié
+        pairs = [(getter(r), f) for r, f in zip(usable, fit) if getter(r) is not None]
+        out[name] = dict(auc=auc([v for v, f in pairs if not f], [v for v, f in pairs if f]), n=len(pairs), n_unfit=sum(not f for _, f in pairs))
+    return out
 
 
 def ladder(rows_eval, m_lim):
@@ -283,7 +287,7 @@ def adopt(table, alpha):
 def per_population(rows_eval, thresholds, m_lim):
     out = {}
     for pop in sorted({r["info"]["population"] for r in rows_eval}):
-        sub = [r for r in rows_eval if r["info"]["population"] == pop and label(r, m_lim) is not None and r.get("E") is not None and r.get("C7") is not None]
+        sub = [r for r in rows_eval if r["info"]["population"] == pop and label(r, m_lim) is not None]
         if not sub:
             continue
         fit = np.array([label(r, m_lim) for r in sub])
@@ -298,7 +302,7 @@ def per_population(rows_eval, thresholds, m_lim):
 
 # ---------------------------------------------------------------------------------------------------------------------------------- phases
 def phase_calibration(rows):
-    calibration = [r for r in rows if "gate" in r and r["index"] < 1000 and r.get("E") is not None]
+    calibration = [r for r in rows if "gate" in r and r["index"] < 1000]
     body = dict(rules="v1.3", calibration_cases=len(calibration), alphas={})
     for alpha in ALPHAS:
         thresholds, counts = {}, {}

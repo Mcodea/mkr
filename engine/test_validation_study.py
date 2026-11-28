@@ -309,6 +309,16 @@ class AnalysisLogic(unittest.TestCase):
         self.assertGreater(worst, 0.2)                                                      # ...mais si les 40 exclus étaient tous des faux positifs, la borne le dit
         self.assertGreater(worst, entry["false_positive"]["upper_adoption"])
 
+    def test_a_criterion_whose_statistic_is_unavailable_refuses_and_the_case_stays_in_the_evaluation(self):
+        # amendement v1.5 : l'absence de E / C7 n'exclut plus le cas (biais de sélection) ; le critère concerné REFUSE faute de preuve
+        unsafe = dict(row(3.0, accepted=False, population="P4"), E=None, C7=None)
+        fit_case = row(1.5, accepted=True, population="P1")
+        ev = analysis.evaluate([unsafe] * 5 + [fit_case] * 5, THRESHOLDS, 2.0)
+        self.assertEqual(ev["n"], 10)
+        self.assertEqual((ev["by"]["E"]["false_positive"]["k"], ev["by"]["E"]["false_positive"]["n"]), (0, 5))
+        power = analysis.discriminating_power([unsafe] * 5 + [fit_case] * 5, 2.0)
+        self.assertEqual(power["C7_pire_Ms_coins"]["n"], 5)               # seuls les cas où la statistique existe entrent dans son AUC, et leur nombre est publié
+
     def test_the_final_report_publishes_coverage_by_population(self):
         base = lambda i, **kw: dict(row(1.5, population="P1", index=1000 + i), **kw)
         rows = [base(i) for i in range(8)] + [dict(info=dict(population="P1"), snr=20, index=1008 + i, crash="x") for i in range(2)]
