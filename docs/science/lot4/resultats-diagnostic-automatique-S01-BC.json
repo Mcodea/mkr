@@ -1,0 +1,364 @@
+{
+ "engine": "signal_diagnosis 1.0.0",
+ "sets": {
+  "B": {
+   "dropout_totals": {
+    "fn": 0,
+    "fp": 36,
+    "tp": 5627,
+    "truth": 5627
+   },
+   "files": {
+    "Baseline/Baseline_10pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 6,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30088,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0001,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "Baseline/Baseline_30pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 9,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0001,
+     "mv_reported_levels": [
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.0002,
+     "pv_reported_saturation_fraction": 0.0002,
+     "rows": 30600
+    },
+    "Baseline/Baseline_40pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 4,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0001,
+     "mv_reported_levels": [
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.0002,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "Baseline/Baseline_50pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 8,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0001,
+     "pv_reported_saturation_fraction": 0.0008,
+     "rows": 30600
+    },
+    "Baseline/Baseline_70pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0002,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "Disturbance/Disturbance_HighOutflow_10pct.csv": {
+     "annotated_dropouts": 370,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 370,
+     "duplicate_timestamps": 70,
+     "mv_reported_fraction": 0.2614,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.2728,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "Disturbance/Disturbance_LowOutflow_40pct.csv": {
+     "annotated_dropouts": 2,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 4,
+     "dropout_tp": 2,
+     "duplicate_timestamps": 68,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0003,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_0pct.csv": {
+     "annotated_dropouts": 276,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 0,
+     "dropout_tp": 276,
+     "duplicate_timestamps": 60,
+     "mv_reported_fraction": 0.1549,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.17,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_30pct.csv": {
+     "annotated_dropouts": 1025,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 1025,
+     "duplicate_timestamps": 63,
+     "mv_reported_fraction": 0.5181,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.5257,
+     "pv_reported_saturation_fraction": 0.0002,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_70pct.csv": {
+     "annotated_dropouts": 1703,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 1703,
+     "duplicate_timestamps": 94,
+     "mv_reported_fraction": 0.6656,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.6749,
+     "pv_reported_saturation_fraction": 0.0011,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_90pct.csv": {
+     "annotated_dropouts": 2251,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 2251,
+     "duplicate_timestamps": 103,
+     "mv_reported_fraction": 0.7581,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.7694,
+     "pv_reported_saturation_fraction": 0.0009,
+     "rows": 30600
+    }
+   }
+  },
+  "C": {
+   "dropout_totals": {
+    "fn": 0,
+    "fp": 43,
+    "tp": 4185,
+    "truth": 4185
+   },
+   "files": {
+    "Baseline/Baseline_100pct.csv": {
+     "annotated_dropouts": 1,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 3,
+     "dropout_tp": 1,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0002,
+     "pv_reported_saturation_fraction": 0.0004,
+     "rows": 30600
+    },
+    "Baseline/Baseline_20pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 11,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0001,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "Baseline/Baseline_60pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 6,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0003,
+     "pv_reported_saturation_fraction": 0.0002,
+     "rows": 30600
+    },
+    "Baseline/Baseline_90pct.csv": {
+     "annotated_dropouts": 0,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 17,
+     "dropout_tp": 0,
+     "duplicate_timestamps": 30089,
+     "mv_reported_fraction": 0.0,
+     "mv_reported_levels": [],
+     "mv_true_fraction_at_bound": 0.0003,
+     "pv_reported_saturation_fraction": 0.0004,
+     "rows": 30600
+    },
+    "Disturbance/Disturbance_HighOutflow_100pct.csv": {
+     "annotated_dropouts": 304,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 3,
+     "dropout_tp": 304,
+     "duplicate_timestamps": 54,
+     "mv_reported_fraction": 0.1713,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.1847,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_10pct.csv": {
+     "annotated_dropouts": 384,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 0,
+     "dropout_tp": 384,
+     "duplicate_timestamps": 89,
+     "mv_reported_fraction": 0.2661,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.2786,
+     "pv_reported_saturation_fraction": 0.0,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_60pct.csv": {
+     "annotated_dropouts": 1809,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 1,
+     "dropout_tp": 1809,
+     "duplicate_timestamps": 53,
+     "mv_reported_fraction": 0.6167,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.6281,
+     "pv_reported_saturation_fraction": 0.0016,
+     "rows": 30600
+    },
+    "PassiveOutflow/PassiveOutflow_80pct.csv": {
+     "annotated_dropouts": 1687,
+     "clock_coarser": true,
+     "dropout_fn": 0,
+     "dropout_fp": 2,
+     "dropout_tp": 1687,
+     "duplicate_timestamps": 100,
+     "mv_reported_fraction": 0.7249,
+     "mv_reported_levels": [
+      [
+       "max",
+       100.0
+      ],
+      [
+       "min",
+       0.0
+      ]
+     ],
+     "mv_true_fraction_at_bound": 0.7334,
+     "pv_reported_saturation_fraction": 0.0008,
+     "rows": 30600
+    }
+   }
+  }
+ },
+ "zip_sha256": "e31b41da2376d885774891606d346b26926d93db8483d9d7ac6bfcc23e24128e"
+}

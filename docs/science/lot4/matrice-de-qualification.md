@@ -4,7 +4,8 @@ Niveaux : 0 non développé · 1 développé non vérifié · 2 vérifié mathé
 
 | Fonctionnalité | Niveau | Preuve / limite |
 |---|---|---|
-| Import CSV, qualité des données (diagnostic) | 3 | tests synthétiques ; taux de détection sur données réelles non mesurés |
+| Import CSV, qualité des données (comptages descriptifs) | 3 | tests synthétiques ; **ne détecte pas** les pertes de capteur codées par une valeur, ni la saturation, ni l'incohérence horodatage/cadence (constats F-S01-1 à 4) |
+| Diagnostic automatique : saturation, perte de capteur possible, cadence (`signal_diagnosis.py`) | 4 (un banc) | rappel 100 % sur 9 812 pertes annotées (B+C), précision ≈ 99 %, bornes de l'actionneur retrouvées sans limite saisie ; **un seul banc, une seule convention de codage ; non intégré à l'application** |
 | Identification FOPDT / SOPDT / intégrateur | 3 | campagnes synthétiques à vérité connue ; données réelles : TCLab (extrait) en régression seulement |
 | Méthode de Broïda (28 %/40 %) | 3 | équations vérifiées, critère de plateau justifié ; capture réelle de l'interface (essai synthétique) |
 | ARX | 3 | synthétique |
