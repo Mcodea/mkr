@@ -178,7 +178,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         {
             text.AppendLine();
             text.AppendLine(Loc.T("cs.reglage_optimise_pour_le_rejet"));
-            text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.IntegralGain)));
+            text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.Controller.Kp / opt.Controller.TiSeconds)));
             text.AppendLine(Loc.T("cs.gain_integral_par_rapport_au", opt.IntegralGainRatio));
             text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent is { } overshootPercent ? F3(overshootPercent) : "—"));
             text.AppendLine(Loc.T("cs.compromis_integrale_plus_vive_donc"));
@@ -187,7 +187,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         {
             text.AppendLine();
             text.AppendLine(Loc.T("cs.pid_optimise_sous_la_meme"));
-            text.AppendLine(Loc.T("cs.kp_ti_s_td_s", F(pid.Controller.Kp), mv, pv, F(pid.Controller.TiSeconds), F(pid.Controller.TdSeconds), F(pid.Controller.FilterSeconds), F(pid.IntegralGain)));
+            text.AppendLine(Loc.T("cs.kp_ti_s_td_s", F(pid.Controller.Kp), mv, pv, F(pid.Controller.TiSeconds), F(pid.Controller.TdSeconds), F(pid.Controller.FilterSeconds), F(pid.Controller.Kp / pid.Controller.TiSeconds)));
             text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas", F(pid.WorstPeakSensitivity)) +
                 (pid.IntegralGainRatioToOptimalPi is { } ratio ? Loc.T("cs.gain_integral_par_rapport_au_2", ratio) : ""));
             if (pid.PidNotBetterThanPi == true)
