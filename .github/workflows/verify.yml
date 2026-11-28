@@ -120,6 +120,9 @@ jobs:
       - name: Tester l’acquisition Schneider et Siemens depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/acquisition.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"
+      - name: Vérifier le retrait du réglage après changement des hypothèses
+        shell: powershell
+        run: ./tests/windows/blocks.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture" -GuidedTuningOnly
       - name: Tester le réglage intégrateur et le contrôle de dérive depuis le paquet autonome
         shell: powershell
         run: ./tests/windows/blocks.ps1 -Executable "$env:RUNNER_TEMP/MKR extrait/Mkr.Desktop.exe" -Fixture "$env:RUNNER_TEMP/mkr-transfer-fixture"

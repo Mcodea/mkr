@@ -497,17 +497,6 @@ try {
             Start-Sleep -Milliseconds 700
             Capture $main "14$([char](97 + $page))-reglage-guide-suite$page"
         }
-        Check 'modifier la variation invalide le résultat de réglage copiable' {
-            $copy = Find $main $id 'CopyButton'
-            $until = [DateTime]::UtcNow.AddSeconds(90)
-            while (-not $copy.Current.IsEnabled -and [DateTime]::UtcNow -lt $until) {
-                Start-Sleep -Milliseconds 250
-            }
-            if (-not $copy.Current.IsEnabled) { throw 'Le calcul précédent doit fournir un résultat copiable.' }
-            Fill $main 'Variation' '51'
-            Press $main 'Calculer le réglage guidé'
-            -not $copy.Current.IsEnabled -and (Find $main $id 'Compute').Current.IsEnabled
-        }
         $step9 = Find $main $id 'Step9'
         $step9.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
         Start-Sleep -Milliseconds 1200

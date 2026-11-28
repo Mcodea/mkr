@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture)
+﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [switch]$GuidedTuningOnly)
 # Integrator tuning window and model drift check, driven through UI Automation (fixtures written by tests/Mkr.Smoke).
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
@@ -110,6 +110,28 @@ try {
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
     $null = Find $main $id 'StudyPicker'
+    if ($GuidedTuningOnly) {
+        $studyId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+        Select-Option $main 'StudyPicker' "*$studyId"
+        Go-Tab $main 6
+        $copy = Find $main $id 'CopyButton'
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
+        if (-not $copy.Current.IsEnabled) { throw 'Le réglage calculé doit pouvoir être copié.' }
+
+        Select-Option $main 'Objective' 'Robuste*'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après changement de robustesse.' }
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
+        if (-not $copy.Current.IsEnabled) { throw 'Le nouveau réglage doit pouvoir être copié.' }
+
+        Fill $main 'Variation' '51'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après changement de la variation.' }
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' '*au plus 50*'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après le refus de la saisie.' }
+        return
+    }
     $project = $main      # single window: the project's data are the « Données » tab of the workspace
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'
