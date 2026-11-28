@@ -86,6 +86,8 @@ jobs:
         run: dotnet run --project tests/Mkr.Communication.Tests -c Release --no-build
       - name: Tester la description physique et les profils
         run: dotnet run --project tests/Mkr.PhysicalLoop.Tests -c Release --no-build
+      - name: Tester l'obsolescence des résultats par dépendances (ADR 0009)
+        run: dotnet run --project tests/Mkr.Orchestration.Tests -c Release --no-build
       - name: Vérifier le parcours graphique du catalogue
         shell: powershell
         run: .\tests\windows\catalogue.ps1
