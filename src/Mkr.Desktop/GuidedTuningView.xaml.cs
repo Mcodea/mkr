@@ -78,6 +78,8 @@ public partial class GuidedTuningView : UserControl, IStepView
         ModelLine.Text = modelLine;
         Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? Loc.T("cs.survolez_un_graphique_pour_lire") : text;
         ObjectiveChanged(this, null!);
+        Objective.SelectionChanged += (_, _) => ClearResult();
+        Variation.TextChanged += (_, _) => ClearResult();
     }
 
     private string ObjectiveTag => (Objective.SelectedItem as ComboBoxItem)?.Tag as string ?? DesignObjectives.Balanced;
@@ -93,8 +95,21 @@ public partial class GuidedTuningView : UserControl, IStepView
         };
     }
 
+    private void ClearResult()
+    {
+        _last = null;
+        CopyButton.IsEnabled = false;
+        Verdict.Visibility = ParamPanel.Visibility = ComparePanel.Visibility = AltPanel.Visibility = Visibility.Collapsed;
+        CurveBar.Visibility = Chart.Visibility = Visibility.Collapsed;
+        ChartEmpty.Visibility = Visibility.Visible;
+        Alternatives.ItemsSource = null;
+        Result.Clear();
+        Notes.Text = CursorLine.Text = Status.Text = string.Empty;
+    }
+
     private async void Calculate(object sender, RoutedEventArgs args)
     {
+        ClearResult();
         var token = _lifetime.Token;
         double? variation = null;
         if (!string.IsNullOrWhiteSpace(Variation.Text))
@@ -106,7 +121,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             }
             variation = percent;
         }
-        Compute.IsEnabled = false;
+        Compute.IsEnabled = Objective.IsEnabled = Variation.IsEnabled = false;
         Status.Text = Loc.T("cs.calcul_en_cours_recherche_du");
         try
         {
@@ -116,7 +131,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }
-        finally { Compute.IsEnabled = true; }
+        finally { Compute.IsEnabled = Objective.IsEnabled = Variation.IsEnabled = true; }
     }
 
     private static string F(double value) => value.ToString("G5", CultureInfo.CurrentCulture);
