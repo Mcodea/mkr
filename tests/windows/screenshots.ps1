@@ -373,7 +373,8 @@ try {
     # niveau à 28 % et 40 % et les marqueurs verticaux « 28 % » / « 40 % ». Capture à relire par une personne (aucune assertion sur les pixels).
     Step '04c-identification-broida' {
         $broidaId = (Get-Content -LiteralPath (Join-Path $Fixture 'broida-study.txt') -Raw).Trim()
-        Select-Option $ident 'StudyList' "*$broidaId"
+        # l'étude Broïda n'a pas de porte de validation : son libellé se termine par « · refusée », d'où le joker final (run 374 : « Option absente »)
+        Select-Option $ident 'StudyList' "*$broidaId*"
         Start-Sleep -Milliseconds 1200
         Capture $ident '04c-identification-broida'
         Select-Option $ident 'StudyList' "*$modelId"     # retour à la sélection précédente : les étapes suivantes sont inchangées
