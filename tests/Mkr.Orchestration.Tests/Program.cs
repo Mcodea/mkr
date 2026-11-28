@@ -280,6 +280,21 @@ Check("the rule table has a version, covers every kind and every facet is used b
     DependencyEngine.RulesVersion == "1.1.0" && Enum.GetValues<ResultKind>().All(kind => DependencyRules.FacetsOf(kind) is not null) &&
     Enum.GetValues<ConfigurationFacet>().All(f => Enum.GetValues<ResultKind>().Any(k => DependencyRules.FacetsOf(k).Contains(f))));
 
+// ---- Dépendances enregistrées avec le résultat (tranche 2) ----
+Check("dependencies: a result records ONLY the facets its kind depends on, survives a JSON round trip, and is invalidated exactly like the in-memory node", () =>
+{
+    var original = Initial();
+    var captured = ResultDependencies.Capture(ResultKind.Model, original, Array.Empty<Guid>(), "rev", "data", "hyp");
+    var json = System.Text.Json.JsonSerializer.Serialize(captured);
+    var back = System.Text.Json.JsonSerializer.Deserialize<ResultDependencies>(json)!;
+    if (back.Facets.Keys.Contains(nameof(ConfigurationFacet.PidParameters)) || !back.Facets.ContainsKey(nameof(ConfigurationFacet.IdentificationWindow))) return false;
+    var node = back.ToNode(model, ResultKind.Model, t0);
+    var same = DependencyEngine.Evaluate(original, new[] { node })[model];
+    var changed = DependencyEngine.Evaluate(original.Apply(ConfigurationFacet.IdentificationWindow, "win-2", t0.AddHours(1), "bob"), new[] { node })[model];
+    var unrelated = DependencyEngine.Evaluate(original.Apply(ConfigurationFacet.PidParameters, "pid-9", t0.AddHours(1), "bob"), new[] { node })[model];
+    return same.Status != ResultStatus.Obsolete && changed.Status == ResultStatus.Obsolete && unrelated.Status != ResultStatus.Obsolete;
+});
+
 // ---- Advisor : one plain conclusion, why, and what to do (no threshold is ever asked from the user) ----
 var none = new RecourseOptions(false, false, false);
 var all3 = new RecourseOptions(true, true, true);
@@ -341,3 +356,4 @@ Check("advisor: every combination yields a conclusion WITH an explanation and an
 
 Console.WriteLine(failures == 0 ? "Orchestration (dépendances) : tous les contrôles passent." : $"{failures} contrôle(s) en échec.");
 return failures == 0 ? 0 : 1;
+

@@ -266,3 +266,21 @@ public interface IConfigurationHistory
     IReadOnlyList<ConfigurationRecord> ListConfiguration(Guid projectId);
     ConfigurationVerification VerifyConfiguration(Guid projectId);
 }
+
+/// <summary>
+/// What a result recorded about its own dependencies at calculation time, stored WITH the result (JSON, optional: a result recorded before it carries null = legacy, "to verify", never obsolete).
+/// Facets are keyed by name so the stored text does not depend on the enum order. The validation proof is stored apart (it is issued when the user validates, not when the result is computed).
+/// </summary>
+public sealed record ResultDependencies(IReadOnlyDictionary<string, string> Facets, IReadOnlyList<Guid> UpstreamResults, string RevisionFingerprint, string DataFingerprint, string AssumptionsFingerprint)
+{
+    /// <summary>Records the facets of the ACTIVE configuration that this kind of result depends on (per the rule table) ; other facets are not recorded, so they can never invalidate it.</summary>
+    public static ResultDependencies Capture(ResultKind kind, ProjectConfiguration configuration, IEnumerable<Guid> upstream, string revision, string data, string assumptions)
+    {
+        var facets = DependencyRules.FacetsOf(kind).Where(configuration.Current.ContainsKey).ToDictionary(f => f.ToString(), f => configuration.Current[f]);
+        return new ResultDependencies(facets, upstream.ToArray(), revision, data, assumptions);
+    }
+
+    public ResultNode ToNode(Guid id, ResultKind kind, DateTimeOffset calculatedAt, ValidationProof? proof = null, bool blocked = false) =>
+        new(id, kind, calculatedAt, Facets.ToDictionary(pair => Enum.Parse<ConfigurationFacet>(pair.Key), pair => pair.Value), UpstreamResults, RevisionFingerprint, DataFingerprint,
+            AssumptionsFingerprint, proof, blocked);
+}

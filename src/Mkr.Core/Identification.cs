@@ -41,7 +41,9 @@ public sealed record IdentificationStudy(Guid Id, Guid TrainingId, Guid Validati
     ValidationAssessment? Assessment = null,
     // Versions of the libraries that did the computation (Python, numpy, scipy), recorded with the study for traceability (LOT 1). Optional: studies recorded
     // before it, or computed while the engine could not report them, carry null ("unknown"), never a guessed value.
-    string? EngineLibraries = null)
+    string? EngineLibraries = null,
+    // Dependencies recorded at calculation time (ADR 0009, LOT 1): optional, null for a study recorded before it ("to verify", never obsolete).
+    ResultDependencies? Dependencies = null)
 {
     public string Label => $"{Family} · {CalculatedAt.ToLocalTime():g} · {Id.ToString()[..8]}" +
         (IsAcceptedForTuning ? "" : " · refusée");
