@@ -1079,6 +1079,8 @@ try
         }
         File.WriteAllText(Path.Combine(fixture, "noisy-demo-study.txt"), noisyStudy.Id.ToString()[..8]);
         File.WriteAllText(Path.Combine(fixture, "short-delay-study.txt"), rapidStudy.Id.ToString()[..8]);
+        // Broïda study computed by the real engine on the synthetic fixture trials: its 28 % / 40 % crossings are drawn on the identification chart (capture 04c).
+        File.WriteAllText(Path.Combine(fixture, "broida-study.txt"), broidaStudy.Id.ToString()[..8]);
         // Fixtures for the block, integrator and drift windows (tests/windows/blocks.ps1).
         var integratorCriteria = new ComparisonCriteria(0.001, 1);
         var (integratorFit, integratorVersion) = await engine.IdentifyAsync(ModelFamily.Integrateur, new StepImport(trainingThird, columns),

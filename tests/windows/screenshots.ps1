@@ -369,6 +369,15 @@ try {
     $modelId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
     Select-Option $ident 'StudyList' "*$modelId"
     Capture $ident '04-identification'
+    # Broïda (cahier directeur, section 42.2) : l'étude Broïda du jeu d'essai SYNTHÉTIQUE est sélectionnée dans l'application réelle ; son graphique doit montrer les lignes de
+    # niveau à 28 % et 40 % et les marqueurs verticaux « 28 % » / « 40 % ». Capture à relire par une personne (aucune assertion sur les pixels).
+    Step '04c-identification-broida' {
+        $broidaId = (Get-Content -LiteralPath (Join-Path $Fixture 'broida-study.txt') -Raw).Trim()
+        Select-Option $ident 'StudyList' "*$broidaId"
+        Start-Sleep -Milliseconds 1200
+        Capture $ident '04c-identification-broida'
+        Select-Option $ident 'StudyList' "*$modelId"     # retour à la sélection précédente : les étapes suivantes sont inchangées
+    }
     Show-Page $ident 'PageSetup'
     Step '04b-courbes' {
         Select-Option $ident 'TrainingSource' '*'
