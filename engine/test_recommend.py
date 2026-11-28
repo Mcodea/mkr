@@ -35,7 +35,7 @@ def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
         dt = min(dt, tf / 5)                                          # explicit Euler of the derivative filter needs dt well below Tf
     steps = int(horizon / dt)
     lag = int(round(delay / dt))
-    buffer = [0.0] * (lag + 1)
+    buffer = [0.0] * lag  # append then pop: exactly lag old samples precede the first command
     states = [0.0] * len(taus)
     integral, previous_error, output, filtered = 0.0, 1.0, 0.0, 0.0
     peak = 0.0
@@ -63,6 +63,15 @@ def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
 
 
 class Equations(unittest.TestCase):
+    def test_independent_delay_buffer_applies_a_command_after_exactly_the_specified_dead_time(self):
+        # Pure integrator, 12 s delay, dt=1 s, proportional unit command.
+        # At t=12 s the state is still zero. Over [12,13] its slope is one.
+        def final_error(horizon):
+            return closed_loop_settles(1.0, [], 12.0, 1.0, math.inf, 0.0, horizon)[0]
+
+        self.assertEqual(final_error(12.0), 1.0)
+        self.assertEqual(final_error(13.0), 0.0)
+
     def test_pi_matches_the_published_simc_rule_at_the_returned_closed_loop_time_constant(self):
         result = calculate(request())
         controller, tauc = result["recommendation"]["controller"], result["recommendation"]["responseSeconds"]
