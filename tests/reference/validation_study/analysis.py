@@ -24,6 +24,12 @@ CALIBRATED = ("D", "E", "C7")
 CANDIDATES = ("A1", "A2", "B", "C", "D", "E", "C7", "A_or_D", "A_or_E", "A_and_E", "A_or_C7")
 ALL = ("A",) + CANDIDATES
 CONFIDENCE = 0.95
+SAFETY_MARGIN = 0.01                       # marge de non-infériorité de sécurité du protocole v1.3 (§7 i) ; appliquée à la BORNE, plus à l'estimation (amendement v1.4)
+
+
+def adoption_level():
+    """Niveau unilatéral des décisions d'adoption : 95 % corrigé de Bonferroni par le nombre de candidats comparés (amendement v1.4)."""
+    return 1 - (1 - CONFIDENCE) / len(CANDIDATES)
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------- statistiques exactes
@@ -41,6 +47,24 @@ def upper_bound(k, n, level=CONFIDENCE):
     if n == 0:
         return None
     return 1.0 if k == n else float(beta.ppf(level, k + 1, n - k))
+
+
+def lower_bound(k, n, level=CONFIDENCE):
+    """Borne inférieure UNILATÉRALE exacte (Clopper-Pearson) du taux k/n."""
+    if n == 0:
+        return None
+    return 0.0 if k == 0 else float(beta.ppf(1 - level, k, n - k + 1))
+
+
+def paired_difference_upper(b, c, n, level):
+    """Borne supérieure unilatérale, de niveau AU MOINS `level`, de la différence appariée P(b) - P(c) (b = cas où seul le candidat « bascule », c = seulement la référence),
+    sur n unités. Borne de Bonferroni de deux intervalles exacts de Clopper-Pearson (U(b) au niveau 1 - (1-level)/2, moins L(c) au même niveau) : valide sans approximation
+    normale, y compris pour des événements rares ou ABSENTS (b = c = 0 donne environ 3/n au lieu d'une certitude de 0, ce que donnerait un bootstrap par percentiles dégénéré).
+    Conservatrice par construction. Références : Clopper & Pearson 1934 ; Newcombe 1998 (Stat. Med. 17:2635) pour les différences de proportions appariées ; Fagerland, Lydersen & Laake 2013 (BMC Med. Res. Methodol. 13:91)."""
+    if n == 0:
+        return None
+    half = 1 - (1 - level) / 2
+    return upper_bound(b, n, half) - lower_bound(c, n, half)
 
 
 def inaptes_needed(alpha, level=CONFIDENCE):
@@ -154,7 +178,8 @@ def evaluate(rows_eval, thresholds, m_lim, itae_factor=None, seed=20261128):
     imperfect = np.array([r["info"]["population"] in IMPERFECT for r in usable])
     acc = {name: np.array([decisions(r, thresholds)[name] for r in usable]) for name in ALL}
     n = len(usable)
-    out = dict(n=n, n_fit=int(fit.sum()), n_unfit=int((~fit).sum()), n_unstable=int((~stable & ~uncertain).sum()), n_stability_uncertain=int(uncertain.sum()), by={}, cross={}, stability={})
+    excluded = [r for r in rows_eval if r not in usable]        # modèle identifié mais vérité ou statistiques E/C7 absentes (biais de sélection potentiel)
+    out = dict(n=n, excluded_with_model=len(excluded), n_fit=int(fit.sum()), n_unfit=int((~fit).sum()), n_unstable=int((~stable & ~uncertain).sum()), n_stability_uncertain=int(uncertain.sum()), by={}, cross={}, stability={})
     rng = np.random.default_rng(seed)
     idx = rng.integers(0, n, size=(BOOTSTRAP, n)) if n else np.zeros((BOOTSTRAP, 0), dtype=int)
     for name in ALL:
@@ -176,12 +201,24 @@ def evaluate(rows_eval, thresholds, m_lim, itae_factor=None, seed=20261128):
             du, dr = np.array(boot_du), np.array(boot_dr)
             entry["diff_false_positive"] = dict(est=float(np.nanmean(du)), ci=[float(np.nanquantile(du, lo)), float(np.nanquantile(du, hi))])
             entry["diff_false_negative"] = dict(est=float(np.nanmean(dr)), ci=[float(np.nanquantile(dr, lo)), float(np.nanquantile(dr, hi))])
+            # Décisions d'adoption : bornes EXACTES appariées (le bootstrap ci-dessus reste descriptif ; il est dégénéré quand l'événement est rare ou absent).
+            level = adoption_level()
+            only_c, only_a = int((a & ~acc["A"] & ~fit).sum()), int((acc["A"] & ~a & ~fit).sum())
+            fn_c, fn_a = int((~a & acc["A"] & fit).sum()), int((a & ~acc["A"] & fit).sum())
+            entry["paired"] = dict(
+                fp_only_candidate=only_c, fp_only_current=only_a, fp_diff_upper=paired_difference_upper(only_c, only_a, fp_n, level),
+                fn_only_candidate=fn_c, fn_only_current=fn_a, fn_diff_upper=paired_difference_upper(fn_c, fn_a, fn_n, level), level=level)
+        # Sensibilité à la sélection (bornes de type Manski 1989 pour données manquantes) : et si TOUS les cas exclus étaient des inaptes acceptés par ce critère ?
+        entry["selection_worst_case_fp_upper_adoption"] = upper_bound(fp_k + len(excluded), fp_n + len(excluded), adoption_level())
+        entry["false_positive"]["upper_adoption"] = upper_bound(fp_k, fp_n, adoption_level())
         out["by"][name] = entry
         out["cross"][name] = {
             "imparfait_reglage_apte_accepte": int((a & imperfect & fit).sum()), "imparfait_reglage_apte_total": int((imperfect & fit).sum()),
             "imparfait_reglage_inapte_accepte": int((a & imperfect & ~fit).sum()), "imparfait_reglage_inapte_total": int((imperfect & ~fit).sum()),
             "exact_reglage_inapte_accepte": int((a & ~imperfect & ~fit).sum()), "exact_reglage_inapte_total": int((~imperfect & ~fit).sum())}
-        out["stability"][name] = dict(accepted=int(a.sum()), accepted_unstable_or_uncertain=int((a & ~stable).sum()))
+        k_unstable, n_accepted = int((a & ~stable).sum()), int(a.sum())
+        out["stability"][name] = dict(accepted=n_accepted, accepted_unstable_or_uncertain=k_unstable,
+                                      rate_upper95=upper_bound(k_unstable, n_accepted), ci95=clopper_pearson(k_unstable, n_accepted))      # k = 0 : borne ~ 3/n, jamais « 0 % »
     return out
 
 
@@ -217,8 +254,11 @@ def ladder(rows_eval, m_lim):
                 rejected_by_current_gate_and_original_tuning_fit=part(lambda r: not r["gate"]["accepted"] and label(r, m_lim) is True))
 
 
-def adopt(table):
-    """Règle §7 i-iii, α primaire (borne supérieure, v1.3 §3). iv (données réelles avec vérité de commande) non satisfait : adoption finale refusée."""
+def adopt(table, alpha):
+    """Règle §7 i-iii pour le risque `alpha` (5 % ou 1 %) — amendement v1.4 : (i) sécurité = borne supérieure appariée de la différence de faux positifs <= marge de non-infériorité
+    ET borne supérieure unilatérale du taux de faux positifs (niveau de Bonferroni) <= alpha, ET la même borne tient dans le pire cas où tous les cas exclus faute de vérité seraient
+    des inaptes acceptés ; (ii) gain = borne supérieure appariée de la différence de faux négatifs < 0 ; (iii) robustesse à la définition. iv (données réelles avec vérité de commande)
+    non satisfait : adoption finale refusée."""
     verdict = {}
     for name in CANDIDATES:
         passes = {}
@@ -228,12 +268,14 @@ def adopt(table):
             if fp["n"] == 0:
                 passes[definition] = False
                 continue
-            safe = by["diff_false_positive"]["est"] <= 0.01 and fp["upper95_onesided"] <= ALPHAS[0]
-            gain = by["diff_false_negative"]["ci"][1] < 0.0
+            paired = by["paired"]
+            safe = (paired["fp_diff_upper"] is not None and paired["fp_diff_upper"] <= SAFETY_MARGIN and fp["upper_adoption"] <= alpha
+                    and by["selection_worst_case_fp_upper_adoption"] <= alpha)
+            gain = paired["fn_diff_upper"] is not None and paired["fn_diff_upper"] < 0.0
             passes[definition] = bool(safe and gain)
         primary = passes.get(f"M<={PRIMARY}", False)
         others = sum(v for k, v in passes.items() if k in ("M<=1.7", "M<=2.5", "M<=3.0"))
-        verdict[name] = dict(passes=passes, demonstrated_on_synthetic_only=bool(primary and others >= 2), adopted=False,
+        verdict[name] = dict(alpha=alpha, passes=passes, demonstrated_on_synthetic_only=bool(primary and others >= 2), adopted=False,
                              reason_not_adopted="iv : aucune donnée réelle offrant une vérité de commande")
     return verdict
 
@@ -279,11 +321,22 @@ def phase_final(rows, frozen):
     evaluation = [r for r in valid if r["index"] >= 1000]
     skipped = dict(total=len(rows), crash=sum("crash" in r for r in rows), identification_error=sum("identification_error" in r for r in rows),
                    no_tuning=sum("no_tuning" in r for r in rows), no_truth=sum("truth" not in r for r in valid), no_extras=sum(r.get("stability") is None for r in valid))
-    report = dict(skipped=skipped, thresholds_sha256=frozen["sha256"], inaptes_needed=dict((f"{a:.2f}", inaptes_needed(a)) for a in ALPHAS), alphas={})
+    by_population = {}
+    for r in [r for r in rows if r["index"] >= 1000]:
+        entry = by_population.setdefault(r["info"]["population"], dict(total=0, no_model=0, with_gate=0, no_tuning=0, no_truth=0, no_extras=0))
+        entry["total"] += 1
+        entry["no_model"] += int("gate" not in r)
+        entry["with_gate"] += int("gate" in r)
+        entry["no_tuning"] += int("gate" in r and "no_tuning" in r)
+        entry["no_truth"] += int("gate" in r and "truth" not in r)
+        entry["no_extras"] += int("gate" in r and r.get("stability") is None)
+    for entry in by_population.values():
+        entry["coverage"] = (entry["with_gate"] - entry["no_extras"]) / entry["total"] if entry["total"] else None
+    report = dict(coverage_evaluation=by_population, skipped=skipped, thresholds_sha256=frozen["sha256"], inaptes_needed=dict((f"{a:.2f}", inaptes_needed(a)) for a in ALPHAS), alphas={})
     for alpha in ALPHAS:
         thresholds = {k: v for k, v in frozen["body"]["alphas"][f"{alpha:.2f}"]["thresholds"].items()}
         table = {f"M<={m}": evaluate(evaluation, thresholds, m) for m in M_LIMITS}
-        report["alphas"][f"{alpha:.2f}"] = dict(thresholds=thresholds, table=table, verdict=adopt(table), per_population=per_population(evaluation, thresholds, PRIMARY))
+        report["alphas"][f"{alpha:.2f}"] = dict(thresholds=thresholds, table=table, verdict=adopt(table, alpha), per_population=per_population(evaluation, thresholds, PRIMARY))
     report["discriminating_power"] = {f"M<={m}": discriminating_power(evaluation, m) for m in M_LIMITS}
     report["ladder"] = {f"M<={m}": ladder(evaluation, m) for m in M_LIMITS}
     return report

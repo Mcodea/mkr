@@ -218,7 +218,7 @@ class AnalysisLogic(unittest.TestCase):
         ev = analysis.evaluate(rows, THRESHOLDS, 2.0)
         self.assertEqual((ev["n_fit"], ev["n_unfit"]), (30, 15))
         self.assertEqual((ev["n_unstable"], ev["n_stability_uncertain"]), (10, 5))
-        self.assertEqual(ev["stability"]["A"], dict(accepted=45, accepted_unstable_or_uncertain=15))       # A accepte tout : 15 réglages douteux acceptés, signalés
+        self.assertEqual((ev["stability"]["A"]["accepted"], ev["stability"]["A"]["accepted_unstable_or_uncertain"]), (45, 15))       # A accepte tout : 15 réglages douteux acceptés, signalés
         self.assertEqual(ev["by"]["A"]["false_positive"]["k"], 15)
 
     def test_imperfect_model_with_a_fit_tuning_is_reported_apart_from_an_unfit_tuning(self):
@@ -243,22 +243,77 @@ class AnalysisLogic(unittest.TestCase):
         self.assertEqual((out["n"], out["robust_fit"], out["alternative_fit"], out["either_fit"], out["alternative_available"]), (3, 1, 1, 2, 1))
 
     def test_adoption_never_happens_without_real_data_even_when_the_synthetic_evidence_is_strong(self):
-        def table(unsafe_diff, rej_hi, upper=0.03):
-            by = {name: dict(false_positive=dict(n=100, k=0, rate=0.0, upper95_onesided=upper), diff_false_positive=dict(est=unsafe_diff, ci=(0, 0)),
-                             diff_false_negative=dict(est=-0.2, ci=(-0.3, rej_hi))) for name in analysis.CANDIDATES}
+        def table(fp_diff_upper, fn_diff_upper, upper=0.03, worst=0.03):
+            by = {name: dict(false_positive=dict(n=100, k=0, rate=0.0, upper95_onesided=upper, upper_adoption=upper), selection_worst_case_fp_upper_adoption=worst,
+                             paired=dict(fp_diff_upper=fp_diff_upper, fn_diff_upper=fn_diff_upper)) for name in analysis.CANDIDATES}
             return dict(by=by)
         good = {k: table(0.0, -0.05) for k in ("M<=1.7", "M<=2.0", "M<=2.5", "M<=3.0")}
-        verdict = analysis.adopt(good)["D"]
+        verdict = analysis.adopt(good, 0.05)["D"]
         self.assertTrue(verdict["demonstrated_on_synthetic_only"])
         self.assertFalse(verdict["adopted"])
         self.assertIn("iv", verdict["reason_not_adopted"])
-        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.0, -0.05, upper=0.07)}))["D"]["demonstrated_on_synthetic_only"])     # borne supérieure > 5 % : refusé
-        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.05, -0.05)}))["D"]["demonstrated_on_synthetic_only"])                # plus de faux positifs que A : refusé
-        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.0, 0.02)}))["D"]["demonstrated_on_synthetic_only"])                   # gain non démontré : refusé
+        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.0, -0.05, upper=0.07)}), 0.05)["D"]["demonstrated_on_synthetic_only"])     # borne > 5 % : refusé
+        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.05, -0.05)}), 0.05)["D"]["demonstrated_on_synthetic_only"])               # plus de faux positifs que A : refusé
+        self.assertFalse(analysis.adopt(dict(good, **{"M<=2.0": table(0.0, 0.02)}), 0.05)["D"]["demonstrated_on_synthetic_only"])                 # gain non démontré : refusé
         fragile = {k: table(0.0, 0.02) for k in ("M<=1.7", "M<=2.5", "M<=3.0")}
         fragile["M<=2.0"] = table(0.0, -0.05)
-        self.assertFalse(analysis.adopt(fragile)["D"]["demonstrated_on_synthetic_only"])
+        self.assertFalse(analysis.adopt(fragile, 0.05)["D"]["demonstrated_on_synthetic_only"])
 
+    def test_adopt_uses_the_risk_level_it_is_given_and_not_always_five_percent(self):
+        # amendement v1.4 : adopt lisait toujours ALPHAS[0] ; un candidat à 3 % de borne est démontré à 5 % mais PAS à 1 %
+        good = {k: dict(by={name: dict(false_positive=dict(n=100, k=0, upper_adoption=0.03), selection_worst_case_fp_upper_adoption=0.03,
+                                       paired=dict(fp_diff_upper=0.0, fn_diff_upper=-0.05)) for name in analysis.CANDIDATES})
+                for k in ("M<=1.7", "M<=2.0", "M<=2.5", "M<=3.0")}
+        self.assertTrue(analysis.adopt(good, 0.05)["D"]["demonstrated_on_synthetic_only"])
+        self.assertFalse(analysis.adopt(good, 0.01)["D"]["demonstrated_on_synthetic_only"])
+        self.assertEqual(analysis.adopt(good, 0.01)["D"]["alpha"], 0.01)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_safety_non_inferiority_is_judged_on_the_upper_bound_not_on_the_point_estimate(self):
+        # même estimation ponctuelle de différence (0) mais peu de cas : la borne supérieure appariée est large et la non-infériorité n'est PAS démontrée
+        self.assertGreater(analysis.paired_difference_upper(0, 0, 40, analysis.adoption_level()), analysis.SAFETY_MARGIN)
+        self.assertLess(analysis.paired_difference_upper(0, 0, 2000, analysis.adoption_level()), analysis.SAFETY_MARGIN)
+
+    def test_paired_upper_bound_is_valid_by_simulation_including_rare_and_absent_events(self):
+        # indépendant du code : couverture empirique sur des tirages multinomiaux connus ; la borne doit dépasser la vraie différence dans au moins 1 - risque des tirages
+        import numpy as np
+        rng = np.random.default_rng(7)
+        level = 0.95
+        for pb, pc, n in ((0.0, 0.0, 100), (0.01, 0.0, 100), (0.02, 0.02, 200), (0.05, 0.01, 60), (0.0, 0.03, 300)):
+            true_diff, covered, trials = pb - pc, 0, 600
+            for _ in range(trials):
+                draw = rng.multinomial(n, [pb, pc, 1 - pb - pc])
+                covered += analysis.paired_difference_upper(int(draw[0]), int(draw[1]), n, level) >= true_diff
+            self.assertGreaterEqual(covered / trials, 0.95 - 0.02, (pb, pc, n))      # conservatrice : au moins ~95 % (tolérance de Monte-Carlo 2 points)
+
+    def test_absent_event_never_reports_zero_percent_with_certainty(self):
+        self.assertAlmostEqual(analysis.upper_bound(0, 300), 1 - 0.05 ** (1 / 300), places=12)     # règle des trois : ~ 3/n
+        self.assertAlmostEqual(analysis.upper_bound(0, 300) * 300, 3.0, delta=0.05)
+        self.assertEqual(analysis.lower_bound(0, 50), 0.0)
+        self.assertEqual(analysis.upper_bound(50, 50), 1.0)
+        self.assertIsNone(analysis.upper_bound(0, 0))
+        # aucun réglage instable accepté : la borne reste strictement positive et est publiée
+        ev = analysis.evaluate([row(1.5, stable=True, population="P1") for _ in range(100)], THRESHOLDS, 2.0)
+        s = ev["stability"]["A"]
+        self.assertEqual(s["accepted_unstable_or_uncertain"], 0)
+        self.assertGreater(s["rate_upper95"], 0.02)
+        self.assertLess(s["rate_upper95"], 0.04)
+
+    def test_excluded_cases_are_counted_and_bound_the_possible_selection_bias(self):
+        usable = [row(3.0, accepted=False, population="P6") for _ in range(100)]
+        missing_truth = [dict(row(3.0, accepted=True, population="P6"), stability=None) for _ in range(40)]     # modèle identifié, pas de vérité
+        ev = analysis.evaluate(usable + missing_truth, THRESHOLDS, 2.0)
+        self.assertEqual((ev["n"], ev["excluded_with_model"]), (100, 40))
+        entry = ev["by"]["A"]
+        self.assertEqual(entry["false_positive"]["k"], 0)                                   # taux observé nul parmi les cas utilisables...
+        worst = entry["selection_worst_case_fp_upper_adoption"]
+        self.assertGreater(worst, 0.2)                                                      # ...mais si les 40 exclus étaient tous des faux positifs, la borne le dit
+        self.assertGreater(worst, entry["false_positive"]["upper_adoption"])
+
+    def test_the_final_report_publishes_coverage_by_population(self):
+        base = lambda i, **kw: dict(row(1.5, population="P1", index=1000 + i), **kw)
+        rows = [base(i) for i in range(8)] + [dict(info=dict(population="P1"), snr=20, index=1008 + i, crash="x") for i in range(2)]
+        frozen = analysis.phase_calibration([row(3.0, nse=0.01 * (i + 1), index=i) for i in range(100)])
+        report = analysis.phase_final(rows, frozen)
+        c = report["coverage_evaluation"]["P1"]
+        self.assertEqual((c["total"], c["no_model"], c["with_gate"]), (10, 2, 8))
+        self.assertAlmostEqual(c["coverage"], 0.8)
