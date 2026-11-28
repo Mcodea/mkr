@@ -218,6 +218,7 @@ try
             ALTER TABLE projects DROP COLUMN loop_tag;
             ALTER TABLE projects DROP COLUMN controlled_quantity;
             ALTER TABLE projects DROP COLUMN operating_point;
+            DROP TABLE configuration_versions;
             DROP TABLE arx_studies;
             DROP TABLE audit_events;
             ALTER TABLE projects DROP COLUMN control_objective;
