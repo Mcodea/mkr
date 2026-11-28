@@ -495,6 +495,8 @@
  "cs.non_decide_2": "non décidé",
  "cs.non_stabilisee_essai_trop_court": "{0:G4} {1}, non stabilisée : essai trop court ou procédé intégrateur",
  "cs.numero_dechantillon": "Numéro d’échantillon",
+ "cs.tuning_study_reference": "Étude {0}\nEssai d’identification {1}\nEssai de validation {2}\nVersion de l’algorithme d’identification {3}",
+ "cs.tuning_algorithm_version": "Version de l’algorithme de réglage {0}",
  "cs.objectif": "Objectif : {0}",
  "cs.observee": "Observée",
  "cs.operation_impossible_verifiez_le_stockage": "Opération impossible. Vérifiez le stockage local, le fichier et la disponibilité de Python.",

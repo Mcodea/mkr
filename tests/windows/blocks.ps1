@@ -119,6 +119,14 @@ try {
         $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
         if (-not $copy.Current.IsEnabled) { throw 'Le réglage calculé doit pouvoir être copié.' }
 
+        Press $main 'Copier le résultat'
+        $null = Wait-Name $main 'Status' '*copié*'
+        $report = Get-Clipboard -Raw
+        if (-not $report.Contains($studyId)) { throw "Identifiant de l'étude absent du résultat copié." }
+        foreach ($part in @("Essai de validation ", "Essai d’identification ", "algorithme de réglage ", "algorithme d’identification ")) {
+            if (-not $report.Contains($part)) { throw "Provenance absente du résultat copié : $part" }
+        }
+
         Select-Option $main 'Objective' 'Robuste*'
         if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après changement de robustesse.' }
         Press $main 'Calculer le réglage guidé'

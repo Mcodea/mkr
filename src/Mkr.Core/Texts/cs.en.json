@@ -495,6 +495,8 @@
  "cs.non_decide_2": "undecided",
  "cs.non_stabilisee_essai_trop_court": "{0:G4} {1}, not settled: test too short or integrating process",
  "cs.numero_dechantillon": "Sample number",
+ "cs.tuning_study_reference": "Study {0}\nIdentification trial {1}\nValidation trial {2}\nIdentification algorithm version {3}",
+ "cs.tuning_algorithm_version": "Tuning algorithm version {0}",
  "cs.objectif": "Objective: {0}",
  "cs.observee": "Observed",
  "cs.operation_impossible_verifiez_le_stockage": "Operation impossible. Check the local storage, the file and the availability of Python.",

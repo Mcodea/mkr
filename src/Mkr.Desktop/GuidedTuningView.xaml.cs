@@ -11,7 +11,7 @@ namespace Mkr.Desktop;
 public partial class GuidedTuningView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
-    private readonly string _mvUnit, _pvUnit;
+    private readonly string _mvUnit, _pvUnit, _studyReference;
     private readonly double _noiseUpperBound;
     private readonly Func<string, double?, CancellationToken, Task<GuidedTuning>> _recommend;
     private readonly CancellationTokenSource _lifetime = new();
@@ -48,7 +48,7 @@ public partial class GuidedTuningView : UserControl, IStepView
     }
 
     internal GuidedTuningView(IdentificationWorkspace workspace, IdentificationStudy model)
-        : this(workspace, model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
+        : this(workspace, Loc.T("cs.tuning_study_reference", model.Id, model.TrainingId, model.ValidationId, model.Result.AlgorithmVersion), model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
             Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
             (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
             Loc.T("cs.prudent_s", model.Result.TuningDelaySeconds),
@@ -58,7 +58,7 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     /// <summary>From an accepted ARX / OE study (ADR 0008): the first-order equivalent of the retained (1,1) model, delay quantised to the sampling grid.</summary>
     internal GuidedTuningView(IdentificationWorkspace workspace, ArxStudy study)
-        : this(workspace, study.MvUnit, study.PvUnit, 0,
+        : this(workspace, Loc.T("cs.tuning_study_reference", study.Id, study.TrainingId, study.ValidationId, study.Result.AlgorithmVersion), study.MvUnit, study.PvUnit, 0,
             study.Result.Selected is { FirstOrder: { } f, Nk: var nk }
                 ? Loc.T("cs.modele_arx_oe_1_1", f.Gain, study.PvUnit, study.MvUnit, f.TauSeconds, nk * study.Result.SamplePeriodSeconds, study.Result.SamplePeriodSeconds)
                 : Loc.T("cs.modele_arx_oe_sans_equivalent"),
@@ -66,11 +66,12 @@ public partial class GuidedTuningView : UserControl, IStepView
     {
     }
 
-    private GuidedTuningView(IdentificationWorkspace workspace, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
+    private GuidedTuningView(IdentificationWorkspace workspace, string studyReference, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
         Func<string, double?, CancellationToken, Task<GuidedTuning>> recommend)
     {
         InitializeComponent();
         _workspace = workspace;
+        _studyReference = studyReference;
         _mvUnit = mvUnit;
         _pvUnit = pvUnit;
         _noiseUpperBound = noiseUpperBound;
@@ -146,6 +147,10 @@ public partial class GuidedTuningView : UserControl, IStepView
         var text = new StringBuilder();
         var mv = _mvUnit;
         var pv = _pvUnit;
+        text.AppendLine(VerdictText.Text);
+        text.AppendLine(_studyReference);
+        text.AppendLine(ModelLine.Text);
+        text.AppendLine(Loc.T("cs.tuning_algorithm_version", tuning.AlgorithmVersion));
         text.AppendLine(Loc.T("cs.objectif", Objective.Text));
         if (tuning.Recommendation is { } rec)
         {
