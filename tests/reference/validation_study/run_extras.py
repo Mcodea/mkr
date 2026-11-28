@@ -13,9 +13,10 @@ sys.path.insert(0, str(HERE))
 import extras  # noqa: E402
 
 
-def job(key):
+def job(item):
+    key, controller = item
     try:
-        return extras.run_extras(*key)
+        return extras.run_extras(*key, controller=controller)
     except Exception as error:
         return dict(info=dict(population=key[0]), snr=key[1], index=key[2], crash=f"{type(error).__name__}: {error}")
 
@@ -26,12 +27,16 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--workers", type=int, default=4)
     options = parser.parse_args()
-    keys = [(r["info"]["population"], r["snr"], r["index"]) for r in map(json.loads, Path(options.results).read_text(encoding="utf-8").splitlines()) if "gate" in r]
+    stored = {}
+    for r in map(json.loads, Path(options.results).read_text(encoding="utf-8").splitlines()):
+        if "gate" in r:
+            stored[(r["info"]["population"], r["snr"], r["index"])] = r.get("controller")
+    keys = list(stored)
     out = Path(options.out)
     done = set()
     if out.exists():
         done = {(r["info"]["population"], r["snr"], r["index"]) for r in map(json.loads, out.read_text(encoding="utf-8").splitlines())}
-    todo = [k for k in keys if k not in done]
+    todo = [(k, stored[k]) for k in keys if k not in done]
     print(f"{len(todo)} cas à calculer ({len(done)} déjà faits)", flush=True)
     started = time.time()
     with mp.Pool(options.workers) as pool, out.open("a", encoding="utf-8") as handle:

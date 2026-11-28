@@ -59,7 +59,7 @@ def behaviour2(plant, ts, controller):
                 agree=(nyq is not None and bool(nyq) == bool(time_stable)))
 
 
-def run_extras(population, snr, index):
+def run_extras(population, snr, index, controller=None):
     c = evaluate.build_case(population, snr, index)
     ts, sigma = c["ts"], c["sigma"]
     payload = dict(training=c["source_t"], validation=c["source_v"], mvTolerance=1e-3 * AMPLITUDE, pvTolerance=3 * sigma)
@@ -68,14 +68,15 @@ def run_extras(population, snr, index):
         criteria = validation_gate.suggest(payload)
         gate = validation_gate.assess(dict(family="FOPDT", trials=payload, maximumRmse=criteria["maximumRmse"], maximumResidualLagOne=criteria["maximumResidualLagOne"]))
         report = gate["report"]
-        plan = evaluate.tuning_for(report, ts)
+        if controller is None:       # sinon : le réglage ENREGISTRÉ dans les résultats est réutilisé (déterministe, identique à un recalcul, et 1/3 moins coûteux)
+            plan = evaluate.tuning_for(report, ts)
+            if plan.get("decision") != "recommended":
+                row["extras_error"] = "no_tuning"
+                return row
+            controller = plan["recommendation"]["controller"]
     except ValueError as error:
         row["extras_error"] = str(error)
         return row
-    if plan.get("decision") != "recommended":
-        row["extras_error"] = "no_tuning"
-        return row
-    controller = plan["recommendation"]["controller"]
     gain, tau, delay = report["gain"], report["tauSeconds"], report["delaySeconds"]
     row["stability"] = behaviour2(c["plant"], ts, controller)                        # stabilité du réglage recommandé : deux méthodes
     # Échelle de recours (v1.3 §8) : (a) réglage du modèle ALTERNATIF SOPDT ; (b) réglage plus ROBUSTE du même FOPDT (objectif prudent du moteur).
