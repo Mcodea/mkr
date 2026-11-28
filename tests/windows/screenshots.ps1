@@ -375,8 +375,11 @@ try {
         $broidaId = (Get-Content -LiteralPath (Join-Path $Fixture 'broida-study.txt') -Raw).Trim()
         # l'étude Broïda n'a pas de porte de validation : son libellé se termine par « · refusée », d'où le joker final (run 374 : « Option absente »)
         Select-Option $ident 'StudyList' "*$broidaId*"
+        # les niveaux 28 % / 40 % et leurs repères ne sont tracés que sur l'essai d'ESTIMATION ; l'application ouvre l'essai de validation par défaut (run 384 : capture sans repères)
+        Select-Option $ident 'PlotSource' 'Estimation*'
         Start-Sleep -Milliseconds 1200
         Capture $ident '04c-identification-broida'
+        Select-Option $ident 'PlotSource' 'Validation*'
         Select-Option $ident 'StudyList' "*$modelId"     # retour à la sélection précédente : les étapes suivantes sont inchangées
     }
     Show-Page $ident 'PageSetup'
