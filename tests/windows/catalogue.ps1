@@ -5,9 +5,9 @@ Add-Type -AssemblyName UIAutomationTypes
 $root = [System.Windows.Automation.AutomationElement]::RootElement
 $scope = [System.Windows.Automation.TreeScope]::Descendants
 
-function Wait-Element($parent, $property, $value) {
+function Wait-Element($parent, $property, $value, $seconds = 20) {
     $condition = [System.Windows.Automation.PropertyCondition]::new($property, $value)
-    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    $deadline = [DateTime]::UtcNow.AddSeconds($seconds)
     do {
         $element = $parent.FindFirst($scope, $condition)
         if ($null -ne $element) { return $element }
@@ -21,7 +21,9 @@ $process = Start-Process -FilePath $exe.Path -PassThru
 try {
     $nameProperty = [System.Windows.Automation.AutomationElement]::NameProperty
     $idProperty = [System.Windows.Automation.AutomationElement]::AutomationIdProperty
-    try { $main = Wait-Element $root $nameProperty 'ORIAS — Espace projets' }
+    # Premier lancement de l'application dans le job : un démarrage à froid lent (processus vivant, aucun mkr.log, erreurs de licence système sur le runner) a fait échouer l'attente de 20 s
+    # aux runs 344 (1re tentative) et 359 ; 90 s pour cette seule fenêtre. HYPOTHÈSE non démontrée ; le diagnostic ci-dessous est conservé et l'assertion n'est pas assouplie.
+    try { $main = Wait-Element $root $nameProperty 'ORIAS — Espace projets' 90 }
     catch {
         # Diagnostic only: say whether the application is still alive and what the runtime reported, instead of a bare « introuvable ».
         Write-Host "##DIAG exited=$($process.HasExited) exitcode=$(if ($process.HasExited) { $process.ExitCode })"
