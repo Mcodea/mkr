@@ -1,0 +1,210 @@
+{
+ "registre_version": "1.0.0",
+ "date": "2026-11-28",
+ "regles": "Aucune donnée brute versionnée. Statuts: telecharge | reference | inaccessible. Ensemble D (aveugle): aucune source publique actuelle ne le permet.",
+ "jeux": [
+  {
+   "id": "S01",
+   "titre": "Two-Tank Water System Dataset for RLS-Based Identification and Adaptive PID Control Under Diverse Operating Conditions",
+   "auteurs": "Gómez-González P.-P., Michelena Á., García Fischer A., Freire-Mahía N., Jove E., Calvo-Rolle J. L.",
+   "organisme": "Universidade da Coruña (CTC, CITIC), Ferrol, Espagne",
+   "doi": "10.5281/zenodo.23529910",
+   "url": "https://zenodo.org/records/23529910",
+   "version": "v2.0",
+   "date_publication": "2026-10-21",
+   "date_telechargement": "2026-11-28",
+   "licence": "CC BY 4.0 (API Zenodo + README)",
+   "redistribution": "autorisée avec attribution ; non versionné dans le dépôt par prudence",
+   "publication": "Sci Data 13, 1465 (2026), doi:10.1038/s41597-026-07686-2",
+   "fichiers": [
+    {
+     "nom": "Dataset_v2.zip",
+     "taille": 35517324,
+     "md5_officiel": "3a70e0b3b9d14b4c0520110963c3d33e",
+     "md5_calcule": "3a70e0b3b9d14b4c0520110963c3d33e",
+     "sha256": "e31b41da2376d885774891606d346b26926d93db8483d9d7ac6bfcc23e24128e",
+     "archive_integre": true
+    }
+   ],
+   "statut_acces": "telecharge",
+   "nature": "expérimentale (banc de laboratoire)",
+   "procede": "niveau, réservoir supérieur, pompe -> niveau, SISO",
+   "boucle": "fermée (PID adaptatif Dahlin + RLS), AUCUN essai en boucle ouverte",
+   "conditions": "25 essais de ~8,5 h, consigne en escalier 10 %→90 % par pas de 5 % (30 min/pas), ouverture de vanne 0–100 %, perturbations de débit de sortie, pertes capteur",
+   "signaux": "Level_pct, Control_Signal_pct, Setpoint_pct, Error_pct, Kp, Ki, Kd, b1, a1, a2, Valve_Opening_pct, Sensor_Dropout",
+   "unites": "%",
+   "periode_echantillonnage_s": 1,
+   "nb_mesures": "30600 par essai x 25 = 765 000",
+   "changelog_verifie": "oui : v2.0 corrige Ki et Kd (ordre Ti/Td inversé en v1) et Valve_Closure_pct des essais HighOutflow ; signaux mesurés identiques à v1. La v1.0 est écartée.",
+   "limites": "correcteur adaptatif (gains variables), pas de boucle ouverte, un seul banc ; les gains enregistrés reconstruisent la commande (contrôle de l'agent, à recouper)",
+   "destination": "A/B/C par essai (règle de répartition à figer avant usage) ; JAMAIS D (déjà examinée, références publiées)",
+   "statut_validation": "inventorié, non exploité"
+  },
+  {
+   "id": "S02",
+   "titre": "Dual-Phase Gas-Liquid Transmembrane Pressure System",
+   "auteurs": "non vérifié",
+   "organisme": "non vérifié (recherche universitaire vietnamienne annoncée)",
+   "doi": "10.17632/r92bsc5ksw.2",
+   "url": "https://data.mendeley.com/datasets/r92bsc5ksw/2",
+   "version": "2 (annoncée du 2026-09-08, NON vérifiée)",
+   "date_telechargement": null,
+   "licence": "CC BY 4.0 annoncée, NON confirmée à la source",
+   "fichiers": [],
+   "statut_acces": "inaccessible",
+   "constat": "Le DOI se résout vers la page Mendeley (HTTP 200) mais la page est une application JavaScript dont les métadonnées et la liste des fichiers sont chargées par une API non joignable (503/404/réponses sans rapport avec ce jeu). Titre, auteurs, version, licence et fichiers NON vérifiés ; rien n'a été téléchargé.",
+   "action": "téléchargement manuel par un humain depuis la page (navigateur), puis dépôt des fichiers pour contrôle MD5/SHA-256 ; ou autre accès officiel à indiquer",
+   "destination": "à décider après contrôle",
+   "statut_validation": "non exploité"
+  },
+  {
+   "id": "S03",
+   "titre": "Cascaded Tanks Benchmark Combining Soft and Hard Nonlinearities",
+   "auteurs": "Schoukens M., Mattson P., Wigren T., Noël J.-P.",
+   "organisme": "4TU.ResearchData",
+   "doi": "10.4121/12960104.v1",
+   "url": "https://data.4tu.nl/datasets/12960104/1",
+   "version": "1",
+   "date_publication": "2020-09-21",
+   "date_telechargement": "2026-11-28",
+   "licence": "CC BY-SA 4.0 (API 4TU + JSON-LD)",
+   "redistribution": "partage dans les mêmes conditions : non versionné dans le dépôt",
+   "fichiers": [
+    {
+     "nom": "CascadedTanksFiles.zip",
+     "taille": 7520592,
+     "md5_officiel": "f832776ed1efdca4572338f467b7baec",
+     "md5_calcule": "f832776ed1efdca4572338f467b7baec",
+     "sha256": "eb0fa05851e8a7136846c2e3b61fbef87def78d0852c86ab91b02ac5db541b51",
+     "archive_integre": true
+    },
+    {
+     "nom": "TanksBenchmark.pdf",
+     "taille": 2169671,
+     "md5_officiel": "81732c07b29388e00fdac91965bd350a",
+     "md5_calcule": "81732c07b29388e00fdac91965bd350a",
+     "sha256": "91597add858efdec98cc1bfabd7b87867c5c3cb8a0ec10976ceed9acdee81b39"
+    }
+   ],
+   "statut_acces": "telecharge",
+   "nature": "expérimentale (banc de laboratoire)",
+   "procede": "deux réservoirs en cascade, pompe -> niveau du réservoir inférieur",
+   "boucle": "ouverte",
+   "conditions": "ensembles d'estimation et de test définis par les auteurs (colonnes uEst/yEst et uVal/yVal)",
+   "signaux": "uEst, uVal, yEst, yVal",
+   "unites": "non précisées dans le CSV (voir PDF)",
+   "periode_echantillonnage_s": 4,
+   "nb_mesures": "1024 par ensemble",
+   "limites": "non-linéarités (saturation, débordement) ; données courtes ; résultats publiés par de nombreux auteurs",
+   "destination": "C (validation intermédiaire) en respectant la séparation estimation/test des auteurs ; JAMAIS D",
+   "statut_validation": "inventorié, non exploité"
+  },
+  {
+   "id": "S04",
+   "titre": "Dataset: D-Stabilization of a Coupled-Tank System Using Experimental Data",
+   "auteurs": "Coelho M. O., Leite V. J. S., Silva G. H. S. et al. (README)",
+   "organisme": "CEFET-MG, Divinópolis, Brésil",
+   "doi": "10.5281/zenodo.19856119",
+   "url": "https://zenodo.org/records/19856119",
+   "version": "v1.0.0",
+   "date_publication": "2026-04-28",
+   "date_telechargement": "2026-11-28",
+   "licence": "CC BY 4.0 (API Zenodo)",
+   "redistribution": "autorisée avec attribution ; non versionné",
+   "fichiers": [
+    {
+     "nom": "complete_data.csv",
+     "taille": 254210,
+     "md5_officiel": "6731ff9410c084fb0cd3c02f1ac73409",
+     "md5_calcule": "6731ff9410c084fb0cd3c02f1ac73409",
+     "sha256": "6b2470f4a0ed64d3cfeb82ee7ec5e6803c6297e48d2a6cfe5af0a7787cebbd78"
+    },
+    {
+     "nom": "h1.csv",
+     "taille": 13559,
+     "md5_officiel": "978d5f00e2520180c879656a1393aea6",
+     "md5_calcule": "978d5f00e2520180c879656a1393aea6",
+     "sha256": "8bcc8e870c19c9f54de122e65963fc52fe1fd23a95f6335a297a51d3d4daf81e"
+    },
+    {
+     "nom": "h2.csv",
+     "taille": 13441,
+     "md5_officiel": "98a8bfbbfc57b37b5233e8a8f5c8b9d5",
+     "md5_calcule": "98a8bfbbfc57b37b5233e8a8f5c8b9d5",
+     "sha256": "dff73ca67048dc031bc9f6834115ae759e7f73b217ff09aea04f0411e24a3925"
+    },
+    {
+     "nom": "U.csv",
+     "taille": 2759,
+     "md5_officiel": "b3ce5b3db14356df6dbd8b365044ae1e",
+     "md5_calcule": "b3ce5b3db14356df6dbd8b365044ae1e",
+     "sha256": "2a6da4ae0f990ad94003444ca7ac8e2a7a5c14dfab1951be1fa741260be54cf3"
+    },
+    {
+     "nom": "README.md",
+     "taille": 2808,
+     "md5_officiel": "3831e38b7ad09e7cc05035dba7f556b6",
+     "md5_calcule": "3831e38b7ad09e7cc05035dba7f556b6",
+     "sha256": "671553956771bf1c249fcc8e655e72e1f6b752c56914c29a2cb55312e0744219"
+    },
+    {
+     "nom": "operational_parameters.json",
+     "taille": 134,
+     "md5_officiel": "3b638b7103bb5cb8a3bb03bc676dea47",
+     "md5_calcule": "3b638b7103bb5cb8a3bb03bc676dea47",
+     "sha256": "565aed05d19e19d6eddbf82234cb3076c98308645c5a3d4ce8f4fc8dd2adb810"
+    }
+   ],
+   "statut_acces": "telecharge",
+   "nature": "expérimentale (banc de laboratoire)",
+   "procede": "deux réservoirs couplés (200 L), pompe -> niveaux h1 et h2",
+   "boucle": "ouverte (séquence pseudo-aléatoire à 10 niveaux autour de 50 % de pompe), 10 répétitions de la même séquence",
+   "signaux": "h1, h2, U (pompe %)",
+   "unites": "cm (README) ; operational_parameters.json indique « mm » et nomme h3_op/h4_op : INCOHÉRENCE à lever",
+   "periode_echantillonnage_s": "4 (README) ; ~3,85 observé dans complete_data.csv : à vérifier",
+   "nb_mesures": "81 par essai (h1.csv, h2.csv) ; 4 502 lignes dans complete_data.csv",
+   "limites": "excitation pseudo-aléatoire, pas d'échelon isolé ; autour d'un seul point de fonctionnement ; incohérences d'unités et de période à résoudre avant exploitation",
+   "destination": "A ou B (répétitions = campagnes indépendantes pour la variabilité), pas D",
+   "statut_validation": "inventorié, non exploité"
+  },
+  {
+   "id": "S05",
+   "titre": "DaISy — Database for the Identification of Systems",
+   "auteurs": "KU Leuven ESAT/STADIUS (De Moor et al.)",
+   "organisme": "KU Leuven, Belgique",
+   "doi": null,
+   "url": "https://homes.esat.kuleuven.be/~smc/daisy/daisydata.html",
+   "version": "non vérifiée",
+   "date_telechargement": null,
+   "licence": "NON vérifiée ; aucune licence uniforme ne doit être présumée",
+   "fichiers": [],
+   "statut_acces": "inaccessible",
+   "constat": "L'hôte est autorisé par l'environnement mais la connexion TLS est réinitialisée par l'origine (curl 35, deux essais ; rien n'a pu être lu). Le serveur FTP indiqué n'est pas un hôte HTTPS. Jeux visés non vérifiés : 96-002, 96-003, 96-010, 96-015, 96-016, 97-002, 98-002.",
+   "action": "un humain peut ouvrir le catalogue et relever pour chaque jeu provenance, nature (industrielle/expérimentale/simulée), licence et fichier ; ou indiquer un miroir officiel",
+   "destination": "à décider",
+   "statut_validation": "non exploité"
+  },
+  {
+   "id": "S06",
+   "titre": "Learning to Tune with Biased Gradients: Iterative Feedback Tuning of Model-Free … (titre tronqué dans la notice relevée ; à compléter)",
+   "doi": "10.5281/zenodo.23493909",
+   "url": "https://zenodo.org/records/23493909",
+   "version": "non nommée (publié 2026-10-20)",
+   "licence": "CC BY 4.0 (API Zenodo, revérifiée)",
+   "fichiers": [
+    {
+     "nom": "data_code_L4DC2027.zip",
+     "taille": 5672322,
+     "md5_officiel": "9589262e3ef2d688b96ba6dc7adf83a7"
+    }
+   ],
+   "statut_acces": "telecharge (par l'agent, MD5 déclaré vérifié, non recalculé ici)",
+   "nature": "expérimentale",
+   "procede": "vannes papillon électroniques (servomécanisme de position), PI incrémental à gains fixes",
+   "boucle": "fermée",
+   "limites": "hors domaine procédé ; contrôle de non-contradiction seulement",
+   "destination": "C hors domaine, jamais comme preuve de la règle iv procédé",
+   "statut_validation": "inventorié"
+  }
+ ]
+}
