@@ -350,7 +350,8 @@ internal sealed class SignalChart : FrameworkElement
 
         // shared time axis
         var bottom = TrackTop(_tracks.Count - 1) + TrackHeightAt(_tracks.Count - 1);
-        foreach (var (ex, label) in _events)
+        var placedTags = new List<Rect>();
+        foreach (var (ex, label) in _events.OrderBy(e => e.X))
         {
             if (ex < _lo || ex > _hi) continue;
             var px = XToPixel(ex);
@@ -359,9 +360,14 @@ internal sealed class SignalChart : FrameworkElement
                 var accent = Theme("MkrAccent");
                 dc.DrawLine(new Pen(accent, 1.2) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) }, new Point(px, TrackTop(0)), new Point(px, bottom));
                 var letter = Text(label, 12, Theme("MkrOnAccent"), true);
-                var square = new Rect(px - 9, TrackTop(0) + 2, 18, 18);
+                // the tag is as wide as its text (« 28 % » does not fit an 18 px square) and moves down below any tag it would overlap (28 % and 40 % crossings are often close, and near A)
+                var width = Math.Max(18, letter.Width + 8);
+                var square = new Rect(px - width / 2, TrackTop(0) + 2, width, 18);
+                while (placedTags.Any(other => other.IntersectsWith(square)) && square.Y + 40 < bottom)
+                    square = new Rect(square.X, square.Y + 20, square.Width, 18);
+                placedTags.Add(square);
                 dc.DrawRectangle(accent, null, square);
-                dc.DrawText(letter, new Point(square.X + (18 - letter.Width) / 2, square.Y + (18 - letter.Height) / 2));
+                dc.DrawText(letter, new Point(square.X + (square.Width - letter.Width) / 2, square.Y + (18 - letter.Height) / 2));
                 continue;
             }
             dc.DrawLine(new Pen(Theme("MkrSignal4"), 1.4) { DashStyle = new DashStyle(new double[] { 1.5, 3 }, 0) }, new Point(px, TrackTop(0)), new Point(px, bottom));
