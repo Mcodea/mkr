@@ -27,3 +27,11 @@ Uniquement les signaux (entrée, sortie, consigne si présente, unités et péri
 - Les incohérences connues (S04 : unités mm/cm, période 4 s vs ~3,85 s) sont **levées et documentées avant** exploitation ; sinon S04 est écarté et le motif consigné.
 - Un résultat défavorable est conservé tel quel ; aucun cas difficile n'est retiré.
 - Le moteur actuel est le commit `5202e25` (puis suivants) : toute évaluation consignera le commit, les graines éventuelles et les empreintes des fichiers (registre).
+
+## 6. Mode opératoire de l'évaluation d'identification sur S03 et S04 (ajouté le 2026-11-28 AVANT toute exécution)
+Chemin évalué : `engine/arx.py` (`identify`, boucle ouverte déclarée par la documentation des auteurs), seule voie du moteur acceptant une excitation arbitraire ; le chemin FOPDT exige des échelons et n'est pas évalué ici.
+- **Horodatages** : S03 et S04 n'ont que la période (4 s) : des horodatages synthétiques `2000-01-01T00:00:00Z + k·Ts` sont générés (transformation documentée, valeurs inchangées).
+- **S03** : apprentissage = (uEst, yEst) ; validation = (uVal, yVal), ensembles des auteurs. **S04** : entrée `u` (pompe) → `h1` puis `h2` séparément ; paires apprentissage A / validation C : répétition 1 → 7, 2 → 8, 3 → 9 (fenêtres de 81 échantillons de `complete_data.csv`, début aux lignes 476 + 425·(k−1)).
+- **Seuil `maximumRmse`** (que la voie ARX exige de l'utilisateur) : **balayé** à 2 %, 5 %, 10 % et 20 % de l'étendue de la sortie de validation ; on publie la décision du moteur à **chaque** niveau, sans en choisir un a posteriori. `mvTolerance` = 1e-3 (résolution déclarée de l'entrée).
+- **Indicateurs** : décision, structure retenue, erreur de simulation libre sur la validation (valeur absolue et normalisée par l'étendue), raisons de refus, et, pour situer, l'erreur d'un prédicteur constant (écart type de la sortie de validation).
+- **Rien n'est conclu au-delà** de ce que mesure l'expérience : un refus n'est pas un échec ; une acceptation n'est pas une preuve d'aptitude à la régulation.
