@@ -54,7 +54,7 @@ def libraries():
 
 def freeze(repo, manifest):
     repo = Path(repo)
-    entries = {str(p.relative_to(repo)): sha256(p) for p in tracked_files(repo)}
+    entries = {p.relative_to(repo).as_posix(): sha256(p) for p in tracked_files(repo)}
     body = dict(kind="orias-engine-freeze", git_commit=git_commit(repo), libraries=libraries(), files=entries,
                 tree_sha256=hashlib.sha256(json.dumps(entries, sort_keys=True).encode()).hexdigest())
     Path(manifest).write_text(json.dumps(body, indent=1, sort_keys=True))
@@ -64,13 +64,13 @@ def freeze(repo, manifest):
 def verify(repo, manifest):
     frozen = json.loads(Path(manifest).read_text())
     repo = Path(repo)
-    now = {str(p.relative_to(repo)): sha256(p) for p in tracked_files(repo)}
+    now = {p.relative_to(repo).as_posix(): sha256(p) for p in tracked_files(repo)}
     changed = sorted(k for k in set(now) | set(frozen["files"]) if now.get(k) != frozen["files"].get(k))
     return changed
 
 
 def seal(results_dir, seal_path):
-    files = {str(p.relative_to(results_dir)): sha256(p) for p in sorted(Path(results_dir).rglob("*")) if p.is_file()}
+    files = {p.relative_to(results_dir).as_posix(): sha256(p) for p in sorted(Path(results_dir).rglob("*")) if p.is_file()}
     if not files:
         raise SystemExit("Aucun résultat à sceller.")
     body = dict(kind="orias-results-seal", sealed_at_utc=datetime.now(timezone.utc).isoformat(), files=files,
@@ -81,7 +81,7 @@ def seal(results_dir, seal_path):
 
 def check(results_dir, seal_path):
     sealed = json.loads(Path(seal_path).read_text())
-    now = {str(p.relative_to(results_dir)): sha256(p) for p in sorted(Path(results_dir).rglob("*")) if p.is_file()}
+    now = {p.relative_to(results_dir).as_posix(): sha256(p) for p in sorted(Path(results_dir).rglob("*")) if p.is_file()}
     return sorted(k for k in set(now) | set(sealed["files"]) if now.get(k) != sealed["files"].get(k))
 
 

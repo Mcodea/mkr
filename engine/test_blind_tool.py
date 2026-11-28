@@ -37,6 +37,13 @@ class BlindToolTests(unittest.TestCase):
             self.assertEqual(blind.check(results, seal), ["case1.json"])
             self.assertEqual(blind.main(["x", "reveal-allowed", str(results), str(seal)]), 2)
 
+    def test_manifest_keys_use_forward_slashes_so_a_freeze_verifies_on_any_platform(self):
+        with tempfile.TemporaryDirectory() as t:
+            self.repo(t); body = blind.freeze(t, Path(t) / "m.json")
+            self.assertTrue(all("\\\\" not in key for key in body["files"]))
+            results = Path(t) / "r" / "sub"; results.mkdir(parents=True); (results / "a.json").write_text("1")
+            self.assertTrue(all("\\\\" not in key for key in blind.seal(Path(t) / "r", Path(t) / "s.json")["files"]))
+
     def test_an_empty_results_directory_cannot_be_sealed(self):
         with tempfile.TemporaryDirectory() as t:
             empty = Path(t) / "r"; empty.mkdir()
