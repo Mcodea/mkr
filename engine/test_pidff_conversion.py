@@ -117,6 +117,18 @@ class DocumentedRules(unittest.TestCase):
         for bad in (dict(kp=1, tiSeconds=-1, tdSeconds=0), dict(kp=math.nan, tiSeconds=5, tdSeconds=0), dict(kp=1, tiSeconds=5)):
             self.assertFalse(convert(dict(name="PIDFF", target={}, parameters=bad))["converted"])
 
+    def test_zero_filter_and_unrepresentable_time_refuse_conversion(self):
+        limit = 2 ** 32
+        for parameters, reason in (
+            (dict(kp=1, tiSeconds=5, tdSeconds=2, filterSeconds=0), "conversion_parameters"),
+            (dict(kp=1, tiSeconds=(limit - 0.25) / 1000, tdSeconds=0), "conversion_time_range"),
+        ):
+            with self.subTest(parameters=parameters):
+                result = convert(dict(name="PIDFF", target={}, parameters=parameters))
+                self.assertEqual((result["converted"], result["reason"], result["parameters"]), (False, reason, None))
+        valid = pidff(dict(kp=1, tiSeconds=(limit - 1) / 1000, tdSeconds=0))
+        self.assertEqual(valid["parameters"]["ti"]["iec"], f"T#{limit - 1}ms")
+
     def test_other_blocks_stay_refused_until_their_documentation_is_read(self):
         for name in ("PI_B", "PIFINT"):
             result = convert(dict(name=name, target={}, parameters=dict(kp=1, tiSeconds=5, tdSeconds=0)))

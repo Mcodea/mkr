@@ -8,7 +8,7 @@ public sealed record TuningCandidate(double ResponseSeconds, TuningController Co
     string? WorstCase = null, double? MultipleOfEffectiveDelay = null);
 
 /// <summary>PI that maximises the integral gain (load-disturbance rejection) under the same sensitivity constraint on every corner.</summary>
-public sealed record OptimizedTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double NominalOvershootPercent, double IntegralGainRatio);
+public sealed record OptimizedTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double? NominalOvershootPercent, double IntegralGainRatio);
 
 /// <summary>PID that maximises the integral gain under the same constraint; compared with the optimal PI so that a PID is never presumed better.</summary>
 public sealed record OptimizedPidTuning(TuningController Controller, double IntegralGain, double WorstPeakSensitivity, double DerivativeToIntegralTimeRatio,

@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture)
+﻿param([Parameter(Mandatory)][string]$Executable, [Parameter(Mandatory)][string]$Fixture, [switch]$GuidedTuningOnly)
 # Integrator tuning window and model drift check, driven through UI Automation (fixtures written by tests/Mkr.Smoke).
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
@@ -110,6 +110,62 @@ try {
     $row.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
     Press $main 'Ouvrir le projet sélectionné'
     $null = Find $main $id 'StudyPicker'
+    if ($GuidedTuningOnly) {
+        $studyId = (Get-Content -LiteralPath (Join-Path $Fixture 'short-delay-study.txt') -Raw).Trim()
+        Select-Option $main 'StudyPicker' "*$studyId"
+        Go-Tab $main 6
+        $copy = Find $main $id 'CopyButton'
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
+        if (-not $copy.Current.IsEnabled) { throw 'Le réglage calculé doit pouvoir être copié.' }
+
+        Press $main 'Copier le résultat'
+        $null = Wait-Name $main 'Status' '*copié*'
+        $report = Get-Clipboard -Raw
+        if (-not $report.Contains($studyId)) { throw "Identifiant de l'étude absent du résultat copié." }
+        if (-not $report.Contains("Bruit blanc de mesure") -or $report.Contains("σ ≤")) {
+            throw 'Le réglage doit donner le gain de bruit blanc sans déduire une borne de la qualité du capteur.'
+        }
+        foreach ($part in @("Essai de validation ", "Essai d’identification ", "algorithme de réglage ", "algorithme d’identification ")) {
+            if (-not $report.Contains($part)) { throw "Provenance absente du résultat copié : $part" }
+        }
+
+        Select-Option $main 'Objective' 'Robuste*'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après changement de robustesse.' }
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
+        if (-not $copy.Current.IsEnabled) { throw 'Le nouveau réglage doit pouvoir être copié.' }
+
+        Fill $main 'Variation' '51'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après changement de la variation.' }
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' '*au plus 50*'
+        if ($copy.Current.IsEnabled) { throw 'Ancien réglage copiable après le refus de la saisie.' }
+        $integratorId = (Get-Content -LiteralPath (Join-Path $Fixture 'integrator-study.txt') -Raw).Trim()
+        Go-Tab $main 1
+        Select-Option $main 'StudyPicker' "*$integratorId"
+        Go-Tab $main 6
+        $modelLine = Wait-Name $main 'ModelLine' '*bar/s par %*'
+        if ($modelLine -notlike '*pente k′ = -*') { throw "Pente du modèle intégrateur absente ou de signe incorrect. $modelLine" }
+        Press $main 'Calculer le réglage guidé'
+        $null = Wait-Name $main 'Status' 'Réglage calculé.' 120
+        Press $main 'Copier le résultat'
+        $null = Wait-Name $main 'Status' '*copié*'
+        $report = Get-Clipboard -Raw
+        $gainRows = [regex]::Matches($report, '(?m)^  Kp = (\S+) %/bar +Ti = (\S+) s[^\r\n]*? Ki = (\S+) %/\(bar·s\)')
+        if ($gainRows.Count -ne 2) { throw "Les gains intégraux des deux réglages optimisés sont attendus. $report" }
+        foreach ($row in $gainRows) {
+            $kp = [double]::Parse($row.Groups[1].Value.Replace(',', '.'), [cultureinfo]::InvariantCulture)
+            $ti = [double]::Parse($row.Groups[2].Value.Replace(',', '.'), [cultureinfo]::InvariantCulture)
+            $ki = [double]::Parse($row.Groups[3].Value.Replace(',', '.'), [cultureinfo]::InvariantCulture)
+            $expected = $kp / $ti
+            # Allow for the five significant digits in each displayed coefficient.
+            if ($ki -ge 0 -or [math]::Abs($ki - $expected) -gt 0.0002 * [math]::Abs($expected)) {
+                throw "Ki affiché $ki incompatible avec Kp/Ti = $expected."
+            }
+        }
+        return
+    }
     $project = $main      # single window: the project's data are the « Données » tab of the workspace
     Press $project 'Identification…'
     $null = Find $main $id 'StudyList'

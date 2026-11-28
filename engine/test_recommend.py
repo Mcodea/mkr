@@ -35,7 +35,7 @@ def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
         dt = min(dt, tf / 5)                                          # explicit Euler of the derivative filter needs dt well below Tf
     steps = int(horizon / dt)
     lag = int(round(delay / dt))
-    buffer = [0.0] * (lag + 1)
+    buffer = [0.0] * lag  # append then pop: exactly lag old samples precede the first command
     states = [0.0] * len(taus)
     integral, previous_error, output, filtered = 0.0, 1.0, 0.0, 0.0
     peak = 0.0
@@ -63,6 +63,15 @@ def closed_loop_settles(gain, taus, delay, kp, ti, td, horizon, tf=0.0):
 
 
 class Equations(unittest.TestCase):
+    def test_independent_delay_buffer_applies_a_command_after_exactly_the_specified_dead_time(self):
+        # Pure integrator, 12 s delay, dt=1 s, proportional unit command.
+        # At t=12 s the state is still zero. Over [12,13] its slope is one.
+        def final_error(horizon):
+            return closed_loop_settles(1.0, [], 12.0, 1.0, math.inf, 0.0, horizon)[0]
+
+        self.assertEqual(final_error(12.0), 1.0)
+        self.assertEqual(final_error(13.0), 0.0)
+
     def test_pi_matches_the_published_simc_rule_at_the_returned_closed_loop_time_constant(self):
         result = calculate(request())
         controller, tauc = result["recommendation"]["controller"], result["recommendation"]["responseSeconds"]
@@ -78,6 +87,37 @@ class Equations(unittest.TestCase):
         tau1, theta = 40.0 + 1.5, 10.0 + 1.5 + 0.5
         self.assertEqual(result["structure"], "PI")
         self.assertAlmostEqual(result["recommendation"]["controller"]["kp"], tau1 / (2.0 * (tauc + theta)), places=12)
+
+    def test_reduced_pi_is_assessed_on_the_identified_two_pole_plant(self):
+        result = calculate(request(family="SOPDT", secondTauSeconds=8.0))
+        chosen = result["recommendation"]
+        controller = chosen["controller"]
+
+        def peak(k, tau, delay):
+            return sensitivity_peak(k, [tau, 8.0], delay + 0.5, controller["kp"], controller["tiSeconds"], 0.0)
+
+        corners = [peak(k, tau, delay) for k in (1.9, 2.1) for tau in (36.0, 44.0) for delay in (8.0, 12.0)]
+        nominal = peak(2.0, 40.0, 10.0)
+        self.assertAlmostEqual(chosen["nominalMargins"]["peakSensitivity"], nominal, delta=0.002)
+        self.assertAlmostEqual(chosen["worstPeakSensitivity"], max(nominal, *corners), delta=0.002)
+
+    def test_optimised_controllers_on_a_negative_gain_reduced_sopdt(self):
+        result = calculate(request(family="SOPDT", gain=-2.0, secondTauSeconds=8.0, optimise=True))
+        self.assertEqual(result["decision"], "recommended")
+        plants = [(-2.0, 40.0, 10.0)]
+        plants.extend((gain, slow_tau, delay)
+                      for gain in (-2.1, -1.9) for slow_tau in (36.0, 44.0) for delay in (8.0, 12.0))
+        for key in ("optimized", "optimizedPid"):
+            with self.subTest(controller=key):
+                tuning = result[key]
+                self.assertIsNotNone(tuning)
+                c = tuning["controller"]
+                self.assertLess(c["kp"], 0.0)
+                peaks = [sensitivity_peak(gain, [slow_tau, 8.0], delay + 0.5, c["kp"],
+                                          c["tiSeconds"], c["tdSeconds"], c["filterSeconds"])
+                         for gain, slow_tau, delay in plants]
+                self.assertAlmostEqual(tuning["worstPeakSensitivity"], max(peaks), delta=0.002)
+                self.assertLessEqual(max(peaks), OBJECTIVES["balanced"] + 0.005)
 
     def test_second_pole_above_the_delay_gives_a_pid_whose_ideal_form_is_the_series_form(self):
         result = calculate(request(family="SOPDT", secondTauSeconds=15.0))
@@ -231,6 +271,7 @@ class Optimisation(unittest.TestCase):
                 rec, opt = result["recommendation"]["controller"], result["optimized"]
                 self.assertGreaterEqual(opt["integralGain"], abs(rec["kp"]) / rec["tiSeconds"] * 0.99)
                 self.assertGreaterEqual(opt["integralGainRatio"], 0.99)
+                self.assertEqual(opt["nominalOvershootPercent"], result["performance"]["optimizedPi"]["setpointStep"]["overshootPercent"])
                 # the cost is announced: the nominal set-point overshoot agrees with the independent time-domain simulation
                 kp, ti = abs(opt["controller"]["kp"]), opt["controller"]["tiSeconds"]
                 k, tau, delay = plants[-1]
@@ -377,6 +418,25 @@ class NoiseSensitivity(unittest.TestCase):
 
 
 class Curves(unittest.TestCase):
+    def test_preview_respects_its_limit_and_keeps_the_first_and_last_recorded_samples(self):
+        # One second with one trace record per integration step. In particular,
+        # the former integer stride sent all 400 records to the 300-point desktop reader.
+        for steps in (239, 240, 241, 400, 479, 480, 481):
+            with self.subTest(steps=steps):
+                result = recommend.closed_loop_performance(
+                    1.0, 1.0, None, 0.0, dict(kp=1.0, tiSeconds=1.0, tdSeconds=0.0, filterSeconds=0.0),
+                    horizon_multiple=1.0, resolution=steps)
+                dt = result["stepSeconds"]
+                count = round(result["horizonSeconds"] / dt)
+                for curve in result["curves"].values():
+                    times = curve["seconds"]
+                    self.assertEqual(len(times), min(count, 240))
+                    self.assertEqual(len(times), len(curve["pv"]))
+                    self.assertEqual(len(times), len(curve["mv"]))
+                    self.assertEqual(times[0], 0.0)
+                    self.assertAlmostEqual(times[-1], (count - 1) * dt)
+                    self.assertTrue(all(a < b for a, b in zip(times, times[1:])))
+
     def test_the_response_curves_start_at_zero_end_at_the_setpoint_and_are_plain_floats(self):
         import json
         p = dict(family="FOPDT", gain=-1.5, tauSeconds=40.0, delaySeconds=15.0, secondTauSeconds=None, sampleSeconds=1.0, standardErrors=None,
@@ -412,6 +472,32 @@ class ClosedLoopPerformance(unittest.TestCase):
     """Oracle: PI with Ti = tau on a dead-time-free first-order plant is an integrator loop L = a / (tau s), a = Kp K:
     set-point error e(t) = exp(-t / T), T = tau / a  ->  IAE = T, ISE = T / 2, ITAE = T^2, no overshoot, 2 % settling at 3.912 T;
     load step at the plant input: y(t) = K / (a - 1) (exp(-t / tau) - exp(-a t / tau))  ->  IAE = K tau / a."""
+
+    def test_settling_is_unobserved_when_the_window_ends_before_band_entry(self):
+        # Ti = tau, Kp K = 1: analytical entry at tau * log(50), beyond one tau.
+        result = recommend.closed_loop_performance(
+            1.0, 10.0, None, 0.0, dict(kp=1.0, tiSeconds=10.0, tdSeconds=0.0, filterSeconds=0.0),
+            horizon_multiple=1.0)
+        self.assertIsNone(result["setpointStep"]["settlingSeconds"])
+        self.assertEqual(result["horizonSeconds"], 10.0)
+        self.assertGreater(len(result["curves"]["setpoint"]["seconds"]), 1)
+
+    def test_two_pole_startup_uses_one_time_origin_for_command_and_process_states(self):
+        # From rest, explicit Euler gives u(0)=Kp, y(dt)=0 and
+        # y(2dt)=K*Kp*dt²/(tau1*tau2) for a unit setpoint step.
+        for gain, kp in ((2.0, 1.5), (-2.0, -1.5)):
+            with self.subTest(gain=gain):
+                result = recommend.closed_loop_performance(
+                    gain, 4.0, 2.0, 0.0,
+                    dict(kp=kp, tiSeconds=4.0, tdSeconds=0.0, filterSeconds=0.0),
+                    horizon_multiple=0.25, resolution=40.0)
+                curve = result["curves"]["setpoint"]
+                dt = result["stepSeconds"]
+                self.assertEqual(curve["seconds"][:3], [0.0, dt, 2 * dt])
+                self.assertEqual(curve["mv"][0], kp)
+                self.assertEqual(result["setpointStep"]["initialMvStep"], abs(curve["mv"][0]))
+                self.assertEqual(curve["pv"][:2], [0.0, 0.0])
+                self.assertAlmostEqual(curve["pv"][2], gain * kp * dt**2 / 8.0)
 
     def test_closed_form_values(self):
         gain, tau, a = 2.0, 30.0, 3.0
@@ -469,6 +555,24 @@ class Refusals(unittest.TestCase):
         self.assertEqual(result["decision"], "recommended")
         self.assertIn("closed_loop_slower_than_the_process", result["warnings"])
 
+    def test_declared_variation_includes_the_fast_lag_of_the_identified_plant(self):
+        for nominal_fast in (8.0, 15.0):
+            with self.subTest(second_tau=nominal_fast):
+                result = calculate(request(family="SOPDT", secondTauSeconds=nominal_fast,
+                                           standardErrors=None, processVariationPercent=20.0))
+                self.assertEqual(result["decision"], "recommended")
+                self.assertIsNone(result["uncertaintyCoverageSigma"])
+                self.assertNotIn("second_pole_uncertainty_not_propagated", result["warnings"])
+                chosen = result["recommendation"]
+                c = chosen["controller"]
+                plants = [(2.0, 40.0, 10.0, nominal_fast)]
+                plants.extend((k, slow, delay, fast) for k in (1.6, 2.4) for slow in (32.0, 48.0)
+                              for delay in (8.0, 12.0) for fast in (0.8 * nominal_fast, 1.2 * nominal_fast))
+                peaks = [sensitivity_peak(k, [slow, fast], delay + 0.5, c["kp"], c["tiSeconds"],
+                                          c["tdSeconds"], c["filterSeconds"]) for k, slow, delay, fast in plants]
+                self.assertAlmostEqual(chosen["worstPeakSensitivity"], max(peaks), delta=0.002)
+                self.assertLessEqual(max(peaks), OBJECTIVES["balanced"] + 0.005)
+
     def test_second_order_uncertainty_is_flagged_as_partly_propagated(self):
         result = calculate(request(family="SOPDT", secondTauSeconds=3.0))
         self.assertIn("second_pole_uncertainty_not_propagated", result["warnings"])
@@ -482,6 +586,20 @@ class Refusals(unittest.TestCase):
 
     def test_the_result_is_always_marked_unqualified(self):
         self.assertEqual(calculate(request())["qualification"], "model_based_unqualified")
+
+    def test_invalid_guided_inputs_return_a_specific_ipc_error(self):
+        import json
+        from mkr_engine import serve
+
+        for changes in ({"objective": []}, {"gain": 10 ** 400},
+                        {"family": "Integrateur", "tauSeconds": None, "standardErrors": []}):
+            with self.subTest(fields=tuple(changes)):
+                message = dict(version=1, requestId="guided-check", operation="recommend_tuning",
+                               payload=request(**changes))
+                reply = json.loads(serve(json.dumps(message).encode()))
+                self.assertEqual(reply["requestId"], "guided-check")
+                self.assertEqual(reply["error"]["code"], "recommend_input")
+                self.assertNotIn("result", reply)
 
     def test_hostile_inputs_are_rejected(self):
         for changes in ({"derivativeFilterRatio": 0.5}, {"processVariationPercent": 0}, {"processVariationPercent": 60}, {"processVariationPercent": "30"}, {"gain": 0}, {"gain": float("nan")}, {"tauSeconds": -1.0}, {"delaySeconds": -1.0}, {"sampleSeconds": 0},

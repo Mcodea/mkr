@@ -11,8 +11,7 @@ namespace Mkr.Desktop;
 public partial class GuidedTuningView : UserControl, IStepView
 {
     private readonly IdentificationWorkspace _workspace;
-    private readonly string _mvUnit, _pvUnit;
-    private readonly double _noiseUpperBound;
+    private readonly string _mvUnit, _pvUnit, _studyReference;
     private readonly Func<string, double?, CancellationToken, Task<GuidedTuning>> _recommend;
     private readonly CancellationTokenSource _lifetime = new();
 
@@ -48,9 +47,11 @@ public partial class GuidedTuningView : UserControl, IStepView
     }
 
     internal GuidedTuningView(IdentificationWorkspace workspace, IdentificationStudy model)
-        : this(workspace, model.MvUnit, model.PvUnit, model.Result.Training.Rmse,
-            Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
-            (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "") +
+        : this(workspace, Loc.T("cs.tuning_study_reference", model.Id, model.TrainingId, model.ValidationId, model.Result.AlgorithmVersion), model.MvUnit, model.PvUnit,
+            (model.Family == ModelFamily.Integrateur
+                ? Loc.T("cs.modele_pente_k_s_par", model.Result.Gain, model.PvUnit, model.MvUnit, model.Result.DelaySeconds)
+                : Loc.T("cs.modele_k", model.Family, model.Result.Gain, model.PvUnit, model.MvUnit) +
+                  (model.Result.TauSeconds is { } tau ? $" · τ = {tau:G5} s" : "") + (model.Result.SecondTauSeconds is { } fast ? $" · τ₂ = {fast:G5} s" : "")) +
             Loc.T("cs.prudent_s", model.Result.TuningDelaySeconds),
             (objective, variation, token) => workspace.RecommendTuningAsync(model, objective, variation, token))
     {
@@ -58,7 +59,7 @@ public partial class GuidedTuningView : UserControl, IStepView
 
     /// <summary>From an accepted ARX / OE study (ADR 0008): the first-order equivalent of the retained (1,1) model, delay quantised to the sampling grid.</summary>
     internal GuidedTuningView(IdentificationWorkspace workspace, ArxStudy study)
-        : this(workspace, study.MvUnit, study.PvUnit, 0,
+        : this(workspace, Loc.T("cs.tuning_study_reference", study.Id, study.TrainingId, study.ValidationId, study.Result.AlgorithmVersion), study.MvUnit, study.PvUnit,
             study.Result.Selected is { FirstOrder: { } f, Nk: var nk }
                 ? Loc.T("cs.modele_arx_oe_1_1", f.Gain, study.PvUnit, study.MvUnit, f.TauSeconds, nk * study.Result.SamplePeriodSeconds, study.Result.SamplePeriodSeconds)
                 : Loc.T("cs.modele_arx_oe_sans_equivalent"),
@@ -66,18 +67,20 @@ public partial class GuidedTuningView : UserControl, IStepView
     {
     }
 
-    private GuidedTuningView(IdentificationWorkspace workspace, string mvUnit, string pvUnit, double noiseUpperBound, string modelLine,
+    private GuidedTuningView(IdentificationWorkspace workspace, string studyReference, string mvUnit, string pvUnit, string modelLine,
         Func<string, double?, CancellationToken, Task<GuidedTuning>> recommend)
     {
         InitializeComponent();
         _workspace = workspace;
+        _studyReference = studyReference;
         _mvUnit = mvUnit;
         _pvUnit = pvUnit;
-        _noiseUpperBound = noiseUpperBound;
         _recommend = recommend;
         ModelLine.Text = modelLine;
         Chart.CursorTextChanged += text => CursorLine.Text = text.Length == 0 ? Loc.T("cs.survolez_un_graphique_pour_lire") : text;
         ObjectiveChanged(this, null!);
+        Objective.SelectionChanged += (_, _) => ClearResult();
+        Variation.TextChanged += (_, _) => ClearResult();
     }
 
     private string ObjectiveTag => (Objective.SelectedItem as ComboBoxItem)?.Tag as string ?? DesignObjectives.Balanced;
@@ -93,8 +96,21 @@ public partial class GuidedTuningView : UserControl, IStepView
         };
     }
 
+    private void ClearResult()
+    {
+        _last = null;
+        CopyButton.IsEnabled = false;
+        Verdict.Visibility = ParamPanel.Visibility = ComparePanel.Visibility = AltPanel.Visibility = Visibility.Collapsed;
+        CurveBar.Visibility = Chart.Visibility = Visibility.Collapsed;
+        ChartEmpty.Visibility = Visibility.Visible;
+        Alternatives.ItemsSource = null;
+        Result.Clear();
+        Notes.Text = CursorLine.Text = Status.Text = string.Empty;
+    }
+
     private async void Calculate(object sender, RoutedEventArgs args)
     {
+        ClearResult();
         var token = _lifetime.Token;
         double? variation = null;
         if (!string.IsNullOrWhiteSpace(Variation.Text))
@@ -106,7 +122,7 @@ public partial class GuidedTuningView : UserControl, IStepView
             }
             variation = percent;
         }
-        Compute.IsEnabled = false;
+        Compute.IsEnabled = Objective.IsEnabled = Variation.IsEnabled = false;
         Status.Text = Loc.T("cs.calcul_en_cours_recherche_du");
         try
         {
@@ -116,7 +132,7 @@ public partial class GuidedTuningView : UserControl, IStepView
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) { Status.Text = error.Message; }
-        finally { Compute.IsEnabled = true; }
+        finally { Compute.IsEnabled = Objective.IsEnabled = Variation.IsEnabled = true; }
     }
 
     private static string F(double value) => value.ToString("G5", CultureInfo.CurrentCulture);
@@ -131,6 +147,10 @@ public partial class GuidedTuningView : UserControl, IStepView
         var text = new StringBuilder();
         var mv = _mvUnit;
         var pv = _pvUnit;
+        text.AppendLine(VerdictText.Text);
+        text.AppendLine(_studyReference);
+        text.AppendLine(ModelLine.Text);
+        text.AppendLine(Loc.T("cs.tuning_algorithm_version", tuning.AlgorithmVersion));
         text.AppendLine(Loc.T("cs.objectif", Objective.Text));
         if (tuning.Recommendation is { } rec)
         {
@@ -158,16 +178,16 @@ public partial class GuidedTuningView : UserControl, IStepView
         {
             text.AppendLine();
             text.AppendLine(Loc.T("cs.reglage_optimise_pour_le_rejet"));
-            text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.IntegralGain)));
+            text.AppendLine(Loc.T("cs.kp_ti_s_ki", F(opt.Controller.Kp), mv, pv, F(opt.Controller.TiSeconds), F(opt.Controller.Kp / opt.Controller.TiSeconds)));
             text.AppendLine(Loc.T("cs.gain_integral_par_rapport_au", opt.IntegralGainRatio));
-            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent));
+            text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas_depassement", F(opt.WorstPeakSensitivity), opt.NominalOvershootPercent is { } overshootPercent ? F3(overshootPercent) : "—"));
             text.AppendLine(Loc.T("cs.compromis_integrale_plus_vive_donc"));
         }
         if (tuning.OptimizedPid is { } pid)
         {
             text.AppendLine();
             text.AppendLine(Loc.T("cs.pid_optimise_sous_la_meme"));
-            text.AppendLine(Loc.T("cs.kp_ti_s_td_s", F(pid.Controller.Kp), mv, pv, F(pid.Controller.TiSeconds), F(pid.Controller.TdSeconds), F(pid.Controller.FilterSeconds), F(pid.IntegralGain)));
+            text.AppendLine(Loc.T("cs.kp_ti_s_td_s", F(pid.Controller.Kp), mv, pv, F(pid.Controller.TiSeconds), F(pid.Controller.TdSeconds), F(pid.Controller.FilterSeconds), F(pid.Controller.Kp / pid.Controller.TiSeconds)));
             text.AppendLine(Loc.T("cs.sensibilite_au_pire_cas", F(pid.WorstPeakSensitivity)) +
                 (pid.IntegralGainRatioToOptimalPi is { } ratio ? Loc.T("cs.gain_integral_par_rapport_au_2", ratio) : ""));
             if (pid.PidNotBetterThanPi == true)
@@ -182,16 +202,17 @@ public partial class GuidedTuningView : UserControl, IStepView
             void Line(string name, LoopPerformance? l)
             {
                 if (l is null) return;
-                text.AppendLine(Loc.T("cs.consigne_iae_depassement_etablissement_a", name, F(l.SetpointStep.Iae), F(l.SetpointStep.OvershootPercent ?? 0), F(l.SetpointStep.SettlingSeconds ?? 0), F(l.LoadDisturbanceStep.Iae), F(l.HighFrequencyGain)));
+                text.AppendLine(Loc.T("cs.consigne_iae_depassement_etablissement_a", name, F(l.SetpointStep.Iae), l.SetpointStep.OvershootPercent is { } overshoot ? F(overshoot) : "—", l.SetpointStep.SettlingSeconds is { } settling ? F(settling) : "—", F(l.LoadDisturbanceStep.Iae), F(l.HighFrequencyGain)));
                 if (l.SetpointStep.PeakMv is { } peak && l.SetpointStep.InitialMvStep is { } kick)
                     text.AppendLine(Loc.T("cs.commande_a_un_echelon_de", pv, F(kick), mv, F(peak), mv));
                 if (l.NoiseToControlGain is { } noise)
-                    text.AppendLine(Loc.T("cs.bruit_un_bruit_de_mesure", F(noise)) +
-                        (_noiseUpperBound > 0 ? Loc.T("cs.avec_erreur_d_ajustement_borne", F(_noiseUpperBound), pv, F(noise * _noiseUpperBound), mv) : ""));
+                    text.AppendLine(Loc.T("cs.tuning_white_noise_gain", F(noise), mv, pv));
             }
             Line(Loc.T("cs.recommande"), perf.Recommended);
             Line(Loc.T("cs.pi_optimise"), perf.OptimizedPi);
             Line(Loc.T("cs.pid_optimise"), perf.OptimizedPid);
+            if (new[] { perf.Recommended, perf.OptimizedPi, perf.OptimizedPid }.Any(p => p is not null && p.SetpointStep.SettlingSeconds is null))
+                text.AppendLine(Loc.T("cs.indicateur_non_disponible_la_reponse"));
         }
         if (tuning.Warnings is { Length: > 0 })
         {

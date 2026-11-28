@@ -349,7 +349,7 @@ public sealed class PythonDiagnostics(string interpreter, string script) : IEngi
             (!tuning.IsRecommended && (tuning.Recommendation is not null || tuning.Reasons is not { Length: > 0 } || tuning.Actions is not { Length: > 0 })))
             throw new InvalidDataException("Réglage guidé incompatible avec le contrat.");
         if (tuning.Optimized is { } o && (!double.IsFinite(o.Controller.Kp) || o.Controller.Kp == 0 || Math.Sign(o.Controller.Kp) != Math.Sign(modelGain) || !(o.Controller.TiSeconds > 0) ||
-            !double.IsFinite(o.IntegralGain) || o.IntegralGain <= 0 || !(o.WorstPeakSensitivity <= limit + 1e-9) || !double.IsFinite(o.NominalOvershootPercent) || o.NominalOvershootPercent < 0))
+            !double.IsFinite(o.IntegralGain) || o.IntegralGain <= 0 || !(o.WorstPeakSensitivity <= limit + 1e-9) || (o.NominalOvershootPercent is { } overshoot && (!double.IsFinite(overshoot) || overshoot < 0))))
             throw new InvalidDataException("Réglage optimisé incompatible avec le contrat.");
         if (tuning.OptimizedPid is { } p && (p.Controller.Structure != "PID" || !double.IsFinite(p.Controller.Kp) || p.Controller.Kp == 0 || Math.Sign(p.Controller.Kp) != Math.Sign(modelGain) ||
             !(p.Controller.TiSeconds > 0) || !(p.Controller.TdSeconds > 0) || !(p.Controller.FilterSeconds > 0) || !double.IsFinite(p.IntegralGain) || p.IntegralGain <= 0 ||

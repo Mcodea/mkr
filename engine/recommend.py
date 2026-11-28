@@ -24,7 +24,7 @@ import math
 from pi_tuning_integrator import loop_margins
 from stability_margins import analyze
 
-VERSION = "1.1.0"
+VERSION = "1.2.1"
 # Design objectives = maximum sensitivity peak Ms accepted on every corner (Astrom & Hagglund 2006: 1.2 - 2.0 usual range).
 OBJECTIVES = {"robust": 1.4, "balanced": 1.7, "performance": 2.0}
 # Derivative filter Tf = Td / N: N between 2 and 20 is the usual range (Astrom & Hagglund 2006); 10 is the default when the user gives none.
@@ -44,7 +44,7 @@ def _plain(value):
 
 
 def _number(x):
-    return type(x) in (int, float) and math.isfinite(x) and abs(x) <= 1e100
+    return type(x) in (int, float) and abs(x) <= 1e100
 
 
 def _simc(gain, tau1, delay, tauc, tau2=None, filter_ratio=DEFAULT_FILTER_RATIO):
@@ -73,9 +73,13 @@ def _corners(gain, tau1, delay, tau2, errors, variation=None):
     hg, ht, hd = _half_widths(gain, tau1, delay, errors, variation)
     if tau1 - ht <= 0 or abs(gain) - hg <= 0:
         raise ValueError("recommend_uncertainty")          # the gain sign or a positive time constant is no longer established
-    for g, t, d in itertools.product((-1, 1), repeat=3):
-        plants.append((f"gain{'+' if g > 0 else '-'},tau{'+' if t > 0 else '-'},delay{'+' if d > 0 else '-'}",
-                       gain + g * hg, tau1 + t * ht, max(delay + d * hd, 0.0), tau2))
+    fast_lags = [("", tau2)]
+    if tau2 is not None and variation is not None:
+        fraction = variation / 100.0
+        fast_lags = [(",tau2-", tau2 * (1 - fraction)), (",tau2+", tau2 * (1 + fraction))]
+    for (g, t, d), (suffix, fast_lag) in itertools.product(itertools.product((-1, 1), repeat=3), fast_lags):
+        plants.append((f"gain{'+' if g > 0 else '-'},tau{'+' if t > 0 else '-'},delay{'+' if d > 0 else '-'}{suffix}",
+                       gain + g * hg, tau1 + t * ht, max(delay + d * hd, 0.0), fast_lag))
     return plants, True
 
 
@@ -114,7 +118,10 @@ def calculate(payload):
     variation = payload["processVariationPercent"]
     if variation is not None and (not _number(variation) or not 0 < variation <= 50):
         raise ValueError("recommend_input")
-    if family not in ("FOPDT", "SOPDT", "Integrateur") or objective not in OBJECTIVES:
+    if family not in ("FOPDT", "SOPDT", "Integrateur") or not isinstance(objective, str) or objective not in OBJECTIVES:
+        raise ValueError("recommend_input")
+    if errors is not None and (not isinstance(errors, dict) or errors.keys() != {"gain", "tauSeconds", "delaySeconds"} or
+                               not all(_number(v) and v >= 0 for v in errors.values())):
         raise ValueError("recommend_input")
     if family == "Integrateur":
         if tau is not None or second is not None or not all(_number(x) for x in (gain, delay, sample)):
@@ -125,9 +132,6 @@ def calculate(payload):
     elif not all(_number(x) for x in (gain, tau, delay, sample)) or (family == "SOPDT") != (second is not None):
         raise ValueError("recommend_input")
     if second is not None and not _number(second):
-        raise ValueError("recommend_input")
-    if errors is not None and (not isinstance(errors, dict) or errors.keys() != {"gain", "tauSeconds", "delaySeconds"} or
-                               not all(_number(v) and v >= 0 for v in errors.values())):
         raise ValueError("recommend_input")
     if gain == 0 or tau <= 0 or delay < 0 or sample <= 0 or (second is not None and not 0 < second <= tau):
         raise ValueError("recommend_domain")
@@ -148,13 +152,14 @@ def calculate(payload):
     sampling_delay = sample / 2        # effective delay includes half the sampling period (Skogestad 2003)
     effective = theta + sampling_delay
     try:
-        plants, quantified = _corners(gain, tau1, theta, tau2, errors, variation)
+        # Reduce the plant for SIMC synthesis only. Judge each controller on the identified dynamics.
+        plants, quantified = _corners(gain, tau, delay, second, errors, variation)
     except ValueError as error:
         return _refusal(family, objective, limit, ["parameter_uncertainty_excludes_the_model"] if str(error) == "recommend_uncertainty" else [str(error)],
                         ["Refaire l'identification avec un essai plus ample ou plus long pour réduire l'incertitude des paramètres."], notes)
     if not quantified:
         notes.append("uncertainty_not_quantified")
-    elif family == "SOPDT":
+    elif family == "SOPDT" and variation is None:
         notes.append("second_pole_uncertainty_not_propagated")
 
     # Phase 1: the fastest grid point that is stable with Ms within the limit on every corner (rejecting early on the first violation).
@@ -212,8 +217,10 @@ def calculate(payload):
                                  ("optimizedPid", optimized_pid and optimized_pid["controller"])):
             if controller is not None:
                 try:
-                    performance[name] = closed_loop_performance(gain, tau1, tau2, effective, controller)
-                    performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau1, tau2, effective, controller, sample)
+                    performance[name] = closed_loop_performance(gain, tau, second, delay + sampling_delay, controller)
+                    if name == "optimizedPi":
+                        optimized["nominalOvershootPercent"] = performance[name]["setpointStep"]["overshootPercent"]
+                    performance[name]["noiseToControlGain"] = noise_to_control_gain(gain, tau, second, delay + sampling_delay, controller, sample)
                 except ValueError:
                     warnings.append("performance_simulation_failed_" + name)
         warnings.append("performance_is_nominal_without_actuator_limits")
@@ -310,6 +317,8 @@ def _integrator(slope, delay, sample, errors, objective, limit, variation=None, 
             if controller is not None:
                 try:
                     performance[name] = closed_loop_performance(slope, 1.0, None, effective, controller, integrating=True)
+                    if name == "optimizedPi":
+                        optimized["nominalOvershootPercent"] = performance[name]["setpointStep"]["overshootPercent"]
                     performance[name]["noiseToControlGain"] = noise_to_control_gain(slope, 1.0, None, effective, controller, sample, integrating=True)
                 except ValueError:
                     notes.append("performance_simulation_failed_" + name)
@@ -337,6 +346,8 @@ def _loop(w, kp, ti, plants, integrating):
     gains = np.array([p[1] for p in plants], dtype=float)[:, None]
     delays = np.array([p[3] for p in plants], dtype=float)[:, None]
     process = gains / s if integrating else gains / (np.array([p[2] for p in plants], dtype=float)[:, None] * s + 1)
+    if not integrating and plants[0][4] is not None:
+        process /= 1 + np.array([p[4] for p in plants])[:, None] * s
     return kp * (1 + 1 / (ti * s)) * process * np.exp(-s * delays)
 
 
@@ -350,6 +361,8 @@ def _feasible(kp, ti, plants, limit, integrating, w):
     w2 = w[None, :]
     delays = np.array([p[3] for p in plants], dtype=float)[:, None]
     lag = -math.pi / 2 if integrating else -np.arctan(np.array([p[2] for p in plants], dtype=float)[:, None] * w2)
+    if not integrating and plants[0][4] is not None:
+        lag -= np.arctan(np.array([p[4] for p in plants])[:, None] * w2)
     phase = -np.arctan2(1.0, ti * w2) + lag - w2 * delays
     for row in range(loop.shape[0]):
         if phase[row, 0] <= -math.pi and abs(loop[row, 0]) >= 1:
@@ -374,27 +387,6 @@ def _max_kp(ti, plants, limit, integrating, w, x_grid):
         mid = (low + high) / 2
         low, high = (mid, high) if _feasible(mid, ti, plants, limit, integrating, w) else (low, mid)
     return float(low)
-
-
-def _nominal_overshoot(gain, tau, delay, kp, ti, integrating):
-    """Overshoot (percent of the unit set-point step) of the nominal loop: explicit Euler simulation, delay buffer."""
-    scale = max(ti, delay, tau if not integrating else 0.0, 1e-9)
-    dt = max(min(scale, delay if delay > 0 else scale) / 40, scale / 4000)
-    steps = int(min(60 * scale, 5e5 * dt) / dt)
-    lag = int(round(delay / dt))
-    buffer, state, integral, output, peak = [0.0] * (lag + 1), 0.0, 0.0, 0.0, 0.0
-    for _ in range(steps):
-        error = 1.0 - output
-        integral += error * dt
-        buffer.append(kp * (error + integral / ti))
-        delayed = buffer.pop(0)
-        if integrating:
-            state += dt * gain * delayed
-        else:
-            state += dt * (gain * delayed - state) / tau
-        output = state
-        peak = max(peak, output)
-    return max(0.0, (peak - 1.0) * 100.0)
 
 
 def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
@@ -429,7 +421,7 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
                     _, pm, peak = loop_margins(k, d, kp, ti)
                     ok = pm is not None and pm > 0
                 else:
-                    m = analyze(k, [t1], d, kp, ti, 0.0, 0.0)
+                    m = analyze(k, [t1] if t2 is None else [t1, t2], d, kp, ti, 0.0, 0.0)
                     peak, ok = m["peakSensitivity"], "nominal_unstable" not in m["warnings"] and m["phaseMarginDegrees"] is not None and m["phaseMarginDegrees"] > 0
                 if not ok:
                     peak = math.inf
@@ -437,10 +429,9 @@ def optimise_pi(family, gain, tau1, theta_total, plants, limit, sampling_delay):
         except ValueError:
             return None
         if max(peaks) <= limit:
-            nominal = scaled[0]
             return dict(controller=dict(structure="PI", kp=math.copysign(kp, gain), tiSeconds=ti, tdSeconds=0.0, filterSeconds=0.0),
                         integralGain=kp / ti, worstPeakSensitivity=max(peaks),
-                        nominalOvershootPercent=_nominal_overshoot(nominal[1], nominal[2] if not integrating else 0.0, nominal[3], kp, ti, integrating))
+                        nominalOvershootPercent=None)
         kp *= 0.995
     return None
 
@@ -581,6 +572,8 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
     steps = int(min(horizon / dt, 1.5e6))
     dt = horizon / steps if steps == int(horizon / dt) else dt
 
+    horizon = steps * dt  # actual duration if the integration step count was capped
+
     def run(setpoint, load):
         n_delay = int(round(delay / dt))
         buffer = [0.0] * (n_delay + 1)
@@ -588,16 +581,16 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         states = [0.0] * max(len(lags), 1)
         integral = yf = 0.0
         iae = ise = itae = peak = peak_mv = 0.0
-        last_outside = 0.0
+        settling_time = None
         trace_t, trace_y, trace_u = [], [], []
         stride = max(1, steps // 4000)
         y = 0.0
         for i in range(steps):
             t = i * dt
             error = setpoint - y
-            integral += kp / ti * error * dt
             derivative = -kp * td * (y - yf) / tf if tf > 0 and td > 0 else 0.0
             u = kp * error + integral + derivative
+            integral += kp / ti * error * dt  # controller state for the next sample
             peak_mv = max(peak_mv, abs(u))
             if i % stride == 0:
                 trace_t.append(t); trace_y.append(y); trace_u.append(u)
@@ -609,20 +602,24 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
             if integrating:
                 states[0] += dt * gain * delayed
             else:
-                states[0] += dt * (gain * delayed - states[0]) / lags[0]
-                for j in range(1, len(lags)):
+                # Forward Euler uses the upstream state from the start of this interval.
+                for j in range(len(lags) - 1, 0, -1):
                     states[j] += dt * (states[j - 1] - states[j]) / lags[j]
+                states[0] += dt * (gain * delayed - states[0]) / lags[0]
             y = states[-1]
             e = abs(setpoint - y)
             iae += e * dt
             ise += e * e * dt
-            itae += t * e * dt
+            itae += (i + 1) * dt * e * dt
             peak = max(peak, y if setpoint else -y * (1 if gain > 0 else 1))
-            if setpoint and e > 0.02 * abs(setpoint):
-                last_outside = t
+            if setpoint:
+                if e > 0.02 * abs(setpoint):
+                    settling_time = None
+                elif settling_time is None:
+                    settling_time = (i + 1) * dt  # y is the state after this integration step
             if not math.isfinite(y) or abs(y) > 1e6:
                 raise ValueError("recommend_simulation_diverged")
-        return iae, ise, itae, peak, last_outside, peak_mv, (trace_t, trace_y, trace_u)
+        return iae, ise, itae, peak, settling_time, peak_mv, (trace_t, trace_y, trace_u)
 
     iae, ise, itae, peak, settle, peak_mv, trace = run(1.0, 0.0)
     l_iae, l_ise, l_itae, _, _, load_peak_mv, load_trace = run(0.0, 1.0)
@@ -631,11 +628,14 @@ def closed_loop_performance(gain, tau1, tau2, delay, controller, horizon_multipl
         """Display window [0, until] resampled to at most 240 points (plain floats: the bridge carries nothing else)."""
         t, y, u = raw
         keep = [k for k, value in enumerate(t) if value <= until] or [0]
-        step = max(1, len(keep) // 240)
-        picked = keep[::step]
+        if len(keep) <= 240:
+            picked = keep
+        else:
+            last = len(keep) - 1
+            picked = [keep[i * last // 239] for i in range(240)]
         return dict(seconds=[float(t[k]) for k in picked], pv=[float(y[k]) for k in picked], mv=[float(u[k]) for k in picked])
 
-    window = min(horizon, max(8.0 * scale, 1.6 * settle))
+    window = horizon if settle is None else min(horizon, max(8.0 * scale, 1.6 * settle))
     return dict(setpointStep=dict(iae=iae, ise=ise, itae=itae, overshootPercent=max(0.0, (peak - 1.0) * 100.0), settlingSeconds=settle,
                                   peakMv=peak_mv, initialMvStep=abs(kp)),
                 loadDisturbanceStep=dict(iae=l_iae, ise=l_ise, itae=l_itae, peakMv=load_peak_mv),

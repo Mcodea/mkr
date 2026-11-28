@@ -24,9 +24,12 @@ def _number(value, low=None, high=None):
 
 def _time_literal(seconds):
     """IEC TIME literal in milliseconds, with a warning when the 1 ms resolution changes the value noticeably."""
-    if seconds * 1000 >= 2 ** 32:
+    milliseconds_exact = seconds * 1000
+    if milliseconds_exact >= 2 ** 32:
         raise ValueError("conversion_time_range")                 # an IEC TIME of Control Expert is a 32-bit count of milliseconds
-    milliseconds = round(seconds * 1000)
+    milliseconds = round(milliseconds_exact)
+    if milliseconds >= 2 ** 32:
+        raise ValueError("conversion_time_range")
     if milliseconds < 1:
         raise ValueError("conversion_time_resolution")
     return f"T#{milliseconds}ms", abs(milliseconds / 1000 - seconds) > 1e-3 * seconds
@@ -57,7 +60,10 @@ def pidff(parameters):
         tf = parameters.get("filterSeconds")
         if tf is None:
             raise ValueError("conversion_filter_required")          # the block always filters its derivative: Tf = td / kd
-        kd = td / _number(tf, 0)
+        tf = _number(tf, 0)
+        if tf == 0:
+            raise ValueError("conversion_parameters")
+        kd = td / tf
         if not math.isfinite(kd) or kd <= 0:
             raise ValueError("conversion_parameters")
         if kd < 1:
