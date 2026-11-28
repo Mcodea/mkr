@@ -1,0 +1,115 @@
+{
+  "schema": "orias-lot4-real-trials/1",
+  "generated": "2026-11-28",
+  "nature": "REAL measured data only. No synthetic data in this file. Simulation files shipped by the publishers are listed as such and never used as measurements.",
+  "base_dir": "Paths are relative to the scratch folder <scratchpad>/real/ populated by fetch_and_describe.py fetch; no raw data is stored in the repository.",
+  "row_convention": "rowStart/rowEnd/stepRow are 0-based data-row indices, header row(s) excluded, inclusive bounds. For csv members: index 0 = first line after the header. For the CSTR xlsx: index 0 = sheet row 3. For InTaSet xlsx: index 0 = sheet row 2.",
+  "screening_rule": "fetch_and_describe.py RULE (declared before screening): single input change, baseline >= 10 s with drift < 10 % of |dY|, plateau >= 30 s, drift over the last 10 s < 5 % of |dY|, |dY| >= 10 x baseline sd. Known limitation: windows are in absolute seconds, so for slow processes a still-moving response can pass; every segment below was also examined by hand.",
+  "summary": {
+    "independent_estimation_validation_pairs": 0,
+    "documented_closed_loop_trials": 0,
+    "why": "No dataset reachable from the allowed hosts contains two independent open-loop step trials on the same input/output channel, nor a closed-loop trial whose controller settings (Kp, Ti, Td, period) are published."
+  },
+  "datasets": {
+    "tclab_takehome": {
+      "doi": "10.5281/zenodo.24286966", "version": "1.1", "license": "CC-BY-4.0",
+      "license_evidence": "Zenodo API metadata license.id = cc-by-4.0 and record page 'Creative Commons Attribution 4.0 International' (read 2026-11-28); archive readme.md: 'Unless stated otherwise, the data are provided under the Creative Commons Attribution 4.0 International license (CC BY 4.0).'",
+      "archive": "tclab_takehome/tclab_takehome_labs_dataset_v1.0.zip",
+      "md5_published": "143ac608400a06d2ffc26535d507c447",
+      "sha256_orias": "a12f6fe10ca4491fb1728293d50b18e9e0bd88ff760393a76dd9938d52da47e4",
+      "use": "embeddable (trial files only, attribution + list of modifications); survey/grade files excluded"
+    },
+    "intaset": {
+      "doi": "10.5281/zenodo.17652851", "license": "CC-BY-4.0",
+      "license_evidence": "Zenodo API metadata license.id = cc-by-4.0; record page 'Creative Commons Attribution 4.0 International' (read 2026-11-28). The archive itself has no readme and no licence file.",
+      "archive": "intaset/InTaSet.zip",
+      "md5_published": "0fe80940a3c9520e665b769f4b8d5ab8",
+      "sha256_orias": "a0aac3b0985bec232afa8f9e95cd87612515904f5e574bc483777e4d532e8c85",
+      "use": "embeddable by licence, but NOT recommended: units undocumented and an integrity anomaly (see segments_rejected)"
+    },
+    "cstr_manipal": {
+      "doi": "10.5281/zenodo.22753301", "license": "CC-BY-4.0",
+      "license_evidence": "Zenodo API metadata license.id = cc-by-4.0; record page 'Creative Commons Attribution 4.0 International' (read 2026-11-28)",
+      "file": "cstr_manipal/CSTR_24aug_PRBS_dataset.xlsx",
+      "md5_published": "524c0276a5d199cd10f341827135684e",
+      "sha256_orias": "0e42ce8af6e05cdcd3c8a39eb1e0d54c9478a9623475d1bc64408e3c23d3d3bd",
+      "use": "licence allows embedding; no exploitable step segment"
+    },
+    "distil_manipal": {
+      "doi": "10.5281/zenodo.22763516", "license": "CC-BY-4.0",
+      "license_evidence": "Zenodo API metadata license.id = cc-by-4.0; record page 'Creative Commons Attribution 4.0 International' (read 2026-11-28)",
+      "archive": "distil_manipal/DistillationColumn (1).zip",
+      "md5_published": "fdcef796282deca5ed89f4b1c15c3e6e",
+      "sha256_orias": "3b19f8dbeb5b74f68b0c732fe27533bde9bf1080e7f6a799761b2b3dab5517df",
+      "use": "not usable for identification: output-only files (no input, no time, no units)"
+    },
+    "consens": {
+      "doi": "10.5281/zenodo.1438233", "license": "CC-BY-4.0",
+      "license_evidence": "Zenodo API metadata license.id = cc-by-4.0; record page 'Creative Commons Attribution 4.0 International' (read 2026-11-28)",
+      "archive": "consens/PCS_data_csv.zip",
+      "md5_published": "f8e1c5aed2a77ef0a77479d0a8bf3da9",
+      "sha256_orias": "ebf36fbcdd8340c6f06f9e66eed1ac9b59a63dcb4ad96bb49dfe8d5cad8faa68",
+      "use": "licence allows embedding; flow-controller records in closed loop, settings undocumented; not screened for open-loop steps"
+    }
+  },
+  "segments_exploitable_with_caveats": [
+    {
+      "id": "tclab_siso_Q1_T1",
+      "dataset": "tclab_takehome",
+      "archive": "tclab_takehome/tclab_takehome_labs_dataset_v1.0.zip",
+      "member": "data/experiment_siso_model_validation.csv",
+      "loop": "open_loop (column controller = 'open_loop')",
+      "mv": {"column": "Q1_pct", "unit": "% heater power"},
+      "pv": {"column": "T1_meas_C", "unit": "degC"},
+      "other_input_constant": {"column": "Q2_pct", "value": 0},
+      "sample_s": 1.0,
+      "rowStart": 1, "rowEnd": 299,
+      "stepRow": 20, "step": {"from": 0, "to": 70, "amplitude": 70},
+      "baselineRows": [1, 19],
+      "durationAfterStep_s": 279,
+      "dY_observed_degC": 46.29,
+      "baseline_sd_degC": 0.275,
+      "snr_observed": 168,
+      "quantization_degC": 0.49,
+      "mode_column": "none (no manual/auto column; constant 'open_loop' label)",
+      "caveats": [
+        "row 0 excluded: T1 = T2 = 23 exactly, TCLab model default, not a measurement",
+        "baseline only 19 samples",
+        "response NOT settled at rowEnd: slope over rows 270-299 = 0.078 degC/s (about 17 % of dY per 100 s); T1 keeps rising to 83.9 degC later (with Q2 also on). The declared rule flags it CANDIDATE only because its 10 s end window cannot resolve this drift under 0.49 degC quantization",
+        "single trial: no independent second trial on the Q1->T1 channel exists in the dataset"
+      ]
+    }
+  ],
+  "segments_rejected": [
+    {"id": "tclab_siso_Q1_T2", "member": "data/experiment_siso_model_validation.csv", "mv": "Q1_pct", "pv": "T2_meas_C", "rowStart": 1, "rowEnd": 299, "stepRow": 20, "reason": "cross-coupling channel, far from settled (end drift about 84 % of dY per 100 s)"},
+    {"id": "tclab_siso_Q2_T2", "member": "data/experiment_siso_model_validation.csv", "mv": "Q2_pct", "pv": "T2_meas_C", "rowStart": 270, "rowEnd": 1000, "stepRow": 300, "step": {"from": 0, "to": 30}, "reason": "flagged CANDIDATE by the rule, rejected on inspection: the 'baseline' rows 270-299 are the transient driven by the Q1 step (T2 rising 0.068 degC/s); the response is a superposition of two inputs, not a step from a steady state"},
+    {"id": "tclab_siso_Q2_T1", "member": "data/experiment_siso_model_validation.csv", "mv": "Q2_pct", "pv": "T1_meas_C", "stepRow": 300, "reason": "baseline drift (T1 still rising from the Q1 step)"},
+    {"id": "intaset_all_ID_files", "dataset": "intaset", "reason": "0 candidates under the declared rule in the 8 InTaSet-ID files: the longest constant-input plateau per file is 62-104 s (any pump change counted) and the levels are still moving at the end of every plateau; no units documented for levels or pumps"},
+    {"id": "intaset_3T_testing_duplicate", "member": "InTaSet/InTaSet-ID/InTaSet-ID-3T/InTaSet-ID-3T_Testing.xlsx", "reason": "integrity anomaly: for rows 700-3599 versus rows 3020-5919 (offset 2320 rows = 232 s), Tank 2 and Tank 3 are bit-identical on 2300 of 2900 rows, Tank 1 and Tank 4 differ slightly; the second half cannot be treated as an independent repetition"},
+    {"id": "cstr_manipal_all", "dataset": "cstr_manipal", "reason": "0 candidates: four inputs excited by a multilevel PRBS, plateaus 46-166 s, reactor temperature drifting (31 to 52 degC over 1565 s); units of 'Hot oil circulation' (0-440) and 'Hot Oil bath' (0-230) not stated"},
+    {"id": "distil_manipal_all", "dataset": "distil_manipal", "reason": "each xlsx holds one unlabelled column (tray temperature, presumably degC) without time, input, step instant or step amplitude: gain and time constant cannot be identified"}
+  ],
+  "candidate_pairs_rejected": [
+    {
+      "estimation": "tclab_siso_Q1_T1",
+      "validation": {"member": "data/experiment_mimo_robust_control_real.csv", "rowStart": 0, "rowEnd": 3599},
+      "reason": "the validation record is MIMO with both heaters moving continuously; predicting T1 needs a 2x2 model, and the Q2->T1 / Q2->T2 channels cannot be identified cleanly from the SISO record (Q2 step taken during the Q1 transient). Also different operating point (46-74 degC), same kit TCLab_001, dates of both runs unpublished, raw noise about 1.0-1.3 degC (sd of first differences / sqrt 2)."
+    }
+  ],
+  "closed_loop_documented": [],
+  "closed_loop_undocumented": [
+    {"dataset": "tclab_takehome", "member": "data/experiment_mimo_robust_control_real.csv", "controller": "robust_mu (mu-synthesis, MIMO)", "columns": ["time_s", "Q1_pct", "Q2_pct", "T1_ref_C", "T2_ref_C", "d1", "d2", "T1_C", "T2_C"], "rows": 3600, "sample_s": 1.0, "setpoint_changes_rows": [899, 1800, 2700], "input_disturbance_rows": {"d1": 1350, "d2": 2250}, "note": "Q1_pct jumps by +10 at row 1350 when d1 = 10, so Q includes the disturbance. Controller not a PID and its realization is not published (preprint arXiv:2611.21200 gives no numeric controller). Companion files: *_real_filtered.csv (low-pass filtered measurements, not raw) and simulation_mimo_robust_control_simulation.csv (SIMULATION, not a measurement)."},
+    {"dataset": "tclab_takehome", "member": "(none)", "controller": "SISO PI, Fig. 3 bottom of arXiv:2611.21200", "note": "the closed-loop PI data of Fig. 3 are NOT in the archive and Kp, Ki are not given numerically in the preprint"},
+    {"dataset": "intaset", "member": "InTaSet/InTaSet-FD/*", "note": "described by Zenodo as closed-loop operating modes; no setpoint column, no controller settings, no mode column"},
+    {"dataset": "consens", "member": "PCS_data_csv/day*/..._Bilanz.csv", "note": "mass-flow loops: setpoint *_w and measurement *_x in kg/h (matlab_variables_explanation.xlsx), *_M0013 signal undocumented; controller settings not published"}
+  ],
+  "not_accessible": {
+    "cascaded_tanks": "page www.nonlinearbenchmark.org read (citation only, no licence text); data hosted on drive.google.com (not an allowed host) and 4TU (doi.org redirects to data.4tu.nl, refused in the inventory). Licence still V-sec CC BY-SA 4.0, not confirmed at source.",
+    "daisy": "homes.esat.kuleuven.be: connection reset by the proxy on 2026-11-28; ftp.esat.kuleuven.be refused (inventory). Not attempted further."
+  },
+  "internal_test_only_reachable": {
+    "apmonitor_tclab_dyn_data2": {"url": "https://apmonitor.com/do/uploads/Main/tclab_dyn_data2.txt", "sha256_orias": "78d9b6c6f575696daec11749b82b1fc6fcea4e200441d29c6766df7f05e13429", "license": "none found (NT)", "structure": "Time,H1,H2,T1,T2; 601 rows; 1 s; H1 changes at rows 10,200,280,400; H2 at 120,320,520", "exploitable": "no clean SISO step: H2 changes 110 s after the first H1 step"},
+    "apmonitor_tclab_2sec": {"url": "https://apmonitor.com/do/uploads/Main/tclab_2sec.txt", "sha256_orias": "31ca3b5ba7eeca339bdf74fc89b8afd1e8ff964fbf0868863c36278f262b5143", "license": "none found (NT)", "structure": "Time,H1,H2,T1,T2; 600 rows; 2 s; H1 and H2 alternate every 50 rows (100 s)", "exploitable": "no clean SISO step"},
+    "cbe30338_tclab_files": {"repo": "https://github.com/jckantor/CBE30338-book", "commit": "bec88ef9f6d9f8dcf1b24d87c52b5875fc1ffeb0", "license": "no LICENSE file (NT)", "structure": "48 files notebooks/data/data_2020*.csv with Time,T1,T2,U1,U2,SP1,SP2 (closed loop), not referenced by any notebook", "exploitable": "no: controller settings not linked to the files and real-versus-simulated origin not established (first rows show T1 = T2 = 20.9495 exactly)"}
+  }
+}
