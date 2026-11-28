@@ -8,6 +8,7 @@
  "acq.state.stopped": "Acquisition arrêtée par l’opérateur",
  "tbl.recommended_short": "Recom.",
  "core.selectionnez_un_projet_pour_voir": "Sélectionnez un projet pour voir les conditions de chaque étape.",
+ "core.modele_obsolete_recalculez": "Résultat obsolète : une donnée dont dépend le modèle (jeu de données, colonnes, unités, fenêtre, prétraitement ou méthode) a changé depuis son calcul. Recalculez l'identification (étape 4) puis faites de nouveau valider le modèle (étape 5) ; l'ancien résultat est conservé avec son historique.",
  "core.aucun_modele_accepte_a_la": "Aucun modèle accepté à la validation. Un réglage sur un modèle non validé n'est pas autorisé : identifiez le procédé (étape 4) puis faites accepter le modèle (étape 5).",
  "core.repere_de_la_boucle_grandeur": "Repère de la boucle, grandeur réglée, point de fonctionnement et objectif. ",
  "core.description_enregistree": "Description enregistrée.",

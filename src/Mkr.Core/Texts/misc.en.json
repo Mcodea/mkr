@@ -8,6 +8,7 @@
  "acq.state.stopped": "Acquisition stopped by the operator",
  "tbl.recommended_short": "Recom.",
  "core.selectionnez_un_projet_pour_voir": "Select a project to see the conditions of each step.",
+ "core.modele_obsolete_recalculez": "Obsolete result: something the model depends on (dataset, columns, units, window, preprocessing or method) has changed since it was calculated. Recompute the identification (step 4), then have the model validated again (step 5); the old result is kept with its history.",
  "core.aucun_modele_accepte_a_la": "No model accepted at validation. Tuning on an unvalidated model is not allowed: identify the process (step 4), then have the model accepted (step 5).",
  "core.repere_de_la_boucle_grandeur": "Loop tag, controlled variable, operating point and objective. ",
  "core.description_enregistree": "Description saved.",

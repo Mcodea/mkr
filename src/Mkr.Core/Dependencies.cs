@@ -284,3 +284,15 @@ public sealed record ResultDependencies(IReadOnlyDictionary<string, string> Face
         new(id, kind, calculatedAt, Facets.ToDictionary(pair => Enum.Parse<ConfigurationFacet>(pair.Key), pair => pair.Value), UpstreamResults, RevisionFingerprint, DataFingerprint,
             AssumptionsFingerprint, proof, blocked);
 }
+
+public static class StudyObsolescence
+{
+    /// <summary>Among the accepted studies, how many are obsolete against the project's active configuration. A study without recorded dependencies (recorded before ADR 0009) is never counted: it is "to verify", not obsolete.</summary>
+    public static int CountObsoleteModels(IEnumerable<IdentificationStudy> studies, ProjectConfiguration configuration)
+    {
+        var nodes = studies.Where(study => study.IsAcceptedForTuning && study.Dependencies is not null)
+            .Select(study => study.Dependencies!.ToNode(study.Id, ResultKind.Model, study.CalculatedAt)).ToArray();
+        if (nodes.Length == 0) return 0;
+        return DependencyEngine.Evaluate(configuration, nodes).Values.Count(status => status.Status == ResultStatus.Obsolete);
+    }
+}

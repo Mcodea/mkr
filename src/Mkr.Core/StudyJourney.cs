@@ -3,7 +3,9 @@ namespace Mkr.Core;
 public enum StepState { Done, Ready, Blocked }
 
 /// <summary>What the project actually contains. The journey is derived from these facts only, never from a stored "progress" flag.</summary>
-public sealed record ProjectFacts(bool HasLoopDescription, int Imports, int Studies, int AcceptedModels);
+/// <param name="ObsoleteModels">Among the accepted models, how many are OBSOLETE (a dependency changed since they were calculated, ADR 0009). Optional: 0 when nothing is known, which is also the legacy behaviour.
+/// An obsolete model never counts as validated: it must be recomputed and validated again before any tuning, block choice, simulation or report.</param>
+public sealed record ProjectFacts(bool HasLoopDescription, int Imports, int Studies, int AcceptedModels, int ObsoleteModels = 0);
 
 /// <param name="Detail">What the step is, and, when blocked, why and what to do (problem · cause · action).</param>
 public sealed record JourneyStep(int Number, string Title, StepState State, string Detail);
@@ -24,8 +26,10 @@ public static class StudyJourney
 
         var data = facts.Imports > 0;
         var identified = facts.Studies > 0;
-        var accepted = facts.AcceptedModels > 0;
-        string needModel = Loc.T("core.aucun_modele_accepte_a_la");
+        var validAccepted = Math.Max(0, facts.AcceptedModels - facts.ObsoleteModels);
+        var accepted = validAccepted > 0;
+        var onlyObsolete = facts.AcceptedModels > 0 && !accepted;     // every accepted model is obsolete: say why and what to do, never show it as current
+        string needModel = onlyObsolete ? Loc.T("core.modele_obsolete_recalculez") : Loc.T("core.aucun_modele_accepte_a_la");
         return new[]
         {
             new JourneyStep(1, Titles[0], facts.HasLoopDescription ? StepState.Done : StepState.Ready,
@@ -40,8 +44,8 @@ public static class StudyJourney
                     identified ? Loc.T("core.etude_s_d_identification_enregistree", facts.Studies) : Loc.T("core.choisissez_un_essai_d_identification")),
             new JourneyStep(5, Titles[4], !identified ? StepState.Blocked : accepted ? StepState.Done : StepState.Ready,
                 !identified ? Loc.T("core.aucune_identification_a_valider_etape") :
-                    accepted ? Loc.T("core.modele_s_accepte_s_sur", facts.AcceptedModels) :
-                        Loc.T("core.les_modeles_identifies_n_ont")),
+                    accepted ? Loc.T("core.modele_s_accepte_s_sur", validAccepted) :
+                        onlyObsolete ? Loc.T("core.modele_obsolete_recalculez") : Loc.T("core.les_modeles_identifies_n_ont")),
             new JourneyStep(6, Titles[5], accepted ? StepState.Ready : StepState.Blocked,
                 accepted ? Loc.T("core.choix_de_la_methode_de") : needModel),
             new JourneyStep(7, Titles[6], accepted ? StepState.Ready : StepState.Blocked,

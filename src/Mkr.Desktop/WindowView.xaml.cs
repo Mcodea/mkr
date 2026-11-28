@@ -298,7 +298,11 @@ public partial class WindowView : Window
             var studies = _workspace.Studies();
             var accepted = studies.Count(study => study.IsAcceptedForTuning);
             var described = new[] { brief.Tag, brief.ControlledQuantity, brief.OperatingPoint, brief.Objective, brief.Description }.Any(text => !string.IsNullOrWhiteSpace(text));
-            _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted));
+            // an accepted model whose dependencies changed since its calculation is OBSOLETE (ADR 0009): the journey says why and what to do. Only a read: a store without history, or studies without
+            // recorded dependencies (legacy), give 0 and the journey behaves as before.
+            var obsolete = _store is IConfigurationHistory history
+                ? StudyObsolescence.CountObsoleteModels(studies, ProjectConfiguration.Replay(history.ListConfiguration(_project.Id).Select(record => record.Change))) : 0;
+            _steps = StudyJourney.Evaluate(new ProjectFacts(described, imports, studies.Count, accepted, obsolete));
             _defaultFacts = Loc.T("cs.enregistrements_etudes_modeles_acceptes", imports, studies.Count, accepted);
             StatusFacts.Text = _defaultFacts;
             InspectorFacts.Text = $"{_project.Name}\nBoucle : {(string.IsNullOrWhiteSpace(brief.Tag) ? "non renseignée" : brief.Tag)}\nEnregistrements : {imports}\nÉtudes : {studies.Count}\nModèles acceptés : {accepted}" +

@@ -295,6 +295,19 @@ Check("dependencies: a result records ONLY the facets its kind depends on, survi
     return same.Status != ResultStatus.Obsolete && changed.Status == ResultStatus.Obsolete && unrelated.Status != ResultStatus.Obsolete;
 });
 
+// ---- Parcours : un modèle accepté mais obsolète n'ouvre aucune étape aval et dit quoi faire ----
+Check("journey: an accepted model that is obsolete blocks the downstream steps with the obsolescence message; a valid one opens them", () =>
+{
+    var valid = StudyJourney.Evaluate(new ProjectFacts(true, 2, 1, 1, 0));
+    var obsolete = StudyJourney.Evaluate(new ProjectFacts(true, 2, 1, 1, 1));
+    var mixed = StudyJourney.Evaluate(new ProjectFacts(true, 2, 2, 2, 1));
+    return valid[7].State == StepState.Ready && obsolete[4].State == StepState.Ready && obsolete[5].State == StepState.Blocked && obsolete[7].State == StepState.Blocked &&
+           obsolete[7].Detail == Loc.T("core.modele_obsolete_recalculez") && mixed[7].State == StepState.Ready && obsolete[7].Detail != Loc.T("core.aucun_modele_accepte_a_la");
+});
+
+Check("journey: facts without obsolescence information behave exactly as before (legacy projects)", () =>
+    StudyJourney.Evaluate(new ProjectFacts(true, 1, 1, 1)).Select(step => step.State).SequenceEqual(StudyJourney.Evaluate(new ProjectFacts(true, 1, 1, 1, 0)).Select(step => step.State)));
+
 // ---- Advisor : one plain conclusion, why, and what to do (no threshold is ever asked from the user) ----
 var none = new RecourseOptions(false, false, false);
 var all3 = new RecourseOptions(true, true, true);
