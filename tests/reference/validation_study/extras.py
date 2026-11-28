@@ -1,8 +1,9 @@
-"""Statistiques des critères E et C7 (amendement v1.1 du protocole). Régénère le cas par sa graine (evaluate.build_case) et calcule, pour le PI recommandé sur le FOPDT :
+"""Statistiques des critères E et C7 (amendement v1.1) et mesures v1.3 : stabilité par deux méthodes, réglage du modèle alternatif SOPDT, réglage plus robuste (amendement v1.3 du protocole). Régénère le cas par sa graine (evaluate.build_case) et calcule, pour le PI recommandé sur le FOPDT :
 
   E  : Ms du PIRE modèle d'un ensemble « compatible avec les données » = {(K, tau, theta) : SSE_conjointe <= SSE(estimé) (1 + p/(N-p) F_{p,N-p}(0,95))} UNION le SOPDT ajusté ;
   C7 : Ms du pire coin de la boîte [K(1+-e_K)] x [tau(1+-e_tau)] x [theta +- e_theta], e = 2,576 x erreur type du moteur x b, b = max(1, sqrt(MSE_val / sigma^2_bruit)).
-Ms par balayage fréquentiel écrit pour l'étude (truth.controller_response), maintien d'ordre zéro inclus (ts/2). Aucune valeur de seuil ici : les décisions sont prises à l'analyse."""
+Ms par balayage fréquentiel écrit pour l'étude (truth.controller_response), maintien d'ordre zéro inclus (ts/2). Aucune valeur de seuil ici : les décisions sont prises à l'analyse.
+E et C7 sont des ESTIMATEURS HEURISTIQUES du pire cas (tirage aléatoire, coins d'une boîte), pas des garanties mathématiques (v1.3 §6)."""
 import itertools
 import math
 
@@ -46,6 +47,18 @@ def worst_ms(models, ts, controller):
     return float(np.max(np.abs(1 / (1 + loops))))
 
 
+def behaviour2(plant, ts, controller):
+    """Comportement d'un réglage sur le procédé VRAI par deux méthodes de stabilité indépendantes + Ms (qui n'est jamais une preuve de stabilité)."""
+    kp, ti = controller["kp"], controller["tiSeconds"]
+    td, tf = controller.get("tdSeconds", 0.0) or 0.0, controller.get("filterSeconds", 0.0) or 0.0
+    if ti is None or not math.isfinite(ti) or ti <= 0:
+        return dict(time_stable=False, nyquist_stable=False, nyquist_zeros=None, ms=None, agree=True)
+    time_stable, itae, _ = truth.closed_loop(plant, ts, kp, ti, td, tf)
+    nyq, zeros = truth.nyquist_stable(plant, ts, kp, ti, td, tf)
+    return dict(time_stable=bool(time_stable), nyquist_stable=nyq, nyquist_zeros=zeros, ms=truth.true_ms(plant, ts, kp, ti, td, tf), itae=itae if math.isfinite(itae) else None,
+                agree=(nyq is not None and bool(nyq) == bool(time_stable)))
+
+
 def run_extras(population, snr, index):
     c = evaluate.build_case(population, snr, index)
     ts, sigma = c["ts"], c["sigma"]
@@ -64,6 +77,14 @@ def run_extras(population, snr, index):
         return row
     controller = plan["recommendation"]["controller"]
     gain, tau, delay = report["gain"], report["tauSeconds"], report["delaySeconds"]
+    row["stability"] = behaviour2(c["plant"], ts, controller)                        # stabilité du réglage recommandé : deux méthodes
+    # Échelle de recours (v1.3 §8) : (a) réglage du modèle ALTERNATIF SOPDT ; (b) réglage plus ROBUSTE du même FOPDT (objectif prudent du moteur).
+    try:
+        robust = evaluate.recommend.calculate(dict(family="FOPDT", gain=gain, tauSeconds=tau, delaySeconds=report["delayIntervalSeconds"][1], secondTauSeconds=None, sampleSeconds=ts,
+                                                   standardErrors=report["standardErrors"], objective="robust", derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
+        row["robust"] = behaviour2(c["plant"], ts, robust["recommendation"]["controller"]) if robust.get("decision") == "recommended" else None
+    except (ValueError, KeyError, TypeError):
+        row["robust"] = None
     # ---- E : ensemble compatible ------------------------------------------------------------------------------------------------------------------------------
     n_rows = BASELINE_ROWS + c["n_post"]
     t = np.arange(n_rows) * ts
@@ -103,6 +124,15 @@ def run_extras(population, snr, index):
         s2 = sopdt.identify(payload)
         sopdt_member = (s2["gain"], [s2["tauSeconds"], s2["secondTauSeconds"]], s2["delaySeconds"])
         members.append(sopdt_member)
+        try:
+            errors = s2.get("standardErrors")                     # le moteur n'accepte que des float Python (pas de numpy)
+            alt = evaluate.recommend.calculate(dict(family="SOPDT", gain=float(s2["gain"]), tauSeconds=float(s2["tauSeconds"]), delaySeconds=float(s2["delayIntervalSeconds"][1]),
+                                                    secondTauSeconds=float(s2["secondTauSeconds"]), sampleSeconds=ts,
+                                                    standardErrors={k: float(v) for k, v in errors.items()} if errors else None, objective="balanced",
+                                                    derivativeFilterRatio=None, processVariationPercent=None, optimise=False))
+            row["alt_sopdt"] = behaviour2(c["plant"], ts, alt["recommendation"]["controller"]) if alt.get("decision") == "recommended" else None
+        except (ValueError, KeyError, TypeError):
+            row["alt_sopdt"] = None
     except (ValueError, KeyError, TypeError):
         pass
     row["E"] = dict(worst_ms=worst_ms(members, ts, controller), nominal_ms=worst_ms([members[0]], ts, controller), members=len(members), inside=inside,
